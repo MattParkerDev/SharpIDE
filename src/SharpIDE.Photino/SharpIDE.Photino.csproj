@@ -17,6 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="BlazorMonaco" Version="3.3.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="9.0.0" />
 		<PackageReference Include="MudBlazor" Version="8.0.0-rc.2" />

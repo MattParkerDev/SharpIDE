@@ -1,6 +1,6 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider Theme="@AppThemeProvider.GetTheme()" />
+<MudThemeProvider Theme="@AppThemeProvider.GetTheme()" IsDarkMode="true" />
 <MudPopoverProvider/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
@@ -14,7 +14,7 @@
 		@* <NavMenu/> *@
 	</MudDrawer>
 	<MudMainContent>
-		<MudContainer Class="px-8 py-6">
+		<MudContainer MaxWidth="MaxWidth.False" Class="mt-2">
 			@Body
 		</MudContainer>
 	</MudMainContent>

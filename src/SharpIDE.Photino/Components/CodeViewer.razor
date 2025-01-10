@@ -1,0 +1,39 @@
+﻿
+<style>
+	#my-editor-id {
+		height: calc(100vh - 100px);
+	}
+</style>
+<StandaloneCodeEditor Id="my-editor-id" ConstructionOptions="@EditorConstructionOptions" />
+
+@code {
+	[Parameter, EditorRequired]
+    public string FilePath { get; set; } = null!;
+
+	private string? _fileContent;
+
+	private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+	{
+		return new StandaloneEditorConstructionOptions
+		{
+			AutomaticLayout = true,
+			Language = "csharp",
+			Theme = "vs-dark",
+			ScrollBeyondLastLine = false,
+			FontSize = 18,
+			Value = _fileContent
+		};
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		var fileInfo = new FileInfo(FilePath);
+		if (!fileInfo.Exists)
+		{
+			throw new FileNotFoundException($"File not found: {FilePath}");
+		}
+		var fileContent = await File.ReadAllTextAsync(FilePath);
+		_fileContent = fileContent;
+	}
+
+}
