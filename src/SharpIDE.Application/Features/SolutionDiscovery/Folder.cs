@@ -3,8 +3,9 @@
 public class Folder
 {
 	public required string Name { get; set; }
-	public List<Folder> Folders { get; set; } = [];
-	public List<MyFile> Files { get; set; } = [];
+	public required string FullName { get; set; }
+	public required Folder? ParentFolder { get; set; }
+	public required List<MyFile> Files { get; set; } = [];
 }
 
 public class MyFile

@@ -37,4 +37,61 @@ public static class GetNodesInSolution
 			.ToList();
 		return files;
 	}
+
+	public static List<Folder> GetFoldersInProject(string projectPath)
+	{
+		var files = GetFilesInProject(projectPath);
+		var rootDirectoryOfProject = new DirectoryInfo(Path.GetDirectoryName(projectPath)!);
+
+		var grouped = files.GroupBy(s => s.Directory!.FullName);
+		var folders = grouped.Select(s => new Folder
+		{
+			Name = Path.GetFileName(s.Key),
+			FullName = s.Key,
+			ParentFolder = null,
+			Files = s.Select(f => new MyFile
+			{
+				Name = f.Name
+			}).ToList()
+		}).ToList();
+
+		foreach (var folder in folders)
+		{
+			var directoryInfo = new DirectoryInfo(folder.FullName);
+			if (directoryInfo.FullName == rootDirectoryOfProject.FullName) continue;
+
+			var parent = directoryInfo.Parent;
+			try
+			{
+				var parentFolder = folders.SingleOrDefault(f => f.FullName == parent!.FullName);
+				folder.ParentFolder = parentFolder;
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
+		}
+
+		return folders;
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -13,7 +13,7 @@
 	return;
 }
 
-<MudTreeView T="ProjectInSolution">
+<MudTreeView T="ProjectInSolution" Dense="true">
 	@foreach(var project in _rootNodes)
 	{
 		@GetProjectFragment(project)
@@ -34,18 +34,23 @@
 				 {
 					 @GetProjectFragment(child)
 				 }
-				 @GetFolderFragment(project)
+				 @GetFolderFragment(_folders.GetValueOrDefault(project.ProjectGuid, []))
 			 </MudTreeViewItem>
 		 </text>;
 
-	private RenderFragment GetFolderFragment(ProjectInSolution project) =>
+	private RenderFragment GetFolderFragment(List<Folder> folders) =>
 		@<text>
-			 @foreach (var folder in _folders.GetValueOrDefault(project.ProjectGuid, []))
+			 @foreach (var folder in folders.Where(s => s.ParentFolder is null))
 			 {
-				 <MudTreeViewItem Value="folder" Text="@folder.Name">
+				 <MudTreeViewItem T="ProjectInSolution" Text="@folder.Name">
+					@GetFolderFragment(folders.Where(s => s.ParentFolder == folder).ToList())
+					@foreach(var file in folder.Files)
+					{
+					 <MudTreeViewItem T="ProjectInSolution" Text="@file.Name" />
+					}
 				 </MudTreeViewItem>
 			 }
-		 </text>;
+	</text>;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -55,7 +60,12 @@
 		var rootNodes = solutionFile.ProjectsByGuid.Values.Where(p => p.ParentProjectGuid == null).OrderBy(s => s.ProjectName).ToList();
 		_rootNodes = rootNodes;
 
-
+		var folders2 = _solutionFile.ProjectsByGuid.Values
+			.Where(s => s.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat)
+			.Take(2)
+			.Select(s => (s, GetNodesInSolution.GetFoldersInProject(s.AbsolutePath)))
+			.ToDictionary(s => s.s.ProjectGuid, s => s.Item2);
+		_folders = folders2;
 	}
 
 }
