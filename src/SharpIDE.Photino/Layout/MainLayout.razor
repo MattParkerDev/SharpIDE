@@ -1,12 +1,8 @@
-﻿@using Microsoft.Build.Construction
-@using Microsoft.Build.Definition
-@using Microsoft.Build.Execution
-@using Microsoft.Build.Framework
-@using Microsoft.Build.Logging
-@using SharpIDE.Application.Features.SolutionDiscovery
+﻿@using SharpIDE.Application.Features.Build
 @inherits LayoutComponentBase
 
 @inject IDialogService DialogService
+@inject BuildService BuildService
 
 <MudLayout>
 	<MudAppBar Dense="true">
@@ -49,28 +45,6 @@
 		var solutionFilePath = (string)result.Data!;
 		_solutionFilePath = solutionFilePath;
 
-		var buildParameters = new BuildParameters
-		{
-			Loggers =
-			[
-				//new BinaryLogger { Parameters = "msbuild.binlog" },
-				new ConsoleLogger(LoggerVerbosity.Quiet),
-			],
-		};
-		// var solutionFile = GetNodesInSolution.ParseSolutionFileFromPath(_solutionFilePath);
-		// ArgumentNullException.ThrowIfNull(solutionFile);
-		// var projects = GetNodesInSolution.GetCSharpProjectObjectsFromSolutionFile(solutionFile);
-		// var projectRoot = projects.First();
-		// var buildRequest = new BuildRequestData(
-		// 	ProjectInstance.FromProjectRootElement(projectRoot, new ProjectOptions()),
-		// 	targetsToBuild: ["Restore", "Build"]);
-		var buildRequest = new BuildRequestData(projectFullPath : _solutionFilePath,
-			globalProperties: new Dictionary<string, string?>(),
-			toolsVersion: null,
-			targetsToBuild: ["Restore", "Build"],
-			hostServices: null,
-			flags: BuildRequestDataFlags.None);
-		var result2 = BuildManager.DefaultBuildManager.Build(buildParameters, buildRequest);
-		Console.WriteLine(result2.OverallResult);
+		await BuildService.BuildSolutionAsync(_solutionFilePath);
 	}
 }
