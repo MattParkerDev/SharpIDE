@@ -1,19 +1,21 @@
 ﻿namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
-public class SharpIdeSolutionModel
+public interface ISharpIdeNode;
+
+public class SharpIdeSolutionModel : ISharpIdeNode
 {
 	public required string Name { get; set; }
 	public required string FilePath { get; set; }
 	public required List<SharpIdeProjectModel> Projects { get; set; }
 	public required List<SharpIdeSolutionFolder> Folders { get; set; }
 }
-public class SharpIdeSolutionFolder
+public class SharpIdeSolutionFolder : ISharpIdeNode
 {
 	public required string Name { get; set; }
 	public required List<SharpIdeSolutionFolder> Folders { get; set; }
 	public required List<SharpIdeProjectModel> Projects { get; set; }
 }
-public class SharpIdeProjectModel
+public class SharpIdeProjectModel : ISharpIdeNode
 {
 	public required string Name { get; set; }
 	public required string FilePath { get; set; }

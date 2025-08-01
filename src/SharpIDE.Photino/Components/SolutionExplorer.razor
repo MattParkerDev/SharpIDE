@@ -5,18 +5,24 @@
 {
 	return;
 }
-<MudTreeView T="SharpIdeSolutionModel" Dense="true">
-	<MudTreeViewItem TextTypo="Typo.body2" Expanded="true" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Primary" Value="@SolutionModel" Text="@SolutionModel.Name">
-		<MudTreeView Dense="true">
-			@foreach (var folder in SolutionModel.Folders)
-			{
-				@GetSolutionFolderFragment(folder)
-			}
-			@foreach(var project in SolutionModel.Projects)
-			{
-				@GetProjectFragment(project)
-			}
-		</MudTreeView>
+<style>
+	.mud-collapse-entering{
+		transition-duration: 0.0s !important;
+	}
+	.mud-collapse-exiting{
+		transition-duration: 0.0s !important;
+	}
+</style>
+<MudTreeView T="ISharpIdeNode" Dense="true" ExpandOnClick="true">
+	<MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Expanded="true" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Primary" Value="@SolutionModel" Text="@SolutionModel.Name">
+		@foreach (var folder in SolutionModel.Folders)
+		{
+			@GetSolutionFolderFragment(folder)
+		}
+		@foreach(var project in SolutionModel.Projects)
+		{
+			@GetProjectFragment(project)
+		}
 	</MudTreeViewItem>
 </MudTreeView>
 
@@ -42,7 +48,7 @@
 
 	private RenderFragment GetSolutionFolderFragment(SharpIdeSolutionFolder slnFolder) =>
 		@<text>
-			 <MudTreeViewItem TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Primary" Value="@slnFolder" Text="@slnFolder.Name">
+			 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Primary" Value="@slnFolder" Text="@slnFolder.Name">
 				 @foreach(var childFolder in slnFolder.Folders)
 				 {
 					 @GetSolutionFolderFragment(childFolder)
@@ -56,10 +62,10 @@
 
 	private RenderFragment GetProjectFragment(SharpIdeProjectModel project) =>
 		@<text>
-			 <MudTreeViewItem TextTypo="Typo.body2" Icon="@Icons.Custom.FileFormats.FileCode" IconColor="Color.Success" Text="@project.Name" Value="project">
+			 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Custom.FileFormats.FileCode" IconColor="Color.Success" Text="@project.Name" Value="project">
 				 @foreach (var folder in project.Folders)
 				 {
-					 <MudTreeViewItem TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Default" @bind-Expanded="folder.Expanded" Text="@folder.Name" Value="@folder">
+					 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Default" @bind-Expanded="folder.Expanded" Text="@folder.Name" Value="@folder">
 						 @GetFolderFragment(folder)
 					 </MudTreeViewItem>
 				 }
@@ -74,7 +80,7 @@
 		@<text>
 				 @foreach (var subFolder in folder.Folders)
 				 {
-					 <MudTreeViewItem TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Default" @bind-Expanded="subFolder.Expanded" Text="@subFolder.Name" Value="@subFolder">
+					 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Default" @bind-Expanded="subFolder.Expanded" Text="@subFolder.Name" Value="@subFolder">
 						 @if (subFolder.Expanded)
 						 {
 							 @GetFolderFragment(subFolder)
@@ -89,7 +95,7 @@
 
 	private RenderFragment GetFileFragment(SharpIdeFile file) =>
 		@<text>
-			 <MudTreeViewItem T="SharpIdeFile" Icon="@Icons.Custom.FileFormats.FileCode" TextTypo="Typo.body2" Text="@file.Name" Value="@file" OnClick="@(async () => await InvokeSelectedFileChanged(file))"/>
+			 <MudTreeViewItem T="ISharpIdeNode" Icon="@Icons.Custom.FileFormats.FileCode" TextTypo="Typo.body2" Text="@file.Name" Value="@file" OnClick="@(async () => await InvokeSelectedFileChanged(file))"/>
 		</text>;
 
 

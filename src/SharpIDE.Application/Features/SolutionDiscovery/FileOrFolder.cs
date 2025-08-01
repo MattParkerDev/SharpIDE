@@ -1,12 +1,14 @@
-﻿namespace SharpIDE.Application.Features.SolutionDiscovery;
+﻿using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
-public class SharpIdeFile
+namespace SharpIDE.Application.Features.SolutionDiscovery;
+
+public class SharpIdeFile : ISharpIdeNode
 {
 	public required string Path { get; set; }
 	public required string Name { get; set; }
 }
 
-public class SharpIdeFolder
+public class SharpIdeFolder : ISharpIdeNode
 {
 	public required string Path { get; set; }
 	public required string Name { get; set; }
