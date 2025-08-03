@@ -15,8 +15,7 @@ public static class BuildManagerExtensions
 		try
 		{
 			var tcs = new TaskCompletionSource<BuildResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-			await using var cancellationTokenRegistration = cancellationToken.Register(() => buildManager.CancelAllSubmissions());
-			cancellationTokenRegistration.ConfigureAwait(false);
+			await using var _ = cancellationToken.Register(() => buildManager.CancelAllSubmissions()).ConfigureAwait(false);
 
 			try
 			{
