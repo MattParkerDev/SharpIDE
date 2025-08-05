@@ -9,6 +9,7 @@
   <ItemGroup>
 <!-- If any Microsoft.Build.dll ends up in the output, it will be prioritised for loading by MSBuild Nodes  -->
     <PackageReference Include="Ardalis.GuardClauses" Version="5.0.0" />
+    <PackageReference Include="AsyncReadProcess" Version="1.0.0-preview4" />
     <PackageReference Include="Microsoft.Build" Version="17.14.8" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Framework" Version="17.14.8" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1" />

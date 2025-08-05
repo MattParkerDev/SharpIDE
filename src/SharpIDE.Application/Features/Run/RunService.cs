@@ -1,44 +1,46 @@
 ﻿using System.Diagnostics;
 using Ardalis.GuardClauses;
+using AsyncReadProcess.Common;
+using AsyncReadProcess;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.Run;
 
 public class RunService
 {
+	public HashSet<SharpIdeProjectModel> RunningProjects { get; } = [];
 	// TODO: optimise this Copilot junk
 	public async Task RunProject(SharpIdeProjectModel project)
 	{
 		Guard.Against.Null(project, nameof(project));
 		Guard.Against.NullOrWhiteSpace(project.FilePath, nameof(project.FilePath), "Project file path cannot be null or empty.");
 
-		var processStartInfo = new ProcessStartInfo
+		var processStartInfo = new ProcessStartInfo2
 		{
 			FileName = "dotnet",
-			Arguments = $"run --project \"{project.FilePath}\"",
-			UseShellExecute = false,
-			CreateNoWindow = true,
+			Arguments = $"run --project \"{project.FilePath}\" --no-build",
 			RedirectStandardOutput = true,
 			RedirectStandardError = true
 		};
 
-		using var process = new Process();
-		process.StartInfo = processStartInfo;
-
-		process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-		process.ErrorDataReceived += (sender, e) => Console.Error.WriteLine(e.Data);
+		await using var process = new AsyncReadProcess.Process2()
+		{
+			StartInfo = processStartInfo
+		};
 
 		process.Start();
 
-		process.BeginOutputReadLine();
-		process.BeginErrorReadLine();
+		_ = Task.Run(async () =>
+		{
+			await foreach(var log in process.CombinedOutputChannel.Reader.ReadAllAsync())
+			{
+				var logString = System.Text.Encoding.UTF8.GetString(log, 0, log.Length);
+				Console.Write(logString);
+			}
+		});
+
 
 		await process.WaitForExitAsync();
-
-		if (process.ExitCode != 0)
-		{
-			throw new InvalidOperationException($"Project run failed with exit code {process.ExitCode}.");
-		}
 
 		Console.WriteLine("Project ran successfully.");
 	}
