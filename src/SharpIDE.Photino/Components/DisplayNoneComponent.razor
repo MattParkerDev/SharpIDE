@@ -1,0 +1,13 @@
+﻿<div style="@GetStyle">
+	@ChildContent
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
+
+	[Parameter, EditorRequired]
+	public bool Visible { get; set; }
+
+	private string GetStyle => Visible ? "display: inherit" : "display: none";
+}

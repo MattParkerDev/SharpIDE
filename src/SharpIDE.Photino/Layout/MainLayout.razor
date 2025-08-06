@@ -18,10 +18,10 @@
 				<MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Inherit"/>
 			</MudButton>
 			<MudButtonGroup OverrideStyles="false">
-				<MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="@BuildSolution">Build</MudButton>
-				<MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="@RebuildSolution">Rebuild</MudButton>
-				<MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="@CleanSolution">Clean</MudButton>
-				<MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="@RestoreSolution">Restore</MudButton>
+				<MudButton Variant="Variant.Filled"   Size="Size.Small" Color="Color.Primary" Disabled="@IsRunningMsBuildJob()" OnClick="@BuildSolution">Build</MudButton>
+				<MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" Disabled="@IsRunningMsBuildJob()" OnClick="@RebuildSolution">Rebuild</MudButton>
+				<MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" Disabled="@IsRunningMsBuildJob()" OnClick="@CleanSolution">Clean</MudButton>
+				<MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" Disabled="@IsRunningMsBuildJob()" OnClick="@RestoreSolution">Restore</MudButton>
 			</MudButtonGroup>
 			<MudButton OnClick="@CancelBuild" Disabled="@(_cancellationTokenSource is null or { IsCancellationRequested: true })" Style="min-width: 20px;">
 				<MudIcon Disabled="@(_cancellationTokenSource is null or { IsCancellationRequested: true })" Icon="@Icons.Material.Filled.Cancel" Color="Color.Error"/>
@@ -73,12 +73,12 @@
 				<div>
 					@if (_solutionFilePath is not null && _selectedBottomPanel is not null)
 					{
-						@(_selectedBottomPanel switch
-						{
-							BottomPanelType.Run => @<RunPanel/>,
-							BottomPanelType.Build => @<TerminalOutputDisplay/>,
-							_ => throw new InvalidOperationException("Unknown bottom panel type")
-						})
+						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Run)">
+							<RunPanel />
+						</DisplayNoneComponent>
+						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Build)">
+							<TerminalOutputDisplay />
+						</DisplayNoneComponent>
 					}
 				</div>
 			</div>
@@ -161,6 +161,7 @@
 		_cancellationTokenSource = null;
 	}
 	private async Task CancelBuild() => await _cancellationTokenSource!.CancelAsync();
+	private bool IsRunningMsBuildJob() => _cancellationTokenSource is not null;
 
 	private async Task OpenSettingsDialog()
 	{
