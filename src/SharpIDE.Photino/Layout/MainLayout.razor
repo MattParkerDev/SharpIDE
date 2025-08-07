@@ -71,7 +71,7 @@
 					@if (_solutionFilePath is not null)
 					{
 						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Run)">
-							<RunPanel />
+							<RunPanel SolutionModel="@_solutionModel" />
 						</DisplayNoneComponent>
 						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Build)">
 							<TerminalOutputDisplay />

@@ -1,8 +1,19 @@
-﻿
+﻿@using SharpIDE.Application.Features.Run
+@using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence
+
+@inject RunService RunService
+
 <MudStack Style="height: 100%">
 	<MudText>Run</MudText>
+	@foreach(var projects in SolutionModel.AllProjects)
+	{
+		<MudButton OnClick="@(async () => await RunService.RunProject(projects))" Variant="Variant.Filled" Color="Color.Primary" Style="margin: 4px;">
+			<MudText>@projects.Name</MudText>
+		</MudButton>
+	}
 </MudStack>
 
 @code {
-
+	[Parameter, EditorRequired]
+	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 }

@@ -10,6 +10,7 @@ public class SharpIdeSolutionModel : ISharpIdeNode
 	public required string FilePath { get; set; }
 	public required List<SharpIdeProjectModel> Projects { get; set; }
 	public required List<SharpIdeSolutionFolder> Folders { get; set; }
+	public required List<SharpIdeProjectModel> AllProjects { get; set; }
 }
 public class SharpIdeSolutionFolder : ISharpIdeNode
 {
