@@ -1,4 +1,5 @@
 ﻿@using SharpIDE.Application.Features.Build
+@using SharpIDE.Application.Features.Events
 @using SharpIDE.Application.Features.SolutionDiscovery
 @using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence
 @using SharpIDE.Photino.Models
@@ -123,6 +124,14 @@
 	protected override async Task OnInitializedAsync()
 	{
 		await LoadSolutionFromInteractivePicker(AppState.IdeSettings.AutoOpenLastSolution);
+		GlobalEvents.StartedRunningProject += OnStartedRunningProject;
+	}
+
+	private async Task OnStartedRunningProject()
+	{
+		_selectedBottomPanel = BottomPanelType.Run;
+		_bottomDrawerOpen = true;
+		await InvokeAsync(StateHasChanged);
 	}
 
 	private async Task LoadSolutionFromInteractivePicker() => await LoadSolutionFromInteractivePicker(false);
