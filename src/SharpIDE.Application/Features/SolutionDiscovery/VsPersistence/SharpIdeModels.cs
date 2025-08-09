@@ -38,7 +38,7 @@ public class SharpIdeProjectModel : ISharpIdeNode
 
 	public bool IsRunnable => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly" || MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe";
 	public bool OpenInRunPanel { get; set; }
-	public Channel<string>? RunningOutputChannel { get; set; }
+	public Channel<byte[]>? RunningOutputChannel { get; set; }
 	public event Func<Task> ProjectStartedRunning = () => Task.CompletedTask;
 	public void InvokeProjectStartedRunning() => ProjectStartedRunning?.Invoke();
 }

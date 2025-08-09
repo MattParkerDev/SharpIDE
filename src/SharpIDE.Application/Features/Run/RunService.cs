@@ -39,7 +39,7 @@ public class RunService
 
 			process.Start();
 
-			project.RunningOutputChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+			project.RunningOutputChannel = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions
 			{
 				SingleReader = true,
 				SingleWriter = false,
@@ -49,9 +49,9 @@ public class RunService
 			{
 				await foreach(var log in process.CombinedOutputChannel.Reader.ReadAllAsync())
 				{
-					var logString = System.Text.Encoding.UTF8.GetString(log, 0, log.Length);
+					//var logString = System.Text.Encoding.UTF8.GetString(log, 0, log.Length);
 					//Console.Write(logString);
-					await project.RunningOutputChannel.Writer.WriteAsync(logString).ConfigureAwait(false);
+					await project.RunningOutputChannel.Writer.WriteAsync(log).ConfigureAwait(false);
 				}
 				project.RunningOutputChannel.Writer.Complete();
 				logsDrained.TrySetResult();

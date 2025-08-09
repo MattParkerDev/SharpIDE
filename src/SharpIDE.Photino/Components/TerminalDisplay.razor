@@ -31,6 +31,10 @@
 
 	private HashSet<string> _addons = ["addon-fit"];
 
+	public async Task Write(byte[] line)
+	{
+		await _terminalRef.Write(line);
+	}
 	public async Task Write(string line)
 	{
 		await _terminalRef.Write(line);
@@ -40,7 +44,7 @@
 	{
 		if (_terminalRef is not null)
 		{
-			await _terminalRef.Clear();
+			await _terminalRef.Reset();
 			await InvokeAsync(StateHasChanged);
 		}
 	}
