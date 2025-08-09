@@ -57,7 +57,7 @@
 				</MudStack>
 			</MudPaper>
 			<div>
-				<MudPaper Height="@MainContentHeight" Style="overflow:hidden; position:relative;">
+				<MudPaper Elevation="0" Height="@MainContentHeight" Style="overflow:hidden; position:relative;">
 					<MudDrawerContainer Style="height: 100%" Class="mud-height-full">
 						<MudDrawer @bind-Open="@_drawerOpen" Style="height: 100%" Width="400px" Fixed="false" Variant="@DrawerVariant.Persistent">
 							@if (_solutionFilePath is not null)
@@ -75,14 +75,14 @@
 						</div>
 					</MudDrawerContainer>
 				</MudPaper>
-				<div style="height: 30%">
+				<div class="mud-elevation-24" style="height: 30%; position:relative">
 					@if (_solutionFilePath is not null)
 					{
 						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Run)">
-							<RunPanel SolutionModel="@_solutionModel" />
+							<RunPanel SolutionModel="@_solutionModel"/>
 						</DisplayNoneComponent>
 						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Build)">
-							<TerminalOutputDisplay />
+							<TerminalOutputDisplay/>
 						</DisplayNoneComponent>
 					}
 				</div>
