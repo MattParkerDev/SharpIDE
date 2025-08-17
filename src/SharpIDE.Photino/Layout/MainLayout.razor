@@ -83,7 +83,7 @@
 					@if (_solutionFilePath is not null)
 					{
 						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Problems)">
-							<ProblemsPanel SolutionModel="@_solutionModel" />
+							<ProblemsPanel SolutionModel="@_solutionModel" @bind-SelectedFile="@_selectedFile" />
 						</DisplayNoneComponent>
 						<DisplayNoneComponent Visible="@(_selectedBottomPanel is BottomPanelType.Run)">
 							<RunPanel SolutionModel="@_solutionModel"/>

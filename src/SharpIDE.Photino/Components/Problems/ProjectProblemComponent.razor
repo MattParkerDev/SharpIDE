@@ -1,6 +1,7 @@
 ﻿@using System.Collections.Immutable
 @using Microsoft.CodeAnalysis
 @using SharpIDE.Application.Features.Analysis
+@using SharpIDE.Application.Features.SolutionDiscovery
 @using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence
 
 @if (_diagnostics.Length is not 0)
@@ -24,6 +25,12 @@
 	[Parameter, EditorRequired]
 	public SharpIdeProjectModel ProjectModel { get; set; } = null!;
 
+	[Parameter, EditorRequired]
+	public SharpIdeFile SelectedFile { get; set; } = null!;
+
+	[Parameter]
+	public EventCallback<SharpIdeFile> SelectedFileChanged { get; set; }
+
 	private ImmutableArray<Diagnostic> _diagnostics = [];
 
 	private static Color GetDiagnosticIconColour(Diagnostic diagnostic) => diagnostic.Severity switch
@@ -36,7 +43,12 @@
 
 	private async Task OpenDocumentContainingDiagnostic(Diagnostic diagnostic)
 	{
+		// TODO: probably store a flat list of all files in each project to avoid recursion
+		var file = ProjectModel.Files
+			.Concat(ProjectModel.Folders.SelectMany(f => f.GetAllFiles()))
+			.Single(s => s.Path == diagnostic.Location.SourceTree?.GetMappedLineSpan(diagnostic.Location.SourceSpan).Path);
 
+		await SelectedFileChanged.InvokeAsync(file);
 	}
 
 	protected override async Task OnInitializedAsync()
@@ -44,5 +56,4 @@
 		var diagnostics = await RoslynAnalysis.GetProjectDiagnostics(ProjectModel);
 		_diagnostics = diagnostics;
 	}
-
 }

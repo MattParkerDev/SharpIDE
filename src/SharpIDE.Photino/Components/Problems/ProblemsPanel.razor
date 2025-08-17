@@ -1,9 +1,11 @@
-﻿@using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence
+﻿@using SharpIDE.Application.Features.SolutionDiscovery
+@using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence
+
 <MudStack Style="height: 100%">
 	<MudTreeView T="string" Dense="true" ExpandOnClick="true">
 		@foreach (var project in SolutionModel.AllProjects)
 		{
-			<ProjectProblemComponent ProjectModel="@project"/>
+			<ProjectProblemComponent ProjectModel="@project" SelectedFile="@SelectedFile" SelectedFileChanged="@SelectedFileChanged"/>
 		}
 	</MudTreeView>
 </MudStack>
@@ -11,4 +13,10 @@
 @code {
 	[Parameter, EditorRequired]
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
+
+	[Parameter, EditorRequired]
+	public SharpIdeFile SelectedFile { get; set; } = null!;
+
+	[Parameter]
+	public EventCallback<SharpIdeFile> SelectedFileChanged { get; set; }
 }

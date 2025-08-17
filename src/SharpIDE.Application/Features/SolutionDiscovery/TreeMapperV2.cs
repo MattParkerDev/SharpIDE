@@ -4,6 +4,11 @@ namespace SharpIDE.Application.Features.SolutionDiscovery;
 
 public static class TreeMapperV2
 {
+	public static IEnumerable<SharpIdeFile> GetAllFiles(this SharpIdeFolder folder)
+	{
+		return folder.Files
+			.Concat(folder.Folders.SelectMany(sub => sub.GetAllFiles()));
+	}
 	public static List<SharpIdeFolder> GetSubFolders(string csprojectPath)
 	{
 		var projectDirectory = Path.GetDirectoryName(csprojectPath)!;
