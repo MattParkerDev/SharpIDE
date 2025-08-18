@@ -127,7 +127,7 @@ public static class RoslynAnalysis
 		return diagnostics;
 	}
 
-	public static async Task<ImmutableArray<Diagnostic>> GetDocumentDiagnostics(SharpIdeFile fileModel)
+	public static async Task<ImmutableArray<(FileLinePositionSpan fileSpan, Diagnostic diagnostic)>> GetDocumentDiagnostics(SharpIdeFile fileModel)
 	{
 		await _solutionLoadedTcs.Task;
 		var cancellationToken = CancellationToken.None;
@@ -141,7 +141,8 @@ public static class RoslynAnalysis
 
 		var diagnostics = semanticModel.GetDiagnostics(cancellationToken: cancellationToken);
 		diagnostics = diagnostics.Where(d => d.Severity is not DiagnosticSeverity.Hidden).ToImmutableArray();
-		return diagnostics;
+		var result = diagnostics.Select(d => (semanticModel.SyntaxTree.GetMappedLineSpan(d.Location.SourceSpan), d)).ToImmutableArray();
+		return result;
 	}
 
 	public static async Task<IEnumerable<(FileLinePositionSpan fileSpan, ClassifiedSpan classifiedSpan)>> GetDocumentSyntaxHighlighting(SharpIdeFile fileModel)
@@ -161,12 +162,14 @@ public static class RoslynAnalysis
 		return result;
 	}
 
-	public static async Task<ImmutableArray<CodeAction>> GetCodeFixesAsync(Diagnostic diagnostic)
+	public static async Task<ImmutableArray<(FileLinePositionSpan fileSpan, CodeAction codeAction)>> GetCodeFixesAsync(Diagnostic diagnostic)
 	{
 		var cancellationToken = CancellationToken.None;
 		var document = _workspace!.CurrentSolution.GetDocument(diagnostic.Location.SourceTree);
 		Guard.Against.Null(document, nameof(document));
-		var result = await GetCodeFixesAsync(document, diagnostic);
+		var codeActions = await GetCodeFixesAsync(document, diagnostic);
+		var result = codeActions.Select(action => (diagnostic.Location.SourceTree!.GetMappedLineSpan(diagnostic.Location.SourceSpan), action))
+			.ToImmutableArray();
 		return result;
 	}
 	private static async Task<ImmutableArray<CodeAction>> GetCodeFixesAsync(Document document, Diagnostic diagnostic)

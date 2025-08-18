@@ -61,6 +61,11 @@ code_completion_enabled = true
 auto_brace_completion_enabled = true
 script = ExtResource("2_qjf5e")
 
+[node name="CodeFixesMenu" type="PopupMenu" parent="VBoxContainer/HBoxContainer/HSplitContainer/SharpIdeCodeEdit"]
+item_count = 1
+item_0/text = "Getting Context Actions..."
+item_0/id = 0
+
 [node name="OpenSolutionDialog" type="FileDialog" parent="."]
 unique_name_in_owner = true
 title = "Open a File"

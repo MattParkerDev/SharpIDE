@@ -1,8 +1,14 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Godot;
+using Microsoft.Build.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Classification;
+using Microsoft.CodeAnalysis.Text;
+using SharpIDE.Application.Features.Analysis;
+using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot;
 
@@ -16,12 +22,17 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private int _selectionEndCol;
 	
 	private CustomHighlighter _syntaxHighlighter = new();
+	private PopupMenu _popupMenu = null!;
 
-	private ImmutableArray<Diagnostic> _diagnostics = [];
+	private ImmutableArray<(FileLinePositionSpan fileSpan, Diagnostic diagnostic)> _diagnostics = [];
 	
 	public override void _Ready()
 	{
-		//AddThemeFontOverride("Cascadia Code", ResourceLoader.Load<Font>("res://CascadiaCode.ttf"));
+		_popupMenu = GetNode<PopupMenu>("CodeFixesMenu");
+		_popupMenu.IdPressed += (id) =>
+		{
+			GD.Print($"Code fix selected: {id}");
+		};
 		this.CodeCompletionRequested += OnCodeCompletionRequested;
 		this.CodeFixesRequested += OnCodeFixesRequested;
 		this.CaretChanged += () =>
@@ -67,14 +78,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public override void _Draw()
 	{
 		UnderlineRange(_currentLine, _selectionStartCol, _selectionEndCol, new Color(1, 0, 0));
-		foreach (var diagnostic in _diagnostics)
+		foreach (var (fileSpan, diagnostic) in _diagnostics)
 		{
 			if (diagnostic.Location.IsInSource)
 			{
-				var mappedLineSpan = (diagnostic.Location.SourceTree?.GetMappedLineSpan(diagnostic.Location.SourceSpan))!.Value;
-				var line = mappedLineSpan.StartLinePosition.Line;
-				var startCol = mappedLineSpan.StartLinePosition.Character;
-				var endCol = mappedLineSpan.EndLinePosition.Character;
+				var line = fileSpan.StartLinePosition.Line;
+				var startCol = fileSpan.StartLinePosition.Character;
+				var endCol = fileSpan.EndLinePosition.Character;
 				var color = diagnostic.Severity switch
 				{
 					DiagnosticSeverity.Error => new Color(1, 0, 0),
@@ -86,7 +96,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 	}
 
-	public void ProvideDiagnostics(ImmutableArray<Diagnostic> diagnostics)
+	public override void _UnhandledKeyInput(InputEvent @event)
+	{
+		if (@event.IsActionPressed(InputStringNames.CodeFixes))
+		{
+			EmitSignalCodeFixesRequested();
+		}
+	}
+
+	public void ProvideDiagnostics(ImmutableArray<(FileLinePositionSpan fileSpan, Diagnostic diagnostic)> diagnostics)
 	{
 		_diagnostics = diagnostics;
 	}
@@ -105,13 +123,50 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	private void OnCodeFixesRequested()
 	{
-		GD.Print("Code fixes requested");
+		var (caretLine, caretColumn) = GetCaretPosition();
+		var test = GetCaretDrawPos();
+		_popupMenu.Position = new Vector2I((int)test.X, (int)test.Y);
+		_popupMenu.Clear();
+		_popupMenu.AddItem("Getting Context Actions...", 0);
+		_popupMenu.Popup();
+		GD.Print($"Code fixes requested at line {caretLine}, column {caretColumn}");
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				var linePos = new LinePosition(caretLine, caretColumn);
+				var diagnostic = _diagnostics.FirstOrDefault(d =>
+					d.fileSpan.StartLinePosition <= linePos && d.fileSpan.EndLinePosition >= linePos);
+				if (diagnostic is (_, null)) return;
+				var codeActions = await RoslynAnalysis.GetCodeFixesAsync(diagnostic.diagnostic);
+				Callable.From(() =>
+				{
+					_popupMenu.Clear();
+					foreach (var (index, (fileSpan, codeAction)) in codeActions.Index())
+					{
+						_popupMenu.AddItem(codeAction.Title, index);
+						//_popupMenu.SetItemMetadata(menuItem, codeAction);
+					}
+					GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
+				}).CallDeferred();
+			}
+			catch (Exception ex)
+			{
+				GD.Print(ex);
+			}
+		});
 	}
 
 	private void OnCodeCompletionRequested()
 	{
+		var (caretLine, caretColumn) = GetCaretPosition();
+		GD.Print($"Code completion requested at line {caretLine}, column {caretColumn}");
+	}
+	
+	private (int, int) GetCaretPosition()
+	{
 		var caretColumn = GetCaretColumn();
 		var caretLine = GetCaretLine();
-		GD.Print($"Code completion requested at line {caretLine}, column {caretColumn}");
+		return (caretLine, caretColumn);
 	}
 }
