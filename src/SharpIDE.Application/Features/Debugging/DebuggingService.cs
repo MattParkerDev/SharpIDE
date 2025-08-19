@@ -4,8 +4,6 @@ using OmniSharp.Extensions.DebugAdapter.Client;
 using OmniSharp.Extensions.DebugAdapter.Protocol.Events;
 using OmniSharp.Extensions.DebugAdapter.Protocol.Models;
 using OmniSharp.Extensions.DebugAdapter.Protocol.Requests;
-using OmniSharp.Extensions.DebugAdapter.Server;
-using OmniSharp.Extensions.JsonRpc.Client;
 
 namespace SharpIDE.Application.Features.Debugging;
 
