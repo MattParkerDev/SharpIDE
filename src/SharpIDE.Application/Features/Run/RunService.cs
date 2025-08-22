@@ -17,7 +17,7 @@ public class RunService
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
 		var semaphoreSlim = _projectLocks.GetOrAdd(project, new SemaphoreSlim(1, 1));
-		var waitResult = await semaphoreSlim.WaitAsync(0);
+		var waitResult = await semaphoreSlim.WaitAsync(0).ConfigureAwait(false);
 		if (waitResult is false) throw new InvalidOperationException($"Project {project.Name} is already running.");
 		if (project.RunningCancellationTokenSource is not null) throw new InvalidOperationException($"Project {project.Name} is already running with a cancellation token source.");
 
@@ -48,7 +48,7 @@ public class RunService
 			var logsDrained = new TaskCompletionSource();
 			_ = Task.Run(async () =>
 			{
-				await foreach(var log in process.CombinedOutputChannel.Reader.ReadAllAsync())
+				await foreach(var log in process.CombinedOutputChannel.Reader.ReadAllAsync().ConfigureAwait(false))
 				{
 					//var logString = System.Text.Encoding.UTF8.GetString(log, 0, log.Length);
 					//Console.Write(logString);
@@ -67,10 +67,10 @@ public class RunService
 			if (project.RunningCancellationTokenSource.IsCancellationRequested)
 			{
 				process.End();
-				await process.WaitForExitAsync();
+				await process.WaitForExitAsync().ConfigureAwait(false);
 			}
 
-			await logsDrained.Task;
+			await logsDrained.Task.ConfigureAwait(false);
 			project.RunningCancellationTokenSource.Dispose();
 			project.RunningCancellationTokenSource = null;
 			project.Running = false;
@@ -90,6 +90,6 @@ public class RunService
 		if (project.Running is false) throw new InvalidOperationException($"Project {project.Name} is not running.");
 		if (project.RunningCancellationTokenSource is null) throw new InvalidOperationException($"Project {project.Name} does not have a running cancellation token source.");
 
-		await project.RunningCancellationTokenSource.CancelAsync();
+		await project.RunningCancellationTokenSource.CancelAsync().ConfigureAwait(false);
 	}
 }
