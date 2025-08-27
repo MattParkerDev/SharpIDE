@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene load_steps=13 format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
 [ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
+[ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
 
 [sub_resource type="FontVariation" id="FontVariation_y3aoi"]
 base_font = ExtResource("2_rk34b")
@@ -153,10 +154,16 @@ script = ExtResource("7_i62lx")
 
 [node name="RunPanel" parent="VBoxContainer/HBoxContainer/VSplitContainer/BottomPanel" instance=ExtResource("5_y3aoi")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 
 [node name="BuildPanel" parent="VBoxContainer/HBoxContainer/VSplitContainer/BottomPanel" instance=ExtResource("9_rllbf")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="ProblemsPanel" parent="VBoxContainer/HBoxContainer/VSplitContainer/BottomPanel" instance=ExtResource("11_b7c1a")]
+unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="OpenSolutionDialog" type="FileDialog" parent="."]
