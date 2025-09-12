@@ -1,5 +1,6 @@
-[gd_scene load_steps=14 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene load_steps=16 format=3 uid="uid://b2oniigcp5ew5"]
 
+[ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
 [ext_resource type="Script" uid="uid://du2lt7r1p1qfy" path="res://SharpIdeCodeEdit.cs" id="2_qjf5e"]
@@ -12,6 +13,9 @@
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
 [ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
 [ext_resource type="PackedScene" uid="uid://dkjips8oudqou" path="res://Features/Debug_/DebugPanel.tscn" id="11_s2dv6"]
+
+[sub_resource type="Theme" id="Theme_s2dv6"]
+default_font = ExtResource("1_7ptyn")
 
 [sub_resource type="FontVariation" id="FontVariation_y3aoi"]
 base_font = ExtResource("2_rk34b")
@@ -26,6 +30,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = SubResource("Theme_s2dv6")
 script = ExtResource("1_whawi")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
