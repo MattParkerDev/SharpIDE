@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene load_steps=16 format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
 [ext_resource type="Texture2D" uid="uid://do0edciarrnp0" path="res://Features/SolutionExplorer/Resources/CsharpFile.svg" id="6_7ptyn"]
 [ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
+[ext_resource type="Texture2D" uid="uid://xc8srvqwlwng" path="res://Features/SolutionExplorer/Resources/FolderIcon.svg" id="7_woo5i"]
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
 [ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
 [ext_resource type="PackedScene" uid="uid://dkjips8oudqou" path="res://Features/Debug_/DebugPanel.tscn" id="11_s2dv6"]
@@ -121,6 +122,7 @@ unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("2_tcy02")
 CsharpFileIcon = ExtResource("6_7ptyn")
+FolderIcon = ExtResource("7_woo5i")
 
 [node name="Tree" type="Tree" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer/SolutionExplorerPanel"]
 layout_mode = 1

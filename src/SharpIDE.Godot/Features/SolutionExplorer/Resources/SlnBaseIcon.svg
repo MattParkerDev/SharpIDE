@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24">
+    <image href="CsharpFile.svg" x="0" y="0" width="10" height="10" />
+    <!-- Outer equilateral triangle -->
+    <polygon points="12,4 22,20 2,20"
+             fill="#9333ea"/>
+    <!-- Smaller inner equilateral triangle -->
+    <polygon points="12,7 19,18.5 5,18.5"
+             fill="#c084fc"/>
+</svg>
