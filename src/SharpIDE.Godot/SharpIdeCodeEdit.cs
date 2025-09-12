@@ -121,6 +121,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			var syntaxHighlighting = await RoslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
 			var diagnostics = await RoslynAnalysis.GetDocumentDiagnostics(_currentFile);
+			await RoslynAnalysis.UpdateSolutionDiagnostics();
 			Callable.From(() =>
 			{
 				SetSyntaxHighlightingModel(syntaxHighlighting);
