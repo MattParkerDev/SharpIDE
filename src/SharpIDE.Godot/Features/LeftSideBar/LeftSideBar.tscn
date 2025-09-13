@@ -34,6 +34,7 @@ size_flags_horizontal = 4
 
 [node name="SlnExplorerButton" type="Button" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 13
@@ -50,6 +51,7 @@ size_flags_vertical = 3
 
 [node name="ProblemsButton" type="Button" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 13
@@ -63,6 +65,7 @@ expand_icon = true
 
 [node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 13
@@ -76,6 +79,7 @@ expand_icon = true
 
 [node name="DebugButton" type="Button" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 13
@@ -89,6 +93,7 @@ expand_icon = true
 
 [node name="BuildButton" type="Button" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 13
