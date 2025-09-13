@@ -4,7 +4,7 @@ using SharpIDE.Godot.Features.Problems;
 
 namespace SharpIDE.Godot.Features.BottomPanel;
 
-public partial class BottomPanelManager : MarginContainer
+public partial class BottomPanelManager : Panel
 {
     public SharpIdeSolutionModel? Solution
     {

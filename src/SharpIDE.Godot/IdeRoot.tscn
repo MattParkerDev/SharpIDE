@@ -110,7 +110,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
-split_offset = -175
+split_offset = 402
 script = ExtResource("3_0ybuf")
 metadata/_custom_type_script = "uid://kvnhndc3l6ih"
 
@@ -148,7 +148,7 @@ item_count = 1
 item_0/text = "Getting Context Actions..."
 item_0/id = 0
 
-[node name="BottomPanel" type="MarginContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer"]
+[node name="BottomPanel" type="Panel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("7_i62lx")
@@ -156,21 +156,21 @@ script = ExtResource("7_i62lx")
 [node name="ProblemsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("11_b7c1a")]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
+layout_mode = 1
 
 [node name="RunPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("5_y3aoi")]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 1
 
 [node name="DebugPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("11_s2dv6")]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
+layout_mode = 1
 
 [node name="BuildPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("9_rllbf")]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
+layout_mode = 1
 
 [node name="OpenSolutionDialog" type="FileDialog" parent="."]
 unique_name_in_owner = true

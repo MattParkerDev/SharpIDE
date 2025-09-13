@@ -1,9 +1,11 @@
-[gd_scene load_steps=5 format=3 uid="uid://tqpmww430cor"]
+[gd_scene load_steps=6 format=3 uid="uid://tqpmww430cor"]
 
 [ext_resource type="Script" uid="uid://b1r3no4u3khik" path="res://Features/Problems/ProblemsPanel.cs" id="1_bnenc"]
 [ext_resource type="Texture2D" uid="uid://pd3h5qfjn8pb" path="res://Features/Problems/Resources/Warning.svg" id="2_xj8le"]
 [ext_resource type="Texture2D" uid="uid://rvuk8jybyu6m" path="res://Features/Problems/Resources/Error.svg" id="3_sap6e"]
 [ext_resource type="Texture2D" uid="uid://cqt30ma6xgder" path="res://Features/SolutionExplorer/Resources/Csproj.svg" id="4_wqdox"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wqdox"]
 
 [node name="ProblemsPanel" type="Control"]
 layout_mode = 3
@@ -29,4 +31,5 @@ grow_vertical = 2
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxEmpty_wqdox")
 hide_root = true

@@ -7,7 +7,7 @@ namespace SharpIDE.Godot.Features.Run;
 public partial class RunPanel : Control
 {
 	private TabBar _tabBar = null!;
-	private Panel _tabsPanel = null!;
+	private MarginContainer _tabsPanel = null!;
 	
 	[Export]
 	public Texture2D RunningIcon { get; set; } = null!;
@@ -20,7 +20,7 @@ public partial class RunPanel : Control
 		_tabBar.ClearTabs();
 		//_tabBar.TabClosePressed
 		_tabBar.TabClicked += OnTabBarTabClicked;
-		_tabsPanel = GetNode<Panel>("%TabsPanel");
+		_tabsPanel = GetNode<MarginContainer>("%TabsPanel");
 		GlobalEvents.ProjectStartedRunning += async projectModel =>
 		{
 			await this.InvokeAsync(() => ProjectStartedRunning(projectModel));

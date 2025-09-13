@@ -62,7 +62,7 @@ tab_close_display_policy = 2
 tab_count = 1
 tab_0/title = "WebApi"
 
-[node name="TabsPanel" type="Panel" parent="VBoxContainer"]
+[node name="TabsPanel" type="MarginContainer" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3

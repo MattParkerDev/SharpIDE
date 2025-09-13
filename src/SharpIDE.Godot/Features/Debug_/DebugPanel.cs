@@ -8,7 +8,7 @@ namespace SharpIDE.Godot.Features.Debug_;
 public partial class DebugPanel : Control
 {
     private TabBar _tabBar = null!;
-	private Panel _tabsPanel = null!;
+	private MarginContainer _tabsPanel = null!;
 	
 	[Export]
 	public Texture2D RunningIcon { get; set; } = null!;
@@ -21,7 +21,7 @@ public partial class DebugPanel : Control
 		_tabBar.ClearTabs();
 		//_tabBar.TabClosePressed
 		_tabBar.TabClicked += OnTabBarTabClicked;
-		_tabsPanel = GetNode<Panel>("%TabsPanel");
+		_tabsPanel = GetNode<MarginContainer>("%TabsPanel");
 		GlobalEvents.ProjectStartedDebugging += async projectModel =>
 		{
 			await this.InvokeAsync(() => ProjectStartedDebugging(projectModel));
