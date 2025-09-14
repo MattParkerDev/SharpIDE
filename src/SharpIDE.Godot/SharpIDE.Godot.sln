@@ -6,6 +6,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpIDE.Application", "..\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpIDE.Photino", "..\SharpIDE.Photino\SharpIDE.Photino.csproj", "{DFF170D9-D92E-4DB7-83B5-19640EAF79D2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E33CF95D-DEAB-4CAC-9931-FC3ADCBA54C0}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\.editorconfig = ..\..\.editorconfig
+		..\..\.gitattributes = ..\..\.gitattributes
+		..\..\.gitignore = ..\..\.gitignore
+		..\..\Directory.Build.props = ..\..\Directory.Build.props
+		..\..\global.json = ..\..\global.json
+		..\..\nuget.config = ..\..\nuget.config
+		..\..\README.md = ..\..\README.md
+		..\..\Directory.Packages.props = ..\..\Directory.Packages.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpIDE.RazorAccess", "..\SharpIDE.RazorAccess\SharpIDE.RazorAccess.csproj", "{614547C3-6620-4F37-B0A9-AA78A4293EB4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 	Debug|Any CPU = Debug|Any CPU
@@ -31,5 +45,11 @@ Global
 		{DFF170D9-D92E-4DB7-83B5-19640EAF79D2}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
 		{DFF170D9-D92E-4DB7-83B5-19640EAF79D2}.ExportRelease|Any CPU.ActiveCfg = Debug|Any CPU
 		{DFF170D9-D92E-4DB7-83B5-19640EAF79D2}.ExportRelease|Any CPU.Build.0 = Debug|Any CPU
+		{614547C3-6620-4F37-B0A9-AA78A4293EB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{614547C3-6620-4F37-B0A9-AA78A4293EB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{614547C3-6620-4F37-B0A9-AA78A4293EB4}.ExportDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{614547C3-6620-4F37-B0A9-AA78A4293EB4}.ExportDebug|Any CPU.Build.0 = Debug|Any CPU
+		{614547C3-6620-4F37-B0A9-AA78A4293EB4}.ExportRelease|Any CPU.ActiveCfg = Debug|Any CPU
+		{614547C3-6620-4F37-B0A9-AA78A4293EB4}.ExportRelease|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType> <!-- Doesn't actually mean Windows Exe, 'Exe' = console entrypoint, 'WinExe' = application entry point -->
@@ -18,13 +18,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ardalis.GuardClauses" Version="5.0.0" />
-		<PackageReference Include="BlazorMonaco" Version="3.3.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Components" Version="10.0.0-rc.1.25451.107" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0-rc.1.25451.107" />
-		<PackageReference Include="MudBlazor" Version="8.12.0" />
-		<PackageReference Include="Photino.Blazor" Version="4.0.13" />
-		<PackageReference Include="XtermBlazor" Version="2.1.2" />
+		<PackageReference Include="Ardalis.GuardClauses" />
+		<PackageReference Include="BlazorMonaco" />
+		<PackageReference Include="Microsoft.AspNetCore.Components" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" />
+		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="Photino.Blazor" />
+		<PackageReference Include="XtermBlazor" />
 	</ItemGroup>
 
 	<ItemGroup>

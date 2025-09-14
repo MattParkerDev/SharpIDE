@@ -1,0 +1,47 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Ardalis.GuardClauses" Version="5.0.0" />
+    <PackageVersion Include="AsyncReadProcess" Version="1.0.0-preview15" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.2" />
+    <PackageVersion Include="BlazorMonaco" Version="3.3.0" />
+    <PackageVersion Include="CliWrap" Version="3.9.0" />
+    <PackageVersion Include="ClrDebug" Version="0.3.4" />
+    <PackageVersion Include="Krafs.Publicizer" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.0-rc.1.25451.107" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.0-rc.1.25451.107" />
+    <PackageVersion Include="Microsoft.Build" Version="17.15.0-preview-25462-116" />
+    <PackageVersion Include="Microsoft.Build.Framework" Version="17.15.0-preview-25462-116" />
+    <PackageVersion Include="Microsoft.Build.Locator" Version="1.9.1" />
+    <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="17.15.0-preview-25462-116" />
+    <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="17.15.0-preview-25462-116" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.0.0-2.25462.116" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0-2.25462.116" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Features" Version="5.0.0-2.25462.116" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0-2.25462.116" />
+    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Razor.Utilities.Shared" Version="10.0.0-preview.25429.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Features" Version="5.0.0-2.25462.116" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Razor.Compiler" Version="10.0.0-preview.25429.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Razor.Workspaces" Version="10.0.0-preview.25429.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0-2.25462.116" />
+    <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.645901" />
+    <PackageVersion Include="Microsoft.DotNet.Arcade.Sdk" Version="9.0.0-beta.24372.7" />
+    <PackageVersion Include="Microsoft.Net.Compilers.Razor.Toolset" Version="10.0.0-preview.25429.2" />
+    <PackageVersion Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" Version="18.0.10427.1" />
+    <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
+    <PackageVersion Include="MudBlazor" Version="8.12.0" />
+    <PackageVersion Include="NuGet.Protocol" Version="7.0.0-preview.1.46008" />
+    <PackageVersion Include="ObservableCollections" Version="3.3.4" />
+    <PackageVersion Include="ObservableCollections.R3" Version="3.3.4" />
+    <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
+    <PackageVersion Include="R3" Version="1.3.0" />
+    <PackageVersion Include="XtermBlazor" Version="2.1.2" />
+  </ItemGroup>
+	<ItemGroup Label="Pinned Transitive Dependencies">
+		<PackageVersion Include="Microsoft.CodeAnalysis.ExternalAccess.Razor.Features" Version="5.0.0-2.25462.116" />
+	</ItemGroup>
+</Project>

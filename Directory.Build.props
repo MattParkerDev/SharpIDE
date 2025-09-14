@@ -2,5 +2,6 @@
 	<PropertyGroup>
 		<!--		<TreatWarningsAsErrors Condition="'$(Configuration)' != 'Debug'">true</TreatWarningsAsErrors>-->
 		<UseArtifactsOutput>true</UseArtifactsOutput>
+		<Features>$(Features);use-roslyn-tokenizer=true</Features> <!-- idk if this does anything lol -->
 	</PropertyGroup>
 </Project>

@@ -2,20 +2,85 @@
 using Godot.Collections;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Classification;
+using SharpIDE.RazorAccess;
 
 namespace SharpIDE.Godot;
 
 public partial class CustomHighlighter : SyntaxHighlighter
 {
-    public IEnumerable<(FileLinePositionSpan fileSpan, ClassifiedSpan classifiedSpan)> ClassifiedSpans = [];
+    private readonly Dictionary _emptyDict = new();
+    public HashSet<(FileLinePositionSpan fileSpan, ClassifiedSpan classifiedSpan)> ClassifiedSpans = [];
+    public HashSet<SharpIdeRazorClassifiedSpan> RazorClassifiedSpans = [];
     public override Dictionary _GetLineSyntaxHighlighting(int line)
     {
-        var highlights = MapClassifiedSpansToHighlights(line);
+        var highlights = (ClassifiedSpans, RazorClassifiedSpans) switch
+        {
+            ({ Count: 0 }, { Count: 0 }) => _emptyDict,
+            ({ Count: > 0 }, _) => MapClassifiedSpansToHighlights(line),
+            (_, { Count: > 0 }) => MapRazorClassifiedSpansToHighlights(line),
+            _ => throw new NotImplementedException("Both ClassifiedSpans and RazorClassifiedSpans are set. This is not supported yet.")
+        };
 
         return highlights;
     }
     
     private static readonly StringName ColorStringName = "color";
+    private Dictionary MapRazorClassifiedSpansToHighlights(int line)
+    {
+        var highlights = new Dictionary();
+
+        // Filter spans on the given line, ignore empty spans
+        var spansForLine = RazorClassifiedSpans
+            .Where(s => s.Span.LineIndex == line && s.Span.Length is not 0)
+            .GroupBy(s => s.Span)
+            .ToList();
+
+        foreach (var razorSpanGrouping in spansForLine)
+        {
+            var spans = razorSpanGrouping.ToList();
+            if (spans.Count > 2) throw new NotImplementedException("More than 2 classified spans is not supported yet.");
+            if (spans.Count is not 1)
+            {
+                if (spans.Any(s => s.Kind is SharpIdeRazorSpanKind.Code))
+                {
+                    spans = spans.Where(s => s.Kind is SharpIdeRazorSpanKind.Code).ToList();
+                }
+                if (spans.Count is not 1)
+                {
+                    SharpIdeRazorClassifiedSpan? staticClassifiedSpan = spans.FirstOrDefault(s => s.CodeClassificationType == ClassificationTypeNames.StaticSymbol);
+                    if (staticClassifiedSpan is not null) spans.Remove(staticClassifiedSpan.Value);
+                }
+            }
+            var razorSpan = spans.Single();
+            
+            int columnIndex = razorSpan.Span.CharacterIndex;
+            
+            var highlightInfo = new Dictionary
+            {
+                { ColorStringName, GetColorForRazorSpanKind(razorSpan.Kind, razorSpan.CodeClassificationType) }
+            };
+
+            highlights[columnIndex] = highlightInfo;
+        }
+
+        return highlights;
+    }
+    
+    private static Color GetColorForRazorSpanKind(SharpIdeRazorSpanKind kind, string? codeClassificationType)
+    {
+        return kind switch
+        {
+            SharpIdeRazorSpanKind.Code => GetColorForClassification(codeClassificationType!),
+            SharpIdeRazorSpanKind.Comment => new Color("57a64a"), // green
+            SharpIdeRazorSpanKind.MetaCode => new Color("a699e6"), // purple
+            SharpIdeRazorSpanKind.Markup => new Color("0b7f7f"), // dark green
+            SharpIdeRazorSpanKind.Transition => new Color("a699e6"), // purple
+            SharpIdeRazorSpanKind.None => new Color("dcdcdc"),
+            _ => new Color("dcdcdc")
+        };
+    }
+
+    
     private Dictionary MapClassifiedSpansToHighlights(int line)
     {
         var highlights = new Dictionary();

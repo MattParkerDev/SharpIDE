@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyName>Microsoft.CodeAnalysis.Razor.Test</AssemblyName>
+    <KeyOriginatorFile>$(PkgMicrosoft_DotNet_Arcade_Sdk)\tools\snk\AspNetCore.snk</KeyOriginatorFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+    <PackageReference Include="Microsoft.DotNet.Arcade.Sdk" PrivateAssets="all" IncludeAssets="none" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Net.Compilers.Razor.Toolset" PrivateAssets="all" IncludeAssets="none" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.AspNetCore.Razor.Utilities.Shared" PrivateAssets="all" IncludeAssets="none" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" PrivateAssets="all" IncludeAssets="none" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Razor.Compiler" PrivateAssets="all" IncludeAssets="none" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Razor.Workspaces" PrivateAssets="all" IncludeAssets="none" GeneratePathProperty="true" />
+    <PackageReference Include="Krafs.Publicizer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+<!--    <Reference Include="$(PkgMicrosoft_Net_Compilers_Razor_Toolset)\source-generators\Microsoft.CodeAnalysis.Razor.Compiler.dll" />-->
+    <Reference Aliases="WorkspaceAlias" Include="$(PkgMicrosoft_CodeAnalysis_Razor_Workspaces)\lib\net9.0\Microsoft.CodeAnalysis.Razor.Workspaces.dll" />
+    <Reference Include="$(PkgMicrosoft_CodeAnalysis_Razor_Compiler)\lib\net9.0\Microsoft.CodeAnalysis.Razor.Compiler.dll" />
+    <Reference Include="$(PkgMicrosoft_AspNetCore_Razor_Utilities_Shared)\lib\net9.0\Microsoft.AspNetCore.Razor.Utilities.Shared.dll" />
+    <Reference Include="$(PkgMicrosoft_Extensions_ObjectPool)\lib\net8.0\Microsoft.Extensions.ObjectPool.dll" />
+  </ItemGroup>
+
+    <ItemGroup>
+      <Publicize Include="Microsoft.CodeAnalysis.Razor.Workspaces" />
+    </ItemGroup>
+</Project>

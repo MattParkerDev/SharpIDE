@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Ardalis.GuardClauses;
 using Microsoft.CodeAnalysis;
@@ -12,9 +11,9 @@ using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.CodeAnalysis.Text;
 using NuGet.Packaging;
-using ObservableCollections;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.RazorAccess;
 
 namespace SharpIDE.Application.Features.Analysis;
 
@@ -137,7 +136,8 @@ public static class RoslynAnalysis
 		await _solutionLoadedTcs.Task;
 		var cancellationToken = CancellationToken.None;
 		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == ((IChildSharpIdeNode)fileModel).GetNearestProjectNode()!.FilePath);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		var document = project.Documents.SingleOrDefault(s => s.FilePath == fileModel.Path);
+		if (document is null) return [];
 		//var document = _workspace!.CurrentSolution.GetDocument(fileModel.Path);
 		Guard.Against.Null(document, nameof(document));
 
@@ -150,11 +150,80 @@ public static class RoslynAnalysis
 		return result;
 	}
 
+	public record SharpIdeRazorMappedClassifiedSpan(SharpIdeRazorSourceSpan SourceSpanInRazor, string CsharpClassificationType);
+	public static async Task<IEnumerable<SharpIdeRazorClassifiedSpan>> GetRazorDocumentSyntaxHighlighting(SharpIdeFile fileModel)
+	{
+		await _solutionLoadedTcs.Task;
+		var cancellationToken = CancellationToken.None;
+		var sharpIdeProjectModel = ((IChildSharpIdeNode) fileModel).GetNearestProjectNode()!;
+		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == sharpIdeProjectModel!.FilePath);
+		if (!fileModel.Name.EndsWith(".razor", StringComparison.OrdinalIgnoreCase))
+		{
+			return [];
+			//throw new InvalidOperationException("File is not a .razor file");
+		}
+
+		var importsFile = sharpIdeProjectModel.Files.Single(s => s.Name.Equals("_Imports.razor", StringComparison.OrdinalIgnoreCase));
+
+		var razorDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var importsDocument = project.AdditionalDocuments.Single(s => s.FilePath == importsFile.Path);
+
+		var razorText = await razorDocument.GetTextAsync(cancellationToken);
+		var importsText = await importsDocument.GetTextAsync(cancellationToken);
+		var (razorSpans, razorGeneratedSourceText, sourceMappings) = RazorAccessors.GetClassifiedSpans(razorText, importsText, razorDocument.FilePath!, Path.GetDirectoryName(project.FilePath!)!);
+
+		var razorGeneratedDocument = project.AddDocument(fileModel.Name + ".g.cs", razorGeneratedSourceText);
+		var razorSyntaxTree = await razorGeneratedDocument.GetSyntaxTreeAsync(cancellationToken);
+		var razorSyntaxRoot = await razorSyntaxTree!.GetRootAsync(cancellationToken);
+		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(razorGeneratedDocument, razorSyntaxRoot.FullSpan, cancellationToken);
+		var roslynMappedSpans = classifiedSpans.Select(s =>
+		{
+			var genSpan = s.TextSpan;
+			var mapping = sourceMappings.SingleOrDefault(m => m.GeneratedSpan.AsTextSpan().IntersectsWith(genSpan));
+			if (mapping != null)
+			{
+				// Translate generated span back to Razor span
+				var offset = genSpan.Start - mapping.GeneratedSpan.AbsoluteIndex;
+				var mappedStart = mapping.OriginalSpan.AbsoluteIndex + offset;
+				var mappedSpan = new TextSpan(mappedStart, genSpan.Length);
+				var sharpIdeSpan = new SharpIdeRazorSourceSpan(
+					mapping.OriginalSpan.FilePath,
+					mappedSpan.Start,
+					razorText.Lines.GetLineFromPosition(mappedSpan.Start).LineNumber,
+					mappedSpan.Start - razorText.Lines.GetLineFromPosition(mappedSpan.Start).Start,
+					mappedSpan.Length,
+					1,
+					mappedSpan.Start - razorText.Lines.GetLineFromPosition(mappedSpan.Start).Start + mappedSpan.Length
+				);
+
+				return new SharpIdeRazorMappedClassifiedSpan(
+					sharpIdeSpan,
+					s.ClassificationType
+				);
+			}
+
+			return null;
+		}).Where(s => s is not null).ToList();
+
+		razorSpans = [..razorSpans.Where(s => s.Kind is not SharpIdeRazorSpanKind.Code), ..roslynMappedSpans
+			.Select(s => new SharpIdeRazorClassifiedSpan(s!.SourceSpanInRazor, SharpIdeRazorSpanKind.Code, s.CsharpClassificationType))
+		];
+		razorSpans = razorSpans.OrderBy(s => s.Span.AbsoluteIndex).ToImmutableArray();
+
+		return razorSpans;
+	}
+
 	public static async Task<IEnumerable<(FileLinePositionSpan fileSpan, ClassifiedSpan classifiedSpan)>> GetDocumentSyntaxHighlighting(SharpIdeFile fileModel)
 	{
 		await _solutionLoadedTcs.Task;
 		var cancellationToken = CancellationToken.None;
 		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == ((IChildSharpIdeNode)fileModel).GetNearestProjectNode()!.FilePath);
+		if (fileModel.Name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) is false)
+		{
+			//throw new InvalidOperationException("File is not a .cs");
+			return [];
+		}
+
 		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
 		Guard.Against.Null(document, nameof(document));
 
@@ -300,11 +369,18 @@ public static class RoslynAnalysis
 		Guard.Against.NullOrEmpty(newContent, nameof(newContent));
 
 		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == ((IChildSharpIdeNode)fileModel).GetNearestProjectNode()!.FilePath);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
-		Guard.Against.Null(document, nameof(document));
-
-		//var updatedDocument = document.WithText(SourceText.From(newContent));
-		var newSolution = _workspace.CurrentSolution.WithDocumentText(document.Id, SourceText.From(newContent));
-		_workspace.TryApplyChanges(newSolution);
+		if (fileModel.IsRazorFile)
+		{
+			var razorDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+			var newSolution = _workspace.CurrentSolution.WithAdditionalDocumentText(razorDocument.Id, SourceText.From(newContent));
+			_workspace.TryApplyChanges(newSolution);
+		}
+		else
+		{
+			var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+			Guard.Against.Null(document, nameof(document));
+			var newSolution = _workspace.CurrentSolution.WithDocumentText(document.Id, SourceText.From(newContent));
+			_workspace.TryApplyChanges(newSolution);
+		}
 	}
 }

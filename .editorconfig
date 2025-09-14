@@ -16,6 +16,8 @@ csharp_space_after_cast = true
 csharp_space_before_colon_in_inheritance_clause = true
 csharp_space_after_colon_in_inheritance_clause = true
 csharp_place_attribute_on_same_line = false
+dotnet_analyzer_diagnostic.category-ApiDesign.severity = none
+dotnet_analyzer_diagnostic.category-RoslynDiagnosticsMaintainability.severity = suggestion
 
 [*.csproj]
 indent_style = space

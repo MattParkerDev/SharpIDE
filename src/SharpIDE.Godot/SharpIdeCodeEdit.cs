@@ -10,6 +10,7 @@ using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.RazorAccess;
 using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot;
@@ -120,12 +121,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_ = Task.GodotRun(async () =>
 		{
 			var syntaxHighlighting = RoslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
+			var razorSyntaxHighlighting = RoslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
 			var diagnostics = RoslynAnalysis.GetDocumentDiagnostics(_currentFile);
 			var slnDiagnostics = RoslynAnalysis.UpdateSolutionDiagnostics();
-			await Task.WhenAll(syntaxHighlighting, diagnostics);
+			await Task.WhenAll(syntaxHighlighting, razorSyntaxHighlighting, diagnostics);
 			Callable.From(() =>
 			{
-				SetSyntaxHighlightingModel(syntaxHighlighting.Result);
+				SetSyntaxHighlightingModel(syntaxHighlighting.Result, razorSyntaxHighlighting.Result);
 				SetDiagnosticsModel(diagnostics.Result);
 			}).CallDeferred();
 			await slnDiagnostics;
@@ -144,12 +146,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			await RoslynAnalysis.ApplyCodeActionAsync(codeAction);
 			var fileContents = await File.ReadAllTextAsync(_currentFile.Path);
 			var syntaxHighlighting = await RoslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
+			var razorSyntaxHighlighting = await RoslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
 			var diagnostics = await RoslynAnalysis.GetDocumentDiagnostics(_currentFile);
 			Callable.From(() =>
 			{
 				BeginComplexOperation();
 				SetText(fileContents);
-				SetSyntaxHighlightingModel(syntaxHighlighting);
+				SetSyntaxHighlightingModel(syntaxHighlighting, razorSyntaxHighlighting);
 				SetDiagnosticsModel(diagnostics);
 				SetCaretLine(currentCaretPosition.line);
 				SetCaretColumn(currentCaretPosition.col);
@@ -167,7 +170,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SetText(fileContents);
 		_fileChangingSuppressBreakpointToggleEvent = false;
 		var syntaxHighlighting = await RoslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
-		SetSyntaxHighlightingModel(syntaxHighlighting);
+		var razorSyntaxHighlighting = await RoslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
+		SetSyntaxHighlightingModel(syntaxHighlighting, razorSyntaxHighlighting);
 		var diagnostics = await RoslynAnalysis.GetDocumentDiagnostics(_currentFile);
 		SetDiagnosticsModel(diagnostics);
 	}
@@ -273,9 +277,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_diagnostics = diagnostics;
 	}
 
-	private void SetSyntaxHighlightingModel(IEnumerable<(FileLinePositionSpan fileSpan, ClassifiedSpan classifiedSpan)> classifiedSpans)
+	private void SetSyntaxHighlightingModel(IEnumerable<(FileLinePositionSpan fileSpan, ClassifiedSpan classifiedSpan)> classifiedSpans, IEnumerable<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
 	{
-		_syntaxHighlighter.ClassifiedSpans = classifiedSpans;
+		_syntaxHighlighter.ClassifiedSpans = classifiedSpans.ToHashSet();
+		_syntaxHighlighter.RazorClassifiedSpans = razorClassifiedSpans.ToHashSet();
 		Callable.From(() =>
 		{
 			_syntaxHighlighter.ClearHighlightingCache();
