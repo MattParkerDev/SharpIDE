@@ -63,7 +63,7 @@ public class DebuggingService
 		});
 		debugProtocolHost.RegisterClientRequestType<HandshakeRequest, HandshakeArguments, HandshakeResponse>(responder =>
 		{
-			var signatureResponse = VsSigner.Sign(responder.Arguments.Value);
+			var signatureResponse = DebuggerHandshakeSigner.Sign(responder.Arguments.Value);
 			responder.SetResponse(new HandshakeResponse(signatureResponse));
 		});
 		debugProtocolHost.RegisterEventType<StoppedEvent>(async void (@event) =>

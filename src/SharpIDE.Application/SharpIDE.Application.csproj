@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CliWrap" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
     <!-- If any Microsoft.Build.*.dll (Excluding Locator) ends up in the output, it will be prioritised for loading by MSBuild Nodes  -->
