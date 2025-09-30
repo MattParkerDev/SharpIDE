@@ -10,6 +10,11 @@ public partial class SlnPicker : Control
 
     private readonly TaskCompletionSource<string?> _tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    public override void _ExitTree()
+    {
+        if (!_tcs.Task.IsCompleted) _tcs.SetResult(null);
+    }
+
     public override void _Ready()
     {
         _fileDialog = GetNode<FileDialog>("%FileDialog");
