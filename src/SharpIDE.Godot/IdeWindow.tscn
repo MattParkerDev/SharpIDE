@@ -16,5 +16,4 @@ oversampling_override = 1.0
 title = "Open Solution"
 initial_position = 2
 visible = false
-wrap_controls = true
 popup_window = true

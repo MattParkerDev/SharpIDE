@@ -35,9 +35,10 @@ public static class RoslynAnalysis
 	private static SharpIdeSolutionModel? _sharpIdeSolutionModel;
 	private static HashSet<CodeFixProvider> _codeFixProviders = [];
 	private static HashSet<CodeRefactoringProvider> _codeRefactoringProviders = [];
-	private static TaskCompletionSource _solutionLoadedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+	private static TaskCompletionSource _solutionLoadedTcs = null!;
 	public static void StartSolutionAnalysis(SharpIdeSolutionModel solutionModel)
 	{
+		_solutionLoadedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		_ = Task.Run(async () =>
 		{
 			try

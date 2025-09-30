@@ -72,6 +72,10 @@ public partial class IdeWindow : Control
                     RemoveChild(_ideRoot);
                     _ideRoot.QueueFree();
                 }
+                else
+                { 
+                    GetWindow().Mode = Window.ModeEnum.Maximized;
+                }
                 _ideRoot = ideRoot;
                 AddChild(ideRoot);
             });
