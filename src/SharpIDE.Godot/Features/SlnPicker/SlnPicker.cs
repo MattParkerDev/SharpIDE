@@ -37,6 +37,7 @@ public partial class SlnPicker : Control
         {
             var node = _previousSlnEntryScene.Instantiate<PreviousSlnEntry>();
             node.RecentSln = previousSln;
+            node.Clicked = path => _tcs.SetResult(path);
             _previousSlnsVBoxContainer.AddChild(node);
         }
     }
