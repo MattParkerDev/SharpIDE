@@ -3,7 +3,7 @@
 
 <svg
    version="1.0"
-   width="526.36401"
+   width="526.36395"
    height="477.03693"
    id="svg2"
    sodipodi:docname="SharpIdeV2.svg"
@@ -21,9 +21,9 @@
      inkscape:pageopacity="0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#505050"
-     inkscape:zoom="0.21622897"
-     inkscape:cx="-883.32291"
-     inkscape:cy="-62.433818"
+     inkscape:zoom="1.2231758"
+     inkscape:cx="143.88774"
+     inkscape:cy="176.99828"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
@@ -33,7 +33,7 @@
   <defs
      id="defs4" />
   <g
-     transform="translate(-91.423882,-253.5866)"
+     transform="translate(-91.423889,-253.5866)"
      id="layer1">
     <path
        d="m 312.32408,254.29303 185.55359,330.25875 -206.2649,0.11485 -39.56378,70.71366 365.21799,0.057 L 394.46457,254.0866 Z"
@@ -41,7 +41,7 @@
        id="path3214" />
     <path
        d="M 312.31392,254.26591 91.923882,655.37223 132.32998,728.10322 315.16759,396.77318 417.193,584.66155 h 80.8122 z"
-       style="display:inline;fill:#be51f6;fill-opacity:0.45895523;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1"
+       style="display:inline;fill:#be51f6;fill-opacity:0.458955;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1"
        id="path4185" />
     <path
        d="m 315.20979,396.83568 40.29125,74.21925 -103.62832,184.37916 365.41516,0.18957 -38.47047,74.49986 -446.47101,-2.04687 z"

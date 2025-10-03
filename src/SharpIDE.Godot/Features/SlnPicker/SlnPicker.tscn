@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://cwvhbsd1mdl2x"]
 
 [ext_resource type="Script" uid="uid://bjvwb6jg6jpsi" path="res://Features/SlnPicker/SlnPicker.cs" id="1_ciq0g"]
-[ext_resource type="Texture2D" uid="uid://dckpauolo55fo" path="res://Resources/SharpIde.png" id="2_qs47j"]
+[ext_resource type="Texture2D" uid="uid://2widrto5grk7" path="res://Resources/SharpIdeV2.svg" id="2_qs47j"]
 [ext_resource type="PackedScene" uid="uid://x5lhwvh5dium" path="res://Features/SlnPicker/PreviousSlnEntry.tscn" id="2_t7l5q"]
 [ext_resource type="Script" uid="uid://but0p7xwpfxtg" path="res://Features/SlnPicker/AutoOpenLastSlnButton.cs" id="4_qs47j"]
 
