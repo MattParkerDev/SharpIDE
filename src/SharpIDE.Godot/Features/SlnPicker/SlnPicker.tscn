@@ -87,6 +87,7 @@ theme_override_constants/margin_bottom = 10
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="VSplitContainer/Panel/MarginContainer2"]
 layout_mode = 2
+theme_override_constants/separation = 6
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VSplitContainer/Panel/MarginContainer2/VBoxContainer2"]
 layout_mode = 2
