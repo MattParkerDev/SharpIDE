@@ -66,8 +66,25 @@ text = "Open Sln"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
-text = "Build
-"
+text = "Build"
+
+[node name="RebuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Rebuild"
+
+[node name="CleanSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Clean"
+
+[node name="RestoreSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+text = "Restore"
 
 [node name="Spacer" type="Control" parent="VBoxContainer/Panel/HBoxContainer"]
 layout_mode = 2

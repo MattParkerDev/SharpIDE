@@ -2,6 +2,7 @@ using Godot;
 using Microsoft.Build.Locator;
 using Microsoft.Extensions.Hosting;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
@@ -19,6 +20,9 @@ public partial class IdeRoot : Control
 	public IdeWindow IdeWindow { get; set; } = null!;
 	private Button _openSlnButton = null!;
 	private Button _buildSlnButton = null!;
+	private Button _rebuildSlnButton = null!;
+	private Button _cleanSlnButton = null!;
+	private Button _restoreSlnButton = null!;
 	private SearchWindow _searchWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
 	private SolutionExplorerPanel _solutionExplorerPanel = null!;
@@ -41,6 +45,9 @@ public partial class IdeRoot : Control
 	{
 		_openSlnButton = GetNode<Button>("%OpenSlnButton");
 		_buildSlnButton = GetNode<Button>("%BuildSlnButton");
+		_rebuildSlnButton = GetNode<Button>("%RebuildSlnButton");
+		_cleanSlnButton = GetNode<Button>("%CleanSlnButton");
+		_restoreSlnButton = GetNode<Button>("%RestoreSlnButton");
 		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
 		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
@@ -54,6 +61,9 @@ public partial class IdeRoot : Control
 		GodotGlobalEvents.Instance.FileSelected += OnSolutionExplorerPanelOnFileSelected;
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
 		_buildSlnButton.Pressed += OnBuildSlnButtonPressed;
+		_rebuildSlnButton.Pressed += OnRebuildSlnButtonPressed;
+		_cleanSlnButton.Pressed += OnCleanSlnButtonPressed;
+		_restoreSlnButton.Pressed += OnRestoreSlnButtonPressed;
 		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested += async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show));
 		_nodeReadyTcs.SetResult();
 	}
@@ -70,6 +80,21 @@ public partial class IdeRoot : Control
 	{
 		GodotGlobalEvents.Instance.InvokeBottomPanelTabExternallySelected(BottomPanelType.Build);
 		await Singletons.BuildService.MsBuildSolutionAsync(_solutionExplorerPanel.SolutionModel.FilePath);
+	}
+	private async void OnRebuildSlnButtonPressed()
+	{
+		GodotGlobalEvents.Instance.InvokeBottomPanelTabExternallySelected(BottomPanelType.Build);
+		await Singletons.BuildService.MsBuildSolutionAsync(_solutionExplorerPanel.SolutionModel.FilePath, BuildType.Rebuild);
+	}
+	private async void OnCleanSlnButtonPressed()
+	{
+		GodotGlobalEvents.Instance.InvokeBottomPanelTabExternallySelected(BottomPanelType.Build);
+		await Singletons.BuildService.MsBuildSolutionAsync(_solutionExplorerPanel.SolutionModel.FilePath, BuildType.Clean);
+	}
+	private async void OnRestoreSlnButtonPressed()
+	{
+		GodotGlobalEvents.Instance.InvokeBottomPanelTabExternallySelected(BottomPanelType.Build);
+		await Singletons.BuildService.MsBuildSolutionAsync(_solutionExplorerPanel.SolutionModel.FilePath, BuildType.Restore);
 	}
 
 	private async Task OnSolutionExplorerPanelOnFileSelected(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
