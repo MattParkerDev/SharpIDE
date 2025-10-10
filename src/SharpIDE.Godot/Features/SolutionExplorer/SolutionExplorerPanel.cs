@@ -37,7 +37,44 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (sharpIdeFileContainer is null) return;
 		var sharpIdeFile = sharpIdeFileContainer.Item;
 		Guard.Against.Null(sharpIdeFile, nameof(sharpIdeFile));
-		GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(sharpIdeFile, null);
+		
+		if (mouseButtonIndex is (int)MouseButtonMask.Left)
+		{
+			GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(sharpIdeFile, null);
+		}
+		else if (mouseButtonIndex is (int)MouseButtonMask.Right)
+		{
+			var menu = new PopupMenu();
+			AddChild(menu);
+			menu.AddItem("Open", 0);
+			menu.AddItem("Reveal in File Explorer", 1);
+			menu.AddSeparator();
+			menu.AddItem("Copy Full Path", 2);
+			menu.PopupHide += () =>
+			{
+				GD.Print("QueueFree menu");
+				menu.QueueFree();
+			};
+			menu.IdPressed += id =>
+			{
+				if (id is 0)
+				{
+					GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(sharpIdeFile, null);
+				}
+				else if (id is 1)
+				{
+					OS.ShellOpen(Path.GetDirectoryName(sharpIdeFile.Path)!);
+				}
+				else if (id is 2)
+				{
+					DisplayServer.ClipboardSet(sharpIdeFile.Path);
+				}
+			};
+			
+			var globalMousePosition = GetGlobalMousePosition();
+			menu.Position = new Vector2I((int)globalMousePosition.X, (int)globalMousePosition.Y);
+			menu.Popup();
+		}
 	}
 	
 	private async Task OnFileExternallySelected(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)

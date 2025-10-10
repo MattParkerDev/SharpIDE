@@ -26,3 +26,4 @@ theme_override_colors/font_color = Color(0.830335, 0.830335, 0.830335, 1)
 theme_override_constants/v_separation = 1
 theme_override_constants/inner_item_margin_left = 2
 theme_override_constants/draw_guides = 0
+allow_rmb_select = true
