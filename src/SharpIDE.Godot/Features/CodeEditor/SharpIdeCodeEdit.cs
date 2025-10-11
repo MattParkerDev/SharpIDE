@@ -82,12 +82,62 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void OnSymbolValidate(string symbol)
 	{
 		GD.Print($"Symbol validating: {symbol}");
+		//var valid = symbol.Contains(' ') is false;
+		//SetSymbolLookupWordAsValid(valid);
 		SetSymbolLookupWordAsValid(true);
 	}
 
-	private void OnSymbolHovered(string symbol, long line, long column)
+	private async void OnSymbolHovered(string symbol, long line, long column)
 	{
-		GD.Print($"Symbol hovered: {symbol}");
+		if (HasFocus() is false) return; // only show if we have focus, every tab is currently listening for this event, maybe find a better way
+		GD.Print($"Symbol hovered: {symbol} at line {line}, column {column}");
+		
+		var roslynSymbol = await RoslynAnalysis.LookupSymbol(_currentFile, new LinePosition((int)line, (int)column));
+		if (roslynSymbol is null)
+		{
+			return;
+		}
+		
+		var popupPanel = new PopupPanel();
+		popupPanel.Unfocusable = true; // may need to change eventually for navigating to other symbols
+		popupPanel.MouseExited += () => popupPanel.QueueFree();
+		// set background color
+		
+		var styleBox = new StyleBoxFlat
+		{
+			BgColor = new Color("2b2d30"),
+			BorderColor = new Color("3e4045"),
+			BorderWidthTop = 1,
+			BorderWidthBottom = 1,
+			BorderWidthLeft = 1,
+			BorderWidthRight = 1,
+			CornerRadiusBottomLeft = 4,
+			CornerRadiusBottomRight = 4,
+			CornerRadiusTopLeft = 4,
+			CornerRadiusTopRight = 4,
+			ShadowSize = 2,
+			ShadowColor = new Color(0, 0, 0, 0.5f),
+			ContentMarginTop = 10,
+			ContentMarginBottom = 10,
+			ContentMarginLeft = 10,
+			ContentMarginRight = 10
+		};
+		popupPanel.AddThemeStyleboxOverride("panel", styleBox);
+		
+		var symbolInfoNode = roslynSymbol switch
+		{
+			IMethodSymbol methodSymbol => SymbolInfoComponents.GetMethodSymbolInfo(methodSymbol),
+			_ => new Control()
+		};
+		popupPanel.AddChild(symbolInfoNode);
+		AddChild(popupPanel);
+		
+		var globalSymbolPosition = GetRectAtLineColumn((int)line, (int)column).Position + GetGlobalPosition();
+		globalSymbolPosition.Y += GetLineHeight();
+		
+		var globalMousePosition = GetGlobalMousePosition();
+		popupPanel.Position = new Vector2I((int)globalMousePosition.X, (int)globalSymbolPosition.Y);
+		popupPanel.Popup();
 	}
 
 	private void OnCaretChanged()

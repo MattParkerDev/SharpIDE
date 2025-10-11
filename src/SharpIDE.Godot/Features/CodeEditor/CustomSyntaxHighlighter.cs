@@ -146,9 +146,9 @@ public partial class CustomHighlighter : SyntaxHighlighter
             "number" => CachedColors.NumberGreen,
 
             // Types (User Types)
-            "class name" => CachedColors.ClassBlue,
-            "record class name" => CachedColors.ClassBlue,
-            "struct name" => CachedColors.ClassBlue,
+            "class name" => CachedColors.ClassGreen,
+            "record class name" => CachedColors.ClassGreen,
+            "struct name" => CachedColors.ClassGreen,
             "interface name" => CachedColors.InterfaceGreen,
             "enum name" => CachedColors.InterfaceGreen,
             "namespace name" => CachedColors.White,
@@ -188,7 +188,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
     }
 }
 
-file static class CachedColors
+public static class CachedColors
 {
     public static readonly Color Orange = new("f27718");
     public static readonly Color White = new("dcdcdc");
@@ -198,7 +198,7 @@ file static class CachedColors
     public static readonly Color LightOrangeBrown = new("d69d85");
     public static readonly Color NumberGreen = new("b5cea8");
     public static readonly Color InterfaceGreen = new("b8d7a3");
-    public static readonly Color ClassBlue = new("4ec9b0");
+    public static readonly Color ClassGreen = new("4ec9b0");
     public static readonly Color VariableBlue = new("9cdcfe");
     public static readonly Color Gray = new("a9a9a9");
     

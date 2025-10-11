@@ -1,0 +1,9 @@
+[gd_resource type="FontVariation" load_steps=2 format=3 uid="uid://cctwlwcoycek7"]
+
+[ext_resource type="FontFile" uid="uid://7jc0nj310cu6" path="res://Features/CodeEditor/Resources/CascadiaCode.ttf" id="1_ba3y1"]
+
+[resource]
+base_font = ExtResource("1_ba3y1")
+spacing_top = 3
+spacing_bottom = 2
+baseline_offset = 0.05

@@ -14,8 +14,8 @@ using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Remote.Razor.ProjectSystem;
 using Microsoft.CodeAnalysis.Remote.Razor.SemanticTokens;
+using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.CodeAnalysis.Text;
-using NuGet.Packaging;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -474,6 +474,37 @@ public static class RoslynAnalysis
 			.ToListAsync(cancellationToken);
 
 		return changedFilesWithText;
+	}
+
+	public static async Task<ISymbol?> LookupSymbol(SharpIdeFile fileModel, LinePosition linePosition)
+	{
+		await _solutionLoadedTcs.Task;
+		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == ((IChildSharpIdeNode)fileModel).GetNearestProjectNode()!.FilePath);
+		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		Guard.Against.Null(document, nameof(document));
+		var sourceText = await document.GetTextAsync();
+		var position = sourceText.GetPosition(linePosition);
+		var semanticModel = await document.GetSemanticModelAsync();
+		Guard.Against.Null(semanticModel, nameof(semanticModel));
+		var syntaxRoot = await document.GetSyntaxRootAsync();
+		var node = syntaxRoot!.FindToken(position).Parent!;
+		var symbol = semanticModel.GetSymbolInfo(node).Symbol ?? semanticModel.GetDeclaredSymbol(node);
+
+		if (symbol is null)
+		{
+			Console.WriteLine("No symbol found at position");
+			return null;
+		}
+
+		var documentationCommentXml = symbol.GetDocumentationCommentXml();
+		if (documentationCommentXml is not null)
+		{
+			var comment = DocumentationComment.FromXmlFragment(documentationCommentXml);
+			;
+		}
+
+		Console.WriteLine($"Symbol found: {symbol.Name} ({symbol.Kind}) - {symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}");
+		return symbol;
 	}
 
 	public static void UpdateDocument(SharpIdeFile fileModel, string newContent)

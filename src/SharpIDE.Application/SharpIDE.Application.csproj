@@ -15,6 +15,8 @@
     <IgnoresAccessChecksTo Include="Microsoft.CodeAnalysis.LanguageServer.Protocol" />
     <IgnoresAccessChecksTo Include="Microsoft.CodeAnalysis.ExternalAccess.Razor.Features" />
     <IgnoresAccessChecksTo Include="Microsoft.CodeAnalysis.Razor.SemanticTokens" />
+    <IgnoresAccessChecksTo Include="Microsoft.CodeAnalysis.Workspaces" />
+    <IgnoresAccessChecksToExcludeTypeName Include="System.Linq.RoslynEnumerableExtensions" />
   </ItemGroup>
 
   <ItemGroup>
