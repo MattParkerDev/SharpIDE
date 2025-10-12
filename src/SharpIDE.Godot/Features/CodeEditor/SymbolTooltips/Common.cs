@@ -63,9 +63,10 @@ public static partial class SymbolInfoComponents
         }
     }
     
-    private static void AddAbstractModifier(this RichTextLabel label, ISymbol methodSymbol)
+    private static void AddAbstractModifier(this RichTextLabel label, ISymbol symbol)
     {
-        if (methodSymbol.IsAbstract)
+        if (symbol is INamedTypeSymbol { TypeKind: TypeKind.Interface }) return;
+        if (symbol.IsAbstract)
         {
             label.PushColor(CachedColors.KeywordBlue);
             label.AddText("abstract");
