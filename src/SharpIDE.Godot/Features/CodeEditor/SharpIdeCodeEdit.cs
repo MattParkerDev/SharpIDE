@@ -132,7 +132,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			IFieldSymbol fieldSymbol => SymbolInfoComponents.GetFieldSymbolInfo(fieldSymbol),
 			IParameterSymbol parameterSymbol => SymbolInfoComponents.GetParameterSymbolInfo(parameterSymbol),
 			ILocalSymbol localSymbol => SymbolInfoComponents.GetLocalVariableSymbolInfo(localSymbol),
-			_ => new Control()
+			_ => SymbolInfoComponents.GetUnknownTooltip(roslynSymbol)
 		};
 		popupPanel.AddChild(symbolInfoNode);
 		AddChild(popupPanel);
