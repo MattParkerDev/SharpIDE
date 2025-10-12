@@ -10,6 +10,7 @@ using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.RazorAccess;
 using Task = System.Threading.Tasks.Task;
+using Timer = Godot.Timer;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
@@ -98,16 +99,21 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			return;
 		}
 		
-		var popupPanel = new Window();
-		popupPanel.WrapControls = true;
-		popupPanel.Unresizable = true;
-		popupPanel.Transparent = true;
-		popupPanel.Borderless = true;
-		popupPanel.PopupWMHint = true;
-		popupPanel.MinimizeDisabled = true;
-		popupPanel.MaximizeDisabled = true;
+		var tooltipWindow = new Window();
+		tooltipWindow.WrapControls = true;
+		tooltipWindow.Unresizable = true;
+		tooltipWindow.Transparent = true;
+		tooltipWindow.Borderless = true;
+		tooltipWindow.PopupWMHint = true;
+		tooltipWindow.MinimizeDisabled = true;
+		tooltipWindow.MaximizeDisabled = true;
+		
+		var timer = new Timer { WaitTime = 0.5f, OneShot = true, Autostart = false };
+		tooltipWindow.AddChild(timer);
+		timer.Timeout += () => tooltipWindow.QueueFree();
 	
-		popupPanel.MouseExited += () => popupPanel.QueueFree();
+		tooltipWindow.MouseExited += () => timer.Start();
+		tooltipWindow.MouseEntered += () => timer.Stop();
 		
 		var styleBox = new StyleBoxFlat
 		{
@@ -150,16 +156,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		vboxContainer.AddThemeConstantOverride("separation", 0);
 		vboxContainer.AddChild(new Control { CustomMinimumSize = new Vector2I(0, GetLineHeight()) });
 		vboxContainer.AddChild(panel);
-		popupPanel.AddChild(vboxContainer);
-		popupPanel.ChildControlsChanged();
-		AddChild(popupPanel);
+		tooltipWindow.AddChild(vboxContainer);
+		tooltipWindow.ChildControlsChanged();
+		AddChild(tooltipWindow);
 		
 		var globalSymbolPosition = GetRectAtLineColumn((int)line, (int)column).Position + GetGlobalPosition();
 		
 		var globalMousePosition = GetGlobalMousePosition();
 		// -1 so that the mouse is inside the popup, otherwise the mouse exit event won't occur if the cursor moves away immediately
-		popupPanel.Position = new Vector2I((int)globalMousePosition.X - 1, (int)globalSymbolPosition.Y);
-		popupPanel.Popup();
+		tooltipWindow.Position = new Vector2I((int)globalMousePosition.X - 1, (int)globalSymbolPosition.Y);
+		tooltipWindow.Popup();
 	}
 
 	private void OnCaretChanged()
