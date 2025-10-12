@@ -13,9 +13,6 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetUnknownTooltip(ISymbol symbol)
     {
         var label = new RichTextLabel();
-        label.FitContent = true;
-        label.AutowrapMode = TextServer.AutowrapMode.Off;
-        label.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         label.PushColor(CachedColors.White);
         label.PushFont(MonospaceFont);
         label.AddText($"UNHANDLED SYMBOL TYPE: {symbol.GetType().Name} - please create an issue!");

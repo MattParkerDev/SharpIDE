@@ -183,6 +183,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			ILocalSymbol localSymbol => SymbolInfoComponents.GetLocalVariableSymbolInfo(localSymbol),
 			_ => SymbolInfoComponents.GetUnknownTooltip(roslynSymbol)
 		};
+		symbolInfoNode.FitContent = true;
+		symbolInfoNode.AutowrapMode = TextServer.AutowrapMode.Off;
+		symbolInfoNode.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		
 		panel.AddChild(symbolInfoNode);
 		var vboxContainer = new VBoxContainer();
 		vboxContainer.AddThemeConstantOverride("separation", 0);

@@ -8,9 +8,6 @@ public partial class SymbolInfoComponents
     public static RichTextLabel GetPropertySymbolInfo(IPropertySymbol symbol)
     {
         var label = new RichTextLabel();
-        label.FitContent = true;
-        label.AutowrapMode = TextServer.AutowrapMode.Off;
-        label.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         label.PushColor(CachedColors.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
