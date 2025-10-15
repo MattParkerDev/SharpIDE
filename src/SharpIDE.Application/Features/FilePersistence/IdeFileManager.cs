@@ -24,7 +24,7 @@ public class IdeFileManager
 	}
 
 	// Calling this assumes that the file is already open - may need to be revisited for code fixes and refactorings. I think all files involved in a multi-file fix/refactor shall just be saved to disk immediately.
-	public void UpdateFileTextInMemory(SharpIdeFile file, string newText)
+	public async Task UpdateFileTextInMemory(SharpIdeFile file, string newText)
 	{
 		if (!_openFiles.ContainsKey(file)) throw new InvalidOperationException("File is not open in memory.");
 
@@ -33,7 +33,7 @@ public class IdeFileManager
 		// Potentially should be event based?
 		if (file.IsRoslynWorkspaceFile)
 		{
-			RoslynAnalysis.UpdateDocument(file, newText);
+			await RoslynAnalysis.UpdateDocument(file, newText);
 		}
 	}
 
@@ -47,7 +47,7 @@ public class IdeFileManager
 		if (file.IsRoslynWorkspaceFile)
 		{
 			var text = await textTask;
-			RoslynAnalysis.UpdateDocument(file, text);
+			await RoslynAnalysis.UpdateDocument(file, text);
 		}
 	}
 
@@ -65,7 +65,7 @@ public class IdeFileManager
 	{
 		if (_openFiles.ContainsKey(file))
 		{
-			UpdateFileTextInMemory(file, newText);
+			await UpdateFileTextInMemory(file, newText);
 			await SaveFileAsync(file);
 		}
 		else

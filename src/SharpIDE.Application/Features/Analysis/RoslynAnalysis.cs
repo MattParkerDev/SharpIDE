@@ -603,10 +603,12 @@ public static class RoslynAnalysis
 	public static async Task<(ISymbol?, LinePositionSpan?)> LookupSymbol(SharpIdeFile fileModel, LinePosition linePosition)
 	{
 		await _solutionLoadedTcs.Task;
-		var (symbol, linePositionSpan) =
-			fileModel.IsRazorFile ? await LookupSymbolInRazor(fileModel, linePosition)
-			: fileModel.IsCsharpFile ? await LookupSymbolInCs(fileModel, linePosition)
-			: (null, null);
+		var (symbol, linePositionSpan) = fileModel switch
+		{
+			{ IsRazorFile: true } => await LookupSymbolInRazor(fileModel, linePosition),
+			{ IsCsharpFile: true } => await LookupSymbolInCs(fileModel, linePosition),
+			_ => (null, null)
+		};
 		return (symbol, linePositionSpan);
 	}
 
@@ -680,24 +682,37 @@ public static class RoslynAnalysis
 		return null;
 	}
 
-	public static void UpdateDocument(SharpIdeFile fileModel, string newContent)
+	public static async Task UpdateDocument(SharpIdeFile fileModel, string newContent)
 	{
 		Guard.Against.Null(fileModel, nameof(fileModel));
 		Guard.Against.NullOrEmpty(newContent, nameof(newContent));
 
 		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == ((IChildSharpIdeNode)fileModel).GetNearestProjectNode()!.FilePath);
-		if (fileModel.IsRazorFile)
+
+		var sourceText = SourceText.From(newContent);
+		var document = fileModel switch
 		{
-			var razorDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
-			var newSolution = _workspace.CurrentSolution.WithAdditionalDocumentText(razorDocument.Id, SourceText.From(newContent));
-			_workspace.TryApplyChanges(newSolution);
-		}
-		else
+			{ IsRazorFile: true } => project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path),
+			{ IsCsharpFile: true } => project.Documents.Single(s => s.FilePath == fileModel.Path),
+			_ => throw new InvalidOperationException("UpdateDocument failed: File is not in workspace")
+		};
+
+		var oldText = await document.GetTextAsync();
+
+		// Compute minimal text changes
+		var changes = sourceText.GetChangeRanges(oldText);
+		if (changes.Count == 0)
+			return; // No changes, nothing to apply
+
+		var newText = oldText.WithChanges(sourceText.GetTextChanges(oldText));
+
+		var newSolution = fileModel switch
 		{
-			var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
-			Guard.Against.Null(document, nameof(document));
-			var newSolution = _workspace.CurrentSolution.WithDocumentText(document.Id, SourceText.From(newContent));
-			_workspace.TryApplyChanges(newSolution);
-		}
+			{ IsRazorFile: true } => _workspace.CurrentSolution.WithAdditionalDocumentText(document.Id, newText),
+			{ IsCsharpFile: true } => _workspace.CurrentSolution.WithDocumentText(document.Id, newText),
+			_ => throw new ArgumentOutOfRangeException()
+		};
+
+		_workspace.TryApplyChanges(newSolution);
 	}
 }

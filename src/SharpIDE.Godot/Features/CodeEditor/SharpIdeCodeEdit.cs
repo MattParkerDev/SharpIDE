@@ -211,7 +211,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		_currentFile.IsDirty.Value = true;
-		Singletons.FileManager.UpdateFileTextInMemory(_currentFile, Text);
+		await Singletons.FileManager.UpdateFileTextInMemory(_currentFile, Text);
 		_ = Task.GodotRun(async () =>
 		{
 			var syntaxHighlighting = RoslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
