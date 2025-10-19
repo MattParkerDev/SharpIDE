@@ -24,7 +24,7 @@ public class IdeFileExternalChangeHandler
 		var sharpIdeFolder = SolutionModel.AllFolders.SingleOrDefault(f => f.Path == folderPath);
 		if (sharpIdeFolder is not null)
 		{
-			Console.WriteLine($"Error - Folder {folderPath} already exists");
+			//Console.WriteLine($"Error - Folder {folderPath} already exists");
 			return;
 		}
 		var containingFolderPath = Path.GetDirectoryName(folderPath)!;
@@ -34,7 +34,8 @@ public class IdeFileExternalChangeHandler
 			Console.WriteLine($"Error - Containing Folder of {folderPath} does not exist");
 			return;
 		}
-		await _sharpIdeSolutionModificationService.CreateDirectory(containingFolder, folderPath);
+		var folderName = Path.GetFileName(folderPath);
+		await _sharpIdeSolutionModificationService.AddDirectory(containingFolder, folderName);
 	}
 
 	private async Task OnFileCreated(string filePath)

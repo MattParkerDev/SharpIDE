@@ -44,6 +44,7 @@ public partial class IdeRoot : Control
 	[Inject] private readonly BuildService _buildService = null!;
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
     [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+    [Inject] private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = null!;
 
 	public override void _EnterTree()
 	{
@@ -141,6 +142,7 @@ public partial class IdeRoot : Control
 			_searchAllFilesWindow.Solution = solutionModel;
 			_fileExternalChangeHandler.SolutionModel = solutionModel;
 			_fileChangedService.SolutionModel = solutionModel;
+			_sharpIdeSolutionModificationService.SolutionModel = solutionModel;
 			Callable.From(_solutionExplorerPanel.BindToSolution).CallDeferred();
 			_roslynAnalysis.StartSolutionAnalysis(solutionModel);
 			_fileWatcher.StartWatching(solutionModel);
