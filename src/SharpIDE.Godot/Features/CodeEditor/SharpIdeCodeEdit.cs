@@ -116,6 +116,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public override void _ExitTree()
 	{
 		_currentFile?.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
+		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 	}
 
 	private void OnBreakpointToggled(long line)
