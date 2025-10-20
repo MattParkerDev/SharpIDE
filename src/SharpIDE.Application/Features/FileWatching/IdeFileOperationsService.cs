@@ -7,11 +7,11 @@ public class IdeFileOperationsService(SharpIdeSolutionModificationService sharpI
 {
 	private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = sharpIdeSolutionModificationService;
 
-	public async Task CreateDirectory(SharpIdeFolder parentFolder, string newDirectoryName)
+	public async Task CreateDirectory(IFolderOrProject parentNode, string newDirectoryName)
 	{
-		var newDirectoryPath = Path.Combine(parentFolder.Path, newDirectoryName);
+		var newDirectoryPath = Path.Combine(parentNode.ChildNodeBasePath, newDirectoryName);
 		Directory.CreateDirectory(newDirectoryPath);
-		var newFolder = await _sharpIdeSolutionModificationService.AddDirectory(parentFolder, newDirectoryName);
+		var newFolder = await _sharpIdeSolutionModificationService.AddDirectory(parentNode, newDirectoryName);
 	}
 
 	public async Task DeleteDirectory(SharpIdeFolder folder)

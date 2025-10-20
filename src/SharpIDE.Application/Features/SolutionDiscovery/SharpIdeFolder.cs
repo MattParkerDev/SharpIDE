@@ -9,6 +9,7 @@ public class SharpIdeFolder : ISharpIdeNode, IExpandableSharpIdeNode, IChildShar
 {
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public required string Path { get; set; }
+	public string ChildNodeBasePath => Path;
 	public required string Name { get; set; }
 	public ObservableHashSet<SharpIdeFile> Files { get; init; }
 	public ObservableHashSet<SharpIdeFolder> Folders { get; init; }

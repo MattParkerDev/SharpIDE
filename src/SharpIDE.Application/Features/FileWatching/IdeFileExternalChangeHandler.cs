@@ -39,14 +39,14 @@ public class IdeFileExternalChangeHandler
 			return;
 		}
 		var containingFolderPath = Path.GetDirectoryName(folderPath)!;
-		var containingFolder = SolutionModel.AllFolders.SingleOrDefault(f => f.Path == containingFolderPath);
-		if (containingFolder is null)
+		var containingFolderOrProject = (IFolderOrProject?)SolutionModel.AllFolders.SingleOrDefault(f => f.ChildNodeBasePath == containingFolderPath) ?? SolutionModel.AllProjects.SingleOrDefault(s => s.ChildNodeBasePath == containingFolderPath);
+		if (containingFolderOrProject is null)
 		{
-			Console.WriteLine($"Error - Containing Folder of {folderPath} does not exist");
+			Console.WriteLine($"Error - Containing Folder or Project of {folderPath} does not exist");
 			return;
 		}
 		var folderName = Path.GetFileName(folderPath);
-		await _sharpIdeSolutionModificationService.AddDirectory(containingFolder, folderName);
+		await _sharpIdeSolutionModificationService.AddDirectory(containingFolderOrProject, folderName);
 	}
 
 	private async Task OnFileCreated(string filePath)
@@ -61,7 +61,7 @@ public class IdeFileExternalChangeHandler
 		// If sharpIdeFile is null, it means the file was created externally, and we need to create it and add it to the solution model
 		var createdFileDirectory = Path.GetDirectoryName(filePath)!;
 
-		var containingFolderOrProject = (IFolderOrProject?)SolutionModel.AllFolders.SingleOrDefault(f => f.Path == createdFileDirectory) ?? SolutionModel.AllProjects.SingleOrDefault(s => s.FilePath == createdFileDirectory);
+		var containingFolderOrProject = (IFolderOrProject?)SolutionModel.AllFolders.SingleOrDefault(f => f.ChildNodeBasePath == createdFileDirectory) ?? SolutionModel.AllProjects.SingleOrDefault(s => s.ChildNodeBasePath == createdFileDirectory);
 		if (containingFolderOrProject is null)
 		{
 			Console.WriteLine($"Error - Containing Folder or Project of {filePath} does not exist");

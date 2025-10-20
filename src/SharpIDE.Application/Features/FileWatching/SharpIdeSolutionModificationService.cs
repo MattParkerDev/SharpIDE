@@ -13,9 +13,9 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 
 	/// The directory must already exist on disk
-	public async Task<SharpIdeFolder> AddDirectory(SharpIdeFolder parentFolder, string directoryName)
+	public async Task<SharpIdeFolder> AddDirectory(IFolderOrProject parentFolder, string directoryName)
 	{
-		var addedDirectoryPath = Path.Combine(parentFolder.Path, directoryName);
+		var addedDirectoryPath = Path.Combine(parentFolder.ChildNodeBasePath, directoryName);
 		var allFiles = new ConcurrentBag<SharpIdeFile>();
 		var allFolders = new ConcurrentBag<SharpIdeFolder>();
 		var sharpIdeFolder = new SharpIdeFolder(new DirectoryInfo(addedDirectoryPath), parentFolder, allFiles, allFolders);

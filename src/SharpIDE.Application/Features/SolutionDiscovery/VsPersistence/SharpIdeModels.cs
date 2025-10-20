@@ -20,6 +20,7 @@ public interface IFolderOrProject : IExpandableSharpIdeNode, IChildSharpIdeNode
 	public ObservableHashSet<SharpIdeFolder> Folders { get; init; }
 	public ObservableHashSet<SharpIdeFile> Files { get; init; }
 	public string Name { get; set; }
+	public string ChildNodeBasePath { get; }
 }
 public interface IChildSharpIdeNode
 {
@@ -89,6 +90,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 {
 	public required string Name { get; set; }
 	public required string FilePath { get; set; }
+	public string ChildNodeBasePath => Path.GetDirectoryName(FilePath)!;
 	public required ObservableHashSet<SharpIdeFolder> Folders { get; init; }
 	public required ObservableHashSet<SharpIdeFile> Files { get; init; }
 	public bool Expanded { get; set; }

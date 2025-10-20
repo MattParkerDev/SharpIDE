@@ -11,11 +11,18 @@ namespace SharpIDE.Godot.Features.SolutionExplorer;
 
 file enum ProjectContextMenuOptions
 {
-    Run = 0,
-    Build = 1,
-    Rebuild = 2,
-    Clean = 3,
-    Restore = 4
+    CreateNew = 0,
+    Run = 1,
+    Build = 2,
+    Rebuild = 3,
+    Clean = 4,
+    Restore = 5
+}
+
+file enum CreateNewSubmenuOptions
+{
+    Directory = 1,
+    CSharpFile = 2
 }
 
 public partial class SolutionExplorerPanel
@@ -29,6 +36,13 @@ public partial class SolutionExplorerPanel
     {
         var menu = new PopupMenu();
         AddChild(menu);
+        var createNewSubmenu = new PopupMenu();
+        menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)ProjectContextMenuOptions.CreateNew);
+        menu.AddSeparator();
+        createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
+        createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
+        createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, project);
+        
         menu.AddIconItem(_runIcon, "Run", (int)ProjectContextMenuOptions.Run);
         menu.SetItemIconMaxWidth((int)ProjectContextMenuOptions.Run, 20);
         menu.AddSeparator();

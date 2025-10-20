@@ -1,6 +1,7 @@
 ﻿using Godot;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer;
@@ -76,7 +77,7 @@ public partial class SolutionExplorerPanel
 
     private readonly PackedScene _newDirectoryDialogScene = GD.Load<PackedScene>("uid://bgi4u18y8pt4x");
     private readonly PackedScene _newCsharpFileDialogScene = GD.Load<PackedScene>("uid://chnb7gmcdg0ww");
-    private void OnCreateNewSubmenuPressed(long id, SharpIdeFolder folder)
+    private void OnCreateNewSubmenuPressed(long id, IFolderOrProject folder)
     {
         var actionId = (CreateNewSubmenuOptions)id;
         if (actionId is CreateNewSubmenuOptions.Directory)

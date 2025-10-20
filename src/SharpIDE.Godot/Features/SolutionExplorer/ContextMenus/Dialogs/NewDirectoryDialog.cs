@@ -1,6 +1,6 @@
 using Godot;
 using SharpIDE.Application.Features.FileWatching;
-using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
@@ -8,7 +8,7 @@ public partial class NewDirectoryDialog : ConfirmationDialog
 {
     private LineEdit _nameLineEdit = null!;
     
-    public SharpIdeFolder ParentFolder { get; set; } = null!;
+    public IFolderOrProject ParentFolder { get; set; } = null!;
 
     [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
 
