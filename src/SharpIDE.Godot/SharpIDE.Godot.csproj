@@ -13,14 +13,14 @@
     <PackageReference Include="ObservableCollections" />
     <PackageReference Include="ObservableCollections.R3" />
     <PackageReference Include="R3" />
-    <PackageReference Include="IgnoresAccessChecksToGenerator">
+    <PackageReference Include="Krafs.Publicizer">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-      <IgnoresAccessChecksTo Include="Microsoft.CodeAnalysis.Workspaces" />
-      <IgnoresAccessChecksToExcludeTypeName Include="System.Linq.RoslynEnumerableExtensions" />
+      <Publicize Include="Microsoft.CodeAnalysis.Workspaces" />
+      <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces:System.Linq.RoslynEnumerableExtensions" />
   </ItemGroup>
 </Project>

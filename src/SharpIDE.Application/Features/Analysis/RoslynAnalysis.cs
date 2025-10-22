@@ -12,10 +12,12 @@ using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Razor.Remote;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Remote.Razor.ProjectSystem;
 using Microsoft.CodeAnalysis.Remote.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Text;
+using Roslyn.LanguageServer.Protocol;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.Build;
@@ -23,6 +25,7 @@ using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.RazorAccess;
 using CodeAction = Microsoft.CodeAnalysis.CodeActions.CodeAction;
+using CompletionItem = Microsoft.CodeAnalysis.Completion.CompletionItem;
 using CompletionList = Microsoft.CodeAnalysis.Completion.CompletionList;
 using Diagnostic = Microsoft.CodeAnalysis.Diagnostic;
 using DiagnosticSeverity = Microsoft.CodeAnalysis.DiagnosticSeverity;
@@ -78,8 +81,13 @@ public class RoslynAnalysis
 			var snapshotManager = container.GetExports<RemoteSnapshotManager>().FirstOrDefault();
 			_snapshotManager = snapshotManager;
 
-			_semanticTokensLegendService = container.GetExports<RemoteSemanticTokensLegendService>().FirstOrDefault();
-			_semanticTokensLegendService!.SetLegend(TokenTypeProvider.ConstructTokenTypes(false), TokenTypeProvider.ConstructTokenModifiers());
+			_semanticTokensLegendService = (RemoteSemanticTokensLegendService)container.GetExports<ISemanticTokensLegendService>().FirstOrDefault()!;
+			_semanticTokensLegendService!.OnLspInitialized(new RemoteClientLSPInitializationOptions
+			{
+				ClientCapabilities = new VSInternalClientCapabilities(),
+				TokenModifiers = TokenTypeProvider.ConstructTokenModifiers(),
+				TokenTypes = TokenTypeProvider.ConstructTokenTypes(false)
+			});
 
 			_msBuildProjectLoader = new CustomMsBuildProjectLoader(_workspace);
 		}
