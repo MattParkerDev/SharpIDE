@@ -47,7 +47,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
     [Inject] private readonly RunService _runService = null!;
     [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-    [Inject] private readonly CodeActionService _codeActionService = null!;
+    [Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
     [Inject] private readonly FileChangedService _fileChangedService = null!;
     [Inject] private readonly IdeCompletionService _ideCompletionService = null!;
 	
@@ -301,7 +301,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		
 		_ = Task.GodotRun(async () =>
 		{
-			await _codeActionService.ApplyCodeAction(codeAction);
+			await _ideCodeActionService.ApplyCodeAction(codeAction);
 		});
 	}
 

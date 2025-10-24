@@ -3,7 +3,7 @@ using SharpIDE.Application.Features.FileWatching;
 
 namespace SharpIDE.Application.Features.Analysis;
 
-public class CodeActionService(RoslynAnalysis roslynAnalysis, FileChangedService fileChangedService)
+public class IdeCodeActionService(RoslynAnalysis roslynAnalysis, FileChangedService fileChangedService)
 {
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
 	private readonly FileChangedService _fileChangedService = fileChangedService;
