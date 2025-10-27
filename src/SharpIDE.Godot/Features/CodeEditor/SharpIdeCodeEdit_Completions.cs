@@ -15,6 +15,7 @@ public partial class SharpIdeCodeEdit
     private readonly Texture2D _namespaceIcon = ResourceLoader.Load<Texture2D>("uid://bob5blfjll4h3");
     private readonly Texture2D _eventIcon = ResourceLoader.Load<Texture2D>("uid://c3upo3lxmgtls");
     private readonly Texture2D _enumIcon = ResourceLoader.Load<Texture2D>("uid://8mdxo65qepqv");
+    private readonly Texture2D _delegateIcon = ResourceLoader.Load<Texture2D>("uid://c83pv25rdescy");
     // delegate
 
     private Texture2D? GetIconForCompletion(SymbolKind? symbolKind, TypeKind? typeKind, Accessibility? accessibility, bool isKeyword)
@@ -25,6 +26,7 @@ public partial class SharpIdeCodeEdit
             (SymbolKind.Method, _, _) => _csharpMethodIcon,
             (_, TypeKind.Interface, _) => _csharpInterfaceIcon,
             (_, TypeKind.Enum, _) => _enumIcon,
+            (_, TypeKind.Delegate, _) => _delegateIcon,
             (SymbolKind.NamedType, _, _) => _csharpClassIcon,
             (SymbolKind.Local, _, _) => _localVariableIcon,
             (SymbolKind.Field, _, _) => _fieldIcon,
