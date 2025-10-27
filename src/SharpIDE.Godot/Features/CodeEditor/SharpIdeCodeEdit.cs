@@ -452,7 +452,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 						SymbolKind.Field => CodeCompletionKind.Member,
 						_ => CodeCompletionKind.PlainText
 					};
-					AddCodeCompletionOption(godotCompletionType, completionItem.DisplayText, completionItem.DisplayText, value: new RefCountedContainer<CompletionItem>(completionItem));
+					var icon = GetIconForSymbolKind(symbolKind);
+					AddCodeCompletionOption(godotCompletionType, completionItem.DisplayText, completionItem.DisplayText, icon: icon, value: new RefCountedContainer<CompletionItem>(completionItem));
 				}
 				// partially working - displays menu only when caret is what CodeEdit determines as valid
 				UpdateCodeCompletionOptions(true);
