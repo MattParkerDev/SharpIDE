@@ -725,9 +725,10 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
-
-		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorText, linePosition);
+		var razorAbsoluteIndex = razorText.Lines.GetPosition(linePosition);
+		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorAbsoluteIndex);
 		if (mappedPosition is null) return (null, null);
+
 		var semanticModelAsync = await generatedDocument.GetSemanticModelAsync(cancellationToken);
 		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModelAsync!, generatedDocSyntaxRoot!, mappedPosition!.Value);
 		if (symbol is null || linePositionSpan is null) return (null, null);
@@ -783,8 +784,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
+		var razorAbsoluteIndex = razorText.Lines.GetPosition(linePosition);
+		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorAbsoluteIndex);
 
-		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorText, linePosition);
 		var semanticModel = await generatedDocument.GetSemanticModelAsync(cancellationToken);
 		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModel!, generatedDocSyntaxRoot!, mappedPosition!.Value);
 
@@ -817,6 +819,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 			VariableDeclaratorSyntax variableDecl => variableDecl.Identifier.Span,
 			AccessorDeclarationSyntax accessorDecl => accessorDecl.Keyword.Span,
 			IndexerDeclarationSyntax indexerDecl => indexerDecl.ThisKeyword.Span,
+
+			GenericNameSyntax genericDecl => genericDecl.Identifier.Span,
+			IdentifierNameSyntax identifierDecl => identifierDecl.Identifier.Span,
 			_ => node.Span
 		};
 
@@ -825,21 +830,11 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		return (symbol, linePositionSpan);
 	}
 
-	private static int? MapRazorLinePositionToGeneratedCSharpAbsolutePosition(RazorCSharpDocument razorCSharpDocument, SourceText razorText, LinePosition razorLinePosition)
+	private static int? MapRazorLinePositionToGeneratedCSharpAbsolutePosition(RazorCSharpDocument razorCSharpDocument, int razorAbsoluteIndex)
 	{
-		var mappings = razorCSharpDocument.SourceMappings;
-		var razorOffset = razorText.Lines.GetPosition(razorLinePosition);
-
-		foreach (var mapping in mappings)
+		if (_documentMappingService!.TryMapToCSharpDocumentPosition(razorCSharpDocument, razorAbsoluteIndex, out var csharpPosition, out var csharpIndex))
 		{
-			var span = mapping.OriginalSpan;
-			if (razorOffset >= span.AbsoluteIndex && razorOffset < span.AbsoluteIndex + span.Length)
-			{
-				// Calculate offset within the mapping
-				var offsetInMapping = razorOffset - span.AbsoluteIndex;
-				// Map to generated C# position
-				return mapping.GeneratedSpan.AbsoluteIndex + offsetInMapping;
-			}
+			return csharpIndex;
 		}
 		return null;
 	}
