@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="CliWrap" />
     <PackageReference Include="FileWatcherEx" />
+    <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <PackageReference Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />

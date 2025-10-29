@@ -26,7 +26,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 	public Texture2D SlnIcon { get; set; } = null!;
 
 	private readonly Color _gitNewFileColour = new Color("50964c");
-	private readonly Color _gitEditedFileColour = new Color("5988b3");
+	private readonly Color _gitEditedFileColour = new Color("6496ba");
+	private readonly Color _gitUnalteredFileColour = new Color("d4d4d4");
 	
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 	private Tree _tree = null!;
@@ -286,7 +287,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		var fileItem = tree.CreateItem(parent);
 		fileItem.SetText(0, sharpIdeFile.Name);
-		fileItem.SetIcon(0, CsharpFileIcon);
+		fileItem.SetIcon(0, CsharpFileIcon); 
+		fileItem.SetCustomColor(0, GetColorForGitStatus(sharpIdeFile.GitStatus));
 		fileItem.SetMetadata(0, new RefCountedContainer<SharpIdeFile>(sharpIdeFile));
 		
 		Observable.EveryValueChanged(sharpIdeFile, folder => folder.Name)
@@ -302,4 +304,12 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 	    await this.InvokeAsync(() => item?.Free());
 	}
+
+	private Color GetColorForGitStatus(GitStatus status) => status switch
+	{
+		GitStatus.Added => _gitNewFileColour,
+		GitStatus.Modified => _gitEditedFileColour,
+		GitStatus.Unaltered => _gitUnalteredFileColour,
+		_ => _gitUnalteredFileColour
+	};
 }

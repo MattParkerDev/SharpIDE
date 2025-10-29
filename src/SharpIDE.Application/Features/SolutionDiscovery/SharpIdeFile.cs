@@ -17,6 +17,7 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	public bool IsCshtmlFile => Path.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase);
 	public bool IsCsharpFile => Path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
 	public bool IsRoslynWorkspaceFile => IsCsharpFile || IsRazorFile || IsCshtmlFile;
+	public GitStatus GitStatus { get; set; } = GitStatus.Unaltered;
 	public required ReactiveProperty<bool> IsDirty { get; init; }
 	public required bool SuppressDiskChangeEvents { get; set; } // probably has concurrency issues
 	public required DateTimeOffset? LastIdeWriteTime { get; set; }
