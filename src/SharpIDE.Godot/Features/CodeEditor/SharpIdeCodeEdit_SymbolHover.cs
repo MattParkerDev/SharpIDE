@@ -142,5 +142,6 @@ public partial class SharpIdeCodeEdit
         tooltipWindow.Position = new Vector2I((int)globalMousePosition.X, (int)startSymbolCharGlobalPos.Y + lineHeight);
         symbolNameHoverWindow.Popup();
         tooltipWindow.Popup();
+        symbolNameHoverWindow.UpdateMouseCursorState();
     }
 }
