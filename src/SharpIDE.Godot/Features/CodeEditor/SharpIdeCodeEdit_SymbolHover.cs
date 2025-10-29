@@ -55,7 +55,6 @@ public partial class SharpIdeCodeEdit
 
         AddChild(symbolNameHoverWindow);
         symbolNameHoverWindow.Position = new Vector2I((int)startSymbolCharGlobalPos.X, (int)endSymbolCharGlobalPos.Y);
-        symbolNameHoverWindow.Popup();
 
         var tooltipWindow = new Window();
         tooltipWindow.WrapControls = true;
@@ -141,6 +140,7 @@ public partial class SharpIdeCodeEdit
         AddChild(tooltipWindow);
 
         tooltipWindow.Position = new Vector2I((int)globalMousePosition.X, (int)startSymbolCharGlobalPos.Y + lineHeight);
+        symbolNameHoverWindow.Popup();
         tooltipWindow.Popup();
     }
 }
