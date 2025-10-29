@@ -4,6 +4,7 @@ using Godot;
 using ObservableCollections;
 using R3;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.Common;
@@ -27,6 +28,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 	private Tree _tree = null!;
 	private TreeItem _rootItem = null!;
+	
+	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
 	private enum ClipboardOperation { Cut, Copy }
 
 	private (List<IFileOrFolder>, ClipboardOperation)? _itemsOnClipboard;
@@ -101,6 +104,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				_tree.QueueRedraw();
 			});
 		}
+		_navigationHistoryService.RecordNavigation(file, fileLinePosition ?? new SharpIdeFileLinePosition(0, 0));
 		await task.ConfigureAwait(false);
 	}
 	

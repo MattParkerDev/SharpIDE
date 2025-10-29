@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgpc5vsddmakc"]
+
+[ext_resource type="Script" uid="uid://cao2o2singwnb" path="res://Features/Navigation/ForwardBackwardButtonContainer.cs" id="1_vep4b"]
+
+[node name="ForwardBackwardButtonContainer" type="HBoxContainer"]
+script = ExtResource("1_vep4b")
+
+[node name="ForwardButton" type="Button" parent="."]
+layout_mode = 2
+size_flags_vertical = 4
+text = " < "
+
+[node name="BackwardButton" type="Button" parent="."]
+layout_mode = 2
+size_flags_vertical = 4
+text = " > "

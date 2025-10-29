@@ -1,10 +1,11 @@
-[gd_scene load_steps=19 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene load_steps=20 format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
 [ext_resource type="Script" uid="uid://kvnhndc3l6ih" path="res://Features/CustomControls/InvertedVSplitContainer.cs" id="3_0ybuf"]
 [ext_resource type="PackedScene" uid="uid://biyhfwx36ium8" path="res://Features/LeftSideBar/LeftSideBar.tscn" id="3_f60gr"]
+[ext_resource type="PackedScene" uid="uid://bgpc5vsddmakc" path="res://Features/Navigation/ForwardBackwardButtonContainer.tscn" id="3_ptnvy"]
 [ext_resource type="PackedScene" uid="uid://cy1bb32g7j7dr" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="5_s2dv6"]
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
 [ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
@@ -56,6 +57,9 @@ offset_left = 5.0
 offset_right = -5.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="ForwardBackwardButtonContainer" parent="VBoxContainer/Panel/HBoxContainer" instance=ExtResource("3_ptnvy")]
+layout_mode = 2
 
 [node name="OpenSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
 unique_name_in_owner = true
