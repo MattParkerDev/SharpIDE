@@ -161,7 +161,9 @@ public partial class IdeRoot : Control
 			
 			var previousTabs = Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.OpenTabs;
 			var filesToOpen = previousTabs
-				.Select(s => (solutionModel.AllFiles.Single(f => f.Path == s.FilePath), new SharpIdeFileLinePosition(s.CaretLine, s.CaretColumn), s.IsSelected))
+				.Select(s => (solutionModel.AllFiles.SingleOrDefault(f => f.Path == s.FilePath), new SharpIdeFileLinePosition(s.CaretLine, s.CaretColumn), s.IsSelected))
+				.Where(s => s.Item1 is not null)
+				.OfType<(SharpIdeFile file, SharpIdeFileLinePosition linePosition, bool isSelected)>()
 				.ToList();
 			await this.InvokeDeferredAsync(async () =>
 			{
@@ -172,8 +174,8 @@ public partial class IdeRoot : Control
 				}
 				_navigationHistoryService.StartRecording();
 				// Select the selected tab
-				var selectedFile = filesToOpen.SingleOrDefault(f => f.IsSelected);
-				if (selectedFile.Item1 is not null) await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(selectedFile.Item1, selectedFile.Item2);
+				var selectedFile = filesToOpen.SingleOrDefault(f => f.isSelected);
+				if (selectedFile.file is not null) await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(selectedFile.file, selectedFile.linePosition);
 			});
 
 			var tasks = solutionModel.AllProjects.Select(p => p.MsBuildEvaluationProjectTask).ToList();
