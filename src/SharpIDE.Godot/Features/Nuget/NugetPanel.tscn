@@ -65,7 +65,7 @@ size_flags_vertical = 3
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
 text = "Installed Packages in Application: 4"
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
@@ -84,7 +84,7 @@ layout_mode = 2
 
 [node name="Label2" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
 text = "Implicitly Installed Packages in Application: 10"
 
 [node name="PanelContainer2" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
@@ -99,7 +99,7 @@ layout_mode = 2
 
 [node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
 text = "Available Packages: Top 100"
 
 [node name="PanelContainer3" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
