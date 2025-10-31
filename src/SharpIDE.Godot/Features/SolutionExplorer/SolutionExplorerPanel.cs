@@ -276,6 +276,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 			.SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
 			{
 				NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateFileTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
+				NotifyCollectionChangedAction.Move => MoveTreeItem(_tree, innerEvent.NewItem.View, innerEvent.NewItem.Value, innerEvent.OldStartingIndex, innerEvent.NewStartingIndex),
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
 			})).AddTo(this);
@@ -307,6 +308,29 @@ public partial class SolutionExplorerPanel : MarginContainer
 			}).AddTo(this);
 		
 		return fileItem;
+	}
+	
+	private async Task MoveTreeItem(Tree tree, TreeItemContainer treeItemContainer, SharpIdeFile sharpIdeFile, int oldStartingIndex, int newStartingIndex)
+	{
+		if (oldStartingIndex == newStartingIndex) throw new InvalidOperationException("Old and new starting indexes are the same");
+		var treeItem = treeItemContainer.Value!;
+		var sharpIdeParent = sharpIdeFile.Parent as IFolderOrProject;
+		Guard.Against.Null(sharpIdeParent, nameof(sharpIdeParent));
+		var folderCount = sharpIdeParent.Folders.Count;
+		newStartingIndex += folderCount;
+		var treeParent = treeItem.GetParent()!;
+		await this.InvokeAsync(() =>
+		{
+			// The API for moving TreeItems is painful - we can only move an Item before or after another item
+			treeParent.RemoveChild(treeItem);
+			var newItem = tree.CreateItem(treeParent, newStartingIndex);
+			newItem.SetText(0, treeItem.GetText(0));
+			newItem.SetIcon(0, treeItem.GetIcon(0));
+			newItem.SetMetadata(0, treeItem.GetMetadata(0));
+			newItem.SetCustomColor(0, treeItem.GetCustomColor(0));
+			treeItemContainer.Value = newItem;
+			treeItem.Free();
+		});
 	}
 
 	private async Task FreeTreeItem(TreeItem? item)

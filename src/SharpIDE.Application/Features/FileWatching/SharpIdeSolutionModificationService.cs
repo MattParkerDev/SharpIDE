@@ -137,6 +137,16 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 	{
 		var sharpIdeFile = new SharpIdeFile(newFilePath, fileName, parentNode, []);
 
+		var correctInsertionPosition = GetInsertionPosition(parentNode, sharpIdeFile);
+
+		parentNode.Files.Insert(correctInsertionPosition, sharpIdeFile);
+		SolutionModel.AllFiles.Add(sharpIdeFile);
+		await _fileChangedService.SharpIdeFileAdded(sharpIdeFile, contents);
+		return sharpIdeFile;
+	}
+
+	private static int GetInsertionPosition(IFolderOrProject parentNode, SharpIdeFile sharpIdeFile)
+	{
 		var correctInsertionPosition = parentNode.Files.list.BinarySearch(sharpIdeFile, SharpIdeFileComparer.Instance);
 		if (correctInsertionPosition < 0)
 		{
@@ -147,10 +157,25 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 			throw new InvalidOperationException("File already exists in the containing folder or project");
 		}
 
-		parentNode.Files.Insert(correctInsertionPosition, sharpIdeFile);
-		SolutionModel.AllFiles.Add(sharpIdeFile);
-		await _fileChangedService.SharpIdeFileAdded(sharpIdeFile, contents);
-		return sharpIdeFile;
+		return correctInsertionPosition;
+	}
+
+	private static int GetMovePosition(IFolderOrProject parentNode, SharpIdeFile sharpIdeFile)
+	{
+		var correctInsertionPosition = parentNode.Files.list
+			.FindAll(x => x != sharpIdeFile) // TODO: Investigate allocations
+			.BinarySearch(sharpIdeFile, SharpIdeFileComparer.Instance);
+
+		if (correctInsertionPosition < 0)
+		{
+			correctInsertionPosition = ~correctInsertionPosition;
+		}
+		else
+		{
+			throw new InvalidOperationException("File already exists in the containing folder or project");
+		}
+
+		return correctInsertionPosition;
 	}
 
 	public async Task RemoveFile(SharpIdeFile file)
@@ -180,6 +205,10 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 		var newFilePath = Path.Combine(Path.GetDirectoryName(oldPath)!, renamedFileName);
 		fileToRename.Name = renamedFileName;
 		fileToRename.Path = newFilePath;
+		var parentFolderOrProject = (IFolderOrProject)fileToRename.Parent;
+		var currentPosition = parentFolderOrProject.Files.IndexOf(fileToRename);
+		var insertionPosition = GetMovePosition(parentFolderOrProject, fileToRename);
+		parentFolderOrProject.Files.Move(currentPosition, insertionPosition);
 		await _fileChangedService.SharpIdeFileRenamed(fileToRename, oldPath);
 		return fileToRename;
 	}
