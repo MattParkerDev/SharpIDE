@@ -35,7 +35,7 @@ public partial class RenameSymbolDialog : ConfirmationDialog
             _isNameValid = false;
         }
         var textColour = _isNameValid ? new Color(1, 1, 1) : new Color(1, 0, 0);
-        _nameLineEdit.AddThemeColorOverride("font_color", textColour);
+        _nameLineEdit.AddThemeColorOverride(ThemeStringNames.FontColor, textColour);
     }
 
     public override void _Input(InputEvent @event)

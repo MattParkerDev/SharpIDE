@@ -59,7 +59,7 @@ public partial class PackageEntry : MarginContainer
         foreach (var source in PackageResult.PackageSources)
         {
             var label = new Label { Text = source.Name };
-            label.AddThemeColorOverride("font_color", source.Name switch
+            label.AddThemeColorOverride(ThemeStringNames.FontColor, source.Name switch
             {
                 // TODO: Make dynamic
                 "nuget.org" => Source_NugetOrg_Color,
