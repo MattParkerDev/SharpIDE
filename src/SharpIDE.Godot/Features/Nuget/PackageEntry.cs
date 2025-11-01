@@ -43,14 +43,16 @@ public partial class PackageEntry : MarginContainer
     private void ApplyValues()
     {
         if (PackageResult is null) return;
-        _packageNameLabel.Text = PackageResult.PackageSearchMetadata.Identity.Id;
+        _packageNameLabel.Text = PackageResult.PackageId;
         _currentVersionLabel.Text = string.Empty;
-        _latestVersionLabel.Text = PackageResult.PackageSearchMetadata.Identity.Version.ToNormalizedString();
+        var highestVersionPackageFromSource = PackageResult.PackageFromSources
+            .MaxBy(p => p.PackageSearchMetadata.Identity.Version);
+        _latestVersionLabel.Text = highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version.ToNormalizedString();
         _sourceNamesContainer.QueueFreeChildren();
 
         _ = Task.GodotRun(async () =>
         {
-            var (iconBytes, iconFormat) = await _nugetPackageIconCacheService.GetNugetPackageIcon(PackageResult.PackageSearchMetadata.Identity.Id, PackageResult.PackageSearchMetadata.IconUrl);
+            var (iconBytes, iconFormat) = await _nugetPackageIconCacheService.GetNugetPackageIcon(PackageResult.PackageId, PackageResult.PackageFromSources.First().PackageSearchMetadata.IconUrl);
             var image = new Image();
             var error = iconFormat switch
             {
@@ -66,9 +68,9 @@ public partial class PackageEntry : MarginContainer
             }
         });
         
-        foreach (var (index, source) in PackageResult.PackageSources.Index())
+        foreach (var (index, packageFromSource) in PackageResult.PackageFromSources.Index())
         {
-            var label = new Label { Text = source.Name };
+            var label = new Label { Text = packageFromSource.Source.Name };
             var labelColour = SourceColors[index % SourceColors.Length];
             label.AddThemeColorOverride(ThemeStringNames.FontColor, labelColour);
             _sourceNamesContainer.AddChild(label);

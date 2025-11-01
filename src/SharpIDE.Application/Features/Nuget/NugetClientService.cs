@@ -1,12 +1,15 @@
 ﻿using NuGet.Common;
 using NuGet.Configuration;
+using NuGet.Packaging.Core;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.Nuget;
 
-public record IdePackageResult(IPackageSearchMetadata PackageSearchMetadata, List<PackageSource> PackageSources);
+//public record IdePackageResult(IPackageSearchMetadata PackageSearchMetadata, List<PackageSource> PackageSources);
+public record IdePackageResult(string PackageId, List<IdePackageFromSourceResult> PackageFromSources);
+public record struct IdePackageFromSourceResult(IPackageSearchMetadata PackageSearchMetadata, PackageSource Source);
 public class NugetClientService
 {
 	private readonly bool _includePrerelease = false;
@@ -38,14 +41,14 @@ public class NugetClientService
 				log: logger,
 				cancellationToken: cancellationToken).ConfigureAwait(false);
 
-			packagesResult.AddRange(results.Select(s => new IdePackageResult(s, [source])));
+			packagesResult.AddRange(results.Select(s => new IdePackageResult(s.Identity.Id, [new IdePackageFromSourceResult(s, source)])));
 		}
 
 		// Combine, group, and order by download count
 		var topPackages = packagesResult
-			.GroupBy(p => p.PackageSearchMetadata.Identity.Id, StringComparer.OrdinalIgnoreCase)
+			.GroupBy(p => p.PackageFromSources.First().PackageSearchMetadata.Identity.Id, StringComparer.OrdinalIgnoreCase)
 			.Select(g => g.First())
-			.OrderByDescending(p => p.PackageSearchMetadata.DownloadCount ?? 0)
+			.OrderByDescending(p => p.PackageFromSources.First().PackageSearchMetadata.DownloadCount ?? 0)
 			.Take(100)
 			.ToList();
 
@@ -63,7 +66,7 @@ public class NugetClientService
 		// we need to find out if other package sources have the package too
 		foreach (var package in topPackages)
 		{
-			foreach (var source in packageSources.Except(package.PackageSources).ToList())
+			foreach (var source in packageSources.Except(package.PackageFromSources.Select(s => s.Source)).ToList())
 			{
 				var repository = Repository.Factory.GetCoreV3(source.Source);
 				var searchResource = await repository.GetResourceAsync<PackageSearchResource>(cancellationToken).ConfigureAwait(false);
@@ -71,19 +74,18 @@ public class NugetClientService
 				if (searchResource == null)
 					continue;
 
-				var packageId = package.PackageSearchMetadata.Identity.Id;
 				// TODO: Might be faster to use FindPackageByIdResource
 				var results = await searchResource.SearchAsync(
-					searchTerm: packageId,
+					searchTerm: package.PackageId,
 					filters: new SearchFilter(includePrerelease: _includePrerelease),
 					skip: 0,
 					take: 2,
 					log: logger,
 					cancellationToken: cancellationToken).ConfigureAwait(false);
-				var foundPackage = results.SingleOrDefault(r => r.Identity.Id.Equals(packageId, StringComparison.OrdinalIgnoreCase));
+				var foundPackage = results.SingleOrDefault(r => r.Identity.Id.Equals(package.PackageId, StringComparison.OrdinalIgnoreCase));
 				if (foundPackage != null)
 				{
-					package.PackageSources.Add(source);
+					package.PackageFromSources.Add(new IdePackageFromSourceResult(foundPackage, source));
 				}
 			}
 		}
