@@ -53,7 +53,7 @@ public partial class PackageEntry : MarginContainer
         if (PackageResult is null) return;
         _packageNameLabel.Text = PackageResult.PackageId;
         var installedPackagedInfo = PackageResult.InstalledNugetPackageInfo;
-        if (installedPackagedInfo?.DependentPackages is not null)
+        if (installedPackagedInfo?.DependentPackages is not null && installedPackagedInfo.IsTransitive)
         {
             var transitiveOriginsGroupedByVersion = installedPackagedInfo.DependentPackages
                 .GroupBy(t => t.RequestedVersion)
