@@ -135,10 +135,11 @@ public class NugetClientService
 				if (metadataResource == null)
 					continue;
 
-				var foundPackage = await metadataResource.GetMetadataAsync(packageIdentity, _sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false);
-				if (foundPackage != null)
+				var foundPackages = await metadataResource.GetMetadataAsync(installedPackage.Name, _includePrerelease, true, _sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false);
+				var latestPackage = foundPackages.LastOrDefault();
+				if (latestPackage != null)
 				{
-					idePackageResult.PackageFromSources.Add(new IdePackageFromSourceResult(foundPackage, source));
+					idePackageResult.PackageFromSources.Add(new IdePackageFromSourceResult(latestPackage, source));
 				}
 			}
 
