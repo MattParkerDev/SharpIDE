@@ -52,10 +52,11 @@ public partial class PackageEntry : MarginContainer
     {
         if (PackageResult is null) return;
         _packageNameLabel.Text = PackageResult.PackageId;
-        _installedVersionLabel.Text = PackageResult.InstalledNugetPackageInfo?.Version.ToNormalizedString();
+        var installedPackagedInfo = PackageResult.InstalledNugetPackageInfo;
+        _installedVersionLabel.Text = installedPackagedInfo?.IsTransitive is true ? $"({installedPackagedInfo?.Version.ToNormalizedString()})" : installedPackagedInfo?.Version.ToNormalizedString();
         var highestVersionPackageFromSource = PackageResult.PackageFromSources
             .MaxBy(p => p.PackageSearchMetadata.Identity.Version);
-        if (PackageResult.InstalledNugetPackageInfo?.Version != highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version)
+        if (installedPackagedInfo?.Version != highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version)
         {
             _latestVersionLabel.Text = highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version.ToNormalizedString();
         }
