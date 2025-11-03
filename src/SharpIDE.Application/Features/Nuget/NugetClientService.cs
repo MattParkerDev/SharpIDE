@@ -9,7 +9,7 @@ using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.Nuget;
 
-public record InstalledNugetPackageInfo(bool IsTransitive, List<ProjectPackageReference> ProjectPackageReferences);
+public record InstalledNugetPackageInfo(bool IsPrimarilyTransitive, List<ProjectPackageReference> ProjectPackageReferences);
 public record IdePackageResult(string PackageId, List<IdePackageFromSourceResult> PackageFromSources, InstalledNugetPackageInfo? InstalledNugetPackageInfo);
 public record struct IdePackageFromSourceResult(IPackageSearchMetadata PackageSearchMetadata, PackageSource Source);
 public class NugetClientService
@@ -118,8 +118,8 @@ public class NugetClientService
 		var packagesResult = new List<IdePackageResult>();
 		foreach (var installedPackage in installedPackages)
 		{
-			var isTransitive = installedPackage.ProjectPackageReferences.Any(p => p.IsTransitive);
-			var installedNugetPackageInfo = new InstalledNugetPackageInfo(isTransitive, installedPackage.ProjectPackageReferences);
+			var isPrimarilyTransitive = installedPackage.ProjectPackageReferences.Any(p => p.IsTransitive is false) is false;
+			var installedNugetPackageInfo = new InstalledNugetPackageInfo(isPrimarilyTransitive, installedPackage.ProjectPackageReferences);
 			var idePackageResult = new IdePackageResult(installedPackage.Name, [], installedNugetPackageInfo);
 
 			foreach (var source in packageSources)

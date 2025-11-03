@@ -52,7 +52,7 @@ public partial class PackageEntry : MarginContainer
 		if (PackageResult is null) return;
 		_packageNameLabel.Text = PackageResult.PackageId;
 		var installedPackagedInfo = PackageResult.InstalledNugetPackageInfo;
-		if (installedPackagedInfo?.IsTransitive is true && installedPackagedInfo.ProjectPackageReferences.Any(p => p.DependentPackages?.Count is not 0) is true)
+		if (installedPackagedInfo?.IsPrimarilyTransitive is true && installedPackagedInfo.ProjectPackageReferences.Any(p => p.DependentPackages?.Count is not 0) is true)
 		{
 			var transitiveOriginsGroupedByVersion = installedPackagedInfo.ProjectPackageReferences.SelectMany(s => s.DependentPackages ?? [])
 				.GroupBy(t => t.RequestedVersion)
@@ -103,7 +103,7 @@ public partial class PackageEntry : MarginContainer
 			.Select(p => p.InstalledVersion.ToNormalizedString())
 			.Distinct()
 			.ToList();
-		var text = packageInfo.IsTransitive ? $"({string.Join(", ", versions)})" : string.Join(", ", versions);
+		var text = packageInfo.IsPrimarilyTransitive ? $"({string.Join(", ", versions)})" : string.Join(", ", versions);
 		return text;
 	}
 }

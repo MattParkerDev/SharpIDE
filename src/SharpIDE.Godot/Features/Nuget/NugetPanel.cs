@@ -73,8 +73,8 @@ public partial class NugetPanel : Control
 			if (_solution is null) throw new InvalidOperationException("Solution is null but should not be");
 			_ = Task.GodotRun(() => SetSolutionOrProjectNameLabels(slnOrProject));
 			_ = Task.GodotRun(() => SetDetailsProjects(slnOrProject));
+			_ = Task.GodotRun(() => PopulateInstalledPackages(slnOrProject));
 			_ = Task.GodotRun(PopulateSearchResults);
-			_ = Task.GodotRun(PopulateInstalledPackages);
 		});
 	}
 
@@ -130,12 +130,23 @@ public partial class NugetPanel : Control
 		});
 	}
 
-	private async Task PopulateInstalledPackages()
+	private async Task PopulateInstalledPackages(ISolutionOrProject slnOrProject)
 	{
-		var project = _solution!.AllProjects.First(s => s.Name == "ProjectA");
-		await project.MsBuildEvaluationProjectTask;
-		var installedPackages = await ProjectEvaluation.GetPackageReferencesForProjects([project]);
-		var idePackageResult = await _nugetClientService.GetPackagesForInstalledPackages(project.ChildNodeBasePath, installedPackages);
+		var msbuildEvalTask = slnOrProject switch
+		{
+			SharpIdeSolutionModel solutionModel => (Task)Task.WhenAll(solutionModel.AllProjects.Select(s => s.MsBuildEvaluationProjectTask)),
+			SharpIdeProjectModel projectModel => (Task)projectModel.MsBuildEvaluationProjectTask,
+			_ => throw new InvalidOperationException("Unknown solution or project type")
+		};
+		await msbuildEvalTask;
+		var projects = slnOrProject switch
+		{
+			SharpIdeSolutionModel solutionModel => solutionModel.AllProjects.ToList(),
+			SharpIdeProjectModel projectModel => [projectModel],
+			_ => throw new InvalidOperationException("Unknown solution or project type")
+		};
+		var installedPackages = await ProjectEvaluation.GetPackageReferencesForProjects(projects);
+		var idePackageResult = await _nugetClientService.GetPackagesForInstalledPackages(slnOrProject.DirectoryPath, installedPackages);
 		var scenes = idePackageResult.Select(s =>
 		{
 			var scene = _packageEntryScene.Instantiate<PackageEntry>();
@@ -143,7 +154,7 @@ public partial class NugetPanel : Control
 			scene.PackageSelected += OnPackageSelected;
 			return scene;
 		}).ToList();
-		var transitiveScenes = scenes.Where(s => s.PackageResult.InstalledNugetPackageInfo!.ProjectPackageReferences.Any(x => x.IsTransitive)).ToList();
+		var transitiveScenes = scenes.Where(s => s.PackageResult.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
 		var directScenes = scenes.Except(transitiveScenes).ToList();
 		await this.InvokeAsync(() =>
 		{
