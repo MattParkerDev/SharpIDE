@@ -68,6 +68,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		}).ToList();
 		await this.InvokeAsync(() =>
 		{
+			_projectsVBoxContainer.QueueFreeChildren();
 			foreach (var scene in scenes)
 			{
 				_projectsVBoxContainer.AddChild(scene);
