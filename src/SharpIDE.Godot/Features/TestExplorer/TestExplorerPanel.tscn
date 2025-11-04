@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://hwdok1kch3b3"]
+[gd_scene load_steps=3 format=3 uid="uid://hwdok1kch3b3"]
 
 [ext_resource type="Script" uid="uid://8o78ti2hb0pu" path="res://Features/TestExplorer/TestExplorerPanel.cs" id="1_b5miy"]
+[ext_resource type="Texture2D" uid="uid://cmwkpdv6pxaai" path="res://Resources/refresh.svg" id="2_4bhqg"]
 
 [node name="TestExplorerPanel" type="Control"]
 layout_mode = 3
@@ -27,9 +28,17 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/HBoxContainer"]
 layout_mode = 2
 text = "Test Explorer"
+
+[node name="Button" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/icon_max_width = 15
+icon = ExtResource("2_4bhqg")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2
