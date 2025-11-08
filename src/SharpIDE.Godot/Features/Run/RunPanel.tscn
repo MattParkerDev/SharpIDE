@@ -14,6 +14,7 @@ script = ExtResource("1_sq1l4")
 RunningIcon = ExtResource("2_tu4jg")
 
 [node name="Label" type="Label" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
