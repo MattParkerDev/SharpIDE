@@ -1,4 +1,8 @@
-# SharpIDE
+<h1 align="center">
+  <img src="src/SharpIDE.Godot/Resources/SharpIdeV3.svg" alt="SharpIDE icon" width="100" height="100" />
+  <br>
+  SharpIDE
+</h1>
 
 An open source, modern & fast IDE for .NET
 
