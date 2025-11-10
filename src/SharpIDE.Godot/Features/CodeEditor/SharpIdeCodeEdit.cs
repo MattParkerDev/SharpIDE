@@ -401,6 +401,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		// Let each open tab respond to this event
 		if (@event.IsActionPressed(InputStringNames.SaveAllFiles))
 		{
+			AcceptEvent();
 			_ = Task.GodotRun(async () =>
 			{
 				await _fileChangedService.SharpIdeFileChanged(_currentFile, Text, FileChangeType.IdeSaveToDisk);
@@ -418,6 +419,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 		else if (@event.IsActionPressed(InputStringNames.SaveFile) && @event.IsActionPressed(InputStringNames.SaveAllFiles) is false)
 		{
+			AcceptEvent();
 			_ = Task.GodotRun(async () =>
 			{
 				await _fileChangedService.SharpIdeFileChanged(_currentFile, Text, FileChangeType.IdeSaveToDisk);
