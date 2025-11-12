@@ -19,8 +19,10 @@
     <Publicize Include="Microsoft.CodeAnalysis.Workspaces" />
     <Publicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
     <Publicize Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" IncludeCompilerGeneratedMembers="false" />
-    <Publicize Include="Microsoft.Build" MemberPattern="^Microsoft.Build.Logging\.TerminalLogger\..*" />
+<!--    <Publicize Include="Microsoft.Build" MemberPattern="^Microsoft\.Build\.Logging\.(TerminalLogger|Terminal)\..*" />-->
+    <Publicize Include="Microsoft.Build" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces:System.Linq.RoslynEnumerableExtensions" />
+    <DoNotPublicize Include="Microsoft.Build:Microsoft.CodeAnalysis.ICollectionExtensions" />
   </ItemGroup>
 
   <ItemGroup>

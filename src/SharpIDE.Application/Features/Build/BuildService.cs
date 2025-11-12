@@ -26,7 +26,7 @@ public class BuildService(ILogger<BuildService> logger)
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(BuildService)}.{nameof(MsBuildAsync)}");
 		var normalOut = Console.Out;
 		Console.SetOut(BuildTextWriter);
-		var terminalLogger = InternalTerminalLoggerFactory.CreateLogger();
+		var terminalLogger = InternalTerminalLoggerFactory.CreateLogger(BuildTextWriter);
 		Console.SetOut(normalOut);
 
 		var nodesToBuildWith = GetBuildNodeCount(Environment.ProcessorCount);
