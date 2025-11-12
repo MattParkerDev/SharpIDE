@@ -21,7 +21,6 @@ public class InternalTerminalLoggerFactory
 		//var logger = new TerminalLogger(loggerVerbosity, originalConsoleMode);
 		var terminal = new Terminal(output);
 		var logger = new TerminalLogger(terminal);
-		logger.CreateStopwatch
 		logger._manualRefresh = false;
 
 		//var logger = TerminalLogger.CreateTerminalOrConsoleLogger(args, supportsAnsi, outputIsScreen, originalConsoleMode);
