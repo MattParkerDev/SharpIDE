@@ -24,10 +24,8 @@ public class BuildService(ILogger<BuildService> logger)
 	public async Task MsBuildAsync(string solutionOrProjectFilePath, BuildType buildType = BuildType.Build, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(BuildService)}.{nameof(MsBuildAsync)}");
-		var normalOut = Console.Out;
-		Console.SetOut(BuildTextWriter);
+
 		var terminalLogger = InternalTerminalLoggerFactory.CreateLogger(BuildTextWriter);
-		Console.SetOut(normalOut);
 
 		var nodesToBuildWith = GetBuildNodeCount(Environment.ProcessorCount);
 		var buildParameters = new BuildParameters
