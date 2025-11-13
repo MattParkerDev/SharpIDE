@@ -1,4 +1,5 @@
-﻿using Microsoft.Build.Framework;
+﻿using Ardalis.GuardClauses;
+using Microsoft.Build.Framework;
 using Microsoft.Build.Logging;
 
 namespace SharpIDE.Application.Features.Logging;
@@ -21,7 +22,9 @@ public class InternalTerminalLoggerFactory
 		//var logger = new TerminalLogger(loggerVerbosity, originalConsoleMode);
 		var terminal = new Terminal(output);
 		var logger = new TerminalLogger(terminal);
-		logger._manualRefresh = false;
+		var field = typeof(TerminalLogger).GetField("_manualRefresh", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		Guard.Against.Null(field, nameof(field));
+		field.SetValue(logger, false);
 
 		//var logger = TerminalLogger.CreateTerminalOrConsoleLogger(args, supportsAnsi, outputIsScreen, originalConsoleMode);
 
