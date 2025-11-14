@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using ParallelPipelines.Host;
+using ParallelPipelines.Host.Helpers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -25,6 +26,11 @@ builder.Services
 	.AddStep<RestoreAndBuildStep>()
 	.AddStep<CreateWindowsRelease>()
 	;
+
+// Unhandled exception. System.InvalidOperationException: fatal: detected dubious ownership in repository at '/__w/SharpIDE/SharpIDE'
+// To add an exception for this directory, call:
+// git config --global --add safe.directory /__w/SharpIDE/SharpIDE
+await PipelineCliHelper.RunCliCommandAsync("git", "config --global --add safe.directory /__w/SharpIDE/SharpIDE", CancellationToken.None);
 
 using var host = builder.Build();
 
