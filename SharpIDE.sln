@@ -37,6 +37,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpIDE.Godot", "src\SharpIDE.Godot\SharpIDE.Godot.csproj", "{D306410D-3A28-4F1B-A09B-CA10041A7C53}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "iac", "iac", "{E239E6C6-8915-4F03-85B7-22AEAF281D14}"
+	ProjectSection(SolutionItems) = preProject
+		iac\should-release.cs = iac\should-release.cs
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deploy", "iac\Deploy\Deploy.csproj", "{52CD8910-88A4-4978-B107-C7B6C7FC3557}"
 EndProject
