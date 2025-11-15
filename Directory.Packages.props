@@ -46,7 +46,7 @@
     <PackageVersion Include="MudBlazor" Version="8.14.0" />
     <PackageVersion Include="NuGet.ProjectModel" Version="7.1.0-preview.1.42" />
     <PackageVersion Include="NuGet.Protocol" Version="7.1.0-preview.1.42" />
-    <PackageVersion Include="NuGet.Versioning" Version="7.0.0" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.1.0-preview.1.42" />
     <PackageVersion Include="ObservableCollections" Version="3.3.4" />
     <PackageVersion Include="ObservableCollections.R3" Version="3.3.4" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
