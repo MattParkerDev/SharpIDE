@@ -65,7 +65,8 @@ alignment = 1
 layout_mode = 2
 text = "SharpIDE"
 
-[node name="Label2" type="Label" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+[node name="VersionLabel" type="Label" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5689727, 0.56897277, 0.5689727, 1)
 text = "v0.1.2"
