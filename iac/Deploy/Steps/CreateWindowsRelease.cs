@@ -10,7 +10,6 @@ public class CreateWindowsRelease : IStep
 {
 	public async Task<BufferedCommandResult?[]?> RunStep(CancellationToken cancellationToken)
 	{
-		return null;
 		var godotPublishDirectory = await PipelineFileHelper.GitRootDirectory.GetDirectory("./artifacts/publish-godot");
 		godotPublishDirectory.Create();
 		var windowsPublishDirectory = await godotPublishDirectory.GetDirectory("./win");
@@ -23,6 +22,8 @@ public class CreateWindowsRelease : IStep
 			$"--headless --verbose --export-release Windows --project {godotProjectFile.GetFullNameUnix()}",
 			cancellationToken
 		);
+
+		var windowsZipFile = await windowsPublishDirectory.ZipDirectoryToFile($"{PipelineFileHelper.GitRootDirectory.FullName}/artifacts/publish-godot/sharpide-win-x64.zip");
 
 		return [godotExportResult];
 	}

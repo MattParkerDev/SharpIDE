@@ -19,7 +19,8 @@ public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
 		github.Credentials = credentials;
 
 		var version = NuGetVersion.Parse("0.1.1");
-		var releaseTag = $"v{version.ToNormalizedString()}";
+		var versionString = version.ToNormalizedString();
+		var releaseTag = $"v{versionString}";
 
 		var newRelease = new NewRelease(releaseTag)
 		{
@@ -32,6 +33,16 @@ public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
 		var owner = "MattParkerDev";
 		var repo = "SharpIDE";
 		var release = await github.Repository.Release.Create(owner, repo, newRelease);
+
+		var windowsReleaseZip = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-win-x64.zip");
+		await using var stream = windowsReleaseZip.OpenRead();
+		var upload = new ReleaseAssetUpload
+		{
+			FileName = $"sharpide-win-x64-{versionString}.zip",
+			ContentType = "application/octet-stream",
+			RawData = stream
+		};
+		var asset = await github.Repository.Release.UploadAsset(release, upload, cancellationToken);
 		return null;
 	}
 }
