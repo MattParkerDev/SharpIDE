@@ -27,11 +27,6 @@ builder.Services
 	.AddStep<CreateWindowsRelease>()
 	;
 
-// Unhandled exception. System.InvalidOperationException: fatal: detected dubious ownership in repository at '/__w/SharpIDE/SharpIDE'
-// To add an exception for this directory, call:
-// git config --global --add safe.directory /__w/SharpIDE/SharpIDE
-await PipelineCliHelper.RunCliCommandAsync("git", "config --global --add safe.directory /__w/SharpIDE/SharpIDE", new CancellationTokenSource().Token);
-
 using var host = builder.Build();
 
 await host.RunAsync();
