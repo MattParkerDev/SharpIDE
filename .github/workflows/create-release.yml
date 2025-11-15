@@ -19,7 +19,14 @@ jobs:
           version: 4.5.1
           use-dotnet: true
           include-templates: true
+      - name: Determine If Release Necessary
+        id: determine-if-release-necessary
+        run: |
+          SHOULD_RELEASE=$(dotnet ./iac/should-release.cs)
+          echo "Command output: $SHOULD_RELEASE"
+          echo "should_release=$SHOULD_RELEASE" >> $GITHUB_OUTPUT
       - name: Dotnet Run Pipeline
+        if: steps.determine-if-release-necessary.outputs.should_release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: dotnet run -c Release --project ./iac/Deploy/Deploy.csproj
