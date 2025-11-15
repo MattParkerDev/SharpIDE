@@ -24,6 +24,7 @@ builder.Services.AddParallelPipelines(
 builder.Services
 	.AddStep<RestoreAndBuildStep>()
 	.AddStep<CreateWindowsRelease>()
+	.AddStep<CreateGithubRelease>()
 	;
 
 using var host = builder.Build();

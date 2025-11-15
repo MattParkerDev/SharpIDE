@@ -48,7 +48,8 @@
     <PackageVersion Include="NuGet.Protocol" Version="7.1.0-preview.1.42" />
     <PackageVersion Include="ObservableCollections" Version="3.3.4" />
     <PackageVersion Include="ObservableCollections.R3" Version="3.3.4" />
-	<PackageVersion Include="ParallelPipelines" Version="2.1.0" />
+    <PackageVersion Include="Octokit" Version="14.0.0" />
+    <PackageVersion Include="ParallelPipelines" Version="2.1.0" />
     <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
     <PackageVersion Include="R3" Version="1.3.0" />
     <PackageVersion Include="XtermBlazor" Version="2.2.0" />
