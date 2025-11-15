@@ -10,8 +10,8 @@ var releaseTag = $"v{versionString}";
 var owner = "MattParkerDev";
 var repo = "SharpIDE";
 var release = await GetReleaseOrNull();
-var resultString = release is null ? "true" : "false";
 
+var resultString = release is null ? "true" : "false";
 Console.WriteLine(resultString);
 return 0;
 
