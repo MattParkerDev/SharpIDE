@@ -18,7 +18,11 @@ public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
 		var credentials = new Credentials(token);
 		github.Credentials = credentials;
 
-		var version = NuGetVersion.Parse("0.1.1");
+		var versionFile = await PipelineFileHelper.GitRootDirectory.GetFile("./src/SharpIDE.Godot/version.txt");
+		if (versionFile.Exists is false) throw new FileNotFoundException(versionFile.FullName);
+		var versionText = await File.ReadAllTextAsync(versionFile.FullName, cancellationToken);
+
+		var version = NuGetVersion.Parse(versionText);
 		var versionString = version.ToNormalizedString();
 		var releaseTag = $"v{versionString}";
 
