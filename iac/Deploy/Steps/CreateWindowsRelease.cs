@@ -10,6 +10,7 @@ public class CreateWindowsRelease : IStep
 {
 	public async Task<BufferedCommandResult?[]?> RunStep(CancellationToken cancellationToken)
 	{
+		return null;
 		var godotPublishDirectory = await PipelineFileHelper.GitRootDirectory.GetDirectory("./artifacts/publish-godot");
 		godotPublishDirectory.Create();
 		var windowsPublishDirectory = await godotPublishDirectory.GetDirectory("./win");
