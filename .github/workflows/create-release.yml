@@ -5,6 +5,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write # Required to create releases
+
 jobs:
   execute-parallel-pipeline:
     runs-on: ubuntu-latest
@@ -17,4 +20,6 @@ jobs:
           use-dotnet: true
           include-templates: true
       - name: Dotnet Run Pipeline
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: dotnet run -c Release --project ./iac/Deploy/Deploy.csproj
