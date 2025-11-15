@@ -19,7 +19,7 @@ public class CreateWindowsRelease : IStep
 
 		var godotExportResult = await PipelineCliHelper.RunCliCommandAsync(
 			"godot",
-			$"--headless --verbose --export-release Linux --project {godotProjectFile.GetFullNameUnix()}",
+			$"--headless --verbose --export-release Windows --project {godotProjectFile.GetFullNameUnix()}",
 			cancellationToken
 		);
 
