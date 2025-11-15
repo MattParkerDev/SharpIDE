@@ -8,10 +8,13 @@ on:
 jobs:
   execute-parallel-pipeline:
     runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:mono-4.5.1
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.5.1
+          use-dotnet: true
+          include-templates: true
       - name: Dotnet Run Pipeline
         run: dotnet run -c Release --project ./iac/Deploy/Deploy.csproj
