@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using ParallelPipelines.Host;
-using ParallelPipelines.Host.Helpers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
