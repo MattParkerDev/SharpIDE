@@ -1,8 +1,6 @@
 using Godot;
-using Microsoft.Build.Locator;
 using Microsoft.Extensions.Hosting;
-using SharpIDE.Application.Features.Events;
-using SharpIDE.Application.Features.FilePersistence;
+using SharpIDE.Application.Features.Build;
 using SharpIDE.Godot.Features.IdeSettings;
 using SharpIDE.Godot.Features.SlnPicker;
 
@@ -26,10 +24,7 @@ public partial class IdeWindow : Control
         GD.Print("IdeWindow _Ready called");
         ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
         ResourceLoader.LoadThreadedRequest(IdeRootScenePath);
-        // Use latest version - https://github.com/microsoft/MSBuildLocator/issues/81
-        var instance = MSBuildLocator.QueryVisualStudioInstances().MaxBy(s => s.Version);
-        if (instance is null) throw new InvalidOperationException("No MSBuild instances found");
-        MSBuildLocator.RegisterInstance(instance);
+        SharpIdeMsbuildLocator.Register();
         GodotOtelExtensions.AddServiceDefaults();
         Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
         //GetWindow().SetMinSize(new Vector2I(1152, 648));
