@@ -61,3 +61,8 @@ step = 0.1
 value = 1.0
 update_on_text_changed = true
 custom_arrow_step = 0.1
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5686275, 0.5686275, 0.5686275, 1)
+text = "Experimental. Non-integer scales will be blurry."
