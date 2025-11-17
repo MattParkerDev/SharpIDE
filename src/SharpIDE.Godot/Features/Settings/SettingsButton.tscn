@@ -1,8 +1,22 @@
-[gd_scene load_steps=2 format=3 uid="uid://c6xurjdabssao"]
+[gd_scene load_steps=3 format=3 uid="uid://c6xurjdabssao"]
 
 [ext_resource type="Texture2D" uid="uid://ctwb5vyjuy5m1" path="res://Resources/settings.svg" id="1_0ups8"]
+[ext_resource type="Script" uid="uid://cry5oglh3nyt1" path="res://Features/Settings/SettingsButton.cs" id="2_e87mh"]
 
 [node name="SettingsButton" type="Button"]
 size_flags_vertical = 4
 icon = ExtResource("1_0ups8")
 icon_alignment = 1
+script = ExtResource("2_e87mh")
+
+[node name="SettingsWindow" type="Window" parent="."]
+unique_name_in_owner = true
+oversampling_override = 1.0
+title = "Settings"
+initial_position = 2
+size = Vector2i(845, 400)
+visible = false
+transient = true
+exclusive = true
+popup_window = true
+popup_wm_hint = true
