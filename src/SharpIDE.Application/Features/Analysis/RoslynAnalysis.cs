@@ -23,6 +23,7 @@ using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
+using NuGet.Frameworks;
 using Roslyn.LanguageServer.Protocol;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.Razor;
@@ -233,6 +234,7 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		// The ProjectIds will not match however, so we need to match on FilePath
 		// Since the ProjectIds don't match, we also need to remap all ProjectReferences to the existing ProjectIds
 		// same for documents
+		// TODO: Handle multiple TFMs - loadedProjectInfos would contain multiple projects with the same FilePath
 		var projectInfosToUpdateWith = loadedProjectInfos.Select(loadedProjectInfo =>
 		{
 			var existingProject = _workspace.CurrentSolution.Projects.Single(p => p.FilePath == loadedProjectInfo.FilePath);
@@ -1008,7 +1010,37 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 
 	private static Project GetProjectForSharpIdeProjectModel(SharpIdeProjectModel projectModel)
 	{
-		var project = _workspace!.CurrentSolution.Projects.Single(s => s.FilePath == projectModel.FilePath);
-		return project;
+		var projectsForProjectPath = _workspace!.CurrentSolution.Projects.Where(s => s.FilePath == projectModel.FilePath).ToList();
+		if (projectsForProjectPath.Count is 0) throw new InvalidOperationException($"No project found in workspace for project path '{projectModel.FilePath}'");
+		if (projectsForProjectPath.Count is 1)
+		{
+			return projectsForProjectPath[0];
+		}
+
+		// Multiple projects with same path, different TFMs
+		var projectAndFrameworkList = projectsForProjectPath
+			.Select(s =>
+			{
+				var flavor = s.State.NameAndFlavor.flavor!;
+				var framework = NuGetFramework.Parse(flavor);
+				return (Project: s, Framework: framework);
+			})
+			.Where(s => s.Framework.IsDesktop() is false) // Exclude .NET Framework projects
+			.ToList();
+
+		if (projectAndFrameworkList.Any(s => s.Framework.Framework == FrameworkConstants.FrameworkIdentifiers.NetCoreApp)) // .NET Core project // I would prefer to use Framework.IsNet5Era
+		{
+			// remove .net standard projects
+			projectAndFrameworkList = projectAndFrameworkList
+				.Where(s => s.Framework.Framework == FrameworkConstants.FrameworkIdentifiers.NetCoreApp)
+				.ToList();
+		}
+
+		var selectedProject = projectAndFrameworkList
+			.OrderByDescending(s => s.Framework, NuGetFrameworkSorter.Instance)
+			.Select(s => s.Project)
+			.First();
+
+		return selectedProject;
 	}
 }
