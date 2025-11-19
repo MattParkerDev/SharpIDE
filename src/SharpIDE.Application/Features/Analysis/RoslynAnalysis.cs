@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using NuGet.Frameworks;
 using Roslyn.LanguageServer.Protocol;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
+using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.SolutionDiscovery;
