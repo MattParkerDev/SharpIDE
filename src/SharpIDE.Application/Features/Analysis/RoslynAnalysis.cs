@@ -11,9 +11,15 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.ExternalAccess.Razor;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Host.Mef;
+using Microsoft.CodeAnalysis.LanguageServer;
+using Microsoft.CodeAnalysis.LanguageServer.Handler.DebugConfiguration;
+using Microsoft.CodeAnalysis.LanguageServer.HostWorkspace;
+using Microsoft.CodeAnalysis.LanguageServer.HostWorkspace.FileWatching;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.ProjectSystem;
 using Microsoft.CodeAnalysis.Razor.DocumentMapping;
 using Microsoft.CodeAnalysis.Razor.Remote;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
@@ -21,8 +27,12 @@ using Microsoft.CodeAnalysis.Remote.Razor.ProjectSystem;
 using Microsoft.CodeAnalysis.Remote.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Shared.Extensions;
+using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Workspaces.ProjectSystem;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.Composition;
 using NuGet.Frameworks;
 using Roslyn.LanguageServer.Protocol;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
@@ -45,7 +55,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 	private readonly ILogger<RoslynAnalysis> _logger = logger;
 	private readonly BuildService _buildService = buildService;
 
-	public static AdhocWorkspace? _workspace;
+	private static LanguageServerWorkspace? _workspace;
+	private static LanguageServerProjectSystem? _languageServerProjectSystem;
+	private static LanguageServerWorkspaceFactory? _languageServerWorkspaceFactory;
 	private static CustomMsBuildProjectLoader? _msBuildProjectLoader;
 	private static RemoteSnapshotManager? _snapshotManager;
 	private static RemoteSemanticTokensLegendService? _semanticTokensLegendService;
@@ -72,6 +84,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 	}
 	public async Task Analyse(SharpIdeSolutionModel solutionModel, CancellationToken cancellationToken = default)
 	{
+
+		//var test = new LanguageServerProjectLoader();
+		//var test = new LanguageServerProjectSystem();
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(Analyse)}");
 		_logger.LogInformation("RoslynAnalysis: Loading solution {SolutionPath}", solutionModel.FilePath);
 		_sharpIdeSolutionModel = solutionModel;
@@ -79,16 +94,29 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		if (_workspace is null)
 		{
 			using var __ = SharpIdeOtel.Source.StartActivity("CreateWorkspace");
+			//var testasdf = await LanguageServerExportProviderBuilder.CreateExportProviderAsync()
 			var configuration = new ContainerConfiguration()
 				.WithAssemblies(MefHostServices.DefaultAssemblies)
+				//.WithAssembly(typeof(LanguageServerWorkspaceFactory).Assembly)
+				//.WithPart<LanguageServerWorkspaceFactory>()
+				//.WithPart<HostServicesProvider>()
+				//.WithPart<ExportProvider>()
+				//.WithExport(testasdf)
 				.WithAssembly(typeof(RemoteSnapshotManager).Assembly);
 
 			// TODO: dispose container at some point?
 			var container = configuration.CreateContainer();
 
 			var host = MefHostServices.Create(container);
-			_workspace = new AdhocWorkspace(host);
-			_workspace.RegisterWorkspaceFailedHandler(o => _logger.LogError("WorkspaceFailedHandler - Workspace failure: {DiagnosticMessage}", o.Diagnostic.Message));
+
+			var simpleFileChangeWatcher = new SimpleFileChangeWatcher();
+			_languageServerWorkspaceFactory = new LanguageServerWorkspaceFactory(host, simpleFileChangeWatcher, [],
+				new ProjectTargetFrameworkManager(), [], new NullLoggerFactory());
+
+			_languageServerProjectSystem = new LanguageServerProjectSystem(_languageServerWorkspaceFactory, simpleFileChangeWatcher, new RazorGlobalOptions.TestGlobalOptionService(), new NullLoggerFactory(), new AsynchronousOperationListenerProvider.NullListenerProvider(), null!);
+
+			//_workspace = new AdhocWorkspace(host);
+			//_workspace.RegisterWorkspaceFailedHandler(o => _logger.LogError("WorkspaceFailedHandler - Workspace failure: {DiagnosticMessage}", o.Diagnostic.Message));
 
 			var snapshotManager = container.GetExports<RemoteSnapshotManager>().FirstOrDefault();
 			_snapshotManager = snapshotManager;
@@ -102,17 +130,25 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 			});
 			_documentMappingService = container.GetExports<IDocumentMappingService>().FirstOrDefault();
 
-			_msBuildProjectLoader = new CustomMsBuildProjectLoader(_workspace);
+			// var languageServerWorkspaceFactory = container.GetExports<LanguageServerWorkspaceFactory>().Single();
+			// await languageServerWorkspaceFactory.HostProjectFactory.ApplyBatchChangeToWorkspaceAsync((accumulator, state) =>
+			// {
+			// 	return state;
+			// }, null);
+
+			//_msBuildProjectLoader = new CustomMsBuildProjectLoader(_workspace);
 		}
 		using (var ___ = SharpIdeOtel.Source.StartActivity("OpenSolution"))
 		{
 			//_msBuildProjectLoader!.LoadMetadataForReferencedProjects = true;
 
 			// MsBuildProjectLoader doesn't do a restore which is absolutely required for resolving PackageReferences, if they have changed. I am guessing it just reads from project.assets.json
-			await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, cancellationToken);
-			var solutionInfo = await _msBuildProjectLoader!.LoadSolutionInfoAsync(_sharpIdeSolutionModel.FilePath, cancellationToken: cancellationToken);
-			_workspace.ClearSolution();
-			var solution = _workspace.AddSolution(solutionInfo);
+			//await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, cancellationToken);
+			//var solutionInfo = await _msBuildProjectLoader!.LoadSolutionInfoAsync(_sharpIdeSolutionModel.FilePath, cancellationToken: cancellationToken);
+			//_workspace.ClearSolution();
+			//var solution = _workspace.AddSolution(solutionInfo);
+			_workspace = _languageServerWorkspaceFactory!.HostWorkspace as LanguageServerWorkspace;
+			await _languageServerProjectSystem!.OpenSolutionAsync(_sharpIdeSolutionModel.FilePath);
 		}
 		timer.Stop();
 		_logger.LogInformation("RoslynAnalysis: Solution loaded in {ElapsedMilliseconds}ms", timer.ElapsedMilliseconds);
@@ -192,7 +228,8 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		// There doesn't appear to be any noticeable difference between ClearSolution + AddSolution vs OnSolutionReloaded
 		//_workspace.OnSolutionReloaded(newSolutionInfo);
 		_workspace.ClearSolution();
-		_workspace.AddSolution(newSolutionInfo);
+		throw new NotImplementedException();
+		//_workspace.AddSolution(newSolutionInfo);
 		___?.Dispose();
 		_logger.LogInformation("RoslynAnalysis: Solution reloaded");
 	}
@@ -894,6 +931,39 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		return null;
 	}
 
+	// public class Test : IFileChangeWatcher
+	// {
+	// 	public IFileChangeContext CreateContext(ImmutableArray<WatchedDirectory> watchedDirectories)
+	// 	{
+	// 		throw new NotImplementedException();
+	// 	}
+	// }
+	//
+	// public async Task OpenDocument(SharpIdeFile sharpIdeFile)
+	// {
+	// 	var document = await GetDocumentForSharpIdeFile(sharpIdeFile);
+	// 	//_workspace!.OpenDocument(document.Id);
+	// 	// Create your editor's text buffer
+	// 	var fileContent = await document.GetTextAsync();
+	// 	var textBuffer = new SharpIdeTextBuffer(new SharpIdeTextSnapshot(fileContent.ToString()));
+	// 	//_workspace.TryOnDocumentOpenedAsync()
+	//
+	// 	//var test = new ProjectSystemProjectFactory(_workspace, null, (b, array) => {}, project => {});
+	//
+	// 	// Create a text container that bridges your buffer to Roslyn
+	// 	var textContainer = new SharpIdeSourceTextContainer(textBuffer);
+	//
+	// 	//var textLoader = new SourceTextLoader(textContainer, fullPath);
+	//
+	// 	// Connect text buffer changes to the container
+	// 	textBuffer.Changed += (sender, e) =>
+	// 	{
+	// 		// Your buffer changed - notify the container
+	// 		textContainer.TextBuffer_Changed(sender, e);
+	// 	};
+	//
+	// }
+
 	public async Task UpdateDocument(SharpIdeFile fileModel, string newContent)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(UpdateDocument)}");
@@ -920,14 +990,17 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 
 		var newText = oldText.WithChanges(sourceText.GetTextChanges(oldText));
 
-		var newSolution = fileModel switch
+		return; // testing IFileWatcher
+		await _workspace.SetCurrentSolutionAsync<object?>(true, null, (oldSolution, s) =>
 		{
-			{ IsRazorFile: true } => _workspace.CurrentSolution.WithAdditionalDocumentText(document.Id, newText),
-			{ IsCsharpFile: true } => _workspace.CurrentSolution.WithDocumentText(document.Id, newText),
-			_ => throw new ArgumentOutOfRangeException()
-		};
-
-		_workspace.TryApplyChanges(newSolution);
+			var newSolution = fileModel switch
+			{
+				{ IsRazorFile: true } => oldSolution.WithAdditionalDocumentText(document.Id, newText),
+				{ IsCsharpFile: true } => oldSolution.WithDocumentText(document.Id, newText),
+				_ => throw new ArgumentOutOfRangeException()
+			};
+			return newSolution;
+		}, false, null, null, CancellationToken.None);
 	}
 
 	public async Task AddDocument(SharpIdeFile fileModel, string content)

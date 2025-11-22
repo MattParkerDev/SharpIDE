@@ -17,6 +17,8 @@
     <Publicize Include="Microsoft.CodeAnalysis.ExternalAccess.Razor.Features" />
     <Publicize Include="Microsoft.CodeAnalysis.Razor.SemanticTokens" />
     <Publicize Include="Microsoft.CodeAnalysis.Workspaces" />
+    <Publicize Include="Microsoft.CodeAnalysis.LanguageServer" />
+    <Publicize Include="Microsoft.CodeAnalysis.Features" />
     <Publicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
     <Publicize Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Microsoft.Build" MemberPattern="^Microsoft\.Build\.Logging\.(TerminalLogger|Terminal)\..*" />
@@ -32,6 +34,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+<!--    <PackageReference Include="Microsoft.CodeAnalysis.LanguageServer.neutral" />-->
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <PackageReference Include="Microsoft.Extensions.Http" />

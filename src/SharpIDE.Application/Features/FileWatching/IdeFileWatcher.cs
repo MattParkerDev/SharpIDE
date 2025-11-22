@@ -21,7 +21,7 @@ public sealed class IdeFileWatcher(ILogger<IdeFileWatcher> logger) : IDisposable
 		var matcher = new Matcher();
 		//matcher.AddIncludePatterns(["**/*.cs", "**/*.csproj", "**/*.sln"]);
 		matcher.AddIncludePatterns(["**/*"]);
-		matcher.AddExcludePatterns(["**/bin", "**/obj", "**/node_modules", "**/.vs", "**/.git", "**/.idea", "**/.vscode"]);
+		matcher.AddExcludePatterns(["**/bin", "**/obj", "**/node_modules", "**/.vs", "**/.git", "**/.idea", "**/.vscode", "**/*.g.cs"]);
 		_matcher = matcher;
 
 		var fileWatcher = new FileSystemWatcherEx();
