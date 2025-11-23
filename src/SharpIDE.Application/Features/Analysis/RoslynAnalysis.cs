@@ -1006,27 +1006,24 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 			return;
 		}
 
-		var existingDocument = fileModel switch
-		{
-			{ IsRazorFile: true } => probableProject.AdditionalDocuments.SingleOrDefault(s => s.FilePath == fileModel.Path),
-			{ IsCsharpFile: true } => probableProject.Documents.SingleOrDefault(s => s.FilePath == fileModel.Path),
-			_ => throw new InvalidOperationException("AddDocument failed: File is not a workspace file")
-		};
-		if (existingDocument is not null)
+		var existingDocumentIdsWithFilePath = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(fileModel.Path);
+		if (!existingDocumentIdsWithFilePath.IsEmpty)
 		{
 			throw new InvalidOperationException($"AddDocument failed: Document '{fileModel.Path}' already exists in workspace");
 		}
 
 		var sourceText = SourceText.From(content, Encoding.UTF8);
+		var documentId = DocumentId.CreateNewId(probableProject.Id);
 
-		var newSolution = fileModel switch
+		_workspace.SetCurrentSolution(oldSolution =>
 		{
-			{ IsRazorFile: true } => _workspace.CurrentSolution.AddAdditionalDocument(DocumentId.CreateNewId(probableProject.Id), fileModel.Name, sourceText, filePath: fileModel.Path),
-			{ IsCsharpFile: true } => _workspace.CurrentSolution.AddDocument(DocumentId.CreateNewId(probableProject.Id), fileModel.Name, sourceText, filePath: fileModel.Path),
-			_ => throw new InvalidOperationException("AddDocument failed: File is not in workspace")
-		};
-
-		_workspace.TryApplyChanges(newSolution);
+			var newSolution = fileModel switch
+			{
+				{ IsCsharpFile: true } => _workspace.CurrentSolution.AddDocument(documentId, fileModel.Name, sourceText, filePath: fileModel.Path),
+				_ => _workspace.CurrentSolution.AddAdditionalDocument(documentId, fileModel.Name, sourceText, filePath: fileModel.Path),
+			};
+			return newSolution;
+		}, WorkspaceChangeKind.DocumentAdded, documentId: documentId);
 	}
 
 	public async Task RemoveDocument(SharpIdeFile fileModel)
