@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene load_steps=24 format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" uid="uid://b8kytk23cfo4x" path="res://Features/Search/SearchAllFiles/SearchAllFilesWindow.tscn" id="15_gh8b1"]
 [ext_resource type="PackedScene" uid="uid://duyxg107nfh2f" path="res://Features/Nuget/NugetPanel.tscn" id="15_lv3f5"]
 [ext_resource type="PackedScene" uid="uid://hwdok1kch3b3" path="res://Features/TestExplorer/TestExplorerPanel.tscn" id="16_0sv7o"]
+[ext_resource type="PackedScene" uid="uid://dr41a4isv0dd5" path="res://Features/BottomBar/BottomBar.tscn" id="18_gyy5s"]
 
 [sub_resource type="Theme" id="Theme_s2dv6"]
 default_font = ExtResource("1_7ptyn")
@@ -142,7 +143,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 4
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_woo5i")
-split_offset = 402
+split_offset = 398
 script = ExtResource("3_0ybuf")
 metadata/_custom_type_script = "uid://kvnhndc3l6ih"
 
@@ -200,6 +201,9 @@ layout_mode = 1
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
+
+[node name="BottomBar" parent="VBoxContainer" instance=ExtResource("18_gyy5s")]
+layout_mode = 2
 
 [node name="SearchWindow" parent="." instance=ExtResource("13_7ptyn")]
 unique_name_in_owner = true
