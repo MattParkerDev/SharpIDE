@@ -1,6 +1,30 @@
-[gd_scene load_steps=2 format=3 uid="uid://dr41a4isv0dd5"]
+[gd_scene load_steps=4 format=3 uid="uid://dr41a4isv0dd5"]
 
 [ext_resource type="Script" uid="uid://dkeruijr43xlk" path="res://Features/BottomBar/BottomBar.cs" id="1_6bm5o"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5swca"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+bg_color = Color(0.28615928, 0.53706324, 0.62218136, 0.5529412)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6bm5o"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+bg_color = Color(0.22352941, 0.57254905, 0.7921569, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 6
 
 [node name="BottomBar" type="PanelContainer"]
 custom_minimum_size = Vector2(0, 27)
@@ -22,7 +46,7 @@ theme_override_constants/margin_right = 8
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 
-[node name="Control" type="Control" parent="MarginContainer/HBoxContainer"]
+[node name="Spacer" type="Control" parent="MarginContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -31,5 +55,7 @@ custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 6
+theme_override_styles/background = SubResource("StyleBoxFlat_5swca")
+theme_override_styles/fill = SubResource("StyleBoxFlat_6bm5o")
 indeterminate = true
-editor_preview_indeterminate = false
+editor_preview_indeterminate = true
