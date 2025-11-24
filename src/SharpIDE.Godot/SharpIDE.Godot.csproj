@@ -25,4 +25,8 @@
       <Publicize Include="Microsoft.CodeAnalysis.Workspaces" />
       <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces:System.Linq.RoslynEnumerableExtensions" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="version.txt" />
+  </ItemGroup>
 </Project>
