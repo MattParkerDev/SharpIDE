@@ -48,6 +48,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\create-release.yml = .github\workflows\create-release.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpIDE.Application.UnitTests", "tests\SharpIDE.Application.UnitTests\SharpIDE.Application.UnitTests.csproj", "{17313240-0A0E-421E-8D33-FC7AD8669451}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -142,6 +144,18 @@ Global
 		{52CD8910-88A4-4978-B107-C7B6C7FC3557}.Release|x64.Build.0 = Release|Any CPU
 		{52CD8910-88A4-4978-B107-C7B6C7FC3557}.Release|x86.ActiveCfg = Release|Any CPU
 		{52CD8910-88A4-4978-B107-C7B6C7FC3557}.Release|x86.Build.0 = Release|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Debug|x64.Build.0 = Debug|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Debug|x86.Build.0 = Debug|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Release|x64.ActiveCfg = Release|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Release|x64.Build.0 = Release|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Release|x86.ActiveCfg = Release|Any CPU
+		{17313240-0A0E-421E-8D33-FC7AD8669451}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -155,5 +169,6 @@ Global
 		{D306410D-3A28-4F1B-A09B-CA10041A7C53} = {F4ED837F-888A-4D01-BCED-C360B9CE0865}
 		{52CD8910-88A4-4978-B107-C7B6C7FC3557} = {E239E6C6-8915-4F03-85B7-22AEAF281D14}
 		{2FAF7C76-F2D6-443D-B3A8-3FA5C4E267C7} = {3852B2EE-7495-4DE1-805F-C198E3A9FF0D}
+		{17313240-0A0E-421E-8D33-FC7AD8669451} = {B6835010-35FA-4C74-AB48-009FB923185D}
 	EndGlobalSection
 EndGlobal
