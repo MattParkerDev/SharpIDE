@@ -143,7 +143,7 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 4
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_woo5i")
-split_offset = 371
+split_offset = 370
 script = ExtResource("3_0ybuf")
 metadata/_custom_type_script = "uid://kvnhndc3l6ih"
 
