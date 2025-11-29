@@ -15,6 +15,7 @@ public partial class SolutionExplorerPanel
     private readonly Texture2D _mdFileIcon = ResourceLoader.Load<Texture2D>("uid://8i2y6xjdjno3");
     private readonly Texture2D _editorConfigFileIcon = ResourceLoader.Load<Texture2D>("uid://5t83l7c7f3g6");
     private readonly Texture2D _gitignoreFileIcon = ResourceLoader.Load<Texture2D>("uid://qhtsnkua67ds");
+    private readonly Texture2D _imageFileIcon = ResourceLoader.Load<Texture2D>("uid://73nvtvnx1tie");
     
     private readonly Texture2D _propsFileOverlayIcon = ResourceLoader.Load<Texture2D>("uid://fa7tdmldi206");
     private readonly Texture2D _configFileOverlayIcon = ResourceLoader.Load<Texture2D>("uid://brsdisqgeah5n");
@@ -35,6 +36,7 @@ public partial class SolutionExplorerPanel
             ".md" => _mdFileIcon,
             ".editorconfig" => _editorConfigFileIcon,
             ".gitignore" => _gitignoreFileIcon,
+            ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".svg" or ".ico" or ".avif" or ".webp" => _imageFileIcon,
             _ => _csIcon
         };
         var overlayTexture = fileExtension switch
