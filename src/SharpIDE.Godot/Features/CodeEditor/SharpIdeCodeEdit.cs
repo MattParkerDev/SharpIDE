@@ -94,6 +94,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		LinesEditedFrom += OnLinesEditedFrom;
 		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
 		SetCodeRegionTags("#region", "#endregion");
+		//AddGitGutter();
 	}
 
 	private readonly CancellationSeries _solutionAlteredCancellationTokenSeries = new();
