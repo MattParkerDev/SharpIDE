@@ -2,7 +2,7 @@
 
 namespace SharpIDE.Application.Features.Analysis;
 
-public struct SharpIdeFileLinePosition
+public record struct SharpIdeFileLinePosition
 {
 	[SetsRequiredMembers]
 	public SharpIdeFileLinePosition(int line, int column)
