@@ -1,7 +1,10 @@
+using System.Diagnostics;
 using Godot;
+using SharpIDE.Application;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Nuget;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.ActivityListener;
 
 namespace SharpIDE.Godot.Features.Nuget;
 
@@ -17,12 +20,15 @@ public partial class NugetPanel : Control
 	private Label _implicitlyInstalledPackagesSlnOrProjectNameLabel = null!;
 	private Label _implicitlyInstalledPackagesResultCountLabel = null!;
 	
+	private ProgressBar _installedPackagesProgressBar = null!;
+	
 	private NugetPackageDetails _nugetPackageDetails = null!;
 
 	private SharpIdeSolutionModel? _solution;
 	
 	[Inject] private readonly NugetClientService _nugetClientService = null!;
 	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
+	[Inject] private readonly ActivityMonitor _activityMonitor = null!;
 	
 	private readonly PackedScene _packageEntryScene = ResourceLoader.Load<PackedScene>("uid://cqc2xlt81ju8s");
 	private readonly Texture2D _csprojIcon = ResourceLoader.Load<Texture2D>("uid://cqt30ma6xgder");
@@ -42,10 +48,13 @@ public partial class NugetPanel : Control
 		_installedPackagesResultCountLabel = GetNode<Label>("%InstalledPackagesResultCountLabel");
 		_implicitlyInstalledPackagesSlnOrProjectNameLabel = GetNode<Label>("%ImplicitlyInstalledPackagesSlnOrProjectNameLabel");
 		_implicitlyInstalledPackagesResultCountLabel = GetNode<Label>("%ImplicitlyInstalledPackagesResultCountLabel");
+		_installedPackagesProgressBar = GetNode<ProgressBar>("%InstalledPackagesProgressBar");
+		_installedPackagesProgressBar.Visible = false;
 		_nugetPackageDetails.Visible = false;
 		_installedPackagesVboxContainer.QueueFreeChildren();
 		_implicitlyInstalledPackagesItemList.QueueFreeChildren();
 		_availablePackagesItemList.QueueFreeChildren();
+		_activityMonitor.ActivityChanged.Subscribe(OnActivityChanged);
 		
 		_ = Task.GodotRun(_AsyncReady);
 	}
@@ -64,6 +73,11 @@ public partial class NugetPanel : Control
 			_solutionOrProjectOptionButton.ItemSelected += OnSolutionOrProjectSelected;
 		});
 		OnSolutionOrProjectSelected(0);
+	}
+
+	public override void _ExitTree()
+	{
+		_activityMonitor.ActivityChanged.Unsubscribe(OnActivityChanged);
 	}
 
 	private void OnSolutionOrProjectSelected(long index)
@@ -133,6 +147,7 @@ public partial class NugetPanel : Control
 
 	private async Task PopulateInstalledPackages(ISolutionOrProject slnOrProject)
 	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetPanel)}.{nameof(PopulateInstalledPackages)}");
 		var setDetailsProjectsTask = SetDetailsProjects(slnOrProject);
 		var msbuildEvalTask = slnOrProject switch
 		{
@@ -183,5 +198,14 @@ public partial class NugetPanel : Control
 			_installedPackagesResultCountLabel.Text = directScenes.Count.ToString();
 			_implicitlyInstalledPackagesResultCountLabel.Text = transitiveScenes.Count.ToString();
 		});
+	}
+	
+	private async Task OnActivityChanged(Activity activity)
+	{
+		var isOccurring = !activity.IsStopped;
+		if (activity.DisplayName == $"{nameof(NugetPanel)}.{nameof(PopulateInstalledPackages)}")
+		{
+			await this.InvokeAsync(() => _installedPackagesProgressBar.Visible = isOccurring);
+		}
 	}
 }

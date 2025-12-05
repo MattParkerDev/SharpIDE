@@ -115,6 +115,22 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
 text = "0"
 
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/margin_left = 10
+
+[node name="InstalledPackagesProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer/MarginContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 2
+indeterminate = true
+editor_preview_indeterminate = false
+
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
