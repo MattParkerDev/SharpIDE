@@ -47,7 +47,7 @@ public partial class IdeWindow : Control
         // PrintOrphanNodes();
     }
 
-    public void SetMaxFpsForMonitor()
+    private void SetMaxFpsForMonitor()
     {
         // Keep max fps below display refresh rate for gsync, to avoid input lag. Currently does not handle window moving across monitors
         var refreshRate = (int)DisplayServer.ScreenGetRefreshRate();
