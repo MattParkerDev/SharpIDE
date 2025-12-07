@@ -52,8 +52,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 	private static CustomMsBuildProjectLoader? _msBuildProjectLoader;
 	private static RemoteSnapshotManager? _snapshotManager;
 	private static RemoteSemanticTokensLegendService? _semanticTokensLegendService;
+	private static ICodeFixService? _codeFixService;
+	private static ICodeRefactoringService? _codeRefactoringService;
 	private static IDocumentMappingService? _documentMappingService;
-	private static HashSet<CodeFixProvider> _codeFixProviders = [];
 	private static HashSet<CodeRefactoringProvider> _codeRefactoringProviders = [];
 
 	// Primarily used for getting the globs for a project
@@ -100,6 +101,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 			var snapshotManager = container.GetExports<RemoteSnapshotManager>().FirstOrDefault();
 			_snapshotManager = snapshotManager;
 
+			_codeFixService = container.GetExports<ICodeFixService>().FirstOrDefault();
+			_codeRefactoringService = container.GetExports<ICodeRefactoringService>().FirstOrDefault();
+
 			_semanticTokensLegendService = (RemoteSemanticTokensLegendService)container.GetExports<ISemanticTokensLegendService>().FirstOrDefault()!;
 			_semanticTokensLegendService!.OnLspInitialized(new RemoteClientLSPInitializationOptions
 			{
@@ -140,12 +144,9 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		{
 			foreach (var assembly in MefHostServices.DefaultAssemblies)
 			{
-				var fixers = CodeFixProviderLoader.LoadCodeFixProviders([assembly], LanguageNames.CSharp);
-				_codeFixProviders.AddRange(fixers);
 				var refactoringProviders = CodeRefactoringProviderLoader.LoadCodeRefactoringProviders([assembly], LanguageNames.CSharp);
 				_codeRefactoringProviders.AddRange(refactoringProviders);
 			}
-			_codeFixProviders = _codeFixProviders.DistinctBy(s => s.GetType().Name).ToHashSet();
 			_codeRefactoringProviders = _codeRefactoringProviders.DistinctBy(s => s.GetType().Name).ToHashSet();
 		}
 
@@ -605,7 +606,16 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
-		var diagnostics = semanticModel.GetDiagnostics(cancellationToken: cancellationToken); // TODO: pass span
+		var projectAnalyzers = document.Project.AnalyzerReferences
+			.OfType<IsolatedAnalyzerFileReference>()
+			.SelectMany(r => r.GetAnalyzers(document.Project.Language))
+			.ToImmutableArray();
+
+		var compilationWithAnalyzers = semanticModel.Compilation.WithAnalyzers(projectAnalyzers);
+
+		var analysisResult = await compilationWithAnalyzers.GetAnalysisResultAsync(semanticModel, null, cancellationToken);
+		var diagnostics = analysisResult.GetAllDiagnostics();
+
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.Lines.GetPosition(linePosition);
 		var diagnosticsAtPosition = diagnostics
@@ -627,23 +637,20 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 
 	private static async Task<ImmutableArray<CodeAction>> GetCodeFixesAsync(Document document, Diagnostic diagnostic, CancellationToken cancellationToken = default)
 	{
-		var codeActions = new List<CodeAction>();
-		var context = new CodeFixContext(
+		var span = diagnostic.Location.SourceSpan;
+
+		var fixCollections = await _codeFixService!.GetFixesAsync(
 			document,
-			diagnostic,
-			(action, _) => codeActions.Add(action), // callback collects fixes
-			cancellationToken
-		);
+			span,
+			cancellationToken);
 
-		var relevantProviders = _codeFixProviders
-			.Where(provider => provider.FixableDiagnosticIds.Contains(diagnostic.Id));
+		var codeActions = fixCollections
+			.SelectMany(collection => collection.Fixes)
+			.Select(fix => fix.Action)
+			.Where(s => s.NestedActions.Length is 0) // Currently, nested actions are not supported
+			.ToImmutableArray();
 
-		foreach (var provider in relevantProviders)
-		{
-			await provider.RegisterCodeFixesAsync(context);
-		}
-
-		return codeActions.ToImmutableArray();
+		return codeActions;
 	}
 
 	private static async Task<ImmutableArray<CodeAction>> GetCodeRefactoringsAsync(Document document, TextSpan span, CancellationToken cancellationToken = default)
@@ -724,6 +731,7 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionApplyChanges)}");
 		await _solutionLoadedTcs.Task;
+		// TODO: Handle codeAction.NestedActions
 		var operations = await codeAction.GetOperationsAsync(cancellationToken);
 		var originalSolution = _workspace!.CurrentSolution;
 		var updatedSolution = originalSolution;
