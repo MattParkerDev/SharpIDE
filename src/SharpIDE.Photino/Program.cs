@@ -5,6 +5,7 @@ using MudBlazor.Services;
 using Photino.Blazor;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Photino.Models;
 using SharpIDE.Photino.Services;
@@ -25,6 +26,7 @@ public class Program
 		appBuilder.Services.AddSingleton<BuildService>();
 		appBuilder.Services.AddSingleton<RunService>();
 		appBuilder.Services.AddSingleton<RoslynAnalysis>();
+		appBuilder.Services.AddSingleton<AnalyzerFileWatcher>();
 
 		appBuilder.RootComponents.Add<App>("app");
 
