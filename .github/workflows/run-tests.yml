@@ -3,11 +3,7 @@ on:
   push:
     branches-ignore:
       - main
-    paths:
-      - ".github/workflows/run-tests.yml"
   pull_request:
-    paths:
-      - ".github/workflows/run-tests.yml"
     branches:
       - main
   workflow_dispatch:
