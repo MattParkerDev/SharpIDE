@@ -56,6 +56,7 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 	private static ICodeRefactoringService? _codeRefactoringService;
 	private static IDocumentMappingService? _documentMappingService;
 	private static HashSet<CodeRefactoringProvider> _codeRefactoringProviders = [];
+	private static HashSet<CodeFixProvider> _codeFixProviders = [];
 
 	// Primarily used for getting the globs for a project
 	private Dictionary<ProjectId, ProjectFileInfo> _projectFileInfoMap = new();
@@ -144,10 +145,15 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		{
 			foreach (var assembly in MefHostServices.DefaultAssemblies)
 			{
+				// These could be loaded from the composition via _workspace.CurrentSolution.Services.ExportProvider.GetExports<Lazy<CodeFixProvider, CodeChangeProviderMetadata>>().ToList(),
+				// however we need all the CodeFixProviders/CodeRefactoringProviders immediately on the first code action request, so I would prefer to do it here
+				var fixers = CodeFixProviderLoader.LoadCodeFixProviders([assembly], LanguageNames.CSharp);
+				_codeFixProviders.AddRange(fixers);
 				var refactoringProviders = CodeRefactoringProviderLoader.LoadCodeRefactoringProviders([assembly], LanguageNames.CSharp);
 				_codeRefactoringProviders.AddRange(refactoringProviders);
 			}
 			_codeRefactoringProviders = _codeRefactoringProviders.DistinctBy(s => s.GetType().Name).ToHashSet();
+			_codeFixProviders = _codeFixProviders.DistinctBy(s => s.GetType().Name).ToHashSet();
 		}
 
 		// // TODO: Distinct on the assemblies first
@@ -597,6 +603,7 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		return new IdeCompletionListResult(document, completions);
 	}
 
+	// TODO: Pass in LinePositionSpan for refactorings that span multiple characters, e.g. extract method
 	public async Task<ImmutableArray<CodeAction>> GetCodeFixesForDocumentAtPosition(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeFixesForDocumentAtPosition)}");
@@ -606,15 +613,8 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
-		var projectAnalyzers = document.Project.AnalyzerReferences
-			.OfType<IsolatedAnalyzerFileReference>()
-			.SelectMany(r => r.GetAnalyzers(document.Project.Language))
-			.ToImmutableArray();
-
-		var compilationWithAnalyzers = semanticModel.Compilation.WithAnalyzers(projectAnalyzers);
-
-		var analysisResult = await compilationWithAnalyzers.GetAnalysisResultAsync(semanticModel, null, cancellationToken);
-		var diagnostics = analysisResult.GetAllDiagnostics();
+		// We don't need analyzer diagnostics, as ICodeFixService does not take diagnostics to find fixes for, it takes a document and span
+		var diagnostics = semanticModel.Compilation.GetDiagnostics(cancellationToken);
 
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.Lines.GetPosition(linePosition);
@@ -622,23 +622,48 @@ public class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildSe
 			.Where(d => d.Location.IsInSource && d.Location.SourceSpan.Contains(position))
 			.ToImmutableArray();
 
-		ImmutableArray<CodeAction> codeActions = [];
+		var arrayBuilder = ImmutableArray.CreateBuilder<CodeAction>();
 		foreach (var diagnostic in diagnosticsAtPosition)
 		{
 			var actions = await GetCodeFixesAsync(document, diagnostic, cancellationToken);
-			codeActions = codeActions.AddRange(actions);
+			arrayBuilder.AddRange(actions);
 		}
+
+		var textSpan = new TextSpan(position, 0);
+		var codeActionsFromProjectAnalyzers = await GetCodeFixesFromProjectAnalyzersAsync(document, textSpan, cancellationToken);
+		arrayBuilder.AddRange(codeActionsFromProjectAnalyzers);
 
 		var linePositionSpan = new LinePositionSpan(linePosition, new LinePosition(linePosition.Line, linePosition.Character + 1));
 		var selectedSpan = sourceText.Lines.GetTextSpan(linePositionSpan);
-		codeActions = codeActions.AddRange(await GetCodeRefactoringsAsync(document, selectedSpan, cancellationToken));
-		return codeActions;
+		arrayBuilder.AddRange(await GetCodeRefactoringsAsync(document, selectedSpan, cancellationToken));
+		return arrayBuilder.ToImmutable();
 	}
 
+	// Fixes from the MefHostServices.DefaultAssemblies
 	private static async Task<ImmutableArray<CodeAction>> GetCodeFixesAsync(Document document, Diagnostic diagnostic, CancellationToken cancellationToken = default)
 	{
-		var span = diagnostic.Location.SourceSpan;
+		var codeActions = new List<CodeAction>();
+		var context = new CodeFixContext(
+			document,
+			diagnostic,
+			(action, _) => codeActions.Add(action), // callback collects fixes
+			cancellationToken
+		);
 
+		var relevantProviders = _codeFixProviders.Where(provider => provider.FixableDiagnosticIds.Contains(diagnostic.Id));
+
+		foreach (var provider in relevantProviders)
+		{
+			await provider.RegisterCodeFixesAsync(context);
+		}
+
+		return codeActions.ToImmutableArray();
+	}
+
+	private static async Task<ImmutableArray<CodeAction>> GetCodeFixesFromProjectAnalyzersAsync(Document document, TextSpan span, CancellationToken cancellationToken = default)
+	{
+		// We could get the CodeFixProviders from the project's IsolatedAnalyzerFileReferences. For now, ICodeFixService handles caching them for me
+		// I also do not know why the _codeFixService does not return fixes for MefHostServices.DefaultAssemblies - I have verified that there are Lazy<CodeFixProvider, CodeChangeProviderMetadata>>'s provided by the composition for them
 		var fixCollections = await _codeFixService!.GetFixesAsync(
 			document,
 			span,
