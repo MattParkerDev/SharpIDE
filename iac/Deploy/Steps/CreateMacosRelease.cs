@@ -6,7 +6,7 @@ using ParallelPipelines.Host.Helpers;
 namespace Deploy.Steps;
 
 [DependsOnStep<RestoreAndBuildStep>]
-[DependsOnStep<CreateWindowsRelease>]
+[DependsOnStep<CreateWindowsArm64Release>]
 public class CreateMacosRelease : IStep
 {
 	public async Task<BufferedCommandResult?[]?> RunStep(CancellationToken cancellationToken)

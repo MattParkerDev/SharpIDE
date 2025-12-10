@@ -9,6 +9,7 @@ using ParallelPipelines.Host.Helpers;
 namespace Deploy.Steps;
 
 [DependsOnStep<CreateWindowsRelease>]
+[DependsOnStep<CreateWindowsArm64Release>]
 [DependsOnStep<CreateLinuxRelease>]
 [DependsOnStep<CreateMacosRelease>]
 public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
@@ -40,35 +41,26 @@ public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
 		var repo = "SharpIDE";
 		var release = await github.Repository.Release.Create(owner, repo, newRelease);
 
-		var windowsReleaseZip = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-win-x64.zip");
-		await using var stream = windowsReleaseZip.OpenRead();
+		var win64Release =		await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-win-x64.zip", $"sharpide-win-x64-{versionString}.zip", cancellationToken);
+		var winArm64Release =	await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-win-arm64.zip", $"sharpide-win-arm64-{versionString}.zip", cancellationToken);
+		var linuxRelease =		await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-linux-x64.tar.gz", $"sharpide-linux-x64-{versionString}.tar.gz", cancellationToken);
+		var macosRelease =		await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-osx-universal.zip", $"sharpide-osx-universal-{versionString}.zip", cancellationToken);
+
+		return null;
+	}
+
+	private static async Task<ReleaseAsset> UploadAssetToRelease(GitHubClient github, Release release, string relativeFilePath, string releaseFileName, CancellationToken cancellationToken)
+	{
+		var releaseArchive = await PipelineFileHelper.GitRootDirectory.GetFile(relativeFilePath);
+		await using var releaseZipStream = releaseArchive.OpenRead();
+
 		var upload = new ReleaseAssetUpload
 		{
-			FileName = $"sharpide-win-x64-{versionString}.zip",
+			FileName = releaseFileName,
 			ContentType = "application/octet-stream",
-			RawData = stream
+			RawData = releaseZipStream
 		};
 		var asset = await github.Repository.Release.UploadAsset(release, upload, cancellationToken);
-
-		var linuxReleaseTarball = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-linux-x64.tar.gz");
-		await using var linuxStream = linuxReleaseTarball.OpenRead();
-		var linuxUpload = new ReleaseAssetUpload
-		{
-			FileName = $"sharpide-linux-x64-{versionString}.tar.gz",
-			ContentType = "application/gzip",
-			RawData = linuxStream
-		};
-		var linuxAsset = await github.Repository.Release.UploadAsset(release, linuxUpload, cancellationToken);
-
-		var macosReleaseZip = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-osx-universal.zip");
-		await using var macosStream = macosReleaseZip.OpenRead();
-		var macosUpload = new ReleaseAssetUpload
-		{
-			FileName = $"sharpide-osx-universal-{versionString}.zip",
-			ContentType = "application/octet-stream",
-			RawData = macosStream
-		};
-		var macosAsset = await github.Repository.Release.UploadAsset(release, macosUpload, cancellationToken);
-		return null;
+		return asset;
 	}
 }

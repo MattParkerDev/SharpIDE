@@ -6,24 +6,25 @@ using ParallelPipelines.Host.Helpers;
 namespace Deploy.Steps;
 
 [DependsOnStep<RestoreAndBuildStep>]
-public class CreateWindowsRelease : IStep
+[DependsOnStep<CreateWindowsRelease>]
+public class CreateWindowsArm64Release : IStep
 {
 	public async Task<BufferedCommandResult?[]?> RunStep(CancellationToken cancellationToken)
 	{
 		var godotPublishDirectory = await PipelineFileHelper.GitRootDirectory.GetDirectory("./artifacts/publish-godot");
 		godotPublishDirectory.Create();
-		var windowsPublishDirectory = await godotPublishDirectory.GetDirectory("./win");
+		var windowsPublishDirectory = await godotPublishDirectory.GetDirectory("./win-arm64");
 		windowsPublishDirectory.Create();
 
 		var godotProjectFile = await PipelineFileHelper.GitRootDirectory.GetFile("./src/SharpIDE.Godot/project.godot");
 
 		var godotExportResult = await PipelineCliHelper.RunCliCommandAsync(
 			"godot",
-			$"--headless --verbose --export-release Windows-x64 --project {godotProjectFile.GetFullNameUnix()}",
+			$"--headless --verbose --export-release Windows-arm64 --project {godotProjectFile.GetFullNameUnix()}",
 			cancellationToken
 		);
 
-		var windowsZipFile = await windowsPublishDirectory.ZipDirectoryToFile($"{PipelineFileHelper.GitRootDirectory.FullName}/artifacts/publish-godot/sharpide-win-x64.zip");
+		var windowsZipFile = await windowsPublishDirectory.ZipDirectoryToFile($"{PipelineFileHelper.GitRootDirectory.FullName}/artifacts/publish-godot/sharpide-win-arm64.zip");
 
 		return [godotExportResult];
 	}
