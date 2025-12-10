@@ -45,7 +45,7 @@ public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
 		var winArm64Release =	await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-win-arm64.zip", $"sharpide-win-arm64-{versionString}.zip", cancellationToken);
 		var linuxRelease =		await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-linux-x64.tar.gz", $"sharpide-linux-x64-{versionString}.tar.gz", cancellationToken);
 		var macosRelease =		await UploadAssetToRelease(github, release, "./artifacts/publish-godot/sharpide-osx-universal.zip", $"sharpide-osx-universal-{versionString}.zip", cancellationToken);
-		
+
 		return null;
 	}
 
