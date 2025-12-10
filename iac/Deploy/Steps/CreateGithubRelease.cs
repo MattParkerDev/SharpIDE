@@ -9,6 +9,7 @@ using ParallelPipelines.Host.Helpers;
 namespace Deploy.Steps;
 
 [DependsOnStep<CreateWindowsRelease>]
+[DependsOnStep<CreateWindowsArm64Release>]
 [DependsOnStep<CreateLinuxRelease>]
 [DependsOnStep<CreateMacosRelease>]
 public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
@@ -40,15 +41,25 @@ public class CreateGithubRelease(IPipelineContext pipelineContext) : IStep
 		var repo = "SharpIDE";
 		var release = await github.Repository.Release.Create(owner, repo, newRelease);
 
-		var windowsReleaseZip = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-win-x64.zip");
-		await using var stream = windowsReleaseZip.OpenRead();
-		var upload = new ReleaseAssetUpload
+		var windows64ReleaseZip = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-win-x64.zip");
+		await using var win64Stream = windows64ReleaseZip.OpenRead();
+		var win64Upload = new ReleaseAssetUpload
 		{
 			FileName = $"sharpide-win-x64-{versionString}.zip",
 			ContentType = "application/octet-stream",
-			RawData = stream
+			RawData = win64Stream
 		};
-		var asset = await github.Repository.Release.UploadAsset(release, upload, cancellationToken);
+		var win64Asset = await github.Repository.Release.UploadAsset(release, win64Upload, cancellationToken);
+
+		var windowsArm64ReleaseZip = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-win-arm64.zip");
+		await using var winArm64Stream = windowsArm64ReleaseZip.OpenRead();
+		var winArm64Upload = new ReleaseAssetUpload
+		{
+			FileName = $"sharpide-win-x64-{versionString}.zip",
+			ContentType = "application/octet-stream",
+			RawData = winArm64Stream
+		};
+		var winArm64Asset = await github.Repository.Release.UploadAsset(release, winArm64Upload, cancellationToken);
 
 		var linuxReleaseTarball = await PipelineFileHelper.GitRootDirectory.GetFile("./artifacts/publish-godot/sharpide-linux-x64.tar.gz");
 		await using var linuxStream = linuxReleaseTarball.OpenRead();
