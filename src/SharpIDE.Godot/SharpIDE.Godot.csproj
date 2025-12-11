@@ -27,6 +27,16 @@
   </ItemGroup>
 
   <ItemGroup>
+      <ProjectReference Include="..\SharpIDE.SourceGenerators\SharpIDE.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="version.txt" />
   </ItemGroup>
+
+  <ItemGroup>
+      <None Remove="project.godot"/>
+      <AdditionalFiles Include="project.godot"/>
+  </ItemGroup>
+    
 </Project>
