@@ -16,7 +16,7 @@ public class Debugger
 	}
 
 	public async Task StepOver(int threadId, CancellationToken cancellationToken = default) => await _debuggingService.StepOver(threadId, cancellationToken);
-	public async Task<List<ThreadModel2>> GetThreadsAtStopPoint() => await _debuggingService.GetThreadsAtStopPoint();
-	public async Task<List<StackFrameModel2>> GetStackFramesForThread(int threadId) => await _debuggingService.GetStackFramesForThread(threadId);
+	public async Task<List<ThreadModel>> GetThreadsAtStopPoint() => await _debuggingService.GetThreadsAtStopPoint();
+	public async Task<List<StackFrameModel>> GetStackFramesForThread(int threadId) => await _debuggingService.GetStackFramesForThread(threadId);
 	public async Task<List<Variable>> GetVariablesForStackFrame(int frameId) => await _debuggingService.GetVariablesForStackFrame(frameId);
 }

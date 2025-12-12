@@ -155,11 +155,11 @@ public class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysi
 		await _debugger!.StepOver(threadId);
 	}
 
-	public async Task<List<ThreadModel2>> GetThreadsAtStopPoint()
+	public async Task<List<ThreadModel>> GetThreadsAtStopPoint()
 	{
 		return await _debugger!.GetThreadsAtStopPoint();
 	}
-	public async Task<List<StackFrameModel2>> GetStackFrames(int threadId)
+	public async Task<List<StackFrameModel>> GetStackFrames(int threadId)
 	{
 		return await _debugger!.GetStackFramesForThread(threadId);
 	}

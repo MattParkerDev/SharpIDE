@@ -163,11 +163,11 @@ public class DebuggingService
 		_debugProtocolHost.SendRequestSync(nextRequest);
 	}
 
-	public async Task<List<ThreadModel2>> GetThreadsAtStopPoint()
+	public async Task<List<ThreadModel>> GetThreadsAtStopPoint()
 	{
 		var threadsRequest = new ThreadsRequest();
 		var threadsResponse = _debugProtocolHost.SendRequestSync(threadsRequest);
-		var mappedThreads = threadsResponse.Threads.Select(s => new ThreadModel2
+		var mappedThreads = threadsResponse.Threads.Select(s => new ThreadModel
 		{
 			Id = s.Id,
 			Name = s.Name
@@ -175,7 +175,7 @@ public class DebuggingService
 		return mappedThreads;
 	}
 
-	public async Task<List<StackFrameModel2>> GetStackFramesForThread(int threadId)
+	public async Task<List<StackFrameModel>> GetStackFramesForThread(int threadId)
 	{
 		var stackTraceRequest = new StackTraceRequest { ThreadId = threadId };
 		var stackTraceResponse = _debugProtocolHost.SendRequestSync(stackTraceRequest);
@@ -185,7 +185,7 @@ public class DebuggingService
 		{
 			var isExternalCode = frame.Name == "[External Code]";
 			ManagedStackFrameInfo? managedStackFrameInfo = isExternalCode ? null : ParseStackFrameName(frame.Name);
-			return new StackFrameModel2
+			return new StackFrameModel
 			{
 				Id = frame.Id,
 				Name = frame.Name,
