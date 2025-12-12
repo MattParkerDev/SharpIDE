@@ -3,12 +3,14 @@ using System.Threading.Channels;
 using Ardalis.GuardClauses;
 using AsyncReadProcess;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using Breakpoint = SharpIDE.Application.Features.Debugging.Breakpoint;
 
 namespace SharpIDE.Application.Features.Run;
 
@@ -153,9 +155,17 @@ public class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysi
 		await _debugger!.StepOver(threadId);
 	}
 
-	public async Task<ThreadsStackTraceModel> GetInfoAtStopPoint()
+	public async Task<List<ThreadModel2>> GetThreadsAtStopPoint()
 	{
-		return await _debugger!.GetInfoAtStopPoint();
+		return await _debugger!.GetThreadsAtStopPoint();
+	}
+	public async Task<List<StackFrameModel2>> GetStackFrames(int threadId)
+	{
+		return await _debugger!.GetStackFramesForThread(threadId);
+	}
+	public async Task<List<Variable>> GetVariablesForStackFrame(int frameId)
+	{
+		return await _debugger!.GetVariablesForStackFrame(frameId);
 	}
 
 	private async Task<string> GetRunArguments(SharpIdeProjectModel project)

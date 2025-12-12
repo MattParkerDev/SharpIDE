@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bdu08nd7si641"]
+[gd_scene load_steps=3 format=3 uid="uid://bdu08nd7si641"]
 
 [ext_resource type="Script" uid="uid://dpc4fvj40e5il" path="res://Features/Debug_/Tab/SubTabs/ThreadsVariablesSubTab.cs" id="1_e3p3b"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hwpe6"]
 
 [node name="ThreadsVariablesSubTab" type="Control"]
 layout_mode = 3
@@ -28,52 +30,46 @@ split_offset = 370
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="HSplitContainer/HSplitContainer/ThreadsPanel"]
+[node name="ThreadsTree" type="Tree" parent="HSplitContainer/HSplitContainer/ThreadsPanel"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="ThreadsVBoxContainer" type="VBoxContainer" parent="HSplitContainer/HSplitContainer/ThreadsPanel/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/draw_guides = 0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
+hide_root = true
 
 [node name="StackFramesPanel" type="Panel" parent="HSplitContainer/HSplitContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="HSplitContainer/HSplitContainer/StackFramesPanel"]
+[node name="StackFramesTree" type="Tree" parent="HSplitContainer/HSplitContainer/StackFramesPanel"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="StackFramesVBoxContainer" type="VBoxContainer" parent="HSplitContainer/HSplitContainer/StackFramesPanel/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/draw_guides = 0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
+hide_root = true
 
 [node name="VariablesPanel" type="Panel" parent="HSplitContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="HSplitContainer/VariablesPanel"]
+[node name="VariablesTree" type="Tree" parent="HSplitContainer/VariablesPanel"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="VariablesVBoxContainer" type="VBoxContainer" parent="HSplitContainer/VariablesPanel/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
+theme_override_constants/draw_guides = 0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
+hide_root = true

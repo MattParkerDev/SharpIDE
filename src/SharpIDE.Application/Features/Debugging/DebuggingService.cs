@@ -163,57 +163,72 @@ public class DebuggingService
 		_debugProtocolHost.SendRequestSync(nextRequest);
 	}
 
-	public async Task<ThreadsStackTraceModel> GetInfoAtStopPoint()
+	public async Task<List<ThreadModel2>> GetThreadsAtStopPoint()
 	{
-		var model = new ThreadsStackTraceModel();
-		try
+		var threadsRequest = new ThreadsRequest();
+		var threadsResponse = _debugProtocolHost.SendRequestSync(threadsRequest);
+		var mappedThreads = threadsResponse.Threads.Select(s => new ThreadModel2
 		{
-			var threads = _debugProtocolHost.SendRequestSync(new ThreadsRequest());
-			foreach (var thread in threads.Threads)
+			Id = s.Id,
+			Name = s.Name
+		}).ToList();
+		return mappedThreads;
+	}
+
+	public async Task<List<StackFrameModel2>> GetStackFramesForThread(int threadId)
+	{
+		var stackTraceRequest = new StackTraceRequest { ThreadId = threadId };
+		var stackTraceResponse = _debugProtocolHost.SendRequestSync(stackTraceRequest);
+		var stackFrames = stackTraceResponse.StackFrames;
+
+		var mappedStackFrames = stackFrames!.Select(frame =>
+		{
+			var isExternalCode = frame.Name == "[External Code]";
+			ManagedStackFrameInfo? managedStackFrameInfo = isExternalCode ? null : ParseStackFrameName(frame.Name);
+			return new StackFrameModel2
 			{
-				var threadModel = new ThreadModel { Id = thread.Id, Name = thread.Name };
-				model.Threads.Add(threadModel);
-				var stackTrace = _debugProtocolHost.SendRequestSync(new StackTraceRequest { ThreadId = thread.Id });
-				var frame = stackTrace.StackFrames!.FirstOrDefault();
-				if (frame == null) continue;
-				var name = frame.Name;
-				if (name == "[External Code]") continue; // TODO: handle this case
+				Id = frame.Id,
+				Name = frame.Name,
+				Line = frame.Line,
+				Column = frame.Column,
+				Source = frame.Source?.Path,
+				IsExternalCode =  isExternalCode,
+				ManagedInfo = managedStackFrameInfo,
+			};
+		}).ToList();
+		return mappedStackFrames;
+	}
 
-				// Infrastructure.dll!Infrastructure.DependencyInjection.AddInfrastructure(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) Line 23
-				// need to parse out the class name, method name, namespace, assembly name
-				var methodName = name.Split('!')[1].Split('(')[0];
-				var className = methodName.Split('.').Reverse().Skip(1).First();
-				var namespaceName = string.Join('.', methodName.Split('.').Reverse().Skip(2).Reverse());
-				var assemblyName = name.Split('!')[0];
-				methodName = methodName.Split('.').Reverse().First();
-				var frameModel = new StackFrameModel
-				{
-					Id = frame.Id,
-					Name = frame.Name,
-					Line = frame.Line,
-					Column = frame.Column,
-					Source = frame.Source?.Path,
-					ClassName = className,
-					MethodName = methodName,
-					Namespace = namespaceName,
-					AssemblyName = assemblyName
-				};
-				threadModel.StackFrames.Add(frameModel);
-				var scopes = _debugProtocolHost.SendRequestSync(new ScopesRequest { FrameId = frame.Id });
-				foreach (var scope in scopes.Scopes)
-				{
-					var scopeModel = new ScopeModel { Name = scope.Name };
-					frameModel.Scopes.Add(scopeModel);
-					var variablesResponse = _debugProtocolHost.SendRequestSync(new VariablesRequest { VariablesReference = scope.VariablesReference });
-					scopeModel.Variables = variablesResponse.Variables;
-				}
-			}
-		}
-		catch (Exception)
+	public async Task<List<Variable>> GetVariablesForStackFrame(int frameId)
+	{
+		var scopesRequest = new ScopesRequest { FrameId = frameId };
+		var scopesResponse = _debugProtocolHost.SendRequestSync(scopesRequest);
+		var allVariables = new List<Variable>();
+		foreach (var scope in scopesResponse.Scopes)
 		{
-			throw;
+			var variablesRequest = new VariablesRequest { VariablesReference = scope.VariablesReference };
+			var variablesResponse = _debugProtocolHost.SendRequestSync(variablesRequest);
+			allVariables.AddRange(variablesResponse.Variables);
 		}
+		return allVariables;
+	}
 
-		return model;
+	// netcoredbg does not provide the stack frame name in this format, so don't use this if using netcoredbg
+	private static ManagedStackFrameInfo? ParseStackFrameName(string name)
+	{
+		return null;
+		var methodName = name.Split('!')[1].Split('(')[0];
+		var className = methodName.Split('.').Reverse().Skip(1).First();
+		var namespaceName = string.Join('.', methodName.Split('.').Reverse().Skip(2).Reverse());
+		var assemblyName = name.Split('!')[0];
+		methodName = methodName.Split('.').Reverse().First();
+		var managedStackFrameInfo = new ManagedStackFrameInfo
+		{
+			MethodName = methodName,
+			ClassName = className,
+			Namespace = namespaceName,
+			AssemblyName = assemblyName
+		};
+		return managedStackFrameInfo;
 	}
 }
