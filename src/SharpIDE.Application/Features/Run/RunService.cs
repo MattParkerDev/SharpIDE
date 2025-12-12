@@ -94,7 +94,7 @@ public class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysi
 				// Attach debugger (which internally uses a DiagnosticClient to resume startup)
 				var debugger = new Debugger { Project = project, ProcessId = process.ProcessId };
 				_debugger = debugger;
-				await debugger.Attach(debuggerExecutablePath, Breakpoints.ToDictionary(), project.RunningCancellationTokenSource.Token).ConfigureAwait(false);
+				await debugger.Attach(debuggerExecutablePath, Breakpoints.ToDictionary(), project, project.RunningCancellationTokenSource.Token).ConfigureAwait(false);
 			}
 
 			project.Running = true;

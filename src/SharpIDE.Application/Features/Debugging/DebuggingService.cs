@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using SharpIDE.Application.Features.Debugging.Signing;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.Debugging;
 
@@ -15,7 +16,7 @@ namespace SharpIDE.Application.Features.Debugging;
 public class DebuggingService
 {
 	private DebugProtocolHost _debugProtocolHost = null!;
-	public async Task Attach(int debuggeeProcessId, string? debuggerExecutablePath, Dictionary<SharpIdeFile, List<Breakpoint>> breakpointsByFile, CancellationToken cancellationToken = default)
+	public async Task Attach(int debuggeeProcessId, string? debuggerExecutablePath, Dictionary<SharpIdeFile, List<Breakpoint>> breakpointsByFile, SharpIdeProjectModel project, CancellationToken cancellationToken = default)
 	{
 		Guard.Against.NegativeOrZero(debuggeeProcessId, nameof(debuggeeProcessId), "Process ID must be a positive integer.");
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
@@ -86,7 +87,7 @@ public class DebuggingService
 			{
 				var filePath = additionalProperties?["source"]?["path"]!.Value<string>()!;
 				var line = (additionalProperties?["line"]?.Value<int>()!).Value;
-				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line, ThreadId = @event.ThreadId!.Value };
+				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line, ThreadId = @event.ThreadId!.Value, Project = project };
 				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 			else
@@ -97,7 +98,7 @@ public class DebuggingService
 				var topFrame = stackTraceResponse.StackFrames.Single();
 				var filePath = topFrame.Source.Path;
 				var line = topFrame.Line;
-				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line, ThreadId = @event.ThreadId!.Value };
+				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line, ThreadId = @event.ThreadId!.Value, Project = project };
 				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 

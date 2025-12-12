@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Ardalis.GuardClauses;
 using Godot;
 using R3;
@@ -19,7 +20,7 @@ public partial class CodeEditorPanel : MarginContainer
     public SharpIdeSolutionModel Solution { get; set; } = null!;
     private PackedScene _sharpIdeCodeEditScene = GD.Load<PackedScene>("res://Features/CodeEditor/SharpIdeCodeEdit.tscn");
     private TabContainer _tabContainer = null!;
-	private ExecutionStopInfo? _debuggerExecutionStopInfo;
+    private ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
     
     [Inject] private readonly RunService _runService = null!;
     public override void _Ready()
@@ -31,6 +32,7 @@ public partial class CodeEditorPanel : MarginContainer
         tabBar.TabCloseDisplayPolicy = TabBar.CloseButtonDisplayPolicy.ShowAlways;
         tabBar.TabClosePressed += OnTabClosePressed;
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
+		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
     }
 
     public override void _ExitTree()
@@ -131,6 +133,7 @@ public partial class CodeEditorPanel : MarginContainer
         await newTab.SetSharpIdeFile(file, fileLinePosition);
     }
     
+    private static readonly Color ExecutingLineColor = new Color("665001");
     private async Task OnDebuggerExecutionStopped(ExecutionStopInfo executionStopInfo)
     {
         Guard.Against.Null(Solution, nameof(Solution));
@@ -144,26 +147,32 @@ public partial class CodeEditorPanel : MarginContainer
         }
         var lineInt = executionStopInfo.Line - 1; // Debugging is 1-indexed, Godot is 0-indexed
         Guard.Against.Negative(lineInt, nameof(lineInt));
-        _debuggerExecutionStopInfo = executionStopInfo;
+        if (_debuggerExecutionStopInfoByProject.TryGetValue(executionStopInfo.Project, out _)) throw new InvalidOperationException("Debugger is already stopped for this project.");
+        _debuggerExecutionStopInfoByProject[executionStopInfo.Project] = executionStopInfo;
         
         await this.InvokeAsync(() =>
         {
-            var focusedTab = _tabContainer.GetChild<SharpIdeCodeEdit>(_tabContainer.CurrentTab);
-            focusedTab.SetLineBackgroundColor(lineInt, new Color("665001"));
-            focusedTab.SetLineAsExecuting(lineInt, true);
+            var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEdit>().Single(t => t.SharpIdeFile.Path == executionStopInfo.FilePath);
+            tabForStopInfo.SetLineBackgroundColor(lineInt, ExecutingLineColor);
+            tabForStopInfo.SetLineAsExecuting(lineInt, true);
         });
     }
     
     private enum DebuggerStepAction { StepOver, StepIn, StepOut, Continue }
+    [RequiresGodotUiThread]
     private void SendDebuggerStepCommand(DebuggerStepAction debuggerStepAction)
     {
-        if (_debuggerExecutionStopInfo is null) return; // ie not currently stopped
-        var godotLine = _debuggerExecutionStopInfo.Line - 1;
-        var focusedTab = _tabContainer.GetChild<SharpIdeCodeEdit>(_tabContainer.CurrentTab);
-        focusedTab.SetLineAsExecuting(godotLine, false);
-        focusedTab.SetLineColour(godotLine);
-        var threadId = _debuggerExecutionStopInfo.ThreadId;
-        _debuggerExecutionStopInfo = null;
+        // TODO: Debugging needs a rework - debugging commands should be scoped to a debug session, ie the debug panel sub-tabs
+        // For now, just use the first project that is currently stopped
+        var stoppedProjects = _debuggerExecutionStopInfoByProject.Keys.ToList();
+        if (stoppedProjects.Count == 0) return; // ie not currently stopped anywhere
+        var project = stoppedProjects[0];
+        if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
+        var godotLine = executionStopInfo.Line - 1;
+        var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEdit>().Single(t => t.SharpIdeFile.Path == executionStopInfo.FilePath);
+        tabForStopInfo.SetLineAsExecuting(godotLine, false);
+        tabForStopInfo.SetLineColour(godotLine);
+        var threadId = executionStopInfo.ThreadId;
         _ = Task.GodotRun(async () =>
         {
             var task = debuggerStepAction switch
@@ -175,6 +184,18 @@ public partial class CodeEditorPanel : MarginContainer
                 _ => throw new ArgumentOutOfRangeException(nameof(debuggerStepAction), debuggerStepAction, null)
             };
             await task;
+        });
+    }
+    
+    private async Task OnProjectStoppedDebugging(SharpIdeProjectModel project)
+    {
+        if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
+        await this.InvokeAsync(() =>
+        {
+            var godotLine = executionStopInfo.Line - 1;
+            var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEdit>().Single(t => t.SharpIdeFile.Path == executionStopInfo.FilePath);
+            tabForStopInfo.SetLineAsExecuting(godotLine, false);
+            tabForStopInfo.SetLineColour(godotLine);
         });
     }
 }
