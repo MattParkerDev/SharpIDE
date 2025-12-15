@@ -139,9 +139,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 			// If these aren't added, IDiagnosticAnalyzerService will not return compiler analyzer diagnostics
 			// Note that we aren't currently using IDiagnosticAnalyzerService
-			//var solutionAnalyzerReferences = CreateSolutionLevelAnalyzerReferencesForWorkspace(_workspace);
-			//solution = solution.WithAnalyzerReferences(solutionAnalyzerReferences);
-			//_workspace.SetCurrentSolution(solution);
+			var solutionAnalyzerReferences = CreateSolutionLevelAnalyzerReferencesForWorkspace(_workspace);
+			solution = solution.WithAnalyzerReferences(solutionAnalyzerReferences);
+			_workspace.SetCurrentSolution(solution);
 		}
 		timer.Stop();
 		_logger.LogInformation("RoslynAnalysis: Solution loaded in {ElapsedMilliseconds}ms", timer.ElapsedMilliseconds);
@@ -349,6 +349,39 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetProjectDiagnostics(SharpIdeProjectModel projectModel, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetProjectDiagnostics)}");
+		var stopwatch = Stopwatch.StartNew();
+		await _solutionLoadedTcs.Task;
+		var project = GetProjectForSharpIdeProjectModel(projectModel);
+		//var compilation = await project.GetCompilationAsync(cancellationToken);
+		//Guard.Against.Null(compilation, nameof(compilation));
+
+		var service = project.Solution.Services.GetRequiredService<IDiagnosticAnalyzerService>();
+
+		var diagnosticData = await service.GetDiagnosticsForIdsAsync(project, default, null, AnalyzerFilter.CompilerAnalyzer, true, cancellationToken);
+		var allDiagnostics = await diagnosticData.ToDiagnosticsAsync(project, cancellationToken);
+		//var allDiagnostics = compilation.GetDiagnostics(cancellationToken);
+		var diagnostics = allDiagnostics
+			.Where(d => d.Severity is not DiagnosticSeverity.Hidden)
+			.Select(d =>
+			{
+				var mappedFileLinePositionSpan = d.Location.SourceTree!.GetMappedLineSpan(d.Location.SourceSpan);
+				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
+			})
+			.ToImmutableArray();
+
+		var test = diagnostics.Where(s => s.Diagnostic.IsSuppressed).ToList();
+		if (test.Count is not 0)
+		{
+			//throw new Exception("Suppressed diagnostics returned from GetProjectDiagnostics");
+		}
+		_logger.LogInformation("RoslynAnalysis: GetProjectDiagnostics {ElapsedMilliseconds}ms", stopwatch.ElapsedMilliseconds);
+		return diagnostics;
+	}
+
+	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetProjectDiagnostics_Original(SharpIdeProjectModel projectModel, CancellationToken cancellationToken = default)
+	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetProjectDiagnostics)}");
+		var stopwatch = Stopwatch.StartNew();
 		await _solutionLoadedTcs.Task;
 		var project = GetProjectForSharpIdeProjectModel(projectModel);
 		var compilation = await project.GetCompilationAsync(cancellationToken);
@@ -363,6 +396,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
 			})
 			.ToImmutableArray();
+		stopwatch.Stop();
+		_logger.LogInformation("RoslynAnalysis: GetProjectDiagnostics {ElapsedMilliseconds}ms", stopwatch.ElapsedMilliseconds);
 		return diagnostics;
 	}
 
@@ -392,6 +427,37 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
 		if (fileModel.IsRoslynWorkspaceFile is false) return [];
+		var stopwatch = Stopwatch.StartNew();
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentDiagnostics)}");
+		await _solutionLoadedTcs.Task;
+
+		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
+		Guard.Against.Null(document, nameof(document));
+
+		var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
+		Guard.Against.Null(syntaxTree, nameof(syntaxTree));
+
+		var service = document.Project.Solution.Services.GetRequiredService<IDiagnosticAnalyzerService>();
+		var diagnosticData = await service.GetDiagnosticsForIdsAsync(document.Project, [document.Id], null, AnalyzerFilter.CompilerAnalyzer, true, cancellationToken);
+		var diagnostics = await diagnosticData.ToDiagnosticsAsync(document.Project, cancellationToken);
+
+		diagnostics = diagnostics.Where(d => d.Severity is not DiagnosticSeverity.Hidden && d.IsSuppressed is false).ToImmutableArray();
+		var result = diagnostics
+			.Select(d =>
+			{
+				var mappedFileLinePositionSpan = syntaxTree.GetMappedLineSpan(d.Location.SourceSpan);
+				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
+			})
+			.ToImmutableArray();
+		stopwatch.Stop();
+		_logger.LogInformation("RoslynAnalysis: GetDocumentDiagnostics {ElapsedMilliseconds}ms", stopwatch.ElapsedMilliseconds);
+		return result;
+	}
+
+	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentDiagnostics_Original(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
+	{
+		if (fileModel.IsRoslynWorkspaceFile is false) return [];
+		var stopwatch = Stopwatch.StartNew();
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentDiagnostics)}");
 		await _solutionLoadedTcs.Task;
 
@@ -410,6 +476,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
 			})
 			.ToImmutableArray();
+		stopwatch.Stop();
+		_logger.LogInformation("RoslynAnalysis: GetDocumentDiagnostics {ElapsedMilliseconds}ms", stopwatch.ElapsedMilliseconds);
 		return result;
 	}
 
