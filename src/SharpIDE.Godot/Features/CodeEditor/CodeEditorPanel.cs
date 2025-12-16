@@ -69,28 +69,21 @@ public partial class CodeEditorPanel : MarginContainer
 		{
 			try
 			{
-				// SharpIdeCodeEdit 继承自 TextEdit，可以直接转换
-				if (editor is not TextEdit textEdit)
-				{
-					GD.Print($"AdjustCodeEditorUiScale: {editor.Name} is not a TextEdit");
-					continue;
-				}
-
 				// 获取当前字体大小；若未设置，则使用默认值
-				int currentSize = textEdit.HasThemeFontSize("font_size")
-					? textEdit.GetThemeFontSize("font_size")
+				int currentSize = editor.HasThemeFontSize("font_size")
+					? editor.GetThemeFontSize("font_size")
 					: defaultFontSize;
 
 				int newSize = Mathf.Clamp(currentSize + fontSizeDelta, minFontSize, maxFontSize);
 
 				if (newSize != currentSize)
 				{
-					textEdit.AddThemeFontSizeOverride("font_size", newSize);
+					editor.AddThemeFontSizeOverride("font_size", newSize);
 				}
 			}
 			catch (Exception ex)
 			{
-				GD.PrintErr($"AdjustCodeEditorUiScale: failed for {editor?.Name}: {ex}");
+				GD.PrintErr($"AdjustCodeEditorUiScale: failed for {editor.Name}: {ex}");
 			}
 		}
 	}
