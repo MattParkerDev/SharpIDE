@@ -14,6 +14,8 @@ public static class InputStringNames
     public static readonly StringName FindFiles = nameof(FindFiles);
     public static readonly StringName SaveFile = nameof(SaveFile);
     public static readonly StringName SaveAllFiles = nameof(SaveAllFiles);
+    public static readonly StringName EditorFontSizeIncrease = nameof(EditorFontSizeIncrease);
+    public static readonly StringName EditorFontSizeDecrease = nameof(EditorFontSizeDecrease);
 }
 
 public static class ThemeStringNames

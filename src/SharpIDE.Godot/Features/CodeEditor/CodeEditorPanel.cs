@@ -34,20 +34,16 @@ public partial class CodeEditorPanel : MarginContainer
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
 	}
-	
-	public override void _Input(InputEvent @event)
+
+	public override void _GuiInput(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton mb && mb.Pressed)
+		if (Input.IsActionPressed(InputStringNames.EditorFontSizeIncrease))
 		{
-			// 使用 Key.Ctrl / Key.Meta
-			if (Input.IsKeyPressed(Key.Ctrl) || Input.IsKeyPressed(Key.Meta))
-			{
-				var button = mb.ButtonIndex;
-				if (button == MouseButton.WheelUp)
-					AdjustCodeEditorUiScale();
-				else if (button == MouseButton.WheelDown)
-					AdjustCodeEditorUiScale(-0.05f);
-			}
+			AdjustCodeEditorUiScale();
+		}
+		else if (Input.IsActionPressed(InputStringNames.EditorFontSizeDecrease))
+		{
+			AdjustCodeEditorUiScale(-0.05f);
 		}
 	}
 
