@@ -39,48 +39,30 @@ public partial class CodeEditorPanel : MarginContainer
 	{
 		if (Input.IsActionPressed(InputStringNames.EditorFontSizeIncrease))
 		{
-			AdjustCodeEditorUiScale();
+			AdjustCodeEditorUiScale(true);
 		}
 		else if (Input.IsActionPressed(InputStringNames.EditorFontSizeDecrease))
 		{
-			AdjustCodeEditorUiScale(-0.05f);
+			AdjustCodeEditorUiScale(false);
 		}
 	}
 
-	private void AdjustCodeEditorUiScale(float scaleStep = 0.05f)
+	private void AdjustCodeEditorUiScale(bool increase)
 	{
 		const int minFontSize = 8;
 		const int maxFontSize = 72;
-		const int defaultFontSize = 14;
 
 		var editors = _tabContainer.GetChildren().OfType<SharpIdeCodeEdit>().ToArray();
 		if (editors.Length == 0) return;
 
-		// 将浮点缩放步长转换为整数字号变化（至少 ±1）
-		int fontSizeDelta = (int)Math.Round(scaleStep * 20f);
-		if (fontSizeDelta == 0 && scaleStep != 0)
-			fontSizeDelta = scaleStep > 0 ? 1 : -1;
+		var currentFontSize = editors.First().GetThemeFontSize(ThemeStringNames.FontSize);
+		var newFontSize = increase
+			? Mathf.Clamp(currentFontSize + 2, minFontSize, maxFontSize)
+			: Mathf.Clamp(currentFontSize - 2, minFontSize, maxFontSize);
 
 		foreach (var editor in editors)
-		{
-			try
-			{
-				// 获取当前字体大小；若未设置，则使用默认值
-				int currentSize = editor.HasThemeFontSize("font_size")
-					? editor.GetThemeFontSize("font_size")
-					: defaultFontSize;
-
-				int newSize = Mathf.Clamp(currentSize + fontSizeDelta, minFontSize, maxFontSize);
-
-				if (newSize != currentSize)
-				{
-					editor.AddThemeFontSizeOverride("font_size", newSize);
-				}
-			}
-			catch (Exception ex)
-			{
-				GD.PrintErr($"AdjustCodeEditorUiScale: failed for {editor.Name}: {ex}");
-			}
+		{ 
+			editor.AddThemeFontSizeOverride(ThemeStringNames.FontSize, newFontSize);
 		}
 	}
 
