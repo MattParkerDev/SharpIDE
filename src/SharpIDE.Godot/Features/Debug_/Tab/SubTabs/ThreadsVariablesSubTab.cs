@@ -93,6 +93,7 @@ public partial class ThreadsVariablesSubTab : Control
 		var selectedItem = _threadsTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var threadId = selectedItem.GetMetadata(0).AsInt32();
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var stackFrames = await _runService.GetStackFrames(threadId);
 		await this.InvokeAsync(() =>
 		{
@@ -124,6 +125,7 @@ public partial class ThreadsVariablesSubTab : Control
 		var selectedItem = _stackFramesTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var frameId = selectedItem.GetMetadata(0).AsInt32();
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var variables = await _runService.GetVariablesForStackFrame(frameId);
 		await this.InvokeAsync(() =>
 		{
