@@ -24,6 +24,7 @@ public static partial class SymbolInfoComponents
         label.AddText("(");
         label.AddParameters(methodSymbol);
         label.AddText(")");
+        label.AddTypeParameterConstraints(methodSymbol);
         label.AddContainingNamespaceAndClass(methodSymbol);
         label.Newline();
         label.AddTypeParameterArguments(methodSymbol);
@@ -220,5 +221,74 @@ public static partial class SymbolInfoComponents
                 label.Newline();
             }
         }
+    }
+
+    private static void AddTypeParameterConstraints(this RichTextLabel label, IMethodSymbol methodSymbol)
+    {
+        foreach (var typeParameter in methodSymbol.TypeParameters)
+        {
+            var constraints =  GetConstraints(typeParameter);
+
+            if (constraints.Count is 0)
+            {
+                continue;
+            }
+            
+            label.Newline();
+            label.PushColor(CachedColors.KeywordBlue);
+            label.AddText("where ");
+            label.Pop();
+            label.PushColor(CachedColors.InterfaceGreen);
+            label.AddText(typeParameter.Name);
+            label.Pop();
+        
+            label.AddText(" : ");
+
+            for (var i = 0; i < constraints.Count; i++)
+            {
+                label.PushColor(constraints[i].Color);
+                label.AddText(constraints[i].Text);
+                label.Pop();
+
+                if (i < constraints.Count - 1)
+                {
+                    label.AddText(", ");
+                }
+            }
+        }
+    }
+
+    private static IReadOnlyList<(string Text, Color Color)> GetConstraints(ITypeParameterSymbol symbol)
+    {
+        var constraints = new List<(string Text, Color Color)>();
+
+        if (symbol.HasReferenceTypeConstraint)
+        {
+            constraints.Add(("class", CachedColors.KeywordBlue));
+        }
+
+        if (symbol.HasValueTypeConstraint)
+        {
+            constraints.Add(("struct", CachedColors.KeywordBlue));
+        }
+
+        if (symbol.HasUnmanagedTypeConstraint)
+        {
+            constraints.Add(("unmanaged", CachedColors.KeywordBlue));
+        }
+
+        if (symbol.HasNotNullConstraint)
+        {
+            constraints.Add(("notnull", CachedColors.KeywordBlue));
+        }
+        
+        constraints.AddRange(symbol.ConstraintTypes.Select(t => (t.Name, t.GetSymbolColourByType())));
+
+        if (symbol.HasConstructorConstraint)
+        {
+            constraints.Add(("new()", CachedColors.KeywordBlue));
+        }
+
+        return constraints;
     }
 }
