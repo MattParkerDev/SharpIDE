@@ -97,14 +97,21 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.ContainingNamespace is null || symbol.ContainingNamespace.IsGlobalNamespace) return; // might be wrong
         label.Newline();
-        if (symbol.ContainingType is null)
+
+        var containingTypeText = symbol.ContainingType?.TypeKind switch
         {
-            label.AddText("in namespace ");
-        }
-        else
-        {
-            label.AddText("in class ");
-        }
+            TypeKind.Class when symbol.ContainingType.IsRecord => "in record ",
+            TypeKind.Class => "in class ",
+            TypeKind.Struct => "in struct ",
+            TypeKind.Interface => "in interface ",
+            TypeKind.Enum => "in enum ",
+            null => "in namespace ",
+
+            _ => "in unknown "
+        };
+        
+        label.AddText(containingTypeText);
+        
         var namespaces = symbol.ContainingNamespace.ToDisplayString().Split('.');
         label.PushMeta("TODO", RichTextLabel.MetaUnderline.OnHover);
         foreach (var (index, ns) in namespaces.Index())
@@ -116,8 +123,9 @@ public static partial class SymbolInfoComponents
         }
         if (symbol.ContainingType is not null)
         {
+            // TODO: Change color according to type
             label.AddText(".");
-            label.PushColor(CachedColors.ClassGreen);
+            label.PushColor(symbol.ContainingType.GetSymbolColourByType());
             label.AddText(symbol.ContainingType.Name);
             label.Pop();
         }
