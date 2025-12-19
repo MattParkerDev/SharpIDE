@@ -12,6 +12,8 @@ public static partial class SymbolInfoComponents
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddAccessibilityModifier(symbol);
+        label.AddSealedModifier(symbol);
+        label.AddReadonlyModifier(symbol);
         label.AddStaticModifier(symbol);
         label.AddVirtualModifier(symbol);
         label.AddAbstractModifier(symbol);
@@ -38,15 +40,7 @@ public static partial class SymbolInfoComponents
     private static void AddNamedTypeSymbolType(this RichTextLabel label, INamedTypeSymbol symbol)
     {
         label.PushColor(CachedColors.KeywordBlue);
-        switch (symbol.TypeKind)
-        {
-            case TypeKind.Class: label.AddText("class"); break;
-            case TypeKind.Struct: label.AddText("struct"); break;
-            case TypeKind.Interface: label.AddText("interface"); break;
-            case TypeKind.Enum: label.AddText("enum"); break;
-            case TypeKind.Delegate: label.AddText("delegate"); break;
-            default: label.AddText(symbol.TypeKind.ToString().ToLowerInvariant()); break;
-        }
+        label.AddText(GetNamedTypeSymbolTypeName(symbol));
         label.Pop();
         label.AddText(" ");
     }
@@ -89,6 +83,17 @@ public static partial class SymbolInfoComponents
             label.PushColor(CachedColors.White);
             label.AddText($"from module {containingModule.Name}");
             label.Pop();
+        }
+    }
+    
+    private static void AddReadonlyModifier(this RichTextLabel label, INamedTypeSymbol symbol)
+    {
+        if (symbol.IsReadOnly)
+        {
+            label.PushColor(CachedColors.KeywordBlue);
+            label.AddText("readonly");
+            label.Pop();
+            label.AddText(" ");
         }
     }
 }

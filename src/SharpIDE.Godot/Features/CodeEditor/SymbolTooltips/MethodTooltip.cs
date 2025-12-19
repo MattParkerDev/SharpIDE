@@ -17,6 +17,7 @@ public static partial class SymbolInfoComponents
         label.AddMethodStaticModifier(methodSymbol);
         label.AddVirtualModifier(methodSymbol);
         label.AddAbstractModifier(methodSymbol);
+        label.AddSealedModifier(methodSymbol);
         label.AddOverrideModifier(methodSymbol);
         label.AddMethodAsyncModifier(methodSymbol);
         label.AddMethodReturnType(methodSymbol);

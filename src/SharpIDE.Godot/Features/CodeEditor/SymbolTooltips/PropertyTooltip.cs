@@ -17,6 +17,7 @@ public partial class SymbolInfoComponents
         label.AddVirtualModifier(symbol);
         label.AddAbstractModifier(symbol);
         label.AddOverrideModifier(symbol);
+        label.AddRequiredModifier(symbol);
         label.AddPropertyTypeName(symbol);
         label.AddPropertyName(symbol);
         label.AddGetSetAccessors(symbol);
@@ -36,6 +37,17 @@ public partial class SymbolInfoComponents
         {
             label.PushColor(CachedColors.KeywordBlue);
             label.AddText("readonly");
+            label.Pop();
+            label.AddText(" ");
+        }
+    }
+
+    private static void AddRequiredModifier(this RichTextLabel label, IPropertySymbol symbol)
+    {
+        if (symbol.IsRequired)
+        {
+            label.PushColor(CachedColors.KeywordBlue);
+            label.AddText("required");
             label.Pop();
             label.AddText(" ");
         }

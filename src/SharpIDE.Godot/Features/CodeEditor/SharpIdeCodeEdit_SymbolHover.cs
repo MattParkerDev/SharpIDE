@@ -146,7 +146,6 @@ public partial class SharpIdeCodeEdit
         diagnosticPanel?.AddThemeStyleboxOverride(ThemeStringNames.Panel, styleBox);
         diagnosticPanel?.AddChild(diagnosticNode);
         
-
         var symbolInfoNode = roslynSymbol switch
         {
             IMethodSymbol methodSymbol => SymbolInfoComponents.GetMethodSymbolInfo(methodSymbol),
@@ -159,6 +158,8 @@ public partial class SharpIdeCodeEdit
             INamespaceSymbol namespaceSymbol => SymbolInfoComponents.GetNamespaceSymbolInfo(namespaceSymbol),
             ITypeParameterSymbol typeParameterSymbol => SymbolInfoComponents.GetTypeParameterSymbolInfo(typeParameterSymbol),
             IDynamicTypeSymbol dynamicTypeSymbol => SymbolInfoComponents.GetDynamicTypeSymbolInfo(dynamicTypeSymbol),
+            // TODO: Implement event symbol
+            IEventSymbol eventSymbol => SymbolInfoComponents.GetUnknownTooltip(eventSymbol),
             _ => SymbolInfoComponents.GetUnknownTooltip(roslynSymbol)
         };
         symbolInfoNode.FitContent = true;

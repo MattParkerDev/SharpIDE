@@ -49,6 +49,17 @@ public static partial class SymbolInfoComponents
         label.Pop();
     }
     
+    private static void AddSealedModifier(this RichTextLabel label, ISymbol symbol)
+    {
+        if (symbol.IsSealed)
+        {
+            label.PushColor(CachedColors.KeywordBlue);
+            label.AddText("override");
+            label.Pop();
+            label.AddText(" ");
+        }
+    }
+    
     private static void AddOverrideModifier(this RichTextLabel label, ISymbol methodSymbol)
     {
         if (methodSymbol.IsOverride)
@@ -97,20 +108,9 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.ContainingNamespace is null || symbol.ContainingNamespace.IsGlobalNamespace) return; // might be wrong
         label.Newline();
-
-        var containingTypeText = symbol.ContainingType?.TypeKind switch
-        {
-            TypeKind.Class when symbol.ContainingType.IsRecord => "in record ",
-            TypeKind.Class => "in class ",
-            TypeKind.Struct => "in struct ",
-            TypeKind.Interface => "in interface ",
-            TypeKind.Enum => "in enum ",
-            null => "in namespace ",
-
-            _ => "in unknown "
-        };
-        
-        label.AddText(containingTypeText);
+        label.AddText("in ");
+        label.AddText(GetNamedTypeSymbolTypeName(symbol.ContainingType));
+        label.AddText(" ");
         label.PushMeta("TODO", RichTextLabel.MetaUnderline.OnHover);
         label.AddNamespace(symbol.ContainingNamespace);
         
@@ -121,6 +121,20 @@ public static partial class SymbolInfoComponents
         }
         label.Pop(); // meta
     }
+
+    private static string GetNamedTypeSymbolTypeName(INamedTypeSymbol? symbol) => symbol?.TypeKind switch
+    {
+        TypeKind.Class when symbol.IsRecord => "record",
+        TypeKind.Class => "class",
+        TypeKind.Delegate => "delegate",
+        TypeKind.Enum => "enum",
+        TypeKind.Interface => "interface",
+        TypeKind.Struct when symbol.IsRecord => "record struct",
+        TypeKind.Struct => "struct",
+        null => "namespace",
+        
+        _ => symbol.TypeKind.ToString().ToLowerInvariant()
+    };
 
     private static void AddNamespace(this RichTextLabel label, INamespaceSymbol symbol)
     {
