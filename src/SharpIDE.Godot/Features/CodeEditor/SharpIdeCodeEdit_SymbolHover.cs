@@ -157,6 +157,7 @@ public partial class SharpIdeCodeEdit
             IParameterSymbol parameterSymbol => SymbolInfoComponents.GetParameterSymbolInfo(parameterSymbol),
             ILocalSymbol localSymbol => SymbolInfoComponents.GetLocalVariableSymbolInfo(localSymbol),
             INamespaceSymbol namespaceSymbol => SymbolInfoComponents.GetNamespaceSymbolInfo(namespaceSymbol),
+            ITypeParameterSymbol typeParameterSymbol => SymbolInfoComponents.GetTypeParameterSymbolInfo(typeParameterSymbol),
             IDynamicTypeSymbol dynamicTypeSymbol => SymbolInfoComponents.GetDynamicTypeSymbolInfo(dynamicTypeSymbol),
             _ => SymbolInfoComponents.GetUnknownTooltip(roslynSymbol)
         };

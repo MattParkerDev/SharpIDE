@@ -1,4 +1,6 @@
-﻿using Godot;
+﻿using System.Collections.Immutable;
+
+using Godot;
 using Microsoft.CodeAnalysis;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -24,7 +26,7 @@ public static partial class SymbolInfoComponents
         label.AddText("(");
         label.AddParameters(methodSymbol);
         label.AddText(")");
-        label.AddTypeParameterConstraints(methodSymbol);
+        label.AddTypeParameterConstraints(methodSymbol.TypeParameters);
         label.AddContainingNamespaceAndClass(methodSymbol);
         label.Newline();
         label.AddTypeParameterArguments(methodSymbol);
@@ -223,9 +225,9 @@ public static partial class SymbolInfoComponents
         }
     }
 
-    private static void AddTypeParameterConstraints(this RichTextLabel label, IMethodSymbol methodSymbol)
+    private static void AddTypeParameterConstraints(this RichTextLabel label, ImmutableArray<ITypeParameterSymbol> typeParameters)
     {
-        foreach (var typeParameter in methodSymbol.TypeParameters)
+        foreach (var typeParameter in typeParameters)
         {
             var constraints =  GetConstraints(typeParameter);
 
@@ -234,11 +236,11 @@ public static partial class SymbolInfoComponents
                 continue;
             }
             
-            label.Newline();
+            label.AddText(" ");
             label.PushColor(CachedColors.KeywordBlue);
             label.AddText("where ");
             label.Pop();
-            label.PushColor(CachedColors.InterfaceGreen);
+            label.PushColor(CachedColors.ClassGreen);
             label.AddText(typeParameter.Name);
             label.Pop();
         

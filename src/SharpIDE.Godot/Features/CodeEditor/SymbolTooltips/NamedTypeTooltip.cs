@@ -19,6 +19,7 @@ public static partial class SymbolInfoComponents
         label.AddNamedTypeSymbolType(symbol);
         label.AddNamedTypeSymbolName(symbol);
         label.AddInheritedTypes(symbol);
+        label.AddTypeParameterConstraints(symbol.TypeParameters);
         label.AddContainingNamespaceAndClass(symbol);
         label.AddContainingPackage(symbol);
         label.Newline();
