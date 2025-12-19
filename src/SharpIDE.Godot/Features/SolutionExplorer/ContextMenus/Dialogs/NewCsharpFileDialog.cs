@@ -71,9 +71,14 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
             fileName += ".cs";
         }
 
+        var selectedIndex = _fileTypeItemList.GetSelectedItems().Single();
+        var selectedFileType = _fileTypeItemList.GetItemText(selectedIndex);
+        
+        var typeName = GetCsharpTypeName(selectedFileType);
+
         _ = Task.GodotRun(async () =>
         {
-           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName);
+           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName, typeName);
            GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, null);
         });
         QueueFree();
@@ -83,4 +88,15 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
     {
         return string.IsNullOrWhiteSpace(name);
     }
+
+    private static string GetCsharpTypeName(string fileType) => fileType switch
+    {
+        "Class" => "class",
+        "Interface" => "interface",
+        "Record" => "record",
+        "Struct" => "struct",
+        "Enum" => "enum",
+        
+        _ => throw new ArgumentOutOfRangeException(nameof(fileType), fileType, "The file type is not supported.")
+    };
 }
