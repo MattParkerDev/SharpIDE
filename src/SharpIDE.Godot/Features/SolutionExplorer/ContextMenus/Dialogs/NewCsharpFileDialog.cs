@@ -7,6 +7,12 @@ namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 public partial class NewCsharpFileDialog : ConfirmationDialog
 {
+    private const string ClassType = "Class";
+    private const string InterfaceType = "Interface";
+    private const string RecordType = "Record";
+    private const string StructType = "Struct";
+    private const string EnumType = "Enum";
+    
     private LineEdit _nameLineEdit = null!;
     private ItemList _fileTypeItemList = null!;
 
@@ -22,11 +28,11 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
         _nameLineEdit.GrabFocus();
         _nameLineEdit.SelectAll();
         _fileTypeItemList = GetNode<ItemList>("%FileTypeItemList");
-        _fileTypeItemList.AddItem("Class", _classIcon);
-        _fileTypeItemList.AddItem("Interface", _classIcon);
-        _fileTypeItemList.AddItem("Record", _classIcon);
-        _fileTypeItemList.AddItem("Struct", _classIcon);
-        _fileTypeItemList.AddItem("Enum", _classIcon);
+        _fileTypeItemList.AddItem(ClassType, _classIcon);
+        _fileTypeItemList.AddItem(InterfaceType, _classIcon);
+        _fileTypeItemList.AddItem(RecordType, _classIcon);
+        _fileTypeItemList.AddItem(StructType, _classIcon);
+        _fileTypeItemList.AddItem(EnumType, _classIcon);
         _fileTypeItemList.Select(0);
         _fileTypeItemList.ItemSelected += FileTypeItemListOnItemSelected;
         Confirmed += OnConfirmed;
@@ -91,11 +97,11 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
 
     private static string GetCsharpTypeName(string fileType) => fileType switch
     {
-        "Class" => "class",
-        "Interface" => "interface",
-        "Record" => "record",
-        "Struct" => "struct",
-        "Enum" => "enum",
+        ClassType => "class",
+        InterfaceType => "interface", 
+        RecordType => "record",
+        StructType => "struct",
+        EnumType => "enum",
         
         _ => throw new ArgumentOutOfRangeException(nameof(fileType), fileType, "The file type is not supported.")
     };
