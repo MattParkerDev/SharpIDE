@@ -1,4 +1,5 @@
-﻿using Aspire.Hosting.Lifecycle;
+﻿using Aspire.Hosting.Eventing;
+using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -42,14 +43,14 @@ public static class GodotExtensions
             command: godotPath,
             workingDirectory: projectDirectory,
             args: arguments.ToArray());
-	        //.WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? throw new InvalidOperationException("OTEL_EXPORTER_OTLP_ENDPOINT environment variable is not set"));
+            //.WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? throw new InvalidOperationException("OTEL_EXPORTER_OTLP_ENDPOINT environment variable is not set"));
 
         // Add a lifecycle hook to handle building before startup
-        builder.Services.AddSingleton<IDistributedApplicationLifecycleHook>(sp =>
-            new GodotBuildHook(
+        builder.Services.AddSingleton<IDistributedApplicationEventingSubscriber>(sp =>
+            new GodotBuildEventSubscriber(
                 projectPath,
                 projectDirectory,
-                sp.GetRequiredService<ILogger<GodotBuildHook>>()));
+                sp.GetRequiredService<ILogger<GodotBuildEventSubscriber>>()));
 
         return godotResource;
     }
@@ -83,73 +84,69 @@ public static class GodotExtensions
         throw new PlatformNotSupportedException("Current platform is not supported for Godot execution.");
     }
 
-    /// <summary>
-    /// Lifecycle hook to build the Godot project before launching
-    /// </summary>
-    private class GodotBuildHook : IDistributedApplicationLifecycleHook
+    private class GodotBuildEventSubscriber : IDistributedApplicationEventingSubscriber
     {
         private readonly string _projectPath;
         private readonly string _projectDirectory;
-        private readonly ILogger<GodotBuildHook> _logger;
+        private readonly ILogger<GodotBuildEventSubscriber> _logger;
 
-        public GodotBuildHook(string projectPath, string projectDirectory, ILogger<GodotBuildHook> logger)
+        public GodotBuildEventSubscriber(string projectPath, string projectDirectory, ILogger<GodotBuildEventSubscriber> logger)
         {
             _projectPath = projectPath;
             _projectDirectory = projectDirectory;
             _logger = logger;
         }
-
-        public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Building Godot project: {ProjectPath}", _projectPath);
-
-            // Execute dotnet build on the project
-            var buildProcess = new System.Diagnostics.Process
+            eventing.Subscribe<BeforeStartEvent>(async (@event, ct) =>
             {
-                StartInfo = new System.Diagnostics.ProcessStartInfo
+                _logger.LogInformation("Building Godot project: {ProjectPath}", _projectPath);
+
+                // Execute dotnet build on the project
+                var buildProcess = new System.Diagnostics.Process
                 {
-                    FileName = "dotnet",
-                    Arguments = $"build \"{_projectPath}\" --configuration Debug",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    WorkingDirectory = _projectDirectory
-                }
-            };
+                    StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "dotnet",
+                        Arguments = $"build \"{_projectPath}\" --configuration Debug",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        WorkingDirectory = _projectDirectory
+                    }
+                };
 
-            buildProcess.OutputDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
+                buildProcess.OutputDataReceived += (sender, e) =>
                 {
-                    _logger.LogInformation("[Godot Build] {Data}", e.Data);
-                }
-            };
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        _logger.LogInformation("[Godot Build] {Data}", e.Data);
+                    }
+                };
 
-            buildProcess.ErrorDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
+                buildProcess.ErrorDataReceived += (sender, e) =>
                 {
-                    _logger.LogError("[Godot Build] {Data}", e.Data);
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        _logger.LogError("[Godot Build] {Data}", e.Data);
+                    }
+                };
+
+                buildProcess.Start();
+                buildProcess.BeginOutputReadLine();
+                buildProcess.BeginErrorReadLine();
+                await buildProcess.WaitForExitAsync(ct);
+
+                if (buildProcess.ExitCode != 0)
+                {
+                    _logger.LogError("Failed to build Godot project: {ProjectPath}", _projectPath);
+                    return;
                 }
-            };
 
-            buildProcess.Start();
-            buildProcess.BeginOutputReadLine();
-            buildProcess.BeginErrorReadLine();
-            await buildProcess.WaitForExitAsync(cancellationToken);
+                _logger.LogInformation("Successfully built Godot project: {ProjectPath}", _projectPath);
+            });
 
-            if (buildProcess.ExitCode != 0)
-            {
-                _logger.LogError("Failed to build Godot project: {ProjectPath}", _projectPath);
-                return;
-            }
-
-            _logger.LogInformation("Successfully built Godot project: {ProjectPath}", _projectPath);
-        }
-
-        public Task AfterStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
-        {
             return Task.CompletedTask;
         }
     }

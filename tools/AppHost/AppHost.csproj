@@ -1,6 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-	<Sdk Name="Aspire.AppHost.Sdk" Version="13.0.0" />
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -11,9 +9,5 @@
 		<UserSecretsId>c8b6b3c2-8acc-412d-9d58-38b990d2f79f</UserSecretsId>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.0" />
-	</ItemGroup>
 
 </Project>
