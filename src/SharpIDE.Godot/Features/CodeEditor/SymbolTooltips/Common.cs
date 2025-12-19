@@ -366,6 +366,7 @@ public static partial class SymbolInfoComponents
             INamedTypeSymbol namedTypeSymbol => label.AddNamedType(namedTypeSymbol),
             ITypeParameterSymbol typeParameterSymbol => label.AddTypeParameter(typeParameterSymbol),
             IArrayTypeSymbol arrayTypeSymbol => label.AddArrayType(arrayTypeSymbol),
+            IDynamicTypeSymbol dynamicTypeSymbol => label.AddDynamicType(dynamicTypeSymbol),
             _ => label.AddUnknownType(symbol)
         };
     }
@@ -388,7 +389,7 @@ public static partial class SymbolInfoComponents
 
     private static RichTextLabel AddSpecialType(this RichTextLabel label, ITypeSymbol symbol)
     {
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(symbol.GetSymbolColourByType());
         label.AddText(symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
         label.Pop();
         return label;
@@ -431,13 +432,35 @@ public static partial class SymbolInfoComponents
         label.Pop();
         return label;
     }
+
+    private static RichTextLabel AddDynamicType(this RichTextLabel label, IDynamicTypeSymbol symbol)
+    {
+        label.PushColor(CachedColors.KeywordBlue);
+        label.AddText(symbol.Name);
+        label.Pop();
+        return label;
+    }
     
     // TODO: handle arrays etc, where there are multiple colours in one type
     private static Color GetSymbolColourByType(this ITypeSymbol symbol)
     {
         Color colour = symbol switch
         {
-            {SpecialType: not SpecialType.None} => CachedColors.KeywordBlue,
+            {SpecialType: not SpecialType.None} => symbol.SpecialType switch
+            {
+                SpecialType.System_Collections_IEnumerable => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IEnumerable_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IList_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_ICollection_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_IEnumerator => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IEnumerator_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IReadOnlyList_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IReadOnlyCollection_T => CachedColors.InterfaceGreen,
+                SpecialType.System_IDisposable => CachedColors.InterfaceGreen,
+                SpecialType.System_IAsyncResult => CachedColors.InterfaceGreen,
+                
+                _ => CachedColors.KeywordBlue
+            },
             INamedTypeSymbol namedTypeSymbol => namedTypeSymbol.TypeKind switch
             {
                 TypeKind.Class => CachedColors.ClassGreen,
@@ -445,6 +468,7 @@ public static partial class SymbolInfoComponents
                 TypeKind.Struct => CachedColors.ClassGreen,
                 TypeKind.Enum => CachedColors.InterfaceGreen,
                 TypeKind.Delegate => CachedColors.ClassGreen,
+                TypeKind.Dynamic => CachedColors.KeywordBlue,
                 _ => CachedColors.Orange
             },
             _ => CachedColors.Orange
