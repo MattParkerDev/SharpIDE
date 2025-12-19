@@ -12,7 +12,8 @@ public static partial class SymbolInfoComponents
         label.PushFont(MonospaceFont);
         label.PushColor(CachedColors.KeywordBlue);
         label.AddText("namespace ");
-        label.AddText(symbol.ToDisplayString());
+        label.Pop();
+        label.AddNamespace(symbol);
         label.Pop();
         return label;
     }

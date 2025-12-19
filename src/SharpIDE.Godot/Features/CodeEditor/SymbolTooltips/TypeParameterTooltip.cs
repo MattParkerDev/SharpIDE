@@ -29,15 +29,14 @@ public static partial class SymbolInfoComponents
         }
         
         label.Pop();
+        label.Pop();
         return label;
 
     }
 
     private static void AddDeclaringMethod(this RichTextLabel label, IMethodSymbol symbol)
     {
-        label.PushColor(CachedColors.ClassGreen);
-        label.AddText(symbol.ContainingType.Name);
-        label.Pop();
+        label.AddType(symbol.ContainingType);
         label.AddText(".");
         label.AddMethodName(symbol);
         label.AddTypeParameters(symbol);

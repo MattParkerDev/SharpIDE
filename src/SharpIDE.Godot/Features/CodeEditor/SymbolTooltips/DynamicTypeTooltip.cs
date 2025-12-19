@@ -13,6 +13,7 @@ public static partial class SymbolInfoComponents
         label.PushColor(CachedColors.KeywordBlue);
         label.AddText(symbol.ToDisplayString());
         label.Pop();
+        label.Pop();
         return label;
     }
 }

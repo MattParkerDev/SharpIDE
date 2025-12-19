@@ -240,9 +240,7 @@ public static partial class SymbolInfoComponents
             label.PushColor(CachedColors.KeywordBlue);
             label.AddText("where ");
             label.Pop();
-            label.PushColor(CachedColors.ClassGreen);
-            label.AddText(typeParameter.Name);
-            label.Pop();
+            label.AddTypeParameter(typeParameter);
         
             label.AddText(" : ");
 

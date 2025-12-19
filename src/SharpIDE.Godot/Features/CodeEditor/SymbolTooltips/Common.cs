@@ -111,9 +111,21 @@ public static partial class SymbolInfoComponents
         };
         
         label.AddText(containingTypeText);
-        
-        var namespaces = symbol.ContainingNamespace.ToDisplayString().Split('.');
         label.PushMeta("TODO", RichTextLabel.MetaUnderline.OnHover);
+        label.AddNamespace(symbol.ContainingNamespace);
+        
+        if (symbol.ContainingType is not null)
+        {
+            label.AddText(".");
+            label.AddType(symbol.ContainingType);
+        }
+        label.Pop(); // meta
+    }
+
+    private static void AddNamespace(this RichTextLabel label, INamespaceSymbol symbol)
+    {
+        var namespaces = symbol.ToDisplayString().Split('.');
+        
         foreach (var (index, ns) in namespaces.Index())
         {
             label.PushColor(CachedColors.KeywordBlue);
@@ -121,15 +133,6 @@ public static partial class SymbolInfoComponents
             label.Pop();
             if (index < namespaces.Length - 1) label.AddText(".");
         }
-        if (symbol.ContainingType is not null)
-        {
-            // TODO: Change color according to type
-            label.AddText(".");
-            label.PushColor(symbol.ContainingType.GetSymbolColourByType());
-            label.AddText(symbol.ContainingType.Name);
-            label.Pop();
-        }
-        label.Pop(); // meta
     }
     
     private static void AddAttribute(this RichTextLabel label, AttributeData attribute, bool newLines)
