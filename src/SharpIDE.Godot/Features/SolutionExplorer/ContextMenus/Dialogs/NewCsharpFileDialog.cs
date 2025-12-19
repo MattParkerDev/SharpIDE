@@ -103,6 +103,6 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
         StructType => "struct",
         EnumType => "enum",
         
-        _ => throw new ArgumentOutOfRangeException(nameof(fileType), fileType, "The file type is not supported.")
+        _ => throw new ArgumentException($"The file type '{fileType}' is not supported.", nameof(fileType))
     };
 }
