@@ -54,7 +54,7 @@ public static partial class SymbolInfoComponents
         if (symbol.IsSealed)
         {
             label.PushColor(CachedColors.KeywordBlue);
-            label.AddText("override");
+            label.AddText("sealed");
             label.Pop();
             label.AddText(" ");
         }
@@ -65,7 +65,7 @@ public static partial class SymbolInfoComponents
         if (methodSymbol.IsOverride)
         {
             label.PushColor(CachedColors.KeywordBlue);
-            label.AddText("sealed");
+            label.AddText("override");
             label.Pop();
             label.AddText(" ");
         }
