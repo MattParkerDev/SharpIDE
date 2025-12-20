@@ -13,9 +13,7 @@ public static partial class SymbolInfoComponents
         var label = new RichTextLabel();
         label.PushColor(CachedColors.White);
         label.PushFont(MonospaceFont);
-        label.PushColor(CachedColors.ClassGreen);
-        label.AddText(symbol.Name);
-        label.Pop();
+        label.AddTypeParameter(symbol);
         label.AddText(" in ");
 
         if (symbol.DeclaringMethod is { } declaringMethod)

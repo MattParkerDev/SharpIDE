@@ -239,10 +239,10 @@ public static partial class SymbolInfoComponents
             
             label.AddText(" ");
             label.PushColor(CachedColors.KeywordBlue);
-            label.AddText("where ");
+            label.AddText("where");
             label.Pop();
+            label.AddText(" ");
             label.AddTypeParameter(typeParameter);
-        
             label.AddText(" : ");
 
             for (var i = 0; i < constraints.Count; i++)

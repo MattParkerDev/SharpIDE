@@ -65,7 +65,7 @@ public static partial class SymbolInfoComponents
         if (methodSymbol.IsOverride)
         {
             label.PushColor(CachedColors.KeywordBlue);
-            label.AddText("override");
+            label.AddText("sealed");
             label.Pop();
             label.AddText(" ");
         }
@@ -132,7 +132,6 @@ public static partial class SymbolInfoComponents
         TypeKind.Struct when symbol.IsRecord => "record struct",
         TypeKind.Struct => "struct",
         null => "namespace",
-        
         _ => symbol.TypeKind.ToString().ToLowerInvariant()
     };
 
@@ -475,7 +474,6 @@ public static partial class SymbolInfoComponents
                 SpecialType.System_Collections_Generic_IReadOnlyCollection_T => CachedColors.InterfaceGreen,
                 SpecialType.System_IDisposable => CachedColors.InterfaceGreen,
                 SpecialType.System_IAsyncResult => CachedColors.InterfaceGreen,
-                
                 _ => CachedColors.KeywordBlue
             },
             INamedTypeSymbol namedTypeSymbol => namedTypeSymbol.TypeKind switch
