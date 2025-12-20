@@ -158,8 +158,9 @@ public partial class SharpIdeCodeEdit
             INamespaceSymbol namespaceSymbol => SymbolInfoComponents.GetNamespaceSymbolInfo(namespaceSymbol),
             ITypeParameterSymbol typeParameterSymbol => SymbolInfoComponents.GetTypeParameterSymbolInfo(typeParameterSymbol),
             IDynamicTypeSymbol dynamicTypeSymbol => SymbolInfoComponents.GetDynamicTypeSymbolInfo(dynamicTypeSymbol),
-            // TODO: Implement event symbol
-            IEventSymbol eventSymbol => SymbolInfoComponents.GetUnknownTooltip(eventSymbol),
+            IEventSymbol eventSymbol => SymbolInfoComponents.GetEventSymbolInfo(eventSymbol),
+            IDiscardSymbol discardSymbol => SymbolInfoComponents.GetDiscardSymbolInfo(discardSymbol),
+            ILabelSymbol labelSymbol => SymbolInfoComponents.GetLabelSymbolInfo(labelSymbol),
             _ => SymbolInfoComponents.GetUnknownTooltip(roslynSymbol)
         };
         symbolInfoNode.FitContent = true;
