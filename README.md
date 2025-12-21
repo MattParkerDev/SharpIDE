@@ -12,6 +12,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions for building and running
 ### WIP
 SharpIDE is a WIP, and contributions are always welcome! If you encounter an error, please raise an issue! 😊
 
+### FAQs
+
+<details><summary>SharpIDE won't open on MacOS Tahoe</summary>
+Tahoe further restricted users' ability to run unsigned software. Follow these steps to get it running:
+
+1. download a fresh zip of the latest release
+2. extract
+3. move SharpIDE.app to `Applications`
+4. open terminal
+5. run `xattr -d -r com.apple.quarantine /Applications/SharpIDE.app`
+6. run `sudo codesign --force --deep --sign - /Applications/SharpIDE.app`
+
+if codesign is not installed, install it with `xcode-select --install`
+</details>
+
 <img width="1638" height="935" alt="image" src="https://github.com/user-attachments/assets/bce91555-a1f2-43ab-a525-8353b4c7cff2" />
 
 ## Completions
