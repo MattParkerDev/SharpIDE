@@ -120,7 +120,7 @@ size_flags_vertical = 3
 [node name="LeftSideBar" parent="VBoxContainer/HBoxContainer" instance=ExtResource("3_f60gr")]
 layout_mode = 2
 
-[node name="DockLayoutRoot" parent="VBoxContainer/HBoxContainer" instance=ExtResource("7_4dy53")]
+[node name="LayoutRoot" parent="VBoxContainer/HBoxContainer" instance=ExtResource("7_4dy53")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

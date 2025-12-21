@@ -12,11 +12,12 @@ using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Godot.Features.BottomPanel;
-using SharpIDE.Godot.Features.CustomControls;
 using SharpIDE.Godot.Features.Layout;
 using SharpIDE.Godot.Features.Run;
 using SharpIDE.Godot.Features.Search;
 using SharpIDE.Godot.Features.Search.SearchAllFiles;
+
+using Orientation = SharpIDE.Godot.Features.Layout.Orientation;
 
 namespace SharpIDE.Godot;
 
@@ -31,9 +32,9 @@ public partial class IdeRoot : Control
 	private Button _restoreSlnButton = null!;
 	private SearchWindow _searchWindow = null!;
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
-	private InvertedVSplitContainer _invertedVSplitContainer = null!;
 	private Button _runMenuButton = null!;
 	private Popup _runMenuPopup = null!;
+	private IdeDockLayout _ideLayoutRoot = null!;
 
 	private IdeDockLayout _dockLayoutRoot = null!;
 	
@@ -74,7 +75,7 @@ public partial class IdeRoot : Control
 		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
-		 //_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
+		_ideLayoutRoot = GetNode<IdeDockLayout>("%LayoutRoot");
 		
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
@@ -83,9 +84,19 @@ public partial class IdeRoot : Control
 		_rebuildSlnButton.Pressed += OnRebuildSlnButtonPressed;
 		_cleanSlnButton.Pressed += OnCleanSlnButtonPressed;
 		_restoreSlnButton.Pressed += OnRestoreSlnButtonPressed;
-		//GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
+		
+		// TODO: Add layout profiles and persist layout
+		var ideLayout = new IdeSplitNode(
+			Orientation.Vertical,
+			FirstNode: new IdeSplitNode(
+				Orientation.Horizontal,
+				FirstNode: new IdeSceneNode(ResourceHelper.SolutionExplorerId, "Solution Explorer"),
+				SecondNode: new IdeSceneNode(ResourceHelper.CodeEditorId, "Code Editor")),
+			SecondNode: new IdeSceneNode(ResourceHelper.MultiFunctionPanelId, "Multi Function Panel"));
+		
+		_ideLayoutRoot.UpdateLayout(ideLayout);
 	}
 	
 	// TODO: Problematic, as this is called even when the focus shifts to an embedded subwindow, such as a popup 
@@ -151,14 +162,11 @@ public partial class IdeRoot : Control
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
-			//_solutionExplorerPanel.SolutionModel = solutionModel;
-			//_codeEditorPanel.Solution = solutionModel;
 			_searchWindow.Solution = solutionModel;
 			_searchAllFilesWindow.Solution = solutionModel;
 			_fileExternalChangeHandler.SolutionModel = solutionModel;
 			_fileChangedService.SolutionModel = solutionModel;
 			_sharpIdeSolutionModificationService.SolutionModel = solutionModel;
-			//_ = Task.GodotRun(_solutionExplorerPanel.BindToSolution);
 			_roslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);
 			_fileWatcher.StartWatching(solutionModel);
 			

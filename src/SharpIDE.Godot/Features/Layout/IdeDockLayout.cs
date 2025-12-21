@@ -21,16 +21,7 @@ public partial class IdeDockLayout : Control
 	{
 		_dockOverlay = GetNode<IdeDockOverlay>("%DockOverlay");
 
-		// TODO: Wrap scenes in dock panel component scene
-		// TODO: Add layout profiles and persist layout
-		_layout = new IdeSplitNode(
-			Orientation.Horizontal,
-			FirstNode: new IdeSceneNode("uid://cy1bb32g7j7dr", "Solution Explorer"),
-			SecondNode: new IdeSceneNode("uid://c5dlwgcx3ubyp", "Code Editor"));
-
 		FocusExited += _dockOverlay.EndDrag;
-
-		RebuildLayoutTree();
 	}
 
 	/// <inheritdoc />
@@ -40,6 +31,12 @@ public partial class IdeDockLayout : Control
 		{
 			_dockOverlay.EndDrag();
 		}
+	}
+
+	public void UpdateLayout(IdeLayoutNode layout)
+	{
+		_layout = layout;
+		RebuildLayoutTree();
 	}
 	
 	private void RebuildLayoutTree()
@@ -102,8 +99,9 @@ public partial class IdeDockLayout : Control
 		return container;
 	}
 
-	private (float FirstRation, float SecondRatio) GetStretchRatio(IdeSplitNode splitNode)
+	private (float FirstRatio, float SecondRatio) GetStretchRatio(IdeSplitNode splitNode)
 	{
+		// TODO: Calculate ratio
 		return (1.0f, 1.0f);
 	}
 
@@ -114,7 +112,6 @@ public partial class IdeDockLayout : Control
 
 	private Control BuildSceneLayout(IdeSceneNode sceneNode)
 	{
-
 		var component = ResourceLoader.Load<PackedScene>("uid://b36lno754a2is").Instantiate<IdeDockComponent>();
 		component.ComponentNode = sceneNode;
 		component.GuiInput += input => OnDockComponentGuiInput(input, sceneNode);
@@ -167,10 +164,43 @@ public partial class IdeDockLayout : Control
 		_dockOverlay.EndDrag();
 	}
 
+	private void DockTarget(IdeLayoutNode dragged, IdeLayoutNode target, DockPosition position)
+	{
+		if (ReferenceEquals(_layout, target))
+		{
+			_layout = RemoveNode(target, dragged)!;
+			target = _layout;
+		}
+		else
+		{
+			_layout = RemoveNode(_layout, dragged)!;
+			target = RemoveNode(target, dragged)!;
+		}
+		
+		
+		var replacement = position switch
+		{
+			DockPosition.Left => new IdeSplitNode(Orientation.Horizontal, dragged, target),
+			DockPosition.Right => new IdeSplitNode(Orientation.Horizontal, target, dragged),
+			DockPosition.Top => new IdeSplitNode(Orientation.Vertical, dragged, target),
+			DockPosition.Bottom => new IdeSplitNode(Orientation.Vertical, target, dragged),
+
+			_ => target
+		};
+
+		if (ReferenceEquals(replacement, target))
+		{
+			return;
+		}
+
+		_layout = ReplaceNode(_layout, target, replacement);
+
+		RebuildLayoutTree();
+	}
+
 	private IdeLayoutNode ReplaceNode(IdeLayoutNode current, IdeLayoutNode target, IdeLayoutNode replacement)
 	{
-		// TODO: FIX
-		if (ReferenceEquals(current, target))
+		if (ReferenceEquals(_layout, target) || ReferenceEquals(current, target))
 		{
 			return replacement;
 		}
@@ -184,7 +214,7 @@ public partial class IdeDockLayout : Control
 			};
 		}
 
-		return replacement;
+		return current;
 	}
 
 	private IdeLayoutNode? RemoveNode(IdeLayoutNode current, IdeLayoutNode target)
@@ -217,30 +247,5 @@ public partial class IdeDockLayout : Control
 			FirstNode = first,
 			SecondNode = second
 		};
-	}
-
-	private void DockTarget(IdeLayoutNode dragged, IdeLayoutNode target, DockPosition position)
-	{
-		_layout = RemoveNode(_layout, dragged)!;
-		target = RemoveNode(target, dragged)!;
-		
-		var replacement = position switch
-		{
-			DockPosition.Left => new IdeSplitNode(Orientation.Horizontal, dragged, target),
-			DockPosition.Right => new IdeSplitNode(Orientation.Horizontal, target, dragged),
-			DockPosition.Top => new IdeSplitNode(Orientation.Vertical, dragged, target),
-			DockPosition.Bottom => new IdeSplitNode(Orientation.Vertical, target, dragged),
-
-			_ => target
-		};
-
-		if (ReferenceEquals(replacement, target))
-		{
-			return;
-		}
-
-		_layout = ReplaceNode(_layout, target, replacement);
-
-		RebuildLayoutTree();
 	}
 }

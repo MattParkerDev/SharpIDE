@@ -10,7 +10,7 @@ using SharpIDE.Godot.Features.TestExplorer;
 
 namespace SharpIDE.Godot.Features.BottomPanel;
 
-public partial class BottomPanelManager : Panel
+public partial class MultiFunctionPanel : Panel
 {
 	private RunPanel _runPanel = null!;
 	private DebugPanel _debugPanel = null!;
@@ -42,6 +42,8 @@ public partial class BottomPanelManager : Panel
 			{ BottomPanelType.Nuget, _nugetPanel },
 			{ BottomPanelType.TestExplorer, _testExplorerPanel }
 		};
+		
+		_ = OnBottomPanelTabSelected(BottomPanelType.Run);
 
 		GodotGlobalEvents.Instance.BottomPanelTabSelected.Subscribe(OnBottomPanelTabSelected);
 	}
@@ -55,14 +57,8 @@ public partial class BottomPanelManager : Panel
 	{
 		await this.InvokeAsync(() =>
 		{
-			if (type == null)
-			{
-				GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.InvokeParallelFireAndForget(false);
-			}
-			else
-			{
-				GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.InvokeParallelFireAndForget(true);
-			}
+			Visible = type is not null;
+			
 			foreach (var kvp in _panelTypeMap)
 			{
 				kvp.Value.Visible = kvp.Key == type;

@@ -13,5 +13,7 @@ public partial class IdeDockComponent : VBoxContainer
 		var sceneResource = ResourceLoader.Load<PackedScene>(ComponentNode.ResourceUid);
 		var scene = sceneResource.Instantiate<Control>();
 		GetNode<Control>("%ScenePresenter").AddChild(scene);
+
+		scene.VisibilityChanged += () => Visible = scene.Visible;
 	}
 }

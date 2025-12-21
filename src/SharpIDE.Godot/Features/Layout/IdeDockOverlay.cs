@@ -71,6 +71,9 @@ public partial class IdeDockOverlay : Control
     {
         Visible = false;
         DraggedNode = null;
+        CurrentDockScope = DockScope.None;
+        CurrentDockPosition = DockPosition.None;
+        HoveredTarget = null;
     }
 
     private void DrawDockPreview()
