@@ -20,7 +20,7 @@ public static partial class SymbolInfoComponents
 
     private static void AddLabelName(this RichTextLabel label, ILabelSymbol symbol)
     {
-        label.PushColor(CachedColors.VariableBlue);
+        label.PushColor(CachedColors.White);
         label.AddText(symbol.Name);
         label.Pop();
     }

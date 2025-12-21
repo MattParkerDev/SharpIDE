@@ -260,6 +260,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
             "type parameter name" => CachedColors.ClassGreen,
             "delegate name" => CachedColors.ClassGreen,
             "event name" => CachedColors.White,
+            "label name" => CachedColors.White,
 
             // Punctuation & operators
             "operator" => CachedColors.White,
