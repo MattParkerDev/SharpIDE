@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://bcn33cckidihf"]
+
+[ext_resource type="Script" uid="uid://byeop8uus5e03" path="res://Features/Layout/IdeDockLayout.cs" id="1_v5k85"]
+[ext_resource type="PackedScene" uid="uid://cv8tsg87o2q7w" path="res://Features/Layout/IdeDockOverlay.tscn" id="2_1xd2f"]
+
+[node name="IdeDockLayout" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_v5k85")
+
+[node name="DockOverlay" parent="." instance=ExtResource("2_1xd2f")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+DockPreviewColor = Color(0.1767, 0.716565, 0.93, 0.40392157)

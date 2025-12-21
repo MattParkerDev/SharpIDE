@@ -13,6 +13,7 @@ using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.BottomPanel;
 using SharpIDE.Godot.Features.CodeEditor;
 using SharpIDE.Godot.Features.CustomControls;
+using SharpIDE.Godot.Features.Layout;
 using SharpIDE.Godot.Features.Run;
 using SharpIDE.Godot.Features.Search;
 using SharpIDE.Godot.Features.Search.SearchAllFiles;
@@ -23,6 +24,7 @@ namespace SharpIDE.Godot;
 public partial class IdeRoot : Control
 {
 	public IdeWindow IdeWindow { get; set; } = null!;
+	
 	private Button _openSlnButton = null!;
 	private Button _buildSlnButton = null!;
 	private Button _rebuildSlnButton = null!;
@@ -37,6 +39,8 @@ public partial class IdeRoot : Control
 	private Button _runMenuButton = null!;
 	private Popup _runMenuPopup = null!;
 	private BottomPanelManager _bottomPanelManager = null!;
+
+	private IdeDockLayout _dockLayoutRoot = null!;
 	
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -45,12 +49,12 @@ public partial class IdeRoot : Control
 	[Inject] private readonly IdeFileExternalChangeHandler _fileExternalChangeHandler = null!;
 	[Inject] private readonly IdeFileWatcher _fileWatcher = null!;
 	[Inject] private readonly BuildService _buildService = null!;
-    [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
-    [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-    [Inject] private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = null!;
-    [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
-    [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
-    [Inject] private readonly ILogger<IdeRoot> _logger = null!;
+	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
+	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+	[Inject] private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = null!;
+	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
+	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+	[Inject] private readonly ILogger<IdeRoot> _logger = null!;
 
 	public override void _EnterTree()
 	{
@@ -76,10 +80,12 @@ public partial class IdeRoot : Control
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
-		_solutionExplorerPanel = GetNode<SolutionExplorerPanel>("%SolutionExplorerPanel");
-		_runPanel = GetNode<RunPanel>("%RunPanel");
-		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
+		 _solutionExplorerPanel = GetNode<SolutionExplorerPanel>("%SolutionExplorerPanel");
+		 _runPanel = GetNode<RunPanel>("%RunPanel");
+		 _invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
 		_bottomPanelManager = GetNode<BottomPanelManager>("%BottomPanel");
+		
+		_dockLayoutRoot = GetNode<IdeDockLayout>("%DockLayoutRoot");
 		
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
@@ -160,6 +166,8 @@ public partial class IdeRoot : Control
 			_ = Task.GodotRun(_solutionExplorerPanel.BindToSolution);
 			_roslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);
 			_fileWatcher.StartWatching(solutionModel);
+
+			//_dockLayoutRoot.ChangeSolution(solutionModel);
 			
 			var previousTabs = Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.OpenTabs;
 			var filesToOpen = previousTabs

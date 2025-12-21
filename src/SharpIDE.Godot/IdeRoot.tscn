@@ -1,34 +1,18 @@
-[gd_scene load_steps=24 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene load_steps=12 format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
-[ext_resource type="Script" uid="uid://kvnhndc3l6ih" path="res://Features/CustomControls/InvertedVSplitContainer.cs" id="3_0ybuf"]
 [ext_resource type="PackedScene" uid="uid://biyhfwx36ium8" path="res://Features/LeftSideBar/LeftSideBar.tscn" id="3_f60gr"]
 [ext_resource type="PackedScene" uid="uid://bgpc5vsddmakc" path="res://Features/Navigation/ForwardBackwardButtonContainer.tscn" id="3_ptnvy"]
 [ext_resource type="PackedScene" uid="uid://c6xurjdabssao" path="res://Features/Settings/SettingsButton.tscn" id="5_pm5al"]
-[ext_resource type="PackedScene" uid="uid://cy1bb32g7j7dr" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="5_s2dv6"]
-[ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
-[ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
-[ext_resource type="PackedScene" uid="uid://c5dlwgcx3ubyp" path="res://Features/CodeEditor/CodeEditorPanel.tscn" id="8_7ptyn"]
-[ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
-[ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
-[ext_resource type="PackedScene" uid="uid://dkjips8oudqou" path="res://Features/Debug_/DebugPanel.tscn" id="11_s2dv6"]
+[ext_resource type="PackedScene" uid="uid://bcn33cckidihf" path="res://Features/Layout/IdeDockLayout.tscn" id="7_4dy53"]
 [ext_resource type="PackedScene" uid="uid://8lk0qj233a7p" path="res://Features/Search/SearchInFiles/SearchWindow.tscn" id="13_7ptyn"]
-[ext_resource type="PackedScene" uid="uid://b0tjuqq3bca5e" path="res://Features/IdeDiagnostics/IdeDiagnosticsPanel.tscn" id="13_woo5i"]
 [ext_resource type="PackedScene" uid="uid://b8kytk23cfo4x" path="res://Features/Search/SearchAllFiles/SearchAllFilesWindow.tscn" id="15_gh8b1"]
-[ext_resource type="PackedScene" uid="uid://duyxg107nfh2f" path="res://Features/Nuget/NugetPanel.tscn" id="15_lv3f5"]
-[ext_resource type="PackedScene" uid="uid://hwdok1kch3b3" path="res://Features/TestExplorer/TestExplorerPanel.tscn" id="16_0sv7o"]
 [ext_resource type="PackedScene" uid="uid://dr41a4isv0dd5" path="res://Features/BottomBar/BottomBar.tscn" id="18_gyy5s"]
 
 [sub_resource type="Theme" id="Theme_s2dv6"]
 default_font = ExtResource("1_7ptyn")
-
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_woo5i"]
-size = Vector2(0, 0)
-
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_7ptyn"]
-size = Vector2(0, 0)
 
 [node name="IdeRoot" type="Control"]
 layout_mode = 3
@@ -136,71 +120,10 @@ size_flags_vertical = 3
 [node name="LeftSideBar" parent="VBoxContainer/HBoxContainer" instance=ExtResource("3_f60gr")]
 layout_mode = 2
 
-[node name="InvertedVSplitContainer" type="VSplitContainer" parent="VBoxContainer/HBoxContainer"]
+[node name="DockLayoutRoot" parent="VBoxContainer/HBoxContainer" instance=ExtResource("7_4dy53")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
-theme_override_constants/minimum_grab_thickness = 10
-theme_override_icons/grabber = SubResource("PlaceholderTexture2D_woo5i")
-split_offset = 370
-script = ExtResource("3_0ybuf")
-metadata/_custom_type_script = "uid://kvnhndc3l6ih"
-
-[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 4
-theme_override_constants/minimum_grab_thickness = 10
-theme_override_icons/grabber = SubResource("PlaceholderTexture2D_7ptyn")
-split_offset = 400
-
-[node name="SolutionExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" instance=ExtResource("5_s2dv6")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="CodeEditorPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" instance=ExtResource("8_7ptyn")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="BottomPanel" type="Panel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-script = ExtResource("7_i62lx")
-
-[node name="ProblemsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("11_b7c1a")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="RunPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("5_y3aoi")]
-unique_name_in_owner = true
-layout_mode = 1
-
-[node name="DebugPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("11_s2dv6")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="BuildPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("9_rllbf")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="IdeDiagnosticsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("13_woo5i")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="NugetPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("15_lv3f5")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="TestExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("16_0sv7o")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
 
 [node name="BottomBar" parent="VBoxContainer" instance=ExtResource("18_gyy5s")]
 layout_mode = 2
