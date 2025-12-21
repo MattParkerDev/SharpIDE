@@ -78,13 +78,13 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
         }
 
         var selectedIndex = _fileTypeItemList.GetSelectedItems().Single();
-        var selectedFileType = _fileTypeItemList.GetItemText(selectedIndex);
+        var selectedFileTypeDisplayName = _fileTypeItemList.GetItemText(selectedIndex);
         
-        var typeName = GetCsharpTypeName(selectedFileType);
+        var typeKeyword = GetCsharpTypeKeywordFromUiDisplayName(selectedFileTypeDisplayName);
 
         _ = Task.GodotRun(async () =>
         {
-           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName, typeName);
+           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName, typeKeyword);
            GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, null);
         });
         QueueFree();
@@ -95,14 +95,13 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
         return string.IsNullOrWhiteSpace(name);
     }
 
-    private static string GetCsharpTypeName(string fileType) => fileType switch
+    private static string GetCsharpTypeKeywordFromUiDisplayName(string typeDisplayName) => typeDisplayName switch
     {
         ClassType => "class",
         InterfaceType => "interface", 
         RecordType => "record",
         StructType => "struct",
         EnumType => "enum",
-        
-        _ => throw new ArgumentException($"The file type '{fileType}' is not supported.", nameof(fileType))
+        _ => throw new ArgumentOutOfRangeException(nameof(typeDisplayName), $"The file type '{typeDisplayName}' is not supported.")
     };
 }

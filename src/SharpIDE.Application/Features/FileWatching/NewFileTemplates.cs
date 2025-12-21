@@ -5,12 +5,12 @@ namespace SharpIDE.Application.Features.FileWatching;
 
 public static class NewFileTemplates
 {
-	public static string CsharpFile(string className, string @namespace, string typeName)
+	public static string CsharpFile(string className, string @namespace, string typeKeyword)
 	{
 		var text = $$"""
 		           namespace {{@namespace}};
 
-		           public {{typeName}} {{className}}
+		           public {{typeKeyword}} {{className}}
 		           {
 
 		           }
