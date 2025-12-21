@@ -14,6 +14,7 @@ public static class NewFileTemplates
 		           {
 
 		           }
+
 		           """;
 		return text;
 	}
