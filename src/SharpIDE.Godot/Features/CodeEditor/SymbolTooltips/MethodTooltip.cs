@@ -1,7 +1,6 @@
-﻿using System.Collections.Immutable;
-
-using Godot;
+﻿using Godot;
 using Microsoft.CodeAnalysis;
+using System.Collections.Immutable;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
