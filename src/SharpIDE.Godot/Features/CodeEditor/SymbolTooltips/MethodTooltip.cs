@@ -276,8 +276,9 @@ public static partial class SymbolInfoComponents
             if (typeParameter.HasConstructorConstraint)
             {
                 label.PushColor(CachedColors.KeywordBlue);
-                label.AddText("new()");
+                label.AddText("new");
                 label.Pop();
+                label.AddText("()");
             }
 
             if (typeParameter.AllowsRefLikeType)
