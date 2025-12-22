@@ -229,12 +229,8 @@ public static partial class SymbolInfoComponents
     {
         foreach (var typeParameter in typeParameters)
         {
-            var constraints =  GetConstraints(typeParameter);
-
-            if (constraints.Count is 0)
-            {
-                continue;
-            }
+            var hasConstraints = typeParameter.HasReferenceTypeConstraint || typeParameter.HasValueTypeConstraint || typeParameter.HasUnmanagedTypeConstraint || typeParameter.HasNotNullConstraint || typeParameter.HasConstructorConstraint || typeParameter.AllowsRefLikeType || typeParameter.ConstraintTypes.Length > 0;
+            if (hasConstraints is false) continue;
             
             label.AddText(" ");
             label.PushColor(CachedColors.KeywordBlue);
@@ -244,55 +240,52 @@ public static partial class SymbolInfoComponents
             label.AddTypeParameter(typeParameter);
             label.AddText(" : ");
 
-            foreach (var (index, constraint) in constraints.Index())
+            if (typeParameter.HasReferenceTypeConstraint)
             {
-                label.PushColor(constraint.Color);
-                label.AddText(constraint.Text);
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("class");
                 label.Pop();
-                if (index < constraints.Count - 1)
-                {
-                    label.AddText(", ");
-                }
+            }
+
+            if (typeParameter.HasValueTypeConstraint)
+            {
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("struct");
+                label.Pop();
+            }
+
+            if (typeParameter.HasUnmanagedTypeConstraint)
+            {
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("unmanaged");
+                label.Pop();
+            }
+
+            if (typeParameter.HasNotNullConstraint)
+            {
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("notnull");
+                label.Pop();
+            }
+
+            foreach (var typeParameterConstraintType in typeParameter.ConstraintTypes)
+            {
+                label.AddType(typeParameterConstraintType);
+            }
+
+            if (typeParameter.HasConstructorConstraint)
+            {
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("new()");
+                label.Pop();
+            }
+
+            if (typeParameter.AllowsRefLikeType)
+            {
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("allows ref struct");
+                label.Pop();
             }
         }
-    }
-
-    private static IReadOnlyList<(string Text, Color Color)> GetConstraints(ITypeParameterSymbol symbol)
-    {
-        var constraints = new List<(string Text, Color Color)>();
-
-        if (symbol.HasReferenceTypeConstraint)
-        {
-            constraints.Add(("class", CachedColors.KeywordBlue));
-        }
-
-        if (symbol.HasValueTypeConstraint)
-        {
-            constraints.Add(("struct", CachedColors.KeywordBlue));
-        }
-
-        if (symbol.HasUnmanagedTypeConstraint)
-        {
-            constraints.Add(("unmanaged", CachedColors.KeywordBlue));
-        }
-
-        if (symbol.HasNotNullConstraint)
-        {
-            constraints.Add(("notnull", CachedColors.KeywordBlue));
-        }
-        
-        constraints.AddRange(symbol.ConstraintTypes.Select(t => (t.Name, t.GetSymbolColourByType())));
-
-        if (symbol.HasConstructorConstraint)
-        {
-            constraints.Add(("new()", CachedColors.KeywordBlue));
-        }
-
-        if (symbol.AllowsRefLikeType)
-        {
-            constraints.Add(("allows ref struct", CachedColors.KeywordBlue));
-        }
-
-        return constraints;
     }
 }
