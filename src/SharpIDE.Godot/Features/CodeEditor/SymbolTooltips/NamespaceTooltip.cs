@@ -9,13 +9,15 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetNamespaceSymbolInfo(INamespaceSymbol symbol)
     {
         var label = new RichTextLabel();
+        label.PushColor(CachedColors.White);
         label.PushFont(MonospaceFont);
         label.PushColor(CachedColors.KeywordBlue);
         label.AddText("namespace");
-        label.Pop();
+        label.Pop(); // color
         label.AddText(" ");
         label.AddNamespace(symbol);
-        label.Pop();
+        label.Pop(); // font
+        label.Pop(); // color
         return label;
     }
 }
