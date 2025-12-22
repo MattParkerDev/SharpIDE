@@ -1,6 +1,7 @@
 ﻿using Godot;
 using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
@@ -239,6 +240,7 @@ public static partial class SymbolInfoComponents
             label.AddText(" ");
             label.AddTypeParameter(typeParameter);
             label.AddText(" : ");
+            var firstConstraintAdded = false;
 
             if (typeParameter.HasReferenceTypeConstraint)
             {
@@ -249,6 +251,7 @@ public static partial class SymbolInfoComponents
 
             if (typeParameter.HasValueTypeConstraint)
             {
+                MaybeAddComma();
                 label.PushColor(CachedColors.KeywordBlue);
                 label.AddText("struct");
                 label.Pop();
@@ -256,6 +259,7 @@ public static partial class SymbolInfoComponents
 
             if (typeParameter.HasUnmanagedTypeConstraint)
             {
+                MaybeAddComma();
                 label.PushColor(CachedColors.KeywordBlue);
                 label.AddText("unmanaged");
                 label.Pop();
@@ -263,6 +267,7 @@ public static partial class SymbolInfoComponents
 
             if (typeParameter.HasNotNullConstraint)
             {
+                MaybeAddComma();
                 label.PushColor(CachedColors.KeywordBlue);
                 label.AddText("notnull");
                 label.Pop();
@@ -270,11 +275,13 @@ public static partial class SymbolInfoComponents
 
             foreach (var typeParameterConstraintType in typeParameter.ConstraintTypes)
             {
+                MaybeAddComma();
                 label.AddType(typeParameterConstraintType);
             }
 
             if (typeParameter.HasConstructorConstraint)
             {
+                MaybeAddComma();
                 label.PushColor(CachedColors.KeywordBlue);
                 label.AddText("new");
                 label.Pop();
@@ -283,9 +290,23 @@ public static partial class SymbolInfoComponents
 
             if (typeParameter.AllowsRefLikeType)
             {
+                MaybeAddComma();
                 label.PushColor(CachedColors.KeywordBlue);
                 label.AddText("allows ref struct");
                 label.Pop();
+            }
+            continue;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void MaybeAddComma()
+            {
+                if (firstConstraintAdded is false)
+                {
+                    firstConstraintAdded = true;
+                }
+                else
+                {
+                    label.AddText(", ");
+                }
             }
         }
     }
