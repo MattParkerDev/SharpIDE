@@ -289,6 +289,11 @@ public static partial class SymbolInfoComponents
             constraints.Add(("new()", CachedColors.KeywordBlue));
         }
 
+        if (symbol.AllowsRefLikeType)
+        {
+            constraints.Add(("allows ref struct", CachedColors.KeywordBlue));
+        }
+
         return constraints;
     }
 }
