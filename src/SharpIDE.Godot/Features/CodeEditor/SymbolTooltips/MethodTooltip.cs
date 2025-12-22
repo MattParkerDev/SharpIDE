@@ -244,13 +244,12 @@ public static partial class SymbolInfoComponents
             label.AddTypeParameter(typeParameter);
             label.AddText(" : ");
 
-            for (var i = 0; i < constraints.Count; i++)
+            foreach (var (index, constraint) in constraints.Index())
             {
-                label.PushColor(constraints[i].Color);
-                label.AddText(constraints[i].Text);
+                label.PushColor(constraint.Color);
+                label.AddText(constraint.Text);
                 label.Pop();
-
-                if (i < constraints.Count - 1)
+                if (index < constraints.Count - 1)
                 {
                     label.AddText(", ");
                 }
