@@ -109,7 +109,7 @@ public static partial class SymbolInfoComponents
         if (symbol.ContainingNamespace is null || symbol.ContainingNamespace.IsGlobalNamespace) return; // might be wrong
         label.Newline();
         label.AddText("in ");
-        label.AddText(GetNamedTypeSymbolTypeName(symbol.ContainingType));
+        label.AddText(GetNamedTypeSymbolTypeName(symbol.ContainingType)); // e.g. 'class' or 'namespace'
         label.AddText(" ");
         label.PushMeta("TODO", RichTextLabel.MetaUnderline.OnHover);
         label.AddNamespace(symbol.ContainingNamespace);
