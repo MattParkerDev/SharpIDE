@@ -19,7 +19,11 @@ public static partial class SymbolInfoComponents
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddFieldName(symbol);
-        label.AddText($" = {symbol.ConstantValue};");
+        label.AddText(" = ");
+        label.PushColor(CachedColors.NumberGreen);
+        label.AddText($"{symbol.ConstantValue}");
+        label.Pop();
+        label.AddText(";");
         label.AddContainingNamespaceAndClass(symbol);
         label.Newline();
         label.Pop();
