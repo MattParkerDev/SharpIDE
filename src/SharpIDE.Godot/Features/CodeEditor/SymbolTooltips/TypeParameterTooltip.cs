@@ -1,7 +1,4 @@
 using Godot;
-
-using ICSharpCode.Decompiler.TypeSystem;
-
 using Microsoft.CodeAnalysis;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
