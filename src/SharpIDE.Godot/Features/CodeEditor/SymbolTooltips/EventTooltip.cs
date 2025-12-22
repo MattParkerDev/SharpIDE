@@ -12,7 +12,7 @@ public static partial class SymbolInfoComponents
         label.PushColor(CachedColors.White);
         label.PushFont(MonospaceFont);
         label.AddAccessibilityModifier(symbol);
-        label.AddEventModifier(symbol);
+        label.AddEventKeyword(symbol);
         label.AddEventTypeName(symbol);
         label.AddEventName(symbol);
         label.AddEventMethods(symbol);
@@ -24,27 +24,27 @@ public static partial class SymbolInfoComponents
         return label;
     }
 
-    public static void AddEventModifier(this RichTextLabel label, IEventSymbol symbol)
+    private static void AddEventKeyword(this RichTextLabel label, IEventSymbol symbol)
     {
         label.PushColor(CachedColors.KeywordBlue);
         label.AddText("event ");
         label.Pop();
     }
 
-    public static void AddEventTypeName(this RichTextLabel label, IEventSymbol symbol)
+    private static void AddEventTypeName(this RichTextLabel label, IEventSymbol symbol)
     {
         label.AddType(symbol.Type);
         label.AddText(" ");
     }
 
-    public static void AddEventName(this RichTextLabel label, IEventSymbol symbol)
+    private static void AddEventName(this RichTextLabel label, IEventSymbol symbol)
     {
         label.PushColor(CachedColors.White);
         label.AddText(symbol.Name);
         label.Pop();
     }
 
-    public static void AddEventMethods(this RichTextLabel label, IEventSymbol symbol)
+    private static void AddEventMethods(this RichTextLabel label, IEventSymbol symbol)
     {
         label.AddText(" { ");
         label.PushColor(CachedColors.KeywordBlue);
