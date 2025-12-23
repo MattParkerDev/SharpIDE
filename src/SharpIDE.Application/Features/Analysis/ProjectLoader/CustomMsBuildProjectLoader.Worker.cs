@@ -1,13 +1,14 @@
-﻿using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SharpIDE.Application.Features.Analysis.ProjectLoader;
 
@@ -111,19 +112,21 @@ public partial class CustomMsBuildProjectLoader
 			return result;
 		}
 
-		public async Task<(ImmutableArray<ProjectInfo>, Dictionary<ProjectId, ProjectFileInfo>)> LoadAsync(CancellationToken cancellationToken)
+		public async IAsyncEnumerable<(ImmutableArray<ProjectInfo>, Dictionary<ProjectId, ProjectFileInfo>)> LoadInShardsAsync(
+			[EnumeratorCancellation] CancellationToken cancellationToken,
+			int batchSize = 10)
 		{
-			var results = ImmutableArray.CreateBuilder<ProjectInfo>();
 			var processedPaths = new HashSet<string>(PathUtilities.Comparer);
+			var batchResults = ImmutableArray.CreateBuilder<ProjectInfo>();
+			var batchFileInfoMap = new Dictionary<ProjectId, ProjectFileInfo>();
 
+			int count = 0;
 			foreach (var projectPath in _requestedProjectPaths)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 
 				if (!_pathResolver.TryGetAbsoluteProjectPath(projectPath, _baseDirectory, _requestedProjectOptions.OnPathFailure, out var absoluteProjectPath))
-				{
-					continue; // Failure should already be reported.
-				}
+					continue;
 
 				if (!processedPaths.Add(absoluteProjectPath))
 				{
@@ -131,26 +134,30 @@ public partial class CustomMsBuildProjectLoader
 						new WorkspaceDiagnostic(
 							WorkspaceDiagnosticKind.Warning,
 							string.Format(WorkspaceMSBuildResources.Duplicate_project_discovered_and_skipped_0, absoluteProjectPath)));
-
 					continue;
 				}
 
 				var projectFileInfos = await LoadProjectInfosFromPathAsync(absoluteProjectPath, _requestedProjectOptions, cancellationToken).ConfigureAwait(false);
+				batchResults.AddRange(projectFileInfos);
 
-				results.AddRange(projectFileInfos);
-			}
-
-			foreach (var (projectPath, projectInfos) in _pathToDiscoveredProjectInfosMap)
-			{
-				cancellationToken.ThrowIfCancellationRequested();
-
-				if (!processedPaths.Contains(projectPath))
+				foreach (var info in projectFileInfos)
 				{
-					results.AddRange(projectInfos);
+					var projectId = _projectMap.GetOrCreateProjectId(info?.FilePath ?? string.Empty);
+					batchFileInfoMap[projectId] = _projectIdToFileInfoMap[projectId];
+				}
+
+				count++;
+				if (count % batchSize == 0)
+				{
+					yield return (batchResults.ToImmutableAndClear(), new Dictionary<ProjectId, ProjectFileInfo>(batchFileInfoMap));
+					batchFileInfoMap.Clear();
 				}
 			}
 
-			return (results.ToImmutableAndClear(), _projectIdToFileInfoMap);
+			if (batchResults.Count > 0)
+			{
+				yield return (batchResults.ToImmutableAndClear(), new Dictionary<ProjectId, ProjectFileInfo>(batchFileInfoMap));
+			}
 		}
 
 		private async Task<ImmutableArray<ProjectFileInfo>> LoadProjectFileInfosAsync(string projectPath, DiagnosticReportingOptions reportingOptions, CancellationToken cancellationToken)
