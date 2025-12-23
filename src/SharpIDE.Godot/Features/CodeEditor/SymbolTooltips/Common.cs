@@ -49,6 +49,17 @@ public static partial class SymbolInfoComponents
         label.Pop();
     }
     
+    private static void AddSealedModifier(this RichTextLabel label, ISymbol symbol)
+    {
+        if (symbol.IsSealed)
+        {
+            label.PushColor(CachedColors.KeywordBlue);
+            label.AddText("sealed");
+            label.Pop();
+            label.AddText(" ");
+        }
+    }
+    
     private static void AddOverrideModifier(this RichTextLabel label, ISymbol methodSymbol)
     {
         if (methodSymbol.IsOverride)
@@ -97,16 +108,37 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.ContainingNamespace is null || symbol.ContainingNamespace.IsGlobalNamespace) return; // might be wrong
         label.Newline();
-        if (symbol.ContainingType is null)
-        {
-            label.AddText("in namespace ");
-        }
-        else
-        {
-            label.AddText("in class ");
-        }
-        var namespaces = symbol.ContainingNamespace.ToDisplayString().Split('.');
+        label.AddText("in ");
+        label.AddText(GetNamedTypeSymbolTypeName(symbol.ContainingType)); // e.g. 'class' or 'namespace'
+        label.AddText(" ");
         label.PushMeta("TODO", RichTextLabel.MetaUnderline.OnHover);
+        label.AddNamespace(symbol.ContainingNamespace);
+        
+        if (symbol.ContainingType is not null)
+        {
+            label.AddText(".");
+            label.AddType(symbol.ContainingType);
+        }
+        label.Pop(); // meta
+    }
+
+    private static string GetNamedTypeSymbolTypeName(INamedTypeSymbol? symbol) => symbol?.TypeKind switch
+    {
+        TypeKind.Class when symbol.IsRecord => "record",
+        TypeKind.Class => "class",
+        TypeKind.Delegate => "delegate",
+        TypeKind.Enum => "enum",
+        TypeKind.Interface => "interface",
+        TypeKind.Struct when symbol.IsRecord => "record struct",
+        TypeKind.Struct => "struct",
+        null => "namespace",
+        _ => symbol.TypeKind.ToString().ToLowerInvariant()
+    };
+
+    private static void AddNamespace(this RichTextLabel label, INamespaceSymbol symbol)
+    {
+        var namespaces = symbol.ToDisplayString().Split('.');
+        
         foreach (var (index, ns) in namespaces.Index())
         {
             label.PushColor(CachedColors.KeywordBlue);
@@ -114,14 +146,6 @@ public static partial class SymbolInfoComponents
             label.Pop();
             if (index < namespaces.Length - 1) label.AddText(".");
         }
-        if (symbol.ContainingType is not null)
-        {
-            label.AddText(".");
-            label.PushColor(CachedColors.ClassGreen);
-            label.AddText(symbol.ContainingType.Name);
-            label.Pop();
-        }
-        label.Pop(); // meta
     }
     
     private static void AddAttribute(this RichTextLabel label, AttributeData attribute, bool newLines)
@@ -358,6 +382,7 @@ public static partial class SymbolInfoComponents
             INamedTypeSymbol namedTypeSymbol => label.AddNamedType(namedTypeSymbol),
             ITypeParameterSymbol typeParameterSymbol => label.AddTypeParameter(typeParameterSymbol),
             IArrayTypeSymbol arrayTypeSymbol => label.AddArrayType(arrayTypeSymbol),
+            IDynamicTypeSymbol dynamicTypeSymbol => label.AddDynamicType(dynamicTypeSymbol),
             _ => label.AddUnknownType(symbol)
         };
     }
@@ -380,7 +405,7 @@ public static partial class SymbolInfoComponents
 
     private static RichTextLabel AddSpecialType(this RichTextLabel label, ITypeSymbol symbol)
     {
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(symbol.GetSymbolColourByType());
         label.AddText(symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
         label.Pop();
         return label;
@@ -423,13 +448,34 @@ public static partial class SymbolInfoComponents
         label.Pop();
         return label;
     }
+
+    private static RichTextLabel AddDynamicType(this RichTextLabel label, IDynamicTypeSymbol symbol)
+    {
+        label.PushColor(CachedColors.KeywordBlue);
+        label.AddText(symbol.Name);
+        label.Pop();
+        return label;
+    }
     
     // TODO: handle arrays etc, where there are multiple colours in one type
     private static Color GetSymbolColourByType(this ITypeSymbol symbol)
     {
         Color colour = symbol switch
         {
-            {SpecialType: not SpecialType.None} => CachedColors.KeywordBlue,
+            {SpecialType: not SpecialType.None} => symbol.SpecialType switch
+            {
+                SpecialType.System_Collections_IEnumerable => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IEnumerable_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IList_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_ICollection_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_IEnumerator => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IEnumerator_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IReadOnlyList_T => CachedColors.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IReadOnlyCollection_T => CachedColors.InterfaceGreen,
+                SpecialType.System_IDisposable => CachedColors.InterfaceGreen,
+                SpecialType.System_IAsyncResult => CachedColors.InterfaceGreen,
+                _ => CachedColors.KeywordBlue
+            },
             INamedTypeSymbol namedTypeSymbol => namedTypeSymbol.TypeKind switch
             {
                 TypeKind.Class => CachedColors.ClassGreen,
@@ -437,6 +483,7 @@ public static partial class SymbolInfoComponents
                 TypeKind.Struct => CachedColors.ClassGreen,
                 TypeKind.Enum => CachedColors.InterfaceGreen,
                 TypeKind.Delegate => CachedColors.ClassGreen,
+                TypeKind.Dynamic => CachedColors.KeywordBlue,
                 _ => CachedColors.Orange
             },
             _ => CachedColors.Orange

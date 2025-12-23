@@ -1,5 +1,7 @@
 ﻿using Godot;
 using Microsoft.CodeAnalysis;
+using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
@@ -15,6 +17,7 @@ public static partial class SymbolInfoComponents
         label.AddMethodStaticModifier(methodSymbol);
         label.AddVirtualModifier(methodSymbol);
         label.AddAbstractModifier(methodSymbol);
+        label.AddSealedModifier(methodSymbol);
         label.AddOverrideModifier(methodSymbol);
         label.AddMethodAsyncModifier(methodSymbol);
         label.AddMethodReturnType(methodSymbol);
@@ -24,6 +27,7 @@ public static partial class SymbolInfoComponents
         label.AddText("(");
         label.AddParameters(methodSymbol);
         label.AddText(")");
+        label.AddTypeParameterConstraints(methodSymbol.TypeParameters);
         label.AddContainingNamespaceAndClass(methodSymbol);
         label.Newline();
         label.AddTypeParameterArguments(methodSymbol);
@@ -218,6 +222,91 @@ public static partial class SymbolInfoComponents
             if (index < methodSymbol.TypeArguments.Length - 1)
             {
                 label.Newline();
+            }
+        }
+    }
+
+    private static void AddTypeParameterConstraints(this RichTextLabel label, ImmutableArray<ITypeParameterSymbol> typeParameters)
+    {
+        foreach (var typeParameter in typeParameters)
+        {
+            var hasConstraints = typeParameter.HasReferenceTypeConstraint || typeParameter.HasValueTypeConstraint || typeParameter.HasUnmanagedTypeConstraint || typeParameter.HasNotNullConstraint || typeParameter.HasConstructorConstraint || typeParameter.AllowsRefLikeType || typeParameter.ConstraintTypes.Length > 0;
+            if (hasConstraints is false) continue;
+            
+            label.AddText(" ");
+            label.PushColor(CachedColors.KeywordBlue);
+            label.AddText("where");
+            label.Pop();
+            label.AddText(" ");
+            label.AddTypeParameter(typeParameter);
+            label.AddText(" : ");
+            var firstConstraintAdded = false;
+
+            if (typeParameter.HasReferenceTypeConstraint)
+            {
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("class");
+                label.Pop();
+            }
+
+            if (typeParameter.HasValueTypeConstraint)
+            {
+                MaybeAddComma();
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("struct");
+                label.Pop();
+            }
+
+            if (typeParameter.HasUnmanagedTypeConstraint)
+            {
+                MaybeAddComma();
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("unmanaged");
+                label.Pop();
+            }
+
+            if (typeParameter.HasNotNullConstraint)
+            {
+                MaybeAddComma();
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("notnull");
+                label.Pop();
+            }
+
+            foreach (var typeParameterConstraintType in typeParameter.ConstraintTypes)
+            {
+                MaybeAddComma();
+                label.AddType(typeParameterConstraintType);
+            }
+
+            if (typeParameter.HasConstructorConstraint)
+            {
+                MaybeAddComma();
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("new");
+                label.Pop();
+                label.AddText("()");
+            }
+
+            if (typeParameter.AllowsRefLikeType)
+            {
+                MaybeAddComma();
+                label.PushColor(CachedColors.KeywordBlue);
+                label.AddText("allows ref struct");
+                label.Pop();
+            }
+            continue;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void MaybeAddComma()
+            {
+                if (firstConstraintAdded is false)
+                {
+                    firstConstraintAdded = true;
+                }
+                else
+                {
+                    label.AddText(", ");
+                }
             }
         }
     }

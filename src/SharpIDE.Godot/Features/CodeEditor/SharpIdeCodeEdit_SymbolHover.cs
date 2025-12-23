@@ -146,15 +146,21 @@ public partial class SharpIdeCodeEdit
         diagnosticPanel?.AddThemeStyleboxOverride(ThemeStringNames.Panel, styleBox);
         diagnosticPanel?.AddChild(diagnosticNode);
         
-
         var symbolInfoNode = roslynSymbol switch
         {
             IMethodSymbol methodSymbol => SymbolInfoComponents.GetMethodSymbolInfo(methodSymbol),
             INamedTypeSymbol namedTypeSymbol => SymbolInfoComponents.GetNamedTypeSymbolInfo(namedTypeSymbol),
             IPropertySymbol propertySymbol => SymbolInfoComponents.GetPropertySymbolInfo(propertySymbol),
+            IFieldSymbol { ContainingType.TypeKind: TypeKind.Enum } fieldSymbol => SymbolInfoComponents.GetEnumValueSymbolInfo(fieldSymbol),
             IFieldSymbol fieldSymbol => SymbolInfoComponents.GetFieldSymbolInfo(fieldSymbol),
             IParameterSymbol parameterSymbol => SymbolInfoComponents.GetParameterSymbolInfo(parameterSymbol),
             ILocalSymbol localSymbol => SymbolInfoComponents.GetLocalVariableSymbolInfo(localSymbol),
+            INamespaceSymbol namespaceSymbol => SymbolInfoComponents.GetNamespaceSymbolInfo(namespaceSymbol),
+            ITypeParameterSymbol typeParameterSymbol => SymbolInfoComponents.GetTypeParameterSymbolInfo(typeParameterSymbol),
+            IDynamicTypeSymbol dynamicTypeSymbol => SymbolInfoComponents.GetDynamicTypeSymbolInfo(dynamicTypeSymbol),
+            IEventSymbol eventSymbol => SymbolInfoComponents.GetEventSymbolInfo(eventSymbol),
+            IDiscardSymbol discardSymbol => SymbolInfoComponents.GetDiscardSymbolInfo(discardSymbol),
+            ILabelSymbol labelSymbol => SymbolInfoComponents.GetLabelSymbolInfo(labelSymbol),
             _ => SymbolInfoComponents.GetUnknownTooltip(roslynSymbol)
         };
         symbolInfoNode.FitContent = true;

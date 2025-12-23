@@ -35,7 +35,7 @@ public static partial class SymbolInfoComponents
     
     private static void AddLocalVariableName(this RichTextLabel label, ILocalSymbol symbol)
     {
-        label.PushColor(CachedColors.White);
+        label.PushColor(CachedColors.VariableBlue);
         label.AddText(symbol.Name);
         label.Pop();
     }

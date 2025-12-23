@@ -7,6 +7,12 @@ namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 public partial class NewCsharpFileDialog : ConfirmationDialog
 {
+    private const string ClassType = "Class";
+    private const string InterfaceType = "Interface";
+    private const string RecordType = "Record";
+    private const string StructType = "Struct";
+    private const string EnumType = "Enum";
+    
     private LineEdit _nameLineEdit = null!;
     private ItemList _fileTypeItemList = null!;
 
@@ -22,11 +28,11 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
         _nameLineEdit.GrabFocus();
         _nameLineEdit.SelectAll();
         _fileTypeItemList = GetNode<ItemList>("%FileTypeItemList");
-        _fileTypeItemList.AddItem("Class", _classIcon);
-        _fileTypeItemList.AddItem("Interface", _classIcon);
-        _fileTypeItemList.AddItem("Record", _classIcon);
-        _fileTypeItemList.AddItem("Struct", _classIcon);
-        _fileTypeItemList.AddItem("Enum", _classIcon);
+        _fileTypeItemList.AddItem(ClassType, _classIcon);
+        _fileTypeItemList.AddItem(InterfaceType, _classIcon);
+        _fileTypeItemList.AddItem(RecordType, _classIcon);
+        _fileTypeItemList.AddItem(StructType, _classIcon);
+        _fileTypeItemList.AddItem(EnumType, _classIcon);
         _fileTypeItemList.Select(0);
         _fileTypeItemList.ItemSelected += FileTypeItemListOnItemSelected;
         Confirmed += OnConfirmed;
@@ -71,9 +77,14 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
             fileName += ".cs";
         }
 
+        var selectedIndex = _fileTypeItemList.GetSelectedItems().Single();
+        var selectedFileTypeDisplayName = _fileTypeItemList.GetItemText(selectedIndex);
+        
+        var typeKeyword = GetCsharpTypeKeywordFromUiDisplayName(selectedFileTypeDisplayName);
+
         _ = Task.GodotRun(async () =>
         {
-           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName);
+           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName, typeKeyword);
            GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, null);
         });
         QueueFree();
@@ -83,4 +94,14 @@ public partial class NewCsharpFileDialog : ConfirmationDialog
     {
         return string.IsNullOrWhiteSpace(name);
     }
+
+    private static string GetCsharpTypeKeywordFromUiDisplayName(string typeDisplayName) => typeDisplayName switch
+    {
+        ClassType => "class",
+        InterfaceType => "interface", 
+        RecordType => "record",
+        StructType => "struct",
+        EnumType => "enum",
+        _ => throw new ArgumentOutOfRangeException(nameof(typeDisplayName), $"The file type '{typeDisplayName}' is not supported.")
+    };
 }
