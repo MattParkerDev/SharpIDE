@@ -2,6 +2,7 @@ using System.Diagnostics;
 
 using Godot;
 
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 
 using SharpIDE.Application.Features.Analysis;
@@ -11,13 +12,12 @@ using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.SolutionDiscovery;
-using SharpIDE.Godot.Features.BottomPanel;
+using SharpIDE.Godot.Features.CodeEditor;
 using SharpIDE.Godot.Features.Layout;
 using SharpIDE.Godot.Features.Run;
 using SharpIDE.Godot.Features.Search;
 using SharpIDE.Godot.Features.Search.SearchAllFiles;
-
-using Orientation = SharpIDE.Godot.Features.Layout.Orientation;
+using SharpIDE.Godot.Features.SolutionExplorer;
 
 namespace SharpIDE.Godot;
 
@@ -32,11 +32,11 @@ public partial class IdeRoot : Control
 	private Button _restoreSlnButton = null!;
 	private SearchWindow _searchWindow = null!;
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
+	private CodeEditorPanel _codeEditorPanel = null!;
+	private SolutionExplorerPanel _solutionExplorerPanel = null!;
 	private Button _runMenuButton = null!;
 	private Popup _runMenuPopup = null!;
-	private IdeDockLayout _ideLayoutRoot = null!;
-
-	private IdeDockLayout _dockLayoutRoot = null!;
+	private IdeMainLayout _mainLayout = null!;
 	
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -75,7 +75,7 @@ public partial class IdeRoot : Control
 		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
-		_ideLayoutRoot = GetNode<IdeDockLayout>("%LayoutRoot");
+		_mainLayout = GetNode<IdeMainLayout>("%MainLayout");
 		
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
@@ -88,15 +88,61 @@ public partial class IdeRoot : Control
 		_nodeReadyTcs.SetResult();
 		
 		// TODO: Add layout profiles and persist layout
-		var ideLayout = new IdeSplitNode(
-			Orientation.Vertical,
-			FirstNode: new IdeSplitNode(
-				Orientation.Horizontal,
-				FirstNode: new IdeSceneNode(ResourceHelper.SolutionExplorerId, "Solution Explorer"),
-				SecondNode: new IdeSceneNode(ResourceHelper.CodeEditorId, "Code Editor")),
-			SecondNode: new IdeSceneNode(ResourceHelper.MultiFunctionPanelId, "Multi Function Panel"));
-		
-		_ideLayoutRoot.UpdateLayout(ideLayout);
+		// TODO: Check how to instantiate views
+		var tools = new[]
+		{
+			new IdeToolInfo(
+				IdeTool.SolutionExplorer,
+				ToolAnchor.LeftTop,
+				IsPinned: true,
+				IsVisible: true,
+				IdeTools.ToolDataMap[IdeTool.SolutionExplorer].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.SolutionExplorer].Icon),
+			new IdeToolInfo(
+				IdeTool.Problems,
+				ToolAnchor.BottomLeft,
+				IsPinned: true,
+				IsVisible: false,
+				IdeTools.ToolDataMap[IdeTool.Problems].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.Problems].Icon),
+			new IdeToolInfo(
+				IdeTool.Run,
+				ToolAnchor.BottomLeft,
+				IsPinned: true,
+				IsVisible: true,
+				IdeTools.ToolDataMap[IdeTool.Run].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.Run].Icon),
+			new IdeToolInfo(
+				IdeTool.Debug,
+				ToolAnchor.BottomLeft,
+				IsPinned: true,
+				IsVisible: false,
+				IdeTools.ToolDataMap[IdeTool.Debug].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.Debug].Icon),
+			new IdeToolInfo(
+				IdeTool.Build,
+				ToolAnchor.BottomLeft,
+				IsPinned: true,
+				IsVisible: false,
+				IdeTools.ToolDataMap[IdeTool.Build].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.Build].Icon),
+			new IdeToolInfo(
+				IdeTool.Nuget,
+				ToolAnchor.BottomLeft,
+				IsPinned: true,
+				IsVisible: false,
+				IdeTools.ToolDataMap[IdeTool.Nuget].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.Nuget].Icon),
+			new IdeToolInfo(
+				IdeTool.TestExplorer,
+				ToolAnchor.BottomLeft,
+				IsPinned: true,
+				IsVisible: false,
+				IdeTools.ToolDataMap[IdeTool.TestExplorer].Scene.Instantiate<Control>(),
+				IdeTools.ToolDataMap[IdeTool.TestExplorer].Icon)
+		};
+
+		_mainLayout.InitializeLayout(tools);
 	}
 	
 	// TODO: Problematic, as this is called even when the focus shifts to an embedded subwindow, such as a popup 
@@ -120,28 +166,28 @@ public partial class IdeRoot : Control
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath);
 	}
 	private async void OnRebuildSlnButtonPressed()
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath, BuildType.Rebuild);
 	}
 	private async void OnCleanSlnButtonPressed()
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath, BuildType.Clean);
 	}
 	private async void OnRestoreSlnButtonPressed()
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath, BuildType.Restore);
 	}
 

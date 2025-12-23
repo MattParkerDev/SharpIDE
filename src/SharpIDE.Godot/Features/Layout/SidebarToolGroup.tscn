@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqv21c7r2gnhu"]
+
+[sub_resource type="CSharpScript" id="CSharpScript_negu7"]
+script/source = "using Godot;
+
+namespace SharpIDE.Godot.Features.Layout;
+
+public partial class SidebarToolGroup : Control
+{
+	public Control ToolGroup { get; private set; } = null!;
+
+	public override void _Ready()
+	{
+		ToolGroup = GetNode<Control>(\"%ToolGroup\");
+	}
+}
+"
+
+[node name="SidebarToolGroup" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = SubResource("CSharpScript_negu7")
