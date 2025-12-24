@@ -1,0 +1,42 @@
+[gd_scene load_steps=2 format=3 uid="uid://cy2a1p2twwni0"]
+
+[ext_resource type="Script" uid="uid://d3uqv7eerpt1p" path="res://Features/Layout/Sidebar.cs" id="1_4ivyu"]
+
+[node name="Sidebar" type="Panel"]
+custom_minimum_size = Vector2(50, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+script = ExtResource("1_4ivyu")
+ToolMinimumSize = Vector2(40, 40)
+PreviewColor = Color(0, 0.7268333, 0.89, 0.6901961)
+
+[node name="Margins" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+
+[node name="TopTools" type="VBoxContainer" parent="Margins/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Control" type="Control" parent="Margins/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BottomTools" type="VBoxContainer" parent="Margins/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2

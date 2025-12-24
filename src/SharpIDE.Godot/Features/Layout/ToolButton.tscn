@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=3 uid="uid://gcpcsulb43in"]
+
+[ext_resource type="Script" uid="uid://14orxapuy7mg" path="res://Features/Layout/ToolButton.cs" id="1_8ncbp"]
+[ext_resource type="StyleBox" uid="uid://cosaurtj574yc" path="res://Features/Layout/Resources/ToolButtonStyleNormal.tres" id="1_83dai"]
+[ext_resource type="StyleBox" uid="uid://d26wbe6o067ko" path="res://Features/Layout/Resources/ToolButtonStylePressed.tres" id="2_m4fy1"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_83dai"]
+
+[node name="ToolButton" type="Button"]
+custom_minimum_size = Vector2(40, 40)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = ExtResource("1_83dai")
+theme_override_styles/pressed = ExtResource("2_m4fy1")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_83dai")
+toggle_mode = true
+icon_alignment = 1
+expand_icon = true
+script = ExtResource("1_8ncbp")
+DragPreviewColor = Color(0.36, 0.36, 0.36, 0.7294118)
