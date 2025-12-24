@@ -1,22 +1,25 @@
 using Godot;
 
-using SharpIDE.Application.Features.Events;
+using SharpIDE.Godot.Features.Layout.Resources;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.Layout;
 
 public partial class IdeMainLayout : Control
 {
-	private readonly Dictionary<ToolAnchor, ToolArea> _toolAreaMap = [];
-	private readonly Dictionary<ToolAnchor, Control> _sidebarToolsMap = [];
-	private readonly Dictionary<ToolAnchor, ButtonGroup> _toolButtonGroupMap = [];
-	private readonly Dictionary<IdeTool, ToolButton> _toolButtonMap = [];
+	private readonly Dictionary<ToolAnchor, AnchorState> _anchorStateMap = [];
+	private readonly Dictionary<IdeToolId, ToolButton> _toolButtonMap = [];
 
-	private Dictionary<IdeTool, IdeToolInfo> _toolMap = [];
+	[Inject]
+	private readonly SharpIdeToolManager _toolManager = null!;
+
+	private Dictionary<IdeToolId, IdeToolState> _toolStateMap = [];
 
 	private Sidebar _leftSidebar = null!;
 	private Sidebar _rightSidebar = null!;
 	private Control _bottomArea = null!;
 	private ToolDragOverlay _toolDragOverlay = null!;
+	private IdeLayoutState _layout = null!;
 
 	public override void _Ready()
 	{
@@ -24,48 +27,38 @@ public partial class IdeMainLayout : Control
 		_rightSidebar = GetNode<Sidebar>("%RightSidebar");
 		_bottomArea = GetNode<Control>("%BottomArea");
 		_toolDragOverlay = GetNode<ToolDragOverlay>("%ToolDragOverlay");
+
+		_anchorStateMap[ToolAnchor.LeftTop] = new AnchorState(
+			_leftSidebar.TopTools,
+			GetNode<ToolArea>("%LeftTopToolArea"),
+			new ButtonGroup { AllowUnpress = true });
+		_anchorStateMap[ToolAnchor.RightTop] = new AnchorState(
+			_rightSidebar.TopTools,
+			GetNode<ToolArea>("%RightTopToolArea"),
+			new ButtonGroup { AllowUnpress = true });
+		_anchorStateMap[ToolAnchor.BottomLeft] = new AnchorState(
+			_leftSidebar.BottomTools,
+			GetNode<ToolArea>("%BottomLeftToolArea"),
+			new ButtonGroup { AllowUnpress = true });
+		_anchorStateMap[ToolAnchor.BottomRight] = new AnchorState(
+			_rightSidebar.BottomTools,
+			GetNode<ToolArea>("%BottomRightToolArea"),
+			new ButtonGroup { AllowUnpress = true });
+
+		// TODO: Load layout from persistence
+		_layout = IdeLayoutState.Default;
 		
-		_toolAreaMap[ToolAnchor.LeftTop] = GetNode<ToolArea>("%LeftTopToolArea");
-		_toolAreaMap[ToolAnchor.RightTop] = GetNode<ToolArea>("%RightTopToolArea");
-		_toolAreaMap[ToolAnchor.BottomLeft] = GetNode<ToolArea>("%BottomLeftToolArea");
-		_toolAreaMap[ToolAnchor.BottomRight] = GetNode<ToolArea>("%BottomRightToolArea");
+		InitializeLayout(_layout);
 
-		_sidebarToolsMap[ToolAnchor.LeftTop] = _leftSidebar.TopTools;
-		_sidebarToolsMap[ToolAnchor.RightTop] = _rightSidebar.TopTools;
-		_sidebarToolsMap[ToolAnchor.BottomLeft] = _leftSidebar.BottomTools;
-		_sidebarToolsMap[ToolAnchor.BottomRight] = _rightSidebar.BottomTools;
-
-		_toolButtonGroupMap[ToolAnchor.LeftTop] = new ButtonGroup
-			{ ResourceName = $"{ToolAnchor.LeftTop}", AllowUnpress = true };
-		_toolButtonGroupMap[ToolAnchor.RightTop] = new ButtonGroup
-			{ ResourceName = $"{ToolAnchor.RightTop}", AllowUnpress = true };
-		_toolButtonGroupMap[ToolAnchor.BottomLeft] = new ButtonGroup
-			{ ResourceName = $"{ToolAnchor.BottomLeft}", AllowUnpress = true };
-		_toolButtonGroupMap[ToolAnchor.BottomRight] = new ButtonGroup
-			{ ResourceName = $"{ToolAnchor.BottomRight}", AllowUnpress = true };
-
-		GodotGlobalEvents.Instance.IdeToolExternallySelected.Subscribe(tool =>
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.Subscribe(tool =>
 		{
 			CallDeferred(
-				nameof(OnIdeToolExternallySelected),
+				nameof(OnIdeToolExternallyActivated),
 				Variant.From(tool));
 			return Task.CompletedTask;
 		});
 
-		_toolDragOverlay.ToolDropped += OnToolDropped;
-	}
-
-	private void OnIdeToolExternallySelected(IdeTool tool)
-	{
-		var anchor = _toolMap[tool].Anchor;
-		
-		foreach (var toolInfo in _toolMap.Values.Where(t => t.Anchor == anchor))
-		{
-			_toolButtonMap[toolInfo.Tool].SetPressedNoSignal(toolInfo.Tool == tool);
-			toolInfo.IsVisible = toolInfo.Tool == tool;
-		}
-		
-		ToggleTool(tool, toggledOn: true);
+		_toolDragOverlay.ToolMoveRequested += OnToolMoveRequested;
 	}
 
 	/// <inheritdoc />
@@ -80,106 +73,175 @@ public partial class IdeMainLayout : Control
 				break;
 			case NotificationDragEnd:
 				_toolDragOverlay.Visible = false;
-				UpdateSidebarVisibility();
+				ApplySidebarVisibility();
 				break;
 		}
 	}
 
-	private void OnToolDropped(object? _, ToolDropData dropData)
+	private void InitializeLayout(IdeLayoutState layoutState)
 	{
-		var toolInfo = _toolMap[dropData.Tool];
-		var toolButton = _toolButtonMap[dropData.Tool];
-		var tools = _sidebarToolsMap[dropData.Anchor];
-		var buttonGroup = _toolButtonGroupMap[dropData.Anchor];
-		var oldToolArea = _toolAreaMap[toolInfo.Anchor];
-		var newToolArea = _toolAreaMap[dropData.Anchor];
+		_toolStateMap = layoutState.SidebarTools.Values.SelectMany(x => x).ToDictionary(state => state.ToolId);
+
+		foreach (var anchorState in _anchorStateMap.Values)
+		{
+			anchorState.SidebarTools.RemoveChildren();
+		}
+
+		foreach (var toolState in _toolStateMap.Values)
+		{
+			var anchorState = _anchorStateMap[toolState.Anchor];
+
+			var button = CreateToolButton(toolState);
+			_toolButtonMap[toolState.ToolId] = button;
+
+			anchorState.SidebarTools.AddChild(button);
+
+			if (toolState.IsActive)
+			{
+				var instance = _toolManager.GetInstance(toolState.ToolId);
+
+				anchorState.ToolArea.ShowTool(instance.Control);
+			}
+		}
+
+		ApplySidebarVisibility();
+		ApplyBottomAreaVisibility();
+	}
+
+	private void ActivateTool(IdeToolId toolId)
+	{
+		SetToolActive(toolId, true);
+		_toolButtonMap[toolId].SetPressedNoSignal(true);
+		ApplyToolVisibility(toolId);
+	}
+
+	private void DeactivateTool(IdeToolId toolId)
+	{
+		SetToolActive(toolId, false);
+		_toolButtonMap[toolId].SetPressedNoSignal(false);
+		ApplyToolVisibility(toolId);
+	}
+
+	private void DeactivateTools(ToolAnchor anchor)
+	{
+		foreach (var toolState in _toolStateMap.Values.Where(t => t.Anchor == anchor))
+		{
+			DeactivateTool(toolState.ToolId);
+		}
+	}
+
+	private void MoveTool(IdeToolId toolId, ToolAnchor targetAnchor, int anchorToolIndex)
+	{
+		var toolState = _toolStateMap[toolId];
+		var targetAnchorState = _anchorStateMap[targetAnchor];
+		var toolButton = _toolButtonMap[toolState.ToolId];
+
+		var originAnchor = toolState.Anchor;
+		var originAnchorState = _anchorStateMap[originAnchor];
+
+		_layout.SidebarTools[toolState.Anchor].Remove(toolState);
+		_layout.SidebarTools[targetAnchor].Insert(anchorToolIndex, toolState);
+		toolState.Anchor = targetAnchor;
+
+		if (originAnchor == targetAnchor)
+		{
+			targetAnchorState.SidebarTools.MoveChild(toolButton, anchorToolIndex);
+			return;
+		}
 
 		if (toolButton.GetParent() is { } buttonParent)
 		{
 			buttonParent.RemoveChild(toolButton);
 		}
 
-		if (oldToolArea.ActiveTool?.Tool == dropData.Tool)
+		var instance = _toolManager.GetInstance(toolId);
+
+		if (ReferenceEquals(originAnchorState.ToolArea.CurrentTool, instance.Control))
 		{
-			oldToolArea.SetActiveTool(null);
+			originAnchorState.ToolArea.HideTool();
 		}
 
-		toolInfo.Anchor = dropData.Anchor;
-
-		toolButton.ButtonGroup = buttonGroup;
-		tools.AddChild(toolButton);
-		tools.MoveChild(toolButton, dropData.Index);
+		toolButton.ButtonGroup = targetAnchorState.ButtonGroup;
+		targetAnchorState.SidebarTools.AddChild(toolButton);
+		targetAnchorState.SidebarTools.MoveChild(toolButton, anchorToolIndex);
 
 		if (toolButton.ButtonPressed)
 		{
-			OnIdeToolExternallySelected(toolInfo.Tool);
+			OnIdeToolExternallyActivated(toolState.ToolId);
 		}
 	}
 
-	public void InitializeLayout(IReadOnlyList<IdeToolInfo> toolInfos)
+	private void SetToolActive(IdeToolId toolId, bool isActive)
 	{
-		_toolMap = toolInfos.ToDictionary(toolInfo => toolInfo.Tool);
-		
-		foreach (var sidebarToolGroup in _sidebarToolsMap.Values)
+		_toolStateMap[toolId].IsActive = isActive;
+	}
+
+	private void ApplyToolVisibility(IdeToolId toolId)
+	{
+		var toolState = _toolStateMap[toolId];
+		var toolArea = _anchorStateMap[toolState.Anchor].ToolArea;
+		var instance = _toolManager.GetInstance(toolId);
+
+		if (toolState.IsActive)
 		{
-			sidebarToolGroup.RemoveChildren();
+			toolArea.ShowTool(instance.Control);
 		}
-		
-		foreach (var toolInfo in toolInfos)
+		else
 		{
-			var sidebarToolGroup = _sidebarToolsMap[toolInfo.Anchor];
-
-			var button = CreateToolButton(toolInfo);
-			_toolButtonMap[toolInfo.Tool] = button;
-			
-			sidebarToolGroup.AddChild(button);
-
-			if (toolInfo is { IsPinned: true, IsVisible: true })
-			{
-				_toolAreaMap[toolInfo.Anchor].SetActiveTool(toolInfo);
-			}
+			toolArea.HideTool();
 		}
-		
-		UpdateSidebarVisibility();
-		UpdateBottomAreaVisibility();
+
+		ApplyBottomAreaVisibility();
 	}
 
-	private void UpdateSidebarVisibility()
+	private void OnIdeToolExternallyActivated(IdeToolId toolId)
 	{
-		_leftSidebar.Visible =
-			_toolMap.Values.Any(toolInfo => toolInfo.Anchor.IsLeft() && toolInfo.IsPinned);
+		if (!_toolStateMap.TryGetValue(toolId, out var toolState))
+		{
+			GD.PrintErr($"Externally activated tool '{toolId}' is not part of layout.");
+			return;
+		}
 
-		_rightSidebar.Visible =
-			_toolMap.Values.Any(toolInfo => toolInfo.Anchor.IsRight() && toolInfo.IsPinned);
+		var anchor = toolState.Anchor;
+		DeactivateTools(anchor);
+		ActivateTool(toolId);
 	}
 
-	private ToolButton CreateToolButton(IdeToolInfo toolInfo)
+	private void OnToolMoveRequested(object? _, ToolMoveData moveData)
 	{
-		var toolButton = ResourceLoader.Load<PackedScene>("uid://gcpcsulb43in").Instantiate<ToolButton>();
+		MoveTool(moveData.ToolId, moveData.Anchor, moveData.Index);
+	}
 
-		toolButton.Tool = toolInfo.Tool;
-		toolButton.SetButtonIcon(toolInfo.Icon);
-		toolButton.Toggled += toggledOn => ToggleTool(toolInfo.Tool,  toggledOn);
-		toolButton.ButtonGroup = _toolButtonGroupMap[toolInfo.Anchor];
-		toolButton.ButtonPressed = toolInfo is { IsPinned: true, IsVisible: true };
+	private void ApplySidebarVisibility()
+	{
+		_leftSidebar.Visible = _toolStateMap.Values.Any(toolState => toolState.Anchor.IsLeft());
+		_rightSidebar.Visible = _toolStateMap.Values.Any(toolState => toolState.Anchor.IsRight());
+	}
+
+	private ToolButton CreateToolButton(IdeToolState toolState)
+	{
+		var toolButton = Scenes.ToolButton.Instantiate<ToolButton>();
+
+		toolButton.ToolId = toolState.ToolId;
+
+		var icon = IdeToolDescriptors.Descriptors[toolState.ToolId].Icon;
+
+		toolButton.SetButtonIcon(icon);
+		toolButton.Toggled += toggledOn =>
+		{
+			SetToolActive(toolState.ToolId, toggledOn);
+			ApplyToolVisibility(toolState.ToolId);
+		};
+		toolButton.ButtonGroup = _anchorStateMap[toolState.Anchor].ButtonGroup;
+		toolButton.ButtonPressed = toolState.IsActive;
 
 		return toolButton;
 	}
 
-	private void ToggleTool(IdeTool tool, bool toggledOn)
+	private void ApplyBottomAreaVisibility()
 	{
-		var toolInfo = _toolMap[tool];
-		var toolArea = _toolAreaMap[toolInfo.Anchor];
-		
-		toolArea.SetActiveTool(toggledOn ? toolInfo : null);
-		
-		UpdateBottomAreaVisibility();
+		_bottomArea.Visible = _toolStateMap.Values.Any(toolState => toolState.Anchor.IsBottom() && toolState.IsActive);
 	}
 
-	private void UpdateBottomAreaVisibility()
-	{
-		_bottomArea.Visible =
-			_toolMap.Values.Any(toolInfo => toolInfo.Anchor.IsBottom()
-											 && toolInfo is { IsPinned: true, IsVisible: true });
-	}
+	private sealed record AnchorState(Control SidebarTools, ToolArea ToolArea, ButtonGroup ButtonGroup);
 }

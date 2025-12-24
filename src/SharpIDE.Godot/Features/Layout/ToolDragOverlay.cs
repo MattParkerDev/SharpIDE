@@ -1,12 +1,16 @@
+using System.Diagnostics.CodeAnalysis;
+
 using Godot;
+
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.Layout;
 
-public sealed record ToolDropData(IdeTool Tool, ToolAnchor Anchor, int Index);
+public sealed record ToolMoveData(IdeToolId ToolId, ToolAnchor Anchor, int Index);
 
 public partial class ToolDragOverlay : Control
 {
-	private readonly Dictionary<DropZone, ToolAnchor> _dropZoneMap = [];
+	private readonly Dictionary<DropZone, ToolAnchor> _dropZoneAnchorMap = [];
 	private readonly Dictionary<ToolAnchor, Sidebar> _sidebarMap = [];
 
 	[Export]
@@ -27,15 +31,15 @@ public partial class ToolDragOverlay : Control
 	[Export]
 	public DropZone BottomRightZone { get; set; } = null!;
 
-	public event EventHandler<ToolDropData>? ToolDropped;
+	public event EventHandler<ToolMoveData>? ToolMoveRequested;
 
 	public override void _Ready()
 	{
 		// TODO: Sidebar visibility not working
-		_dropZoneMap[LeftTopZone] = ToolAnchor.LeftTop;
-		_dropZoneMap[RightTopZone] = ToolAnchor.RightTop;
-		_dropZoneMap[BottomLeftZone] = ToolAnchor.BottomLeft;
-		_dropZoneMap[BottomRightZone] = ToolAnchor.BottomRight;
+		_dropZoneAnchorMap[LeftTopZone] = ToolAnchor.LeftTop;
+		_dropZoneAnchorMap[RightTopZone] = ToolAnchor.RightTop;
+		_dropZoneAnchorMap[BottomLeftZone] = ToolAnchor.BottomLeft;
+		_dropZoneAnchorMap[BottomRightZone] = ToolAnchor.BottomRight;
 
 		_sidebarMap[ToolAnchor.LeftTop] = LeftSidebar;
 		_sidebarMap[ToolAnchor.RightTop] = RightSidebar;
@@ -46,44 +50,61 @@ public partial class ToolDragOverlay : Control
 	}
 
 	/// <inheritdoc />
-	public override bool _CanDropData(Vector2 _, Variant data)
+	public override bool _CanDropData(Vector2 pos, Variant data)
 	{
+		if (data.VariantType is not Variant.Type.Int)
+		{
+			return false;
+		}
+		
 		HideToolPreviews();
 		HideDropZoneHighlights();
 
 		var mousePosition = GetGlobalMousePosition();
 
-		foreach (var (zone, anchor) in _dropZoneMap)
+		if (TryGetAnchorAndZoneAtPosition(mousePosition, out var anchor, out var dropZone))
 		{
-			if (InDropZone(zone, mousePosition))
-			{
-				ShowGhostPreview(anchor, mousePosition);
-				zone.Highlight.Show();
-				return true;
-			}
+			ShowGhostPreview(anchor.Value, mousePosition);
+			dropZone.Highlight.Show();
+			return true;
 		}
 
 		return false;
 	}
 
 	/// <inheritdoc />
-	public override void _DropData(Vector2 atPosition, Variant data)
+	public override void _DropData(Vector2 _, Variant data)
 	{
 		var mousePosition = GetGlobalMousePosition();
 
-		foreach (var (zone, anchor) in _dropZoneMap)
+		if (TryGetAnchorAndZoneAtPosition(mousePosition, out var anchor, out var _))
 		{
-			if (InDropZone(zone, mousePosition))
+			RaiseToolDropped(
+				data.As<IdeToolId>(),
+				anchor.Value,
+				CalculateInsertionIndex(GetSidebarTools(anchor.Value), mousePosition, preview: false));
+		}
+	}
+
+	private bool TryGetAnchorAndZoneAtPosition(
+		Vector2 position,
+		[NotNullWhen(true)] out ToolAnchor? anchor,
+		[NotNullWhen(true)] out DropZone? dropZone)
+	{
+		anchor = null;
+		dropZone = null;
+
+		foreach (var (zone, zoneAnchor) in _dropZoneAnchorMap)
+		{
+			if (InDropZone(zone, position))
 			{
-				ToolDropped?.Invoke(
-					sender: this,
-					new ToolDropData(
-						data.As<IdeTool>(),
-						anchor,
-						CalculateInsertionIndex(GetSidebarTools(anchor), mousePosition)));
-				return;
+				anchor = zoneAnchor;
+				dropZone = zone;
+				return true;
 			}
 		}
+
+		return false;
 	}
 
 	private void OnVisibilityChanged()
@@ -95,15 +116,27 @@ public partial class ToolDragOverlay : Control
 		}
 	}
 
-	private void RaiseToolDropped(IdeTool tool, ToolAnchor anchor) { }
+	private void RaiseToolDropped(IdeToolId toolId, ToolAnchor anchor, int index)
+	{
+		ToolMoveRequested?.Invoke(
+			sender: this,
+			new ToolMoveData(
+				toolId,
+				anchor,
+				index));
+	}
 
 	private void ShowGhostPreview(ToolAnchor anchor, Vector2 mousePosition)
 	{
 		var sidebar = _sidebarMap[anchor];
 		var tools = GetSidebarTools(anchor);
-		var previewIndex = CalculateInsertionIndex(tools, mousePosition);
+		var previewIndex = CalculateInsertionIndex(tools, mousePosition, preview: true);
 
-		tools.AddChild(sidebar.ToolPreview);
+		if (!ReferenceEquals(sidebar.ToolPreview.GetParent(), tools))
+		{
+			tools.AddChild(sidebar.ToolPreview);
+		}
+
 		tools.MoveChild(sidebar.ToolPreview, previewIndex);
 	}
 
@@ -134,27 +167,39 @@ public partial class ToolDragOverlay : Control
 
 	private void HideDropZoneHighlights()
 	{
-		foreach (var zone in _dropZoneMap.Keys)
+		foreach (var zone in _dropZoneAnchorMap.Keys)
 		{
 			zone.Highlight.Hide();
 		}
 	}
 
-	private static int CalculateInsertionIndex(Container tools, Vector2 mousePosition)
+	// TODO: Check why ths does not calculate correct index
+	private static int CalculateInsertionIndex(Container tools, Vector2 mousePosition, bool preview)
 	{
-		foreach (var child in tools.GetChildren().OfType<ToolButton>())
+		var children = tools.GetChildren()
+							.OfType<ToolButton>()
+
+							// When in preview we don't ignore the disabled button (button being dragged)
+							// in order to insert this preview in the correct index.
+							// When calculating the index for the actual insertion we ignore the button being dragged.
+							.Where(button => preview || !button.Disabled)
+							.Index()
+							.ToList();
+
+		foreach (var (index, child) in children)
 		{
 			var rect = child.GetGlobalRect();
-
 			var midpoint = rect.Position.Y + rect.Size.Y / 2.0f;
 
 			if (mousePosition.Y < midpoint)
 			{
-				return child.GetIndex();
+				GD.Print($"[{nameof(CalculateInsertionIndex)}]: {index})");
+				return index;
 			}
 		}
+		GD.Print($"[{nameof(CalculateInsertionIndex)}]: {children.Count})");
 
-		return tools.GetChildCount();
+		return children.Count;
 	}
 
 	private static bool InDropZone(Control dropZone, Vector2 position)

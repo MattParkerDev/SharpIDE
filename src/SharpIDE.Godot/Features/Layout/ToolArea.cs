@@ -4,41 +4,44 @@ namespace SharpIDE.Godot.Features.Layout;
 
 public partial class ToolArea : Control
 {
-	public IdeToolInfo? ActiveTool { get; private set; }
+	public Control? CurrentTool { get; private set; }
 
 	public override void _Ready()
 	{
 		Visible = false;
 	}
 
-	public void SetActiveTool(IdeToolInfo? toolInfo)
+	public void ShowTool(Control tool)
 	{
-		if (ReferenceEquals(ActiveTool, toolInfo))
+		if (ReferenceEquals(CurrentTool, tool))
 		{
-			return;
-		}
-		
-		if (ActiveTool is not null)
-		{
-			RemoveChild(ActiveTool.Control);
-			ActiveTool.IsVisible = false;
-		}
-		
-		if (toolInfo is null)
-		{
-			Visible = false;
-			ActiveTool = null;
 			return;
 		}
 
-		if (toolInfo.Control.GetParent() is { } parent)
+		if (CurrentTool is not null)
 		{
-			parent.RemoveChild(toolInfo.Control);
+			HideTool();
 		}
-		
-		ActiveTool = toolInfo;
-		
-		AddChild(ActiveTool.Control);
-		Visible = ActiveTool.IsVisible = true;
+
+		if (tool.GetParent() is ToolArea parent)
+		{
+			parent.HideTool();
+		}
+
+		CurrentTool = tool;
+
+		AddChild(CurrentTool);
+		Visible = true;
+	}
+
+	public void HideTool()
+	{
+		if (CurrentTool is not null)
+		{
+			RemoveChild(CurrentTool);
+		}
+
+		CurrentTool = null;
+		Visible = false;
 	}
 }

@@ -18,6 +18,7 @@ using SharpIDE.Godot.Features.Run;
 using SharpIDE.Godot.Features.Search;
 using SharpIDE.Godot.Features.Search.SearchAllFiles;
 using SharpIDE.Godot.Features.SolutionExplorer;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot;
 
@@ -86,63 +87,6 @@ public partial class IdeRoot : Control
 		_restoreSlnButton.Pressed += OnRestoreSlnButtonPressed;
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
-		
-		// TODO: Add layout profiles and persist layout
-		// TODO: Check how to instantiate views
-		var tools = new[]
-		{
-			new IdeToolInfo(
-				IdeTool.SolutionExplorer,
-				ToolAnchor.LeftTop,
-				IsPinned: true,
-				IsVisible: true,
-				IdeTools.ToolDataMap[IdeTool.SolutionExplorer].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.SolutionExplorer].Icon),
-			new IdeToolInfo(
-				IdeTool.Problems,
-				ToolAnchor.BottomLeft,
-				IsPinned: true,
-				IsVisible: false,
-				IdeTools.ToolDataMap[IdeTool.Problems].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.Problems].Icon),
-			new IdeToolInfo(
-				IdeTool.Run,
-				ToolAnchor.BottomLeft,
-				IsPinned: true,
-				IsVisible: true,
-				IdeTools.ToolDataMap[IdeTool.Run].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.Run].Icon),
-			new IdeToolInfo(
-				IdeTool.Debug,
-				ToolAnchor.BottomLeft,
-				IsPinned: true,
-				IsVisible: false,
-				IdeTools.ToolDataMap[IdeTool.Debug].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.Debug].Icon),
-			new IdeToolInfo(
-				IdeTool.Build,
-				ToolAnchor.BottomLeft,
-				IsPinned: true,
-				IsVisible: false,
-				IdeTools.ToolDataMap[IdeTool.Build].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.Build].Icon),
-			new IdeToolInfo(
-				IdeTool.Nuget,
-				ToolAnchor.BottomLeft,
-				IsPinned: true,
-				IsVisible: false,
-				IdeTools.ToolDataMap[IdeTool.Nuget].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.Nuget].Icon),
-			new IdeToolInfo(
-				IdeTool.TestExplorer,
-				ToolAnchor.BottomLeft,
-				IsPinned: true,
-				IsVisible: false,
-				IdeTools.ToolDataMap[IdeTool.TestExplorer].Scene.Instantiate<Control>(),
-				IdeTools.ToolDataMap[IdeTool.TestExplorer].Icon)
-		};
-
-		_mainLayout.InitializeLayout(tools);
 	}
 	
 	// TODO: Problematic, as this is called even when the focus shifts to an embedded subwindow, such as a popup 
@@ -166,28 +110,28 @@ public partial class IdeRoot : Control
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath);
 	}
 	private async void OnRebuildSlnButtonPressed()
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath, BuildType.Rebuild);
 	}
 	private async void OnCleanSlnButtonPressed()
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath, BuildType.Clean);
 	}
 	private async void OnRestoreSlnButtonPressed()
 	{
 		await _solutionManager.SolutionReadyTcs.Task;
 		
-		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await _buildService.MsBuildAsync(_solutionManager.SolutionModel.FilePath, BuildType.Restore);
 	}
 

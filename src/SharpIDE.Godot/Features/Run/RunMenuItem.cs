@@ -2,6 +2,7 @@ using Godot;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.Layout;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.Run;
 
@@ -55,13 +56,13 @@ public partial class RunMenuItem : HBoxContainer
 
     private async void OnRunButtonPressed()
     {
-		GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Run);
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
         await _runService.RunProject(Project).ConfigureAwait(false);
     }
     
     private async void OnDebugButtonPressed()
     {
-        GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Debug);
+        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Debug);
         await _runService.RunProject(Project, true, Singletons.AppState.IdeSettings.DebuggerExecutablePath).ConfigureAwait(false);
     }
 }

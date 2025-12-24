@@ -6,6 +6,7 @@ using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.Layout;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer;
 
@@ -62,7 +63,7 @@ public partial class SolutionExplorerPanel
             {
                 _ = Task.GodotRun(async () =>
                 {
-		            GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Run);
+		            GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
                     await _runService.RunProject(project);
                 });
             }
@@ -98,7 +99,7 @@ public partial class SolutionExplorerPanel
     }
     private async Task MsBuildProject(SharpIdeProjectModel project, BuildType buildType)
     {
-        GodotGlobalEvents.Instance.IdeToolExternallySelected.InvokeParallelFireAndForget(IdeTool.Build);
+        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
         await _buildService.MsBuildAsync(project.FilePath, buildType);
     }
 }

@@ -1,29 +1,26 @@
 using Godot;
 
+using SharpIDE.Godot.Features.Tools;
+
 namespace SharpIDE.Godot.Features.Layout;
 
 public partial class ToolButton : Button
 {
-	public IdeTool Tool { get; set; }
+	public IdeToolId ToolId { get; set; }
 	
 	[Export]
 	public Color DragPreviewColor { get; set; }
-
-	private bool _pressedBeforeDrag;
-	
 
 	/// <inheritdoc />
 	public override Variant _GetDragData(Vector2 atPosition)
 	{
 		SetDragPreview(CreateDragPreview());
 
-		// We save the state and unpress the button without toggle signal,
-		// otherwise Hide() will unpress the button which toggles it.
-		_pressedBeforeDrag = ButtonPressed;
-		SetPressedNoSignal(false);
+		// We disable the button when dragging to ensure the Hide() does not toggle it.
+		Disabled = true;
 		Hide();
 		
-		return Variant.From(Tool);
+		return Variant.From(ToolId);
 	}
 
 	/// <inheritdoc />
@@ -32,8 +29,8 @@ public partial class ToolButton : Button
 		switch ((long) what)
 		{
 			case NotificationDragEnd:
+				Disabled = false;
 				Show();
-				SetPressedNoSignal(_pressedBeforeDrag);
 				break;
 		}
 	}
