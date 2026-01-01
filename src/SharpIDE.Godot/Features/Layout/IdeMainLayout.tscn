@@ -1,0 +1,183 @@
+[gd_scene load_steps=7 format=3 uid="uid://bbdbcqg3jys2b"]
+
+[ext_resource type="Script" uid="uid://bu3a3xbolcijl" path="res://Features/Layout/IdeMainLayout.cs" id="1_tq23w"]
+[ext_resource type="PackedScene" uid="uid://cy2a1p2twwni0" path="res://Features/Layout/Sidebar.tscn" id="2_e53sf"]
+[ext_resource type="PackedScene" uid="uid://b8wqkwa7sjrid" path="res://Features/Layout/ToolArea.tscn" id="3_cxuiw"]
+[ext_resource type="PackedScene" uid="uid://c5dlwgcx3ubyp" path="res://Features/CodeEditor/CodeEditorPanel.tscn" id="4_kocsp"]
+[ext_resource type="PackedScene" uid="uid://f1hvt1gn1adf" path="res://Features/Layout/ToolDragOverlay.tscn" id="5_e53sf"]
+[ext_resource type="Script" uid="uid://dh8sh21lx7p34" path="res://Features/Layout/DropZone.cs" id="6_yv27d"]
+
+[node name="IdeMainLayout" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_tq23w")
+
+[node name="Root" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LeftSidebar" parent="Root" instance=ExtResource("2_e53sf")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CenterArea" type="VSplitContainer" parent="Root"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="TopArea" type="HSplitContainer" parent="Root/CenterArea"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
+theme_override_constants/separation = 0
+
+[node name="LeftTopToolArea" parent="Root/CenterArea/TopArea" instance=ExtResource("3_cxuiw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HSplitContainer" type="HSplitContainer" parent="Root/CenterArea/TopArea"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 5.0
+theme_override_constants/separation = 0
+
+[node name="CodeEditor" parent="Root/CenterArea/TopArea/HSplitContainer" instance=ExtResource("4_kocsp")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 5.0
+
+[node name="RightTopToolArea" parent="Root/CenterArea/TopArea/HSplitContainer" instance=ExtResource("3_cxuiw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BottomArea" type="HSplitContainer" parent="Root/CenterArea"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+theme_override_constants/minimum_grab_thickness = 6
+
+[node name="BottomLeftToolArea" parent="Root/CenterArea/BottomArea" instance=ExtResource("3_cxuiw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BottomRightToolArea" parent="Root/CenterArea/BottomArea" instance=ExtResource("3_cxuiw")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightSidebar" parent="Root" instance=ExtResource("2_e53sf")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ToolDragOverlay" parent="." node_paths=PackedStringArray("LeftSidebar", "RightSidebar", "LeftTopZone", "RightTopZone", "BottomLeftZone", "BottomRightZone") instance=ExtResource("5_e53sf")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+mouse_filter = 1
+LeftSidebar = NodePath("../Root/LeftSidebar")
+RightSidebar = NodePath("../Root/RightSidebar")
+LeftTopZone = NodePath("LeftTopDropZone")
+RightTopZone = NodePath("RightTopDropZone")
+BottomLeftZone = NodePath("BottomLeftDropZone")
+BottomRightZone = NodePath("BottomRightDropZone")
+
+[node name="LeftTopDropZone" type="Control" parent="ToolDragOverlay"]
+layout_mode = 1
+anchor_right = 0.2
+anchor_bottom = 0.5
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 1
+script = ExtResource("6_yv27d")
+
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/LeftTopDropZone"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 50.227203
+mouse_filter = 2
+color = Color(0, 0.7268333, 0.89, 0.5137255)
+
+[node name="RightTopDropZone" type="Control" parent="ToolDragOverlay"]
+layout_mode = 1
+anchor_left = 0.8
+anchor_right = 1.0
+anchor_bottom = 0.5
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 1
+script = ExtResource("6_yv27d")
+
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/RightTopDropZone"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = -49.99678
+mouse_filter = 2
+color = Color(0, 0.7254902, 0.8901961, 0.5137255)
+
+[node name="BottomLeftDropZone" type="Control" parent="ToolDragOverlay"]
+layout_mode = 1
+anchor_top = 0.5
+anchor_right = 0.2
+anchor_bottom = 1.0
+grow_vertical = 0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 1
+script = ExtResource("6_yv27d")
+
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/BottomLeftDropZone"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.349
+anchor_right = 2.4740002
+anchor_bottom = 1.0
+offset_left = 50.227203
+offset_top = -0.07600403
+mouse_filter = 2
+color = Color(0, 0.7254902, 0.8901961, 0.5137255)
+
+[node name="BottomRightDropZone" type="Control" parent="ToolDragOverlay"]
+layout_mode = 1
+anchor_left = 0.8
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+mouse_filter = 1
+script = ExtResource("6_yv27d")
+
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/BottomRightDropZone"]
+visible = false
+layout_mode = 1
+anchors_preset = -1
+anchor_left = -1.475
+anchor_top = 0.34600002
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -0.104003906
+offset_right = -49.99678
+mouse_filter = 2
+color = Color(0, 0.7254902, 0.8901961, 0.5137255)

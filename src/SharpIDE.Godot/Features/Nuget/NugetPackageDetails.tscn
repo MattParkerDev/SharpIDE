@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://odaefch2sdft"]
 
 [ext_resource type="Script" uid="uid://d1v1v4uqdu2rw" path="res://Features/Nuget/NugetPackageDetails.cs" id="1_c3hm2"]
-[ext_resource type="Texture2D" uid="uid://b5ih61vdjv5e6" path="res://Features/LeftSideBar/Resources/Nuget.svg" id="1_jrdf0"]
+[ext_resource type="Texture2D" uid="uid://b5ih61vdjv5e6" path="res://Features/Layout/Resources/Nuget.svg" id="1_jrdf0"]
 [ext_resource type="PackedScene" uid="uid://5uan5u23cr2s" path="res://Features/Nuget/PackageDetailsProjectEntry.tscn" id="3_tik62"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tik62"]

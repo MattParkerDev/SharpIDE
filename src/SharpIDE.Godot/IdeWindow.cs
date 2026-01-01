@@ -93,7 +93,7 @@ public partial class IdeWindow : Control
                 _slnPicker = null;
                 return;
             }
-            ideRoot.SetSlnFilePath(slnPath);
+
             var recentSln = Singletons.AppState.RecentSlns.SingleOrDefault(s => s.FilePath == slnPath);
             if (recentSln is not null)
             {
@@ -120,6 +120,9 @@ public partial class IdeWindow : Control
                 _ideRoot = ideRoot; // This has no DI services, until it is added to the scene tree
                 GetNode<DiAutoload>("/root/DiAutoload").ResetScope();
                 AddChild(ideRoot);
+                
+                // This is executed after resetting the DI scope to ensure the DI services are available.
+                _ideRoot.SetSlnFilePath(slnPath);
             });
         });
     }
