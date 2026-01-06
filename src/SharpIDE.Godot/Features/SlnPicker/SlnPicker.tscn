@@ -71,6 +71,13 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.5689727, 0.56897277, 0.5689727, 1)
 text = "v0.1.2"
 
+[node name="HSeparator" type="HSeparator" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Button" type="Button" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Create New"
+
 [node name="Panel" type="Panel" parent="VSplitContainer"]
 layout_mode = 2
 
