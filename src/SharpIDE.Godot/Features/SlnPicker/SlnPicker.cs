@@ -8,6 +8,8 @@ namespace SharpIDE.Godot.Features.SlnPicker;
 public partial class SlnPicker : Control
 {
     private FileDialog _fileDialog = null!;
+    private AcceptDialog _solutionDialog = null!;
+    private Button _newSolutionButton = null!;
     private Button _openSlnButton = null!;
     private VBoxContainer _previousSlnsVBoxContainer = null!;
     private Label _versionLabel = null!;
@@ -16,6 +18,8 @@ public partial class SlnPicker : Control
     private PackedScene _previousSlnEntryScene = ResourceLoader.Load<PackedScene>("res://Features/SlnPicker/PreviousSlnEntry.tscn");
 
     private readonly TaskCompletionSource<string?> _tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+    
+
 
     public override void _ExitTree()
     {
@@ -27,6 +31,17 @@ public partial class SlnPicker : Control
         _previousSlnsVBoxContainer = GetNode<VBoxContainer>("%PreviousSlnsVBoxContainer");
         _versionLabel = GetNode<Label>("%VersionLabel");
         _fileDialog = GetNode<FileDialog>("%FileDialog");
+        _solutionDialog = GetNode<AcceptDialog>("%SolutionDialog");
+        _newSolutionButton = GetNode<Button>("%NewSolutionButton");
+        _newSolutionButton.Pressed += () => _solutionDialog.PopupCentered();
+        _solutionDialog.Confirmed += () => 
+        {
+            // GD.Print($"Creating project at: {_folderDialog.CurrentDir}");
+            // GD.Print($"Selected Template: {_templateDropdown.GetItemText(_templateDropdown.Selected)}");
+            // GD.Print($"Git enabled: {_gitCheckbox.ButtonPressed}");
+            //
+            // _tcs.SetResult(_folderDialog.CurrentDir);
+        };
         _openSlnButton = GetNode<Button>("%OpenSlnButton");
         _openSlnButton.Pressed += () => _fileDialog.PopupCentered();
         var windowParent = GetParentOrNull<Window>();

@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://cwvhbsd1mdl2x"]
+[gd_scene load_steps=7 format=3 uid="uid://cwvhbsd1mdl2x"]
 
 [ext_resource type="Script" uid="uid://bjvwb6jg6jpsi" path="res://Features/SlnPicker/SlnPicker.cs" id="1_ciq0g"]
 [ext_resource type="Texture2D" uid="uid://tpjfx7mo6cwj" path="res://Resources/SharpIdeV3.svg" id="2_qs47j"]
 [ext_resource type="PackedScene" uid="uid://x5lhwvh5dium" path="res://Features/SlnPicker/PreviousSlnEntry.tscn" id="2_t7l5q"]
 [ext_resource type="Script" uid="uid://but0p7xwpfxtg" path="res://Features/SlnPicker/AutoOpenLastSlnButton.cs" id="4_qs47j"]
+[ext_resource type="Script" uid="uid://btuicqd4rg4at" path="res://Features/SlnPicker/SolutionDialog.cs" id="5_6t7l7"]
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_qs47j"]
 
@@ -72,11 +73,8 @@ theme_override_colors/font_color = Color(0.5689727, 0.56897277, 0.5689727, 1)
 text = "v0.1.2"
 
 [node name="HSeparator" type="HSeparator" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
-
-[node name="Button" type="Button" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Create New"
 
 [node name="Panel" type="Panel" parent="VSplitContainer"]
 layout_mode = 2
@@ -104,6 +102,11 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Search recent projects"
+
+[node name="NewSolutionButton" type="Button" parent="VSplitContainer/Panel/MarginContainer2/VBoxContainer2/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New Solution"
 
 [node name="OpenSlnButton" type="Button" parent="VSplitContainer/Panel/MarginContainer2/VBoxContainer2/HBoxContainer"]
 unique_name_in_owner = true
@@ -144,4 +147,79 @@ dialog_hide_on_ok = true
 file_mode = 0
 access = 2
 filters = PackedStringArray("*.sln,*.slnx;Solution Files")
+use_native_dialog = true
+
+[node name="SolutionDialog" type="AcceptDialog" parent="."]
+unique_name_in_owner = true
+oversampling_override = 1.0
+title = "New Solution"
+size = Vector2i(900, 500)
+visible = true
+ok_button_text = "Create"
+script = ExtResource("5_6t7l7")
+
+[node name="HSplitContainer" type="HSplitContainer" parent="SolutionDialog"]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 892.0
+offset_bottom = 451.0
+split_offset = 245
+
+[node name="Panel" type="Panel" parent="SolutionDialog/HSplitContainer"]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="SolutionDialog/HSplitContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SolutionDialog/HSplitContainer/Panel/MarginContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel/MarginContainer/ScrollContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.48570347, 0.48570353, 0.48570347, 1)
+text = "Project Type"
+
+[node name="BlazorButton" type="Button" parent="SolutionDialog/HSplitContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+toggle_mode = true
+text = "Blazor"
+flat = true
+alignment = 0
+
+[node name="ConsoleButton" type="Button" parent="SolutionDialog/HSplitContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+toggle_mode = true
+text = "Console"
+flat = true
+alignment = 0
+
+[node name="Panel2" type="Panel" parent="SolutionDialog/HSplitContainer"]
+layout_mode = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="SolutionDialog/HSplitContainer/Panel2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2"]
+layout_mode = 2
+
+[node name="FolderDialog" type="FileDialog" parent="SolutionDialog"]
+unique_name_in_owner = true
+oversampling_override = 1.0
+title = "Open a Directory"
+dialog_hide_on_ok = true
+file_mode = 2
+access = 2
 use_native_dialog = true
