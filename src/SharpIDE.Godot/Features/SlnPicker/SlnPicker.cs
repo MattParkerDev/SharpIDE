@@ -40,7 +40,7 @@ public partial class SlnPicker : Control
 			var projectCreator = new ProjectCreator();
 			creatorNode.AddChild(projectCreator);
 			
-			projectCreator.CreateProject("/Users/ruanroos/Projects/SharpSolutionCreator", "MyNewSolution", "MyNewProject", "console", "net8.0", "C#");
+			projectCreator.CreateProject("/Users/ruanroos/Projects/SharpSolutionCreator", "MyNewSolution", "MyNewProject", "console", "net8.0", "C#", "8.0.411");
 			// GD.Print($"Creating project at: {_folderDialog.CurrentDir}");
 			// GD.Print($"Selected Template: {_templateDropdown.GetItemText(_templateDropdown.Selected)}");
 			// GD.Print($"Git enabled: {_gitCheckbox.ButtonPressed}");
