@@ -49,19 +49,11 @@ public partial class ProjectCreator : Node
 		  string installedSdks = GetInstalledSdks(dotnetPath);
 		  if (!Regex.IsMatch(installedSdks, $@"\b{Regex.Escape(sdkVersion)}\b"))
 		  {
-			  throw new Exception($"Specified SDK {sdkVersion} not installed. Available: {installedSdks}. Install from https://dotnet.microsoft.com.");
+			  OS.Alert($"Specified SDK {sdkVersion} not installed. Available: {installedSdks}. Install from https://dotnet.microsoft.com.","Error");
 		  }
 
-		  // Create global.json to pin the specified SDK
-		  string globalJsonPath = Path.Combine(solutionDir, "global.json");
-		  string globalJsonContent = $@"{{
-  ""sdk"": {{
-	""version"": ""{sdkVersion}""
-  }}
-}}";
-		  Directory.CreateDirectory(solutionDir); // Create dir early for global.json
-		  File.WriteAllText(globalJsonPath, globalJsonContent);
-		  GD.Print($"Pinned SDK to {sdkVersion} via global.json in {solutionDir}");
+		  Directory.CreateDirectory(solutionDir);
+		  PinGlobalConfig(solutionDir, sdkVersion);
 
 		  // Create solution file
 		  ExecuteDotnetCommand(dotnetPath, solutionDir, $"new sln -n {solutionName}");
@@ -74,13 +66,15 @@ public partial class ProjectCreator : Node
 		  ExecuteDotnetCommand(dotnetPath, solutionDir, projectArgs);
 
 		  // Add project to solution
-		  ExecuteDotnetCommand(dotnetPath, solutionDir, $"sln add {projectName}/{projectName}.csproj");
+		  var solutionArgs = $"sln add {projectName}/{projectName}.csproj";
+		  ExecuteDotnetCommand(dotnetPath, solutionDir, solutionArgs);
 
 		  GD.Print($"Project ({template}) created successfully at {solutionDir}!");
+		  PinGlobalConfig(solutionDir, sdkVersion,true);
 	   }
 	   catch (Exception ex)
 	   {
-		  GD.PrintErr($"Error creating project: {ex.Message}. Folder may be partially created at {solutionDir}. If access denied to template cache, try running 'sudo chown -R $(whoami) ~/.templateengine' or 'rm -rf ~/.templateengine/dotnetcli/<version>' in terminal.");
+		   OS.Alert($"Error creating project: {ex.Message}. Folder may be partially created at {solutionDir}. If access denied to template cache, try running 'sudo chown -R $(whoami) ~/.templateengine' or 'rm -rf ~/.templateengine/dotnetcli/<version>' in terminal.","Error");
 	   }
 	}
 
@@ -109,7 +103,7 @@ public partial class ProjectCreator : Node
 		}
 		else
 		{
-			GD.PrintErr($"System dotnet not found at {dotnetPath}; falling back to 'dotnet'. Check your install.");
+			OS.Alert($"System dotnet not found at {dotnetPath}; falling back to 'dotnet'. Check your install.","Warning");
 			return "dotnet";
 		}
 	}
@@ -176,26 +170,45 @@ public partial class ProjectCreator : Node
 		  CreateNoWindow = true
 	   };
 
+	   processInfo.EnvironmentVariables["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+	   
 	   using (var process = new Process { StartInfo = processInfo })
 	   {
 		  process.Start();
 		  string output = process.StandardOutput.ReadToEnd();
 		  string error = process.StandardError.ReadToEnd();
 		  process.WaitForExit();
+		  
+		  if (process.ExitCode != 0) OS.Alert($"dotnet command failed in {workingDir}: {error}", "Error");
+		  // if (!string.IsNullOrEmpty(error)) OS.Alert($"Command Error: {error}", "Error");;
 
-		  if (process.ExitCode != 0)
-		  {
-			 throw new Exception($"dotnet command failed in {workingDir}: {error}");
-		  }
-
-		  GD.Print($"dotnet output in {workingDir}: {output}"); // Log for SharpIDE's console
+		  GD.Print($"dotnet output in {workingDir}: {output}");
 	   }
 	}
 
-	// Example: Override _Ready for testing (remove in production)
-	// public override void _Ready()
-	// {
-	//     // Test console app with specific SDK
-	//     CreateProject("/Users/ruanroos/Projects/SharpSolutionCreator", "MyNewSolution", "MyNewProject", "console", "net8.0", "C#", "8.0.411");
-	// }
+	private void PinGlobalConfig(string solutionDir, string sdkVersion, bool deleteExistingGlobalJson = false)
+	{
+		if (!deleteExistingGlobalJson)
+		{
+			// Create global.json to pin the specified SDK
+			string globalJsonPath = Path.Combine(solutionDir, "global.json");
+			string globalJsonContent = $@"{{
+""sdk"": {{
+	""version"": ""{sdkVersion}""
+	}}
+}}";
+			File.WriteAllText(globalJsonPath, globalJsonContent);
+			GD.Print($"Pinned SDK to {sdkVersion} via global.json in {solutionDir}");
+		}
+		else
+		{
+			string globalJsonPath = Path.Combine(solutionDir, "global.json");
+			if (File.Exists(globalJsonPath))
+			{
+				File.Delete(globalJsonPath);
+				GD.Print($"Deleted global.json from {solutionDir}");
+			}
+		}
+		
+	}
 }
