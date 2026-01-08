@@ -36,11 +36,15 @@ public partial class SlnPicker : Control
 		_newSolutionButton.Pressed += () => _solutionDialog.PopupCentered();
 		_solutionDialog.Confirmed += () => 
 		{
+			var solutionName = _solutionDialog.GetNode<LineEdit>("%SlnNameLineEdit").Text;
+			var projectName = _solutionDialog.GetNode<LineEdit>("%PrjNameLineEdit").Text;
+			var solutionDir = _solutionDialog.GetNode<LineEdit>("%SlnDirLineEdit").Text;
+			
 			var creatorNode = new Node();
 			var projectCreator = new ProjectCreator();
 			creatorNode.AddChild(projectCreator);
 			
-			projectCreator.CreateProject("/Users/ruanroos/Projects/SharpSolutionCreator", "MyNewSolution", "MyNewProject", "console", "net8.0", "C#", "8.0.411");
+			projectCreator.CreateProject(solutionDir, solutionName, projectName, "console", "net8.0", "C#", "8.0.411");
 			// GD.Print($"Creating project at: {_folderDialog.CurrentDir}");
 			// GD.Print($"Selected Template: {_templateDropdown.GetItemText(_templateDropdown.Selected)}");
 			// GD.Print($"Git enabled: {_gitCheckbox.ButtonPressed}");

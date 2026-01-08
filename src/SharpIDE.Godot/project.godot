@@ -26,6 +26,8 @@ ObservableTrackerRuntimeHook="*res://addons/R3.Godot/ObservableTrackerRuntimeHoo
 
 [display]
 
+window/size/viewport_width=1920
+window/size/viewport_height=1080
 window/energy_saving/keep_screen_on=false
 
 [dotnet]
