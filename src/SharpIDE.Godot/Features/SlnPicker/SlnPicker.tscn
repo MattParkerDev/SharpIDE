@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://cwvhbsd1mdl2x"]
+[gd_scene load_steps=10 format=3 uid="uid://cwvhbsd1mdl2x"]
 
 [ext_resource type="Script" uid="uid://bjvwb6jg6jpsi" path="res://Features/SlnPicker/SlnPicker.cs" id="1_ciq0g"]
 [ext_resource type="Texture2D" uid="uid://tpjfx7mo6cwj" path="res://Resources/SharpIdeV3.svg" id="2_qs47j"]
 [ext_resource type="PackedScene" uid="uid://x5lhwvh5dium" path="res://Features/SlnPicker/PreviousSlnEntry.tscn" id="2_t7l5q"]
 [ext_resource type="Script" uid="uid://but0p7xwpfxtg" path="res://Features/SlnPicker/AutoOpenLastSlnButton.cs" id="4_qs47j"]
 [ext_resource type="Script" uid="uid://btuicqd4rg4at" path="res://Features/SlnPicker/SolutionDialog.cs" id="5_6t7l7"]
+[ext_resource type="Texture2D" uid="uid://bbfxltr1fcomt" path="res://Features/SolutionExplorer/Resources/SlnFolderIcon.svg" id="6_ithdl"]
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_qs47j"]
 
@@ -18,6 +19,9 @@ corner_radius_top_left = 5
 corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0gtej"]
+content_margin_top = 176.0
 
 [node name="SlnPicker" type="Control"]
 layout_mode = 3
@@ -166,7 +170,6 @@ oversampling_override = 1.0
 title = "New Solution"
 position = Vector2i(0, 36)
 size = Vector2i(1000, 500)
-visible = true
 ok_button_text = "Create"
 script = ExtResource("5_6t7l7")
 
@@ -226,113 +229,130 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TabContainer" type="TabContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2"]
-unique_name_in_owner = true
-layout_mode = 2
-current_tab = 1
-tabs_visible = false
-
-[node name="BlazorSettingsPanel" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer"]
-visible = false
-layout_mode = 2
-metadata/_tab_index = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/BlazorSettingsPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 18.0
-offset_top = 12.0
-offset_right = -3.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/BlazorSettingsPanel/MarginContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/BlazorSettingsPanel/MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/BlazorSettingsPanel/MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4862745, 0.4862745, 0.4862745, 1)
-text = "Blazor Settings"
+text = "Solution Settings"
 
-[node name="ConsoleSettingsPanel" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer"]
-layout_mode = 2
-metadata/_tab_index = 1
-
-[node name="MarginContainer" type="MarginContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 18.0
-offset_top = 12.0
-offset_right = -3.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer"]
+[node name="HSeparator" type="HSeparator" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.4862745, 0.4862745, 0.4862745, 1)
-text = "Console Settings"
-
-[node name="HSeparator" type="HSeparator" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="HSplitContainer" type="HSplitContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer"]
+[node name="HSplitContainer" type="HSplitContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer"]
 layout_mode = 2
 split_offset = 196
 
-[node name="Panel" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer"]
+[node name="Panel" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel"]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
 theme_override_constants/separation = 20
 
-[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel/VBoxContainer"]
+[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel/VBoxContainer"]
 layout_mode = 2
 text = "Solution Name:"
 
-[node name="Label2" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel/VBoxContainer"]
+[node name="Label2" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel/VBoxContainer"]
 layout_mode = 2
 text = "Project Name:"
 
-[node name="Label3" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel/VBoxContainer"]
+[node name="Label3" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel/VBoxContainer"]
 layout_mode = 2
 text = "Solution Directory:"
 
-[node name="Panel2" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer"]
+[node name="Panel2" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer"]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel2"]
 layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+offset_right = 505.0
+offset_bottom = 114.0
 theme_override_constants/separation = 10
 
-[node name="SlnNameLineEdit" type="LineEdit" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel2/VBoxContainer"]
+[node name="SlnNameLineEdit" type="LineEdit" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel2/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_6t7l7")
 
-[node name="PrjNameLineEdit" type="LineEdit" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/TabContainer/ConsoleSettingsPanel/MarginContainer/VBoxContainer/HSplitContainer/Panel2/VBoxContainer"]
+[node name="PrjNameLineEdit" type="LineEdit" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel2/VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_6t7l7")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel2/VBoxContainer"]
+layout_mode = 2
+
+[node name="SlnDirLineEdit" type="LineEdit" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel2/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_6t7l7")
+
+[node name="SlnDirOpenButton" type="Button" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/VBoxContainer/HSplitContainer/Panel2/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+icon = ExtResource("6_ithdl")
+
+[node name="TabContainer" type="TabContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_0gtej")
+current_tab = 1
+tabs_visible = false
+
+[node name="BlazorSettingsPanel" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer"]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer/BlazorSettingsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 12.0
+offset_right = -3.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer/BlazorSettingsPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer/BlazorSettingsPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer/BlazorSettingsPanel/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4862745, 0.4862745, 0.4862745, 1)
+text = "Blazor Settings"
+
+[node name="ConsoleSettingsPanel" type="Panel" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer"]
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="SolutionDialog/HSplitContainer/Panel2/MarginContainer2/VBoxContainer2/TabContainer/ConsoleSettingsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 12.0
+offset_right = -3.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="FolderDialog" type="FileDialog" parent="SolutionDialog"]
 unique_name_in_owner = true
