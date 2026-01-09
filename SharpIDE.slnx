@@ -2,6 +2,7 @@
   <Folder Name="/.github/" />
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/create-release.yml" />
+    <File Path=".github/workflows/run-tests.yml" />
   </Folder>
   <Folder Name="/iac/">
     <File Path="iac/should-release.cs" />
