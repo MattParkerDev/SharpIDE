@@ -186,6 +186,8 @@ public partial class CodeEditorPanel : MarginContainer
 			var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEdit>().Single(t => t.SharpIdeFile.Path == executionStopInfo.FilePath);
 			tabForStopInfo.SetLineBackgroundColor(lineInt, ExecutingLineColor);
 			tabForStopInfo.SetLineAsExecuting(lineInt, true);
+			var fileLinePosition = new SharpIdeFileLinePosition(lineInt, 0);
+			tabForStopInfo.SetFileLinePosition(fileLinePosition);
 		});
 	}
 	
