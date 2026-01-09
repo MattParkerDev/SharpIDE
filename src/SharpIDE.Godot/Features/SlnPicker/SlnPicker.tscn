@@ -170,7 +170,6 @@ oversampling_override = 1.0
 title = "New Solution"
 position = Vector2i(0, 36)
 size = Vector2i(1000, 500)
-visible = true
 ok_button_text = "Create"
 script = ExtResource("5_6t7l7")
 
