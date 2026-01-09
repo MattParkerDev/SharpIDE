@@ -51,6 +51,7 @@ public partial class ProjectCreator : Node
 		  }
 
 		  Directory.CreateDirectory(solutionDir);
+		  // Pin dotnet conf for solution creation
 		  PinGlobalConfig(solutionDir, sdkVersion);
 
 		  // Create solution file
@@ -63,12 +64,14 @@ public partial class ProjectCreator : Node
 		  string projectArgs = $"new {template} -n {projectName} --framework {framework} --language {language} {extraArgs}";
 		  ExecuteDotnetCommand(dotnetPath, solutionDir, projectArgs);
 
+		  // Delete dotnet conf
+		  PinGlobalConfig(solutionDir, sdkVersion,true);
 		  // Add project to solution
 		  var solutionArgs = $"sln add {projectName}/{projectName}.csproj";
 		  ExecuteDotnetCommand(dotnetPath, solutionDir, solutionArgs);
 
 		  GD.Print($"Project ({template}) created successfully at {solutionDir}!");
-		  PinGlobalConfig(solutionDir, sdkVersion,true);
+		  
 	   }
 	   catch (Exception ex)
 	   {
