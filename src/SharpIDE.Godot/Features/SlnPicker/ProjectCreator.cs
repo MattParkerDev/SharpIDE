@@ -15,18 +15,16 @@ public partial class ProjectCreator : Node
 {
 	// Creates a new project with the specified parameters.
 	public void CreateProject(string basePath, string solutionName, string projectName, string template,
-		string framework, string language, string sdkVersion, string extraArgs = "")
+		string language, string sdkVersion, string extraArgs = "")
 	{
-		solutionName = solutionName ?? "MySolution";
-		projectName = projectName ?? "MyProject";
-		template = template ?? "console"; //"blazor" for Blazor, "webapi" for API, etc.
-		framework = framework ?? "net8.0";
-	   language = language ?? "C#";
+		//"blazor" for Blazor, "webapi" for API, etc.
 
 	   // Normalize and resolve absolute paths for cross-platform reliability
 	   basePath = Path.GetFullPath(basePath);
 	   string solutionDir = Path.Combine(basePath, solutionName);
 	   string projectDir = Path.Combine(solutionDir, projectName);
+	   string framework = "net" + sdkVersion.Split('.')[0] + ".0";
+	   
 
 	   try
 	   {
@@ -79,7 +77,7 @@ public partial class ProjectCreator : Node
 	}
 
 	// Get platform-specific path to system dotnet CLI
-	private string GetDotnetPath()
+	public string GetDotnetPath()
 	{
 		string osName = OS.GetName();
 		string dotnetPath = "dotnet"; // Fallback
@@ -109,7 +107,7 @@ public partial class ProjectCreator : Node
 	}
 
 	// Get list of installed SDKs using specified dotnetPath
-	private string GetInstalledSdks(string dotnetPath)
+	public string GetInstalledSdks(string dotnetPath)
 	{
 		var processInfo = new ProcessStartInfo
 		{

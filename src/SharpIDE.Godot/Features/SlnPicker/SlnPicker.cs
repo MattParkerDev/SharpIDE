@@ -39,17 +39,14 @@ public partial class SlnPicker : Control
 			var solutionName = _solutionDialog.GetNode<LineEdit>("%SlnNameLineEdit").Text;
 			var projectName = _solutionDialog.GetNode<LineEdit>("%PrjNameLineEdit").Text;
 			var solutionDir = _solutionDialog.GetNode<LineEdit>("%SlnDirLineEdit").Text;
+			var projectTemplate = _solutionDialog.GetNode<Label>("%PrjTypeLabel").Text;
+			var sdkVersion = _solutionDialog.GetNode<OptionButton>("%SdkVersionOptions").Text;
 			
 			var creatorNode = new Node();
 			var projectCreator = new ProjectCreator();
 			creatorNode.AddChild(projectCreator);
 			
-			projectCreator.CreateProject(solutionDir, solutionName, projectName, "console", "net8.0", "C#", "8.0.411");
-			// GD.Print($"Creating project at: {_folderDialog.CurrentDir}");
-			// GD.Print($"Selected Template: {_templateDropdown.GetItemText(_templateDropdown.Selected)}");
-			// GD.Print($"Git enabled: {_gitCheckbox.ButtonPressed}");
-			//
-			// _tcs.SetResult(_folderDialog.CurrentDir);
+			projectCreator.CreateProject(solutionDir, solutionName, projectName, projectTemplate, "C#", sdkVersion);
 		};
 		_openSlnButton = GetNode<Button>("%OpenSlnButton");
 		_openSlnButton.Pressed += () => _fileDialog.PopupCentered();
