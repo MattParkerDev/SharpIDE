@@ -1,6 +1,7 @@
 using BlazorGodot.Library.V2;
 using Godot;
 using NuGet.Versioning;
+using SharpIDE.Godot.Features.SlnPicker.GodotMarkup;
 using FileAccess = Godot.FileAccess;
 using static BlazorGodot.Library.V2.VNodeExtensions;
 
@@ -47,14 +48,41 @@ public partial class SlnPicker : Control
 
     private void StateHasChanged()
     {
-        this.RemoveChildAndQueueFree(_renderedRoot);
-        var vNode = Render();
-        _renderedRoot = vNode.Build();
-        AddChild(_renderedRoot);
+        var newVNode = Render();
+
+        if (_previousVNode == null || _renderedRoot == null)
+        {
+            // Initial render
+            _renderedRoot = newVNode.Build();
+            AddChild(_renderedRoot);
+            _mapping.Map(newVNode, _renderedRoot);
+            MapAllDescendants(newVNode, _renderedRoot);
+        }
+        else
+        {
+            // Diff and patch
+            var operations = VNodeDiffer.ComputeDiff(_previousVNode, newVNode, _mapping);
+            //VNodePatcher.ApplyDiff(this, operations, _mapping);
+            VNodePatcher.ApplyDiff(_renderedRoot, operations, _mapping);
+        }
+
+        _previousVNode = newVNode;
     }
 
-    private VNode _vNodeRoot = null!;
-    private Node _renderedRoot = null!;
+    private void MapAllDescendants(VNode vNode, Node node)
+    {
+        for (int i = 0; i < vNode.Children.Count; i++)
+        {
+            var childVNode = vNode.Children[i];
+            var childNode = node.GetChild(i);
+            _mapping.Map(childVNode, childNode);
+            MapAllDescendants(childVNode, childNode);
+        }
+    }
+
+    private VNode?  _previousVNode = null;
+    private Node? _renderedRoot = null;
+    private NodeMapping _mapping = new();
     public override void _Ready()
     {
         _previousSlnsVBoxContainer = GetNode<VBoxContainer>("%PreviousSlnsVBoxContainer");
@@ -80,8 +108,7 @@ public partial class SlnPicker : Control
             }
         }
         PopulatePreviousSolutions();
-        _renderedRoot = Render().Build();
-        AddChild(_renderedRoot);
+        StateHasChanged();
     }
     
     private void PopulatePreviousSolutions()
