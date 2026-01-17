@@ -1,6 +1,9 @@
+using BlazorGodot.Library.V2;
 using Godot;
 using NuGet.Versioning;
 using FileAccess = Godot.FileAccess;
+using static BlazorGodot.Library.V2.VNodeExtensions;
+
 
 namespace SharpIDE.Godot.Features.SlnPicker;
 
@@ -21,7 +24,35 @@ public partial class SlnPicker : Control
     {
         if (!_tcs.Task.IsCompleted) _tcs.SetResult(null);
     }
+    
+	private List<string> _myStrings = ["one", "two", "three"];
+    private int _counter = 0;
+    protected VNode Render() =>
+        _<VBoxContainer>()
+        [
+            _<Label>(s => { s.Text = "Hello, World!"; s.TextDirection = Control.TextDirection.Auto; }),
+            _<VBoxContainer>()
+            [[
+                _<Label>(),
+                .. _myStrings.Select(s => _<Label>(l => l.Text = s))
+            ]],
+            _<Label>(s => { s.Text = _counter.ToString(); }),
+            _<Button>(s => { s.Text = "Increment"; s.Pressed += () =>
+            {
+                _counter++;
+                GD.Print($"Counter incremented: {_counter}");
+                StateHasChanged();
+            }; })
+        ];
 
+    private void StateHasChanged()
+    {
+        this.RemoveChildAndQueueFree(_renderedRoot);
+        _renderedRoot = Render().Build();
+        AddChild(_renderedRoot);
+    }
+
+    private Node _renderedRoot = null!;
     public override void _Ready()
     {
         _previousSlnsVBoxContainer = GetNode<VBoxContainer>("%PreviousSlnsVBoxContainer");
@@ -47,6 +78,8 @@ public partial class SlnPicker : Control
             }
         }
         PopulatePreviousSolutions();
+        _renderedRoot = Render().Build();
+        AddChild(_renderedRoot);
     }
     
     private void PopulatePreviousSolutions()
