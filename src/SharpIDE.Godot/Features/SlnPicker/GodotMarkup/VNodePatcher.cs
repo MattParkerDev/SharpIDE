@@ -1,4 +1,3 @@
-using BlazorGodot.Library.V2;
 using Godot;
 
 namespace SharpIDE.Godot.Features.SlnPicker.GodotMarkup;

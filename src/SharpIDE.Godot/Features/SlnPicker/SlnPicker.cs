@@ -1,9 +1,8 @@
-using BlazorGodot.Library.V2;
 using Godot;
 using NuGet.Versioning;
 using SharpIDE.Godot.Features.SlnPicker.GodotMarkup;
 using FileAccess = Godot.FileAccess;
-using static BlazorGodot.Library.V2.VNodeExtensions;
+using static SharpIDE.Godot.Features.SlnPicker.GodotMarkup.VNodeExtensions;
 
 
 namespace SharpIDE.Godot.Features.SlnPicker;
