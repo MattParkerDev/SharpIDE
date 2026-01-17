@@ -42,13 +42,24 @@ public partial class SlnPicker : Control
                 _counter++;
                 GD.Print($"Counter incremented: {_counter}");
                 StateHasChanged();
-            }; })
+            }; }),
+            _<VBoxContainer>()
+            [
+                Enumerable.Range(0, _counter).Select(s => _<Label>(l => l.Text = $"Item {s}"))
+            ]
         ];
 
     private void StateHasChanged()
     {
         var newVNode = Render();
-
+        // if (_renderedRoot is not null)
+        // {
+        //     this.RemoveChildAndQueueFree(_renderedRoot);
+        // }
+        // var vNode = Render();
+        // _renderedRoot = vNode.Build();
+        // AddChild(_renderedRoot);
+        // return;
         if (_previousVNode == null || _renderedRoot == null)
         {
             // Initial render

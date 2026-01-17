@@ -8,7 +8,15 @@ public abstract class VNode
     public object? Key { get; init; }  // For keyed diffing
     internal int Sequence { get; set; }  // Auto-assigned sequence number
 	
-    public VNode this[params VNode[] children]
+    public VNode this[params ReadOnlySpan<VNode> children]
+    {
+        get
+        {
+            Children.AddRange(children);
+            return this;
+        }
+    }
+    public VNode this[IEnumerable<VNode> children]
     {
         get
         {
