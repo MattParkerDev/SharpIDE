@@ -48,10 +48,12 @@ public partial class SlnPicker : Control
     private void StateHasChanged()
     {
         this.RemoveChildAndQueueFree(_renderedRoot);
-        _renderedRoot = Render().Build();
+        var vNode = Render();
+        _renderedRoot = vNode.Build();
         AddChild(_renderedRoot);
     }
 
+    private VNode _vNodeRoot = null!;
     private Node _renderedRoot = null!;
     public override void _Ready()
     {
