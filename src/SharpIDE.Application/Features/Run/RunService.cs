@@ -15,14 +15,16 @@ using Breakpoint = SharpIDE.Application.Features.Debugging.Breakpoint;
 
 namespace SharpIDE.Application.Features.Run;
 
-public partial class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysis, BuildService buildService)
+public partial class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysis, BuildService buildService, DebuggingService debuggingService)
 {
 	private readonly ConcurrentDictionary<SharpIdeProjectModel, SemaphoreSlim> _projectLocks = [];
-	private Debugger? _debugger; // TODO: Support multiple debuggers for multiple running projects
+	//private readonly ConcurrentDictionary<SharpIdeProjectModel, DebuggerSessionId> _projectDebuggerSessionIds = [];
+	private DebuggerSessionId? _debuggerSessionId; // TODO: Support multiple debuggers for multiple running projects
 
 	private readonly ILogger<RunService> _logger = logger;
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
 	private readonly BuildService _buildService = buildService;
+	private readonly DebuggingService _debuggingService = debuggingService;
 
 	public async Task RunProject(SharpIdeProjectModel project, bool isDebug = false, DebuggerExecutableInfo? debuggerExecutableInfo = null)
 	{
@@ -117,9 +119,9 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			if (isDebug)
 			{
 				// Attach debugger (which internally uses a DiagnosticClient to resume startup)
-				var debugger = new Debugger { Project = project, ProcessId = process.ProcessId };
-				_debugger = debugger;
-				await debugger.Attach(debuggerExecutableInfo, Breakpoints.ToDictionary(), project, project.RunningCancellationTokenSource.Token).ConfigureAwait(false);
+				var debuggerSessionId = await _debuggingService.Attach(process.ProcessId, debuggerExecutableInfo, Breakpoints.ToDictionary(), project, project.RunningCancellationTokenSource.Token);
+				//_projectDebuggerSessionIds[project] = debuggerSessionId;
+				_debuggerSessionId = debuggerSessionId;
 			}
 
 			project.Running = true;
@@ -148,7 +150,9 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			project.Running = false;
 			if (isDebug)
 			{
-				_debugger = null;
+				await _debuggingService.CloseDebuggerSession(_debuggerSessionId!.Value);
+				//_projectDebuggerSessionIds.TryRemove(project, out _);
+				_debuggerSessionId = null;
 				GlobalEvents.Instance.ProjectStoppedDebugging.InvokeParallelFireAndForget(project);
 			}
 			else
@@ -176,26 +180,26 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 		await project.RunningCancellationTokenSource.CancelAsync().ConfigureAwait(false);
 	}
 
-	public async Task SendDebuggerStepOver(int threadId) => await _debugger!.StepOver(threadId);
-	public async Task SendDebuggerStepInto(int threadId) => await _debugger!.StepInto(threadId);
-	public async Task SendDebuggerStepOut(int threadId) => await _debugger!.StepOut(threadId);
-	public async Task SendDebuggerContinue(int threadId) => await _debugger!.Continue(threadId);
+	public async Task SendDebuggerStepOver(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.StepOver(_debuggerSessionId!.Value, threadId, cancellationToken);
+	public async Task SendDebuggerStepInto(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.StepInto(_debuggerSessionId!.Value, threadId, cancellationToken);
+	public async Task SendDebuggerStepOut(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.StepOut(_debuggerSessionId!.Value, threadId, cancellationToken);
+	public async Task SendDebuggerContinue(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.Continue(_debuggerSessionId!.Value, threadId, cancellationToken);
 
 	public async Task<List<ThreadModel>> GetThreadsAtStopPoint()
 	{
-		return await _debugger!.GetThreadsAtStopPoint();
+		return await _debuggingService!.GetThreadsAtStopPoint(_debuggerSessionId!.Value);
 	}
 	public async Task<List<StackFrameModel>> GetStackFrames(int threadId)
 	{
-		return await _debugger!.GetStackFramesForThread(threadId);
+		return await _debuggingService!.GetStackFramesForThread(_debuggerSessionId!.Value, threadId);
 	}
 	public async Task<List<Variable>> GetVariablesForStackFrame(int frameId)
 	{
-		return await _debugger!.GetVariablesForStackFrame(frameId);
+		return await _debuggingService!.GetVariablesForStackFrame(_debuggerSessionId!.Value, frameId);
 	}
 	public async Task<List<Variable>> GetVariablesForVariablesReference(int variablesReferenceId)
 	{
-		return await _debugger!.GetVariablesForVariablesReference(variablesReferenceId);
+		return await _debuggingService!.GetVariablesForVariablesReference(_debuggerSessionId!.Value, variablesReferenceId);
 	}
 
 	private async Task<string> GetRunArguments(SharpIdeProjectModel project)
