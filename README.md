@@ -44,7 +44,7 @@ if codesign is not installed, install it with `xcode-select --install`
 ## Run
 <img width="1544" height="867" alt="image" src="https://github.com/user-attachments/assets/53c32fd2-959d-4e72-9e50-83edaa008d8b" />
 
-## Debug (WIP)
+## Debug
 <img width="1513" height="880" alt="image" src="https://github.com/user-attachments/assets/9bd75fef-4198-41a8-a029-c4eea2e53a97" />
 
 
