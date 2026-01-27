@@ -101,5 +101,4 @@ layout_mode = 2
 [node name="TextEdit" type="TextEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer2" unique_id=967321892]
 layout_mode = 2
 size_flags_vertical = 3
-focus_mode = 0
 editable = false

@@ -120,7 +120,6 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
-focus_mode = 0
 disabled = true
 icon = ExtResource("2_8x8ub")
 icon_alignment = 1
