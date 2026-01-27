@@ -48,7 +48,7 @@ public partial class SharpIdeCodeEdit
 
         var font = GetThemeFont(ThemeStringNames.Font);
         var fontSize = GetThemeFontSize(ThemeStringNames.FontSize);
-        var ci = GetCanvasItem();
+        var ci = _aboveCanvasItemRid!.Value;
         var availableCompletions = _codeCompletionOptions.Length;
         var completionsToDisplay = Math.Min(availableCompletions, MaxLines);
         var rowHeight = GetLineHeight();
