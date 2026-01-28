@@ -82,6 +82,21 @@ public partial class SharpIdeCodeEdit
                     // Lets jump to the definition
                     var definitionLocation = locations[0];
                     var definitionLineSpan = definitionLocation.GetMappedLineSpan();
+                    if (string.IsNullOrWhiteSpace(definitionLineSpan.Path))
+                    {
+                        // This flow happens when we are trying to reach methods non-existing in the current project (mostly because they are from library or framework)
+                        // When this happens, we are trying to generate temporary metadata definition file with Roslyn. This works for built-in framework/language methods.
+                        var (doc, defLinePositionSpan) = await _roslynAnalysis.LookupMetadataDefinition(_currentFile, new LinePosition((int)line, (int)column));
+
+                        if (doc is null || defLinePositionSpan is null)
+                        {
+                            GD.PrintErr($"Failed to generate metadata document for symbol: {symbol.Name}");
+                            return;
+                        }
+
+                        await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(doc, new SharpIdeFileLinePosition(defLinePositionSpan.Value.Span.Start.Line, defLinePositionSpan.Value.Span.Start.Character));
+                        return;
+                    }
                     var sharpIdeFile = Solution!.AllFiles.GetValueOrDefault(definitionLineSpan.Path);
                     if (sharpIdeFile is null)
                     {
