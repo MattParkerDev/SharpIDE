@@ -11,7 +11,7 @@
         "DOTNET_ENVIRONMENT": "Development",
         "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21295",
         "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22130",
-		"GODOT": "C:/Users/Matthew/Documents/Godot/4.5.1/Godot_v4.5.1-stable_mono_win64.exe"
+		"GODOT": "C:/Users/Matthew/Documents/Godot/4.6/Godot_v4.6-stable_mono_win64.exe"
       }
     }
   }
