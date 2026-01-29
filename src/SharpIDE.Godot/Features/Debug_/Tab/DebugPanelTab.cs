@@ -2,12 +2,13 @@ using GDExtensionBindgen;
 using Godot;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.Debug_.Tab.SubTabs;
+using SharpIDE.Godot.Features.TerminalBase;
 
 namespace SharpIDE.Godot.Features.Debug_.Tab;
 
 public partial class DebugPanelTab : Control
 {
-    private Terminal _terminal = null!;
+    private SharpIdeTerminal _terminal = null!;
     private ThreadsVariablesSubTab _threadsVariablesSubTab = null!;
     private Task _writeTask = Task.CompletedTask;
     
@@ -22,8 +23,7 @@ public partial class DebugPanelTab : Control
 
     public override void _Ready()
     {
-        var terminalControl = GetNode<Control>("%Terminal");
-        _terminal = new Terminal(terminalControl);
+        _terminal = GetNode<SharpIdeTerminal>("%SharpIdeTerminal");
     }
     
     public void StartWritingFromProjectOutput()
@@ -37,16 +37,13 @@ public partial class DebugPanelTab : Control
         {
             await foreach (var array in Project.RunningOutputChannel!.Reader.ReadAllAsync().ConfigureAwait(false))
             {
-                //_terminal.Write(array);
-                //await this.InvokeAsync(() => _terminal.Write(array));
-                var str = System.Text.Encoding.UTF8.GetString(array);
-                await this.InvokeAsync(() => _terminal.Write(str));
+                _terminal.Write(array);
             }
         });
     }
     
     public void ClearTerminal()
     {
-        _terminal.Clear();
+        _terminal.ClearTerminal();
     }
 }

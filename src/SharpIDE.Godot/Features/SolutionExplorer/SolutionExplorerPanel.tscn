@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://cy1bb32g7j7dr"]
+[gd_scene format=3 uid="uid://cy1bb32g7j7dr"]
 
 [ext_resource type="Script" uid="uid://bai53k7ongbxw" path="res://Features/SolutionExplorer/SolutionExplorerPanel.cs" id="1_gjy0r"]
 [ext_resource type="Texture2D" uid="uid://do0edciarrnp0" path="res://Features/SolutionExplorer/Resources/CsharpFile.svg" id="2_8ymw0"]
@@ -34,7 +34,7 @@ expand_margin_top = 1.0
 expand_margin_right = 1.0
 expand_margin_bottom = 1.0
 
-[node name="SolutionExplorerPanel" type="MarginContainer"]
+[node name="SolutionExplorerPanel" type="MarginContainer" unique_id=1365350332]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -47,10 +47,10 @@ SlnFolderIcon = ExtResource("4_8ymw0")
 CsprojIcon = ExtResource("5_r1qfc")
 SlnIcon = ExtResource("6_idvpu")
 
-[node name="PanelContainer" type="PanelContainer" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1468166306]
 layout_mode = 2
 
-[node name="Tree" type="Tree" parent="PanelContainer"]
+[node name="Tree" type="Tree" parent="PanelContainer" unique_id=1327553265]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.830335, 0.830335, 0.830335, 1)

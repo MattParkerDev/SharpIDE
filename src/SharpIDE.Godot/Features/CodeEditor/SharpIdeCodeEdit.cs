@@ -2,9 +2,7 @@ using System.Collections.Immutable;
 using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
-using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
-using Microsoft.CodeAnalysis.Tags;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Threading;
 using ObservableCollections;
@@ -21,7 +19,6 @@ using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.Problems;
 using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -38,6 +35,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	
 	private CustomHighlighter _syntaxHighlighter = new();
 	private PopupMenu _popupMenu = null!;
+	private CanvasItem _aboveCanvasItem = null!;
+	private Rid? _aboveCanvasItemRid = null!;
 
 	private ImmutableArray<SharpIdeDiagnostic> _fileDiagnostics = [];
 	private ImmutableArray<SharpIdeDiagnostic> _fileAnalyzerDiagnostics = [];
@@ -57,18 +56,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
 
-    private readonly List<string> _codeCompletionTriggers =
-    [
-	    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-	    "_", "<", ".", "#"
-    ];
-    private readonly List<string> _additionalCodeCompletionPrefixes =
-	[
-		//"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-		//"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-	    "(", ",", "=", "\t", ":"
-	];
-
 	public SharpIdeCodeEdit()
 	{
 		_selectionChangedQueue = new AsyncBatchingWorkQueue(TimeSpan.FromMilliseconds(150), ProcessSelectionChanged, IAsynchronousOperationListener.Instance, CancellationToken.None);
@@ -76,14 +63,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _Ready()
 	{
-		// _filter_code_completion_candidates_impl uses these prefixes to determine where the completions menu is allowed to show.
-		// It is quite annoying as we cannot override it via _FilterCodeCompletionCandidates, as we would lose the filtering as well.
-		// Currently, it is not possible to show completions on a new line at col 0
-		CodeCompletionPrefixes = [.._codeCompletionTriggers, .._additionalCodeCompletionPrefixes];
 		SyntaxHighlighter = _syntaxHighlighter;
 		_popupMenu = GetNode<PopupMenu>("CodeFixesMenu");
+		_aboveCanvasItem = GetNode<CanvasItem>("%AboveCanvasItem");
+		_aboveCanvasItemRid = _aboveCanvasItem.GetCanvasItem();
+		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, GetCanvasItem());
 		_popupMenu.IdPressed += OnCodeFixSelected;
-		CodeCompletionRequested += OnCodeCompletionRequested;
+		CustomCodeCompletionRequested.Subscribe(OnCodeCompletionRequested);
 		CodeFixesRequested += OnCodeFixesRequested;
 		BreakpointToggled += OnBreakpointToggled;
 		CaretChanged += OnCaretChanged;
@@ -93,7 +79,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SymbolValidate += OnSymbolValidate;
 		SymbolLookup += OnSymbolLookup;
 		LinesEditedFrom += OnLinesEditedFrom;
-		MouseEntered += GrabFocus; // fixes symbol hover not appearing when e.g. solution explorer is focused. Same as godot editor
 		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
 		SetCodeRegionTags("#region", "#endregion");
 		//AddGitGutter();
@@ -233,6 +218,25 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnTextChanged)}");
 			_currentFile.IsDirty.Value = true;
 			await _fileChangedService.SharpIdeFileChanged(_currentFile, Text, FileChangeType.IdeUnsavedChange);
+			if (pendingCompletionTrigger is not null)
+			{
+				var cursorPosition = GetCaretPosition();
+				var linePosition = new LinePosition(cursorPosition.line, cursorPosition.col);
+				completionTrigger = pendingCompletionTrigger;
+				pendingCompletionTrigger = null;
+				var shouldTriggerCompletion = await _roslynAnalysis.ShouldTriggerCompletionAsync(_currentFile, Text, linePosition, completionTrigger!.Value);
+				GD.Print($"Code completion trigger typed: '{completionTrigger.Value.Character}' at {linePosition.Line}:{linePosition.Character} should trigger: {shouldTriggerCompletion}");
+				if (shouldTriggerCompletion)
+				{
+					await OnCodeCompletionRequested(completionTrigger.Value);
+				}
+			}
+			else if (pendingCompletionFilterReason is not null)
+			{
+				var filterReason = pendingCompletionFilterReason.Value;
+				pendingCompletionFilterReason = null;
+				await CustomFilterCodeCompletionCandidates(filterReason);
+			}
 			__?.Dispose();
 		});
 	}
@@ -277,8 +281,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SetCaretColumn(column);
 		Callable.From(() =>
 		{
-			GrabFocus();
-			CenterViewportToCaret();
+			GrabFocus(true);
+			AdjustViewportToCaret();
 		}).CallDeferred();
 	}
 
@@ -363,11 +367,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			endPos.X += 10;
 		}
-		DrawDashedLine(startPos, endPos, color, thickness);
-		//DrawLine(startPos, endPos, color, thickness);
+
+		RenderingServer.Singleton.DrawDashedLine(_aboveCanvasItemRid!.Value, startPos, endPos, color, thickness);
 	}
 	public override void _Draw()
 	{
+		RenderingServer.Singleton.CanvasItemClear(_aboveCanvasItemRid!.Value);
 		//UnderlineRange(_currentLine, _selectionStartCol, _selectionEndCol, new Color(1, 0, 0));
 		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 		{
@@ -382,17 +387,19 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			};
 			UnderlineRange(line, startCol, endCol, color);
 		}
+		DrawCompletionsPopup();
 	}
-
-	// public override Array<Dictionary> _FilterCodeCompletionCandidates(Array<Dictionary> candidates)
-	// {
-	// 	return base._FilterCodeCompletionCandidates(candidates);
-	// }
 
 	// This only gets invoked if the Node is focused
 	public override void _GuiInput(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton { Pressed: true } mouseEvent)
+		if (@event is InputEventMouseMotion) return;
+		if (CompletionsPopupTryConsumeGuiInput(@event))
+		{
+			AcceptEvent();
+			return;
+		}
+		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left or MouseButton.Right } mouseEvent)
 		{
 			var (col, line) = GetLineColumnAtPos((Vector2I)mouseEvent.Position);
 			var current = _navigationHistoryService.Current.Value;
@@ -402,43 +409,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				_navigationHistoryService.RecordNavigation(_currentFile, new SharpIdeFileLinePosition(line, col));
 			}
 		}
-		else if (@event is InputEventKey { Pressed: true } keyEvent)
-		{
-			var codeCompletionSelectedIndex = GetCodeCompletionSelectedIndex();
-			var isCodeCompletionPopupOpen = codeCompletionSelectedIndex is not -1;
-			if (keyEvent is { Keycode: Key.Backspace, CtrlPressed: false })
-			{
-				
-			}
-			if (keyEvent is { Keycode: Key.Delete, CtrlPressed: false })
-			{
-				
-			}
-			else if (keyEvent.Unicode != 0)
-			{
-				var unicodeString = char.ConvertFromUtf32((int)keyEvent.Unicode);
-				if (isCodeCompletionPopupOpen && unicodeString is " ")
-				{
-					Callable.From(() => CancelCodeCompletion()).CallDeferred();
-				}
-				else if (isCodeCompletionPopupOpen is false && _codeCompletionTriggers.Contains(unicodeString, StringComparer.OrdinalIgnoreCase))
-				{
-					void OnAction()
-					{
-						TextChanged -= OnAction;
-						Callable.From(() => RequestCodeCompletion(true)).CallDeferred();
-					}
-					TextChanged += OnAction; // We need to wait for the text to actually change before requesting completions
-				}
-			}
-		}
-		// else if (@event.IsActionPressed("ui_text_completion_query"))
-		// {
-		// 	GD.Print("Entering CompletionQueryBuiltin _GuiInput");
-		// 	AcceptEvent();
-		// 	//GetViewport().SetInputAsHandled();
-  //           Callable.From(() => RequestCodeCompletion(true)).CallDeferred();
-		// }
 	}
 
 	public override void _UnhandledKeyInput(InputEvent @event)
@@ -545,75 +515,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				if (codeActions.Length is not 0) _popupMenu.SetFocusedItem(0);
 				GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
 			});
-		});
-	}
-
-	public override void _ConfirmCodeCompletion(bool replace)
-	{
-		var selectedIndex = GetCodeCompletionSelectedIndex();
-		var selectedText = GetCodeCompletionOption(selectedIndex);
-		if (selectedText is null) return;
-		var completionItem = selectedText["default_value"].As<GodotObjectContainer<IdeCompletionItem>>().Item;
-		_ = Task.GodotRun(async () =>
-		{
-			await _ideApplyCompletionService.ApplyCompletion(_currentFile, completionItem.CompletionItem, completionItem.Document);
-		});
-		CancelCodeCompletion();
-	}
-
-	private record struct IdeCompletionItem(CompletionItem CompletionItem, Document Document);
-	private void OnCodeCompletionRequested()
-	{
-		var (caretLine, caretColumn) = GetCaretPosition();
-		
-		GD.Print($"Code completion requested at line {caretLine}, column {caretColumn}");
-		_ = Task.GodotRun(async () =>
-		{
-			var linePos = new LinePosition(caretLine, caretColumn);
-				
-			var completionsResult = await _roslynAnalysis.GetCodeCompletionsForDocumentAtPosition(_currentFile, linePos);
-			var completionOptions = new List<(CodeCompletionKind kind, string displayText, Texture2D? icon, GodotObjectContainer<IdeCompletionItem> refCountedContainer)>(completionsResult.CompletionList.ItemsList.Count);
-
-			foreach (var completionItem in completionsResult.CompletionList.ItemsList)
-			{
-				var symbolKindString = CollectionExtensions.GetValueOrDefault(completionItem.Properties, "SymbolKind");
-				var symbolKind = symbolKindString is null ? null : (SymbolKind?)int.Parse(symbolKindString);
-				var wellKnownTags = completionItem.Tags;
-				var typeKindString = completionItem.Tags[0];
-				var accessibilityModifierString = completionItem.Tags.Skip(1).FirstOrDefault(); // accessibility is not always supplied, and I don't think there's actually any guarantee on the order of tags. See WellKnownTags and WellKnownTagArrays
-				TypeKind? typeKind = Enum.TryParse<TypeKind>(typeKindString, out var tk) ? tk : null;
-				Accessibility? accessibilityModifier = Enum.TryParse<Accessibility>(accessibilityModifierString, out var am) ? am : null;
-				var godotCompletionType = symbolKind switch
-				{
-					SymbolKind.Method => CodeCompletionKind.Function,
-					SymbolKind.NamedType => CodeCompletionKind.Class,
-					SymbolKind.Local => CodeCompletionKind.Variable,
-					SymbolKind.Parameter => CodeCompletionKind.Variable,
-					SymbolKind.Property => CodeCompletionKind.Member,
-					SymbolKind.Field => CodeCompletionKind.Member,
-					_ => CodeCompletionKind.PlainText
-				};
-				var isKeyword = wellKnownTags.Contains(WellKnownTags.Keyword);
-				var isExtensionMethod = wellKnownTags.Contains(WellKnownTags.ExtensionMethod);
-				var isMethod = wellKnownTags.Contains(WellKnownTags.Method);
-				if (symbolKind is null && (isMethod || isExtensionMethod)) symbolKind = SymbolKind.Method;
-				var icon = GetIconForCompletion(symbolKind, typeKind, accessibilityModifier, isKeyword);
-				var ideItem = new IdeCompletionItem(completionItem, completionsResult.Document);
-				// TODO: This is a GodotObjectContainer to avoid errors with the RefCountedContainer?? But the workaround 100% causes a memory leak as these are never freed, unlike RefCounted. Do this better
-				var refContainer = new GodotObjectContainer<IdeCompletionItem>(ideItem);
-
-				completionOptions.Add((godotCompletionType, completionItem.DisplayText, icon, refContainer));
-			}
-			await this.InvokeAsync(() =>
-			{
-				foreach (var (godotCompletionType, displayText, icon, refCountedContainer) in completionOptions)
-				{
-					AddCodeCompletionOption(godotCompletionType, displayText, displayText, icon: icon, value: refCountedContainer);
-				}
-				UpdateCodeCompletionOptions(true);
-				//RequestCodeCompletion(true);
-			});
-			GD.Print($"Found {completionsResult.CompletionList.ItemsList.Count} completions, displaying menu");
 		});
 	}
 	

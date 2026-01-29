@@ -28,6 +28,7 @@ public partial class IdeRoot : Control
 	private Button _rebuildSlnButton = null!;
 	private Button _cleanSlnButton = null!;
 	private Button _restoreSlnButton = null!;
+	private TextureButton _cancelMsBuildActionButton = null!;
 	private SearchWindow _searchWindow = null!;
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
@@ -71,6 +72,7 @@ public partial class IdeRoot : Control
 		_rebuildSlnButton = GetNode<Button>("%RebuildSlnButton");
 		_cleanSlnButton = GetNode<Button>("%CleanSlnButton");
 		_restoreSlnButton = GetNode<Button>("%RestoreSlnButton");
+		_cancelMsBuildActionButton = GetNode<TextureButton>("%CancelMsBuildActionButton");
 		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
 		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
@@ -88,11 +90,29 @@ public partial class IdeRoot : Control
 		_rebuildSlnButton.Pressed += OnRebuildSlnButtonPressed;
 		_cleanSlnButton.Pressed += OnCleanSlnButtonPressed;
 		_restoreSlnButton.Pressed += OnRestoreSlnButtonPressed;
+		_cancelMsBuildActionButton.Pressed += async () => await _buildService.CancelBuildAsync();
+		_buildService.BuildStarted.Subscribe(OnBuildStarted);
+		_buildService.BuildFinished.Subscribe(OnBuildFinished);
 		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
 	}
-	
+
+	private async Task OnBuildStarted(BuildStartedFlags flags) => await OnBuildRunningStateChanged(true, flags);
+	private async Task OnBuildFinished() => await OnBuildRunningStateChanged(false);
+	private async Task OnBuildRunningStateChanged(bool running, BuildStartedFlags? flags = null)
+	{
+		if (running && flags is BuildStartedFlags.UserFacing) GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		await this.InvokeAsync(() =>
+		{
+			_cancelMsBuildActionButton.Disabled = !running;
+			_buildSlnButton.Disabled = running;
+			_rebuildSlnButton.Disabled = running;
+			_cleanSlnButton.Disabled = running;
+			_restoreSlnButton.Disabled = running;
+		});
+	}
+
 	// TODO: Problematic, as this is called even when the focus shifts to an embedded subwindow, such as a popup 
 	private void OnFocusExited()
 	{
@@ -110,25 +130,14 @@ public partial class IdeRoot : Control
 		_runMenuPopup.Popup();
 	}
 
-	private async void OnBuildSlnButtonPressed()
+	private void OnBuildSlnButtonPressed() => MsBuild(BuildType.Build);
+	private void OnRebuildSlnButtonPressed() => MsBuild(BuildType.Rebuild);
+	private void OnCleanSlnButtonPressed() => MsBuild(BuildType.Clean);
+	private void OnRestoreSlnButtonPressed() => MsBuild(BuildType.Restore);
+	private async void MsBuild(BuildType buildType)
 	{
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
-		await _buildService.MsBuildAsync(_solutionExplorerPanel.SolutionModel.FilePath);
-	}
-	private async void OnRebuildSlnButtonPressed()
-	{
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
-		await _buildService.MsBuildAsync(_solutionExplorerPanel.SolutionModel.FilePath, BuildType.Rebuild);
-	}
-	private async void OnCleanSlnButtonPressed()
-	{
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
-		await _buildService.MsBuildAsync(_solutionExplorerPanel.SolutionModel.FilePath, BuildType.Clean);
-	}
-	private async void OnRestoreSlnButtonPressed()
-	{
-		GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
-		await _buildService.MsBuildAsync(_solutionExplorerPanel.SolutionModel.FilePath, BuildType.Restore);
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		await _buildService.MsBuildAsync(_solutionExplorerPanel.SolutionModel.FilePath, buildType);
 	}
 
 	private async Task OnSolutionExplorerPanelOnFileSelected(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)

@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://dt50f2of66dlt"]
+[gd_scene format=3 uid="uid://dt50f2of66dlt"]
 
 [ext_resource type="Script" uid="uid://cnfayblofyjwn" path="res://Features/TestExplorer/TestNodeEntry.cs" id="1_p16jw"]
 
-[node name="TestNodeEntry" type="MarginContainer"]
+[node name="TestNodeEntry" type="MarginContainer" unique_id=693220105]
 anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
@@ -13,15 +13,15 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_p16jw")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=235964095]
 layout_mode = 2
 
-[node name="TestNameLabel" type="Label" parent="HBoxContainer"]
+[node name="TestNameLabel" type="Label" parent="HBoxContainer" unique_id=1980813625]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Test Name"
 
-[node name="TestNodeStatusLabel" type="Label" parent="HBoxContainer"]
+[node name="TestNodeStatusLabel" type="Label" parent="HBoxContainer" unique_id=1768779649]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Node Status"

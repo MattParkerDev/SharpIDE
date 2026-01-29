@@ -15,9 +15,9 @@ public partial class RunService
 		var breakpoints = Breakpoints.GetOrAdd(file, []);
 		var breakpoint = new Breakpoint { Line = line };
 		breakpoints.Add(breakpoint);
-		if (_debugger is not null)
+		if (_debuggerSessionId is not null)
 		{
-			await _debugger.SetBreakpointsForFile(file, breakpoints);
+			await _debuggingService.SetBreakpointsForFile(_debuggerSessionId!.Value, file, breakpoints);
 		}
 	}
 
@@ -27,9 +27,9 @@ public partial class RunService
 		var breakpoints = Breakpoints.GetOrAdd(file, []);
 		var breakpoint = breakpoints.Single(b => b.Line == line);
 		breakpoints.Remove(breakpoint);
-		if (_debugger is not null)
+		if (_debuggerSessionId is not null)
 		{
-			await _debugger.SetBreakpointsForFile(file, breakpoints);
+			await _debuggingService.SetBreakpointsForFile(_debuggerSessionId!.Value, file, breakpoints);
 		}
 	}
 }

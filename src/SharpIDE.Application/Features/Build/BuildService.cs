@@ -4,6 +4,7 @@ using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Logging;
 using Microsoft.Extensions.Logging;
+using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Logging;
 
 namespace SharpIDE.Application.Features.Build;
@@ -15,14 +16,21 @@ public enum BuildType
 	Clean,
 	Restore
 }
+public enum BuildStartedFlags { UserFacing = 0, Internal }
+public enum SharpIdeBuildResult { Success = 0, Failure }
+
 public class BuildService(ILogger<BuildService> logger)
 {
 	private readonly ILogger<BuildService> _logger = logger;
 
-	public event Func<Task> BuildStarted = () => Task.CompletedTask;
+	public EventWrapper<BuildStartedFlags, Task> BuildStarted { get; } = new(_ => Task.CompletedTask);
+	public EventWrapper<Task> BuildFinished { get; } = new(() => Task.CompletedTask);
 	public ChannelTextWriter BuildTextWriter { get; } = new ChannelTextWriter();
-	public async Task MsBuildAsync(string solutionOrProjectFilePath, BuildType buildType = BuildType.Build, CancellationToken cancellationToken = default)
+	private CancellationTokenSource? _cancellationTokenSource;
+	public async Task<SharpIdeBuildResult> MsBuildAsync(string solutionOrProjectFilePath, BuildType buildType = BuildType.Build, BuildStartedFlags buildStartedFlags = BuildStartedFlags.UserFacing, CancellationToken cancellationToken = default)
 	{
+		if (_cancellationTokenSource is not null) throw new InvalidOperationException("A build is already in progress.");
+		_cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(BuildService)}.{nameof(MsBuildAsync)}");
 
 		var terminalLogger = InternalTerminalLoggerFactory.CreateLogger(BuildTextWriter);
@@ -50,11 +58,27 @@ public class BuildService(ILogger<BuildService> logger)
 			hostServices: null,
 			flags: BuildRequestDataFlags.None);
 
-		await BuildStarted.Invoke().ConfigureAwait(false);
+		BuildStarted.InvokeParallelFireAndForget(buildStartedFlags);
 		var timer = Stopwatch.StartNew();
-		var buildResult = await BuildManager.DefaultBuildManager.BuildAsync(buildParameters, buildRequest, cancellationToken).ConfigureAwait(false);
+		var buildResult = await BuildManager.DefaultBuildManager.BuildAsync(buildParameters, buildRequest, _cancellationTokenSource.Token).ConfigureAwait(false);
 		timer.Stop();
+		BuildFinished.InvokeParallelFireAndForget();
+		_cancellationTokenSource = null;
 		_logger.LogInformation(buildResult.Exception, "Build result: {BuildResult} in {ElapsedMilliseconds}ms", buildResult.OverallResult, timer.ElapsedMilliseconds);
+		var mappedResult = buildResult.OverallResult switch
+		{
+			BuildResultCode.Success => SharpIdeBuildResult.Success,
+			BuildResultCode.Failure => SharpIdeBuildResult.Failure,
+			_ => throw new ArgumentOutOfRangeException()
+		};
+		return mappedResult;
+	}
+
+	public async Task CancelBuildAsync()
+	{
+		if (_cancellationTokenSource is null) throw new InvalidOperationException("No build is in progress.");
+		await _cancellationTokenSource.CancelAsync();
+		_cancellationTokenSource = null;
 	}
 
 	private static string[] TargetsToBuild(BuildType buildType)

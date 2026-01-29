@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://dq7ss2ha5rk44"]
+[gd_scene format=3 uid="uid://dq7ss2ha5rk44"]
 
 [ext_resource type="Script" uid="uid://cxxo2sex03ox5" path="res://Features/SymbolLookup/SymbolLookupPopup.cs" id="1_f5udm"]
 [ext_resource type="PackedScene" uid="uid://dokm0dyac2enh" path="res://Features/SymbolLookup/SymbolUsageComponent.tscn" id="1_k5g0h"]
@@ -12,14 +12,14 @@ corner_radius_bottom_left = 5
 shadow_color = Color(0, 0, 0, 0.11764706)
 shadow_size = 4
 
-[node name="SymbolLookupPopup" type="PopupPanel"]
+[node name="SymbolLookupPopup" type="PopupPanel" unique_id=33002749]
 oversampling_override = 1.0
 size = Vector2i(564, 340)
 visible = true
 theme_override_styles/panel = SubResource("StyleBoxFlat_cuaw5")
 script = ExtResource("1_f5udm")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1659363832]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -34,26 +34,26 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 15
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1609249406]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1035135242]
 custom_minimum_size = Vector2(0, 43.615)
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=887444311]
 layout_mode = 2
 text = "Usages of"
 
-[node name="SymbolNameLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="SymbolNameLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=578605484]
 unique_name_in_owner = true
 layout_mode = 2
 text = "'UseWebApi()'"
 
-[node name="UsagesVBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="UsagesVBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1090496511]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SymbolUsageComponent" parent="MarginContainer/VBoxContainer/UsagesVBoxContainer" instance=ExtResource("1_k5g0h")]
+[node name="SymbolUsageComponent" parent="MarginContainer/VBoxContainer/UsagesVBoxContainer" unique_id=2020096751 instance=ExtResource("1_k5g0h")]
 layout_mode = 2

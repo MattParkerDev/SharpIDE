@@ -1,10 +1,10 @@
-[gd_scene load_steps=4 format=3 uid="uid://dr41a4isv0dd5"]
+[gd_scene format=3 uid="uid://dr41a4isv0dd5"]
 
 [ext_resource type="Script" uid="uid://dkeruijr43xlk" path="res://Features/BottomBar/BottomBar.cs" id="1_6bm5o"]
 [ext_resource type="PackedScene" uid="uid://cnla64hcar6dr" path="res://Features/BottomBar/RunningTasksDisplay.tscn" id="2_5swca"]
 [ext_resource type="PackedScene" uid="uid://df55cl01wdfuv" path="res://Features/BottomBar/EditorLineCharDisplay.tscn" id="3_igj0x"]
 
-[node name="BottomBar" type="PanelContainer"]
+[node name="BottomBar" type="PanelContainer" unique_id=2062751789]
 custom_minimum_size = Vector2(0, 28)
 anchors_preset = 14
 anchor_top = 0.5
@@ -16,20 +16,20 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_6bm5o")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=967420900]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_right = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1041374178]
 layout_mode = 2
 
-[node name="Spacer" type="Control" parent="MarginContainer/HBoxContainer"]
+[node name="Spacer" type="Control" parent="MarginContainer/HBoxContainer" unique_id=841468863]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RunningTasksDisplay" parent="MarginContainer/HBoxContainer" instance=ExtResource("2_5swca")]
+[node name="RunningTasksDisplay" parent="MarginContainer/HBoxContainer" unique_id=399186651 instance=ExtResource("2_5swca")]
 layout_mode = 2
 
-[node name="EditorLineCharDisplay" parent="MarginContainer/HBoxContainer" instance=ExtResource("3_igj0x")]
+[node name="EditorLineCharDisplay" parent="MarginContainer/HBoxContainer" unique_id=1794281415 instance=ExtResource("3_igj0x")]
 layout_mode = 2

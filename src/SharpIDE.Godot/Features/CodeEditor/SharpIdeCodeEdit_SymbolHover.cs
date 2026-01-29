@@ -18,8 +18,7 @@ public partial class SharpIdeCodeEdit
 	// This method is a bit of a disaster - we create an additional invisible Window, so that the tooltip window doesn't disappear while the mouse is over the hovered symbol
     private async void OnSymbolHovered(string symbol, long line, long column)
     {
-        if (HasFocus() is false)
-            return; // only show if we have focus, every tab is currently listening for this event, maybe find a better way
+        if (Visible is false) return; // This should never return false, as this signal should not be emitted when this SharpIdeCodeEdit is not the selected tab, ie the control is not visible
         var globalMousePosition = GetGlobalMousePosition(); // don't breakpoint before this, else your mouse position will be wrong
         var lineHeight = GetLineHeight();
         GD.Print($"Symbol hovered: {symbol} at line {line}, column {column}");

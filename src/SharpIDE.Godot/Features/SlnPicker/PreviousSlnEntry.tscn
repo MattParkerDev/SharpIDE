@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://x5lhwvh5dium"]
+[gd_scene format=3 uid="uid://x5lhwvh5dium"]
 
 [ext_resource type="Script" uid="uid://cnfj7yfseyikh" path="res://Features/SlnPicker/PreviousSlnEntry.cs" id="1_2ycpd"]
 
@@ -14,7 +14,7 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
-[node name="PreviousSlnEntry" type="MarginContainer"]
+[node name="PreviousSlnEntry" type="MarginContainer" unique_id=1762367679]
 anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
@@ -29,11 +29,11 @@ theme_override_constants/margin_right = 2
 theme_override_constants/margin_bottom = 2
 script = ExtResource("1_2ycpd")
 
-[node name="Button" type="Button" parent="."]
+[node name="Button" type="Button" parent="." unique_id=92149289]
 custom_minimum_size = Vector2(0, 65)
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Button"]
+[node name="MarginContainer" type="MarginContainer" parent="Button" unique_id=1628543422]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -43,30 +43,30 @@ grow_vertical = 2
 theme_override_constants/margin_left = 15
 theme_override_constants/margin_right = 15
 
-[node name="PreviousSlnEntry" type="HBoxContainer" parent="Button/MarginContainer"]
+[node name="PreviousSlnEntry" type="HBoxContainer" parent="Button/MarginContainer" unique_id=1099748446]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Panel" type="Panel" parent="Button/MarginContainer/PreviousSlnEntry"]
+[node name="Panel" type="Panel" parent="Button/MarginContainer/PreviousSlnEntry" unique_id=593472239]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(25, 25)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_1rtjt")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Button/MarginContainer/PreviousSlnEntry"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Button/MarginContainer/PreviousSlnEntry" unique_id=1121015400]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/separation = 0
 
-[node name="SlnNameLabel" type="Label" parent="Button/MarginContainer/PreviousSlnEntry/VBoxContainer"]
+[node name="SlnNameLabel" type="Label" parent="Button/MarginContainer/PreviousSlnEntry/VBoxContainer" unique_id=1193279800]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Solution Name"
 text_overrun_behavior = 3
 
-[node name="SlnPathLabel" type="Label" parent="Button/MarginContainer/PreviousSlnEntry/VBoxContainer"]
+[node name="SlnPathLabel" type="Label" parent="Button/MarginContainer/PreviousSlnEntry/VBoxContainer" unique_id=946949283]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.5132329, 0.5132329, 0.5132329, 1)

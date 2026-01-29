@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://5uan5u23cr2s"]
+[gd_scene format=3 uid="uid://5uan5u23cr2s"]
 
 [ext_resource type="Texture2D" uid="uid://cqt30ma6xgder" path="res://Features/SolutionExplorer/Resources/Csproj.svg" id="1_dmxym"]
 [ext_resource type="Script" uid="uid://bhgqjh7sfenxm" path="res://Features/Nuget/PackageDetailsProjectEntry.cs" id="1_kwjfp"]
@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://cwwqf66568iac" path="res://Features/Nuget/Resources/downgrade-icon.svg" id="4_qyf5e"]
 [ext_resource type="Texture2D" uid="uid://bh48xoc6pvchm" path="res://Features/Nuget/Resources/add-icon.svg" id="6_je8mg"]
 
-[node name="PackageDetailsProjectEntry" type="MarginContainer"]
+[node name="PackageDetailsProjectEntry" type="MarginContainer" unique_id=1392205228]
 anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
@@ -20,22 +20,22 @@ theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 5
 script = ExtResource("1_kwjfp")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=831114634]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer" unique_id=451545292]
 layout_mode = 2
 theme_override_constants/margin_left = 1
 theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 4
 
-[node name="CsprojTextureRect" type="TextureRect" parent="HBoxContainer/MarginContainer"]
+[node name="CsprojTextureRect" type="TextureRect" parent="HBoxContainer/MarginContainer" unique_id=243023248]
 layout_mode = 2
 texture = ExtResource("1_dmxym")
 expand_mode = 3
 
-[node name="ProjectNameLabel" type="Label" parent="HBoxContainer"]
+[node name="ProjectNameLabel" type="Label" parent="HBoxContainer" unique_id=1658981059]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -43,7 +43,7 @@ theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
 theme_override_font_sizes/font_size = 16
 text = "Application"
 
-[node name="InstalledVersionLabel" type="Label" parent="HBoxContainer"]
+[node name="InstalledVersionLabel" type="Label" parent="HBoxContainer" unique_id=348042208]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 6
@@ -51,37 +51,37 @@ mouse_filter = 1
 theme_override_colors/font_color = Color(0.6706895, 0.6706895, 0.6706895, 1)
 text = "1.12.0"
 
-[node name="Spacer" type="Control" parent="HBoxContainer"]
+[node name="Spacer" type="Control" parent="HBoxContainer" unique_id=249353635]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer" unique_id=1665503277]
 custom_minimum_size = Vector2(31, 0)
 layout_mode = 2
 
-[node name="UpgradeButton" type="Button" parent="HBoxContainer/HBoxContainer"]
+[node name="UpgradeButton" type="Button" parent="HBoxContainer/HBoxContainer" unique_id=2098028266]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 23
 icon = ExtResource("3_lvt3l")
 
-[node name="DowngradeButton" type="Button" parent="HBoxContainer/HBoxContainer"]
+[node name="DowngradeButton" type="Button" parent="HBoxContainer/HBoxContainer" unique_id=1048319349]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 23
 icon = ExtResource("4_qyf5e")
 
-[node name="AddButton" type="Button" parent="HBoxContainer/HBoxContainer"]
+[node name="AddButton" type="Button" parent="HBoxContainer/HBoxContainer" unique_id=780682870]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 23
 icon = ExtResource("6_je8mg")
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HBoxContainer" unique_id=2120095995]
 custom_minimum_size = Vector2(31, 0)
 layout_mode = 2
 
-[node name="RemoveButton" type="Button" parent="HBoxContainer/HBoxContainer2"]
+[node name="RemoveButton" type="Button" parent="HBoxContainer/HBoxContainer2" unique_id=2049333185]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 23

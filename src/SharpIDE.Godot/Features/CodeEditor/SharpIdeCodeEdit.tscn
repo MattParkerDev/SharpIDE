@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://cinaqbdghcvoi"]
+[gd_scene format=3 uid="uid://cinaqbdghcvoi"]
 
 [ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_s7ira"]
 [ext_resource type="Script" uid="uid://du2lt7r1p1qfy" path="res://Features/CodeEditor/SharpIdeCodeEdit.cs" id="2_kp2fd"]
@@ -16,14 +16,11 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7ptyn"]
-
-[node name="SharpIdeCodeEdit" type="CodeEdit"]
+[node name="SharpIdeCodeEdit" type="CodeEdit" unique_id=2021737984]
 theme_override_colors/current_line_color = Color(0.0588235, 0.0588235, 0.0588235, 1)
 theme_override_fonts/font = ExtResource("1_s7ira")
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_v06ln")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_7ptyn")
 highlight_all_occurrences = true
 highlight_current_line = true
 symbol_lookup_on_click = true
@@ -32,15 +29,21 @@ gutters_draw_breakpoints_gutter = true
 gutters_draw_executing_lines = true
 gutters_draw_line_numbers = true
 delimiter_strings = Array[String]([])
-code_completion_enabled = true
 code_completion_prefixes = Array[String]([".", " "])
 indent_automatic = true
 auto_brace_completion_enabled = true
 auto_brace_completion_highlight_matching = true
 script = ExtResource("2_kp2fd")
 
-[node name="CodeFixesMenu" type="PopupMenu" parent="."]
+[node name="CodeFixesMenu" type="PopupMenu" parent="." unique_id=54277800]
 size = Vector2i(217, 100)
 item_count = 1
 item_0/text = "Getting Context Actions..."
 item_0/id = 0
+
+[node name="AboveCanvasItem" type="Control" parent="." unique_id=650087366]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2

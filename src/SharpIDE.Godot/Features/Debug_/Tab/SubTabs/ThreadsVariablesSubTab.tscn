@@ -1,10 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://bdu08nd7si641"]
+[gd_scene format=3 uid="uid://bdu08nd7si641"]
 
 [ext_resource type="Script" uid="uid://dpc4fvj40e5il" path="res://Features/Debug_/Tab/SubTabs/ThreadsVariablesSubTab.cs" id="1_e3p3b"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hwpe6"]
 
-[node name="ThreadsVariablesSubTab" type="Control"]
+[node name="ThreadsVariablesSubTab" type="Control" unique_id=151035768]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -13,24 +13,26 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_e3p3b")
 
-[node name="HSplitContainer" type="HSplitContainer" parent="."]
+[node name="HSplitContainer" type="HSplitContainer" parent="." unique_id=1028287240]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+split_offsets = PackedInt32Array(775)
 split_offset = 775
 
-[node name="HSplitContainer" type="HSplitContainer" parent="HSplitContainer"]
+[node name="HSplitContainer" type="HSplitContainer" parent="HSplitContainer" unique_id=483446595]
 layout_mode = 2
+split_offsets = PackedInt32Array(370)
 split_offset = 370
 
-[node name="ThreadsPanel" type="Panel" parent="HSplitContainer/HSplitContainer"]
+[node name="ThreadsPanel" type="Panel" parent="HSplitContainer/HSplitContainer" unique_id=1163437978]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ThreadsTree" type="Tree" parent="HSplitContainer/HSplitContainer/ThreadsPanel"]
+[node name="ThreadsTree" type="Tree" parent="HSplitContainer/HSplitContainer/ThreadsPanel" unique_id=1418994359]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -42,11 +44,11 @@ theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
 hide_root = true
 
-[node name="StackFramesPanel" type="Panel" parent="HSplitContainer/HSplitContainer"]
+[node name="StackFramesPanel" type="Panel" parent="HSplitContainer/HSplitContainer" unique_id=52162020]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="StackFramesTree" type="Tree" parent="HSplitContainer/HSplitContainer/StackFramesPanel"]
+[node name="StackFramesTree" type="Tree" parent="HSplitContainer/HSplitContainer/StackFramesPanel" unique_id=1005959886]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -58,11 +60,11 @@ theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
 hide_root = true
 
-[node name="VariablesPanel" type="Panel" parent="HSplitContainer"]
+[node name="VariablesPanel" type="Panel" parent="HSplitContainer" unique_id=760942911]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="VariablesTree" type="Tree" parent="HSplitContainer/VariablesPanel"]
+[node name="VariablesTree" type="Tree" parent="HSplitContainer/VariablesPanel" unique_id=1453500091]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15

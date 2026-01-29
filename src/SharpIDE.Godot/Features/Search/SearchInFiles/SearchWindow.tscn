@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://8lk0qj233a7p"]
+[gd_scene format=3 uid="uid://8lk0qj233a7p"]
 
 [ext_resource type="Script" uid="uid://bah6tmifl41ce" path="res://Features/Search/SearchInFiles/SearchWindow.cs" id="1_ft33p"]
 [ext_resource type="PackedScene" uid="uid://d358tex0duum8" path="res://Features/Search/SearchInFiles/SearchResultComponent.tscn" id="2_cuaw5"]
@@ -12,7 +12,7 @@ corner_radius_bottom_left = 5
 shadow_color = Color(0, 0, 0, 0.11764706)
 shadow_size = 4
 
-[node name="SearchWindow" type="PopupPanel"]
+[node name="SearchWindow" type="PopupPanel" unique_id=1478372446]
 oversampling_override = 1.0
 initial_position = 5
 size = Vector2i(1200, 800)
@@ -20,7 +20,7 @@ visible = true
 theme_override_styles/panel = SubResource("StyleBoxFlat_cuaw5")
 script = ExtResource("1_ft33p")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=739901057]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -35,37 +35,37 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 15
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1781373091]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=671679335]
 custom_minimum_size = Vector2(0, 43.615)
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1770520272]
 layout_mode = 2
 text = "Find Text in Files"
 
-[node name="ResultCountLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="ResultCountLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=22927106]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = " 30 matches in 5 files"
 
-[node name="SearchLineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer"]
+[node name="SearchLineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer" unique_id=1510665587]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Test"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=230785341]
 layout_mode = 2
 size_flags_vertical = 3
 follow_focus = true
 
-[node name="SearchResultsVBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+[node name="SearchResultsVBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=806322815]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SearchResultComponent" parent="MarginContainer/VBoxContainer/ScrollContainer/SearchResultsVBoxContainer" instance=ExtResource("2_cuaw5")]
+[node name="SearchResultComponent" parent="MarginContainer/VBoxContainer/ScrollContainer/SearchResultsVBoxContainer" unique_id=1364853308 instance=ExtResource("2_cuaw5")]
 layout_mode = 2

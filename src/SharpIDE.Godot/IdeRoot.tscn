@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
@@ -6,8 +6,12 @@
 [ext_resource type="Script" uid="uid://kvnhndc3l6ih" path="res://Features/CustomControls/InvertedVSplitContainer.cs" id="3_0ybuf"]
 [ext_resource type="PackedScene" uid="uid://biyhfwx36ium8" path="res://Features/LeftSideBar/LeftSideBar.tscn" id="3_f60gr"]
 [ext_resource type="PackedScene" uid="uid://bgpc5vsddmakc" path="res://Features/Navigation/ForwardBackwardButtonContainer.tscn" id="3_ptnvy"]
+[ext_resource type="Texture2D" uid="uid://dhwm7cehq2ftr" path="res://Resources/cancel.svg" id="4_4dy53"]
+[ext_resource type="Texture2D" uid="uid://hshkb0fxldrg" path="res://Resources/cancel-lighter.svg" id="5_ghsri"]
 [ext_resource type="PackedScene" uid="uid://c6xurjdabssao" path="res://Features/Settings/SettingsButton.tscn" id="5_pm5al"]
+[ext_resource type="Texture2D" uid="uid://ccj73acbnukyt" path="res://Resources/cancel-disabled.svg" id="5_qo7tr"]
 [ext_resource type="PackedScene" uid="uid://cy1bb32g7j7dr" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="5_s2dv6"]
+[ext_resource type="Texture2D" uid="uid://c0gl3rvabse1f" path="res://Resources/cancel-darker.svg" id="5_uvk4l"]
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
 [ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
 [ext_resource type="PackedScene" uid="uid://c5dlwgcx3ubyp" path="res://Features/CodeEditor/CodeEditorPanel.tscn" id="8_7ptyn"]
@@ -30,7 +34,7 @@ size = Vector2(0, 0)
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_7ptyn"]
 size = Vector2(0, 0)
 
-[node name="IdeRoot" type="Control"]
+[node name="IdeRoot" type="Control" unique_id=598156645]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -40,7 +44,7 @@ grow_vertical = 2
 theme = SubResource("Theme_s2dv6")
 script = ExtResource("1_whawi")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=64458129]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,11 +52,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="Panel" parent="VBoxContainer"]
+[node name="Panel" type="Panel" parent="VBoxContainer" unique_id=1061211858]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Panel"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Panel" unique_id=1265935116]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -62,57 +66,69 @@ offset_right = -5.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ForwardBackwardButtonContainer" parent="VBoxContainer/Panel/HBoxContainer" instance=ExtResource("3_ptnvy")]
+[node name="ForwardBackwardButtonContainer" parent="VBoxContainer/Panel/HBoxContainer" unique_id=2052350713 instance=ExtResource("3_ptnvy")]
 layout_mode = 2
 
-[node name="OpenSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="OpenSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1738341873]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Open Sln"
 
-[node name="BuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="BuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1008449804]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Build"
 
-[node name="RebuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="RebuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=81218066]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Rebuild"
 
-[node name="CleanSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="CleanSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=286020562]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Clean"
 
-[node name="RestoreSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="RestoreSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1772904772]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Restore"
 
-[node name="Spacer" type="Control" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="CancelMsBuildActionButton" type="TextureButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=850281836]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(21, 18)
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+texture_normal = ExtResource("4_4dy53")
+texture_pressed = ExtResource("5_uvk4l")
+texture_hover = ExtResource("5_ghsri")
+texture_disabled = ExtResource("5_qo7tr")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Spacer" type="Control" parent="VBoxContainer/Panel/HBoxContainer" unique_id=484162762]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RunMenuButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer"]
+[node name="RunMenuButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=193947069]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
-focus_mode = 0
 disabled = true
 icon = ExtResource("2_8x8ub")
 icon_alignment = 1
 
-[node name="RunMenuPopup" type="Popup" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton"]
+[node name="RunMenuPopup" type="Popup" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton" unique_id=92504102]
 unique_name_in_owner = true
 size = Vector2i(151, 100)
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup" unique_id=911955929]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -123,92 +139,94 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup/MarginContainer" unique_id=1372084780]
 layout_mode = 2
 
-[node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" instance=ExtResource("5_pm5al")]
+[node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=643519049]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="LeftSideBar" parent="VBoxContainer/HBoxContainer" instance=ExtResource("3_f60gr")]
+[node name="LeftSideBar" parent="VBoxContainer/HBoxContainer" unique_id=266709518 instance=ExtResource("3_f60gr")]
 layout_mode = 2
 
-[node name="InvertedVSplitContainer" type="VSplitContainer" parent="VBoxContainer/HBoxContainer"]
+[node name="InvertedVSplitContainer" type="VSplitContainer" parent="VBoxContainer/HBoxContainer" unique_id=391365394]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_woo5i")
+split_offsets = PackedInt32Array(370)
 split_offset = 370
 script = ExtResource("3_0ybuf")
 metadata/_custom_type_script = "uid://kvnhndc3l6ih"
 
-[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer"]
+[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer" unique_id=41909034]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_7ptyn")
+split_offsets = PackedInt32Array(400)
 split_offset = 400
 
-[node name="SolutionExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" instance=ExtResource("5_s2dv6")]
+[node name="SolutionExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" unique_id=833739052 instance=ExtResource("5_s2dv6")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CodeEditorPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" instance=ExtResource("8_7ptyn")]
+[node name="CodeEditorPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" unique_id=462793994 instance=ExtResource("8_7ptyn")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BottomPanel" type="Panel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer"]
+[node name="BottomPanel" type="Panel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer" unique_id=1573156698]
 unique_name_in_owner = true
 layout_mode = 2
 script = ExtResource("7_i62lx")
 
-[node name="ProblemsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("11_b7c1a")]
+[node name="ProblemsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=357647494 instance=ExtResource("11_b7c1a")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="RunPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("5_y3aoi")]
+[node name="RunPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=11433548 instance=ExtResource("5_y3aoi")]
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="DebugPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("11_s2dv6")]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-
-[node name="BuildPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("9_rllbf")]
+[node name="DebugPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=212731667 instance=ExtResource("11_s2dv6")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="IdeDiagnosticsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("13_woo5i")]
+[node name="BuildPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=635393214 instance=ExtResource("9_rllbf")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="NugetPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("15_lv3f5")]
+[node name="IdeDiagnosticsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=2098231922 instance=ExtResource("13_woo5i")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="TestExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" instance=ExtResource("16_0sv7o")]
+[node name="NugetPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=1724211208 instance=ExtResource("15_lv3f5")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="BottomBar" parent="VBoxContainer" instance=ExtResource("18_gyy5s")]
+[node name="TestExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=1651732904 instance=ExtResource("16_0sv7o")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="BottomBar" parent="VBoxContainer" unique_id=2024105566 instance=ExtResource("18_gyy5s")]
 layout_mode = 2
 
-[node name="SearchWindow" parent="." instance=ExtResource("13_7ptyn")]
+[node name="SearchWindow" parent="." unique_id=847277566 instance=ExtResource("13_7ptyn")]
 unique_name_in_owner = true
 visible = false
 
-[node name="SearchAllFilesWindow" parent="." instance=ExtResource("15_gh8b1")]
+[node name="SearchAllFilesWindow" parent="." unique_id=86964754 instance=ExtResource("15_gh8b1")]
 unique_name_in_owner = true
 visible = false

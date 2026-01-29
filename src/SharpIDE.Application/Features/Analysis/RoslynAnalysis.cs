@@ -15,6 +15,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Options;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Razor.DocumentMapping;
 using Microsoft.CodeAnalysis.Razor.Remote;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
@@ -26,7 +28,6 @@ using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using NuGet.Frameworks;
-using Roslyn.LanguageServer.Protocol;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
@@ -34,11 +35,14 @@ using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using static Roslyn.Utilities.EnumerableExtensions;
 using CodeAction = Microsoft.CodeAnalysis.CodeActions.CodeAction;
 using CompletionItem = Microsoft.CodeAnalysis.Completion.CompletionItem;
 using CompletionList = Microsoft.CodeAnalysis.Completion.CompletionList;
+using CompletionOptions = Microsoft.CodeAnalysis.Completion.CompletionOptions;
 using Diagnostic = Microsoft.CodeAnalysis.Diagnostic;
 using DiagnosticSeverity = Microsoft.CodeAnalysis.DiagnosticSeverity;
+using VSInternalClientCapabilities = Roslyn.LanguageServer.Protocol.VSInternalClientCapabilities;
 
 namespace SharpIDE.Application.Features.Analysis;
 
@@ -120,7 +124,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		using (var ___ = SharpIdeOtel.Source.StartActivity("RestoreSolution"))
 		{
 			// MsBuildProjectLoader doesn't do a restore which is absolutely required for resolving PackageReferences, if they have changed. I am guessing it just reads from project.assets.json
-			await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, cancellationToken);
+			await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
 		}
 		using (var ___ = SharpIdeOtel.Source.StartActivity("OpenSolution"))
 		{
@@ -187,7 +191,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
 
 		// It is important to note that a Workspace has no concept of MSBuild, nuget packages etc. It is just told about project references and "metadata" references, which are dlls. This is the what MSBuild does - it reads the csproj, and most importantly resolves nuget package references to dlls
-		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, cancellationToken);
+		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.MSBuildProjectLoader.LoadSolutionInfoAsync");
 		// This call is the expensive part - MSBuild is slow. There doesn't seem to be any incrementalism for solutions.
 		// The best we could do to speed it up is do .LoadProjectInfoAsync for the single project, and somehow munge that into the existing solution
@@ -214,7 +218,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(_workspace, nameof(_workspace));
 		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
 
-		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, cancellationToken);
+		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.Internal, cancellationToken);
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(CustomMsBuildProjectLoader)}.{nameof(CustomMsBuildProjectLoader.LoadProjectInfosAsync)}");
 
 		var thisProject = GetProjectForSharpIdeProjectModel(projectModel);
@@ -598,15 +602,15 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	// We store the document here, so that we have the correct version of the document when we compute completions
 	// This may not be the best way to do this, but it seems to work okay. It may only be a problem because I continue to update the doc in the workspace as the user continues typing, filtering the completion
 	// I could possibly pause updating the document while the completion list is open, but that seems more complex - handling accepted vs cancelled completions etc
-	public record IdeCompletionListResult(Document Document, CompletionList CompletionList);
-	public async Task<IdeCompletionListResult> GetCodeCompletionsForDocumentAtPosition(SharpIdeFile fileModel, LinePosition linePosition)
+	public record IdeCompletionListResult(Document Document, CompletionList CompletionList, LinePosition LinePosition);
+	public async Task<IdeCompletionListResult> GetCodeCompletionsForDocumentAtPosition(SharpIdeFile fileModel, LinePosition linePosition, CompletionTrigger completionTrigger)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeCompletionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel);
 		Guard.Against.Null(document, nameof(document));
-		var completions = await GetCompletionsAsync(document, linePosition).ConfigureAwait(false);
-		return new IdeCompletionListResult(document, completions);
+		var (completions, triggerLinePosition) = await GetCompletionsAsync(document, linePosition, completionTrigger).ConfigureAwait(false);
+		return new IdeCompletionListResult(document, completions, triggerLinePosition);
 	}
 
 	// TODO: Pass in LinePositionSpan for refactorings that span multiple characters, e.g. extract method
@@ -722,30 +726,80 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return codeActions.ToImmutableArray();
 	}
 
-	private static async Task<CompletionList> GetCompletionsAsync(Document document, LinePosition linePosition, CancellationToken cancellationToken = default)
+	private static async Task<(CompletionList completions, LinePosition triggerLinePosition)> GetCompletionsAsync(Document document, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
 	{
 		var completionService = CompletionService.GetService(document);
 		if (completionService is null) throw new InvalidOperationException("Completion service is not available for the document.");
 
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.Lines.GetPosition(linePosition);
-		var completions = await completionService.GetCompletionsAsync(document, position, cancellationToken: cancellationToken);
-		//var filterItems = completionService.FilterItems(document, completions.ItemsList.AsImmutable(), "va");
-		return completions;
+		var completions = await completionService.GetCompletionsAsync(document, position, completionTrigger, cancellationToken: cancellationToken);
+		var triggerLinePosition = sourceText.GetLinePosition(completions.Span.Start);
+		return (completions, triggerLinePosition);
 	}
 
 	// Currently unused
-	private async Task<bool> ShouldTriggerCompletionAsync(SharpIdeFile file, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
+	public async Task<bool> ShouldTriggerCompletionAsync(SharpIdeFile file, string documentText, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
 	{
+		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(file, cancellationToken);
 		var completionService = CompletionService.GetService(document);
 		if (completionService is null) throw new InvalidOperationException("Completion service is not available for the document.");
 
-		var sourceText = await document.GetTextAsync(cancellationToken);
+		//var sourceText = await document.GetTextAsync(cancellationToken);
+		var sourceText = SourceText.From(documentText, Encoding.UTF8);
 		var position = sourceText.Lines.GetPosition(linePosition);
-		var shouldTrigger = completionService.ShouldTriggerCompletion(sourceText, position, completionTrigger);
+		var shouldTrigger = completionService.ShouldTriggerCompletion(document.Project, document.Project.Services, sourceText, position, completionTrigger, CompletionOptions.Default, document.Project.Solution.Options ?? OptionSet.Empty);
 		return shouldTrigger;
 	}
+
+	public static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(SharpIdeFile file, string documentText, LinePosition linePosition, CompletionList completionList, CompletionTrigger completionTrigger, CompletionFilterReason filterReason)
+	{
+		var sourceText = SourceText.From(documentText, Encoding.UTF8);
+		var position = sourceText.Lines.GetPosition(linePosition);
+
+		var filterSpanLength = position - completionList.Span.Start;
+		// user has backspaced past the trigger span
+		if (filterSpanLength < 0) return [];
+		var filterSpan = new TextSpan(completionList.Span.Start, length: filterSpanLength);
+
+		var filteredCompletionItems = FilterCompletionList(completionList, filterSpan, completionTrigger, filterReason, sourceText);
+		return filteredCompletionItems;
+	}
+
+	private static ImmutableArray<SharpIdeCompletionItem> FilterCompletionList(CompletionList completionList, TextSpan filterSpan, CompletionTrigger completionTrigger, CompletionFilterReason filterReason, SourceText sourceText)
+    {
+        var filterText = sourceText.GetSubText(filterSpan).ToString();
+		Console.WriteLine($"Filter text: '{filterText}'");
+
+        // Use pattern matching to determine which items are most relevant out of the calculated items.
+        using var _ = ArrayBuilder<MatchResult>.GetInstance(out var matchResultsBuilder);
+        var index = 0;
+        using var helper = new PatternMatchHelper(filterText);
+        foreach (var item in completionList.ItemsList)
+        {
+            if (helper.TryCreateMatchResult(
+                item,
+                completionTrigger.Kind,
+                filterReason,
+                recentItemIndex: -1,
+                includeMatchSpans: true,
+                index,
+                out var matchResult))
+            {
+                matchResultsBuilder.Add(matchResult);
+                index++;
+            }
+        }
+
+        // Next, we sort the list based on the pattern matching result.
+        matchResultsBuilder.Sort(MatchResult.SortingComparer);
+
+        var filteredList = matchResultsBuilder.SelectAsArray(matchResult =>
+	        new SharpIdeCompletionItem(matchResult.CompletionItem, matchResult.PatternMatch?.MatchedSpans));
+
+        return filteredList;
+    }
 
 	public async Task<(string updatedText, SharpIdeFileLinePosition sharpIdeFileLinePosition)> GetCompletionApplyChanges(SharpIdeFile file, CompletionItem completionItem, Document document, CancellationToken cancellationToken = default)
 	{

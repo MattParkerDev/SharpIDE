@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://cactda5eiy55"]
+[gd_scene format=3 uid="uid://cactda5eiy55"]
 
 [ext_resource type="Script" uid="uid://dx53kr0ffp0n8" path="res://Features/Search/SearchAllFiles/SearchAllFilesResultComponent.cs" id="1_fmccx"]
 
@@ -12,7 +12,7 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[node name="SearchAllFilesResultComponent" type="MarginContainer"]
+[node name="SearchAllFilesResultComponent" type="MarginContainer" unique_id=1521041462]
 anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
@@ -23,13 +23,13 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fmccx")
 
-[node name="Button" type="Button" parent="."]
+[node name="Button" type="Button" parent="." unique_id=523472771]
 custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_6ov2c")
 theme_override_styles/focus = SubResource("StyleBoxFlat_dtmd4")
 
-[node name="MarginContainer" type="MarginContainer" parent="Button"]
+[node name="MarginContainer" type="MarginContainer" parent="Button" unique_id=1514479043]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -39,27 +39,27 @@ grow_vertical = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Button/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button/MarginContainer" unique_id=978919073]
 layout_mode = 2
 
-[node name="CenterContainer" type="CenterContainer" parent="Button/MarginContainer/HBoxContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="Button/MarginContainer/HBoxContainer" unique_id=1845279343]
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="IconTextureRect" type="TextureRect" parent="Button/MarginContainer/HBoxContainer/CenterContainer"]
+[node name="IconTextureRect" type="TextureRect" parent="Button/MarginContainer/HBoxContainer/CenterContainer" unique_id=1396963170]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="IconOverlayTextureRect" type="TextureRect" parent="Button/MarginContainer/HBoxContainer/CenterContainer"]
+[node name="IconOverlayTextureRect" type="TextureRect" parent="Button/MarginContainer/HBoxContainer/CenterContainer" unique_id=1390125088]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="FileNameLabel" type="Label" parent="Button/MarginContainer/HBoxContainer"]
+[node name="FileNameLabel" type="Label" parent="Button/MarginContainer/HBoxContainer" unique_id=1305785853]
 unique_name_in_owner = true
 layout_mode = 2
 text = "FileName.cs"
 
-[node name="FilePathLabel" type="Label" parent="Button/MarginContainer/HBoxContainer"]
+[node name="FilePathLabel" type="Label" parent="Button/MarginContainer/HBoxContainer" unique_id=2000084714]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

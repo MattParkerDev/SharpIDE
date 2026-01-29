@@ -479,12 +479,6 @@ public class Terminal
 		set => _object.UseParentMaterial = value;
 	}
 
-	public Godot.NodePath ImportPath
-	{
-		get => _object._ImportPath;
-		set => _object._ImportPath = value;
-	}
-
 	public Godot.StringName Name
 	{
 		get => _object.Name;

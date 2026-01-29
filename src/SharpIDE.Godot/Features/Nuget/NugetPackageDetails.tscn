@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://odaefch2sdft"]
+[gd_scene format=3 uid="uid://odaefch2sdft"]
 
 [ext_resource type="Script" uid="uid://d1v1v4uqdu2rw" path="res://Features/Nuget/NugetPackageDetails.cs" id="1_c3hm2"]
 [ext_resource type="Texture2D" uid="uid://b5ih61vdjv5e6" path="res://Features/LeftSideBar/Resources/Nuget.svg" id="1_jrdf0"]
@@ -16,7 +16,7 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
-[node name="NugetPackageDetails" type="VBoxContainer"]
+[node name="NugetPackageDetails" type="VBoxContainer" unique_id=1264762970]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -25,33 +25,33 @@ grow_vertical = 2
 theme_override_constants/separation = 8
 script = ExtResource("1_c3hm2")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1553068044]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="PackageIconTextureRect" type="TextureRect" parent="HBoxContainer"]
+[node name="PackageIconTextureRect" type="TextureRect" parent="HBoxContainer" unique_id=1749565859]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 texture = ExtResource("1_jrdf0")
 expand_mode = 3
 
-[node name="PackageNameLabel" type="Label" parent="HBoxContainer"]
+[node name="PackageNameLabel" type="Label" parent="HBoxContainer" unique_id=727807580]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
 theme_override_font_sizes/font_size = 18
 text = "OpenTelemetry.Exporter.OpenTelemetryProtocol"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="."]
+[node name="HBoxContainer2" type="HBoxContainer" parent="." unique_id=164153319]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HBoxContainer2"]
+[node name="Label" type="Label" parent="HBoxContainer2" unique_id=145190229]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
 text = "Version"
 
-[node name="VersionOptionButton" type="OptionButton" parent="HBoxContainer2"]
+[node name="VersionOptionButton" type="OptionButton" parent="HBoxContainer2" unique_id=1228212594]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -61,7 +61,7 @@ item_count = 1
 popup/item_0/text = "1.13.0"
 popup/item_0/id = 0
 
-[node name="NugetSourceOptionButton" type="OptionButton" parent="HBoxContainer2"]
+[node name="NugetSourceOptionButton" type="OptionButton" parent="HBoxContainer2" unique_id=403411843]
 unique_name_in_owner = true
 layout_mode = 2
 selected = 0
@@ -69,7 +69,7 @@ item_count = 1
 popup/item_0/text = "nuget"
 popup/item_0/id = 0
 
-[node name="InfoFoldableContainer" type="FoldableContainer" parent="."]
+[node name="InfoFoldableContainer" type="FoldableContainer" parent="." unique_id=1492895289]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/title_collapsed_panel = SubResource("StyleBoxFlat_tik62")
@@ -77,13 +77,13 @@ folded = true
 title = "Info - OpenTelemetry protocol exporter for OpenTelemetry .NET"
 title_text_overrun_behavior = 3
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=723630067]
 layout_mode = 2
 theme_override_constants/margin_top = 10
 
-[node name="ProjectsVBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="ProjectsVBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=891924041]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="PackageDetailsProjectEntry" parent="MarginContainer/ProjectsVBoxContainer" instance=ExtResource("3_tik62")]
+[node name="PackageDetailsProjectEntry" parent="MarginContainer/ProjectsVBoxContainer" unique_id=1935160636 instance=ExtResource("3_tik62")]
 layout_mode = 2

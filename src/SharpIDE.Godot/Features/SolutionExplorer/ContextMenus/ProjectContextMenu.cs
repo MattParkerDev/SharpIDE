@@ -62,7 +62,6 @@ public partial class SolutionExplorerPanel
             {
                 _ = Task.GodotRun(async () =>
                 {
-		            GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Run);
                     await _runService.RunProject(project);
                 });
             }
@@ -98,7 +97,6 @@ public partial class SolutionExplorerPanel
     }
     private async Task MsBuildProject(SharpIdeProjectModel project, BuildType buildType)
     {
-        GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
         await _buildService.MsBuildAsync(project.FilePath, buildType);
     }
 }

@@ -44,7 +44,7 @@ public partial class TestExplorerPanel : Control
         var solution = _solutionAccessor.SolutionModel!;
         if (withBuild)
         {
-            await _buildService.MsBuildAsync(solution.FilePath);
+            await _buildService.MsBuildAsync(solution.FilePath, buildStartedFlags: BuildStartedFlags.Internal);
         }
         var testNodes = await _testRunnerService.DiscoverTests(solution);
         var scenes = testNodes.Select(s =>
@@ -70,7 +70,7 @@ public partial class TestExplorerPanel : Control
         {
             await _solutionAccessor.SolutionReadyTcs.Task;
             var solution = _solutionAccessor.SolutionModel!;
-            await _buildService.MsBuildAsync(solution.FilePath);
+            await _buildService.MsBuildAsync(solution.FilePath, buildStartedFlags: BuildStartedFlags.Internal);
             await this.InvokeAsync(() => _testNodesVBoxContainer.QueueFreeChildren());
             _testNodeEntryNodes.Clear();
             await _testRunnerService.RunTestsAsync(solution, HandleTestNodeUpdates);

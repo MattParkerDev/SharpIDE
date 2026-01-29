@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://d358tex0duum8"]
+[gd_scene format=3 uid="uid://d358tex0duum8"]
 
 [ext_resource type="Script" uid="uid://6sdu34jtdrux" path="res://Features/Search/SearchInFiles/SearchResultComponent.cs" id="1_6ov2c"]
 
@@ -12,7 +12,7 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[node name="SearchResultComponent" type="MarginContainer"]
+[node name="SearchResultComponent" type="MarginContainer" unique_id=956110310]
 anchors_preset = 14
 anchor_top = 0.5
 anchor_right = 1.0
@@ -23,13 +23,13 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_6ov2c")
 
-[node name="Button" type="Button" parent="."]
+[node name="Button" type="Button" parent="." unique_id=781970918]
 custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_6ov2c")
 theme_override_styles/focus = SubResource("StyleBoxFlat_dtmd4")
 
-[node name="MarginContainer" type="MarginContainer" parent="Button"]
+[node name="MarginContainer" type="MarginContainer" parent="Button" unique_id=1004015399]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -39,23 +39,23 @@ grow_vertical = 2
 theme_override_constants/margin_left = 5
 theme_override_constants/margin_right = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Button/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button/MarginContainer" unique_id=1220461453]
 layout_mode = 2
 
-[node name="MatchingLineLabel" type="Label" parent="Button/MarginContainer/HBoxContainer"]
+[node name="MatchingLineLabel" type="Label" parent="Button/MarginContainer/HBoxContainer" unique_id=96553154]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Line matching search result"
 text_overrun_behavior = 3
 
-[node name="FileNameLabel" type="Label" parent="Button/MarginContainer/HBoxContainer"]
+[node name="FileNameLabel" type="Label" parent="Button/MarginContainer/HBoxContainer" unique_id=1076022344]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.7411765)
 text = "FileName.cs"
 
-[node name="LineNumberLabel" type="Label" parent="Button/MarginContainer/HBoxContainer"]
+[node name="LineNumberLabel" type="Label" parent="Button/MarginContainer/HBoxContainer" unique_id=1411128112]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.7411765)

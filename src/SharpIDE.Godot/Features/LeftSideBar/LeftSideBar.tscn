@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://biyhfwx36ium8"]
+[gd_scene format=3 uid="uid://biyhfwx36ium8"]
 
 [ext_resource type="Script" uid="uid://bddno1bbvvp5q" path="res://Features/LeftSideBar/LeftSideBar.cs" id="1_rgaf0"]
 [ext_resource type="ButtonGroup" uid="uid://c2nmo2x3va0gi" path="res://Features/LeftSideBar/LeftBottomSidebarButtonGroup.tres" id="2_1aad6"]
@@ -13,7 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://b5ih61vdjv5e6" path="res://Features/LeftSideBar/Resources/Nuget.svg" id="11_csqeq"]
 [ext_resource type="Texture2D" uid="uid://dged1mm438qli" path="res://Features/LeftSideBar/Resources/SidebarTestExplorer.svg" id="12_rlff3"]
 
-[node name="LeftSideBar" type="Panel"]
+[node name="LeftSideBar" type="Panel" unique_id=1098002211]
 custom_minimum_size = Vector2(80, 0)
 anchors_preset = 13
 anchor_left = 0.5
@@ -23,7 +23,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_rgaf0")
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1260749271]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -35,14 +35,13 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1397112540]
 layout_mode = 2
 
-[node name="SlnExplorerButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="SlnExplorerButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=962488242]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -54,15 +53,14 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer"]
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=987798304]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ProblemsButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="ProblemsButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1477870962]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -74,11 +72,10 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="RunButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=631247068]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -91,11 +88,10 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="DebugButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="DebugButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1159615827]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -107,11 +103,10 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="BuildButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="BuildButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=621071042]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -123,12 +118,11 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="IdeDiagnosticsButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="IdeDiagnosticsButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=771614017]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -140,11 +134,10 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="NugetButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="NugetButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1320842412]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")
@@ -156,11 +149,10 @@ icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="TestExplorerButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="TestExplorerButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1699998074]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = ExtResource("4_umcfu")
 theme_override_styles/pressed = ExtResource("5_csqeq")

@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://tqpmww430cor"]
+[gd_scene format=3 uid="uid://tqpmww430cor"]
 
 [ext_resource type="Script" uid="uid://b1r3no4u3khik" path="res://Features/Problems/ProblemsPanel.cs" id="1_bnenc"]
 [ext_resource type="Texture2D" uid="uid://pd3h5qfjn8pb" path="res://Features/Problems/Resources/Warning.svg" id="2_xj8le"]
@@ -11,7 +11,7 @@ content_margin_top = 5.0
 content_margin_right = 5.0
 content_margin_bottom = 5.0
 
-[node name="ProblemsPanel" type="Control"]
+[node name="ProblemsPanel" type="Control" unique_id=1062190946]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -23,7 +23,7 @@ WarningIcon = ExtResource("2_xj8le")
 ErrorIcon = ExtResource("3_sap6e")
 CsprojIcon = ExtResource("4_wqdox")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1645945351]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,21 +32,21 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=376476313]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer" unique_id=1681822274]
 layout_mode = 2
 text = "Problems"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1003709916]
 layout_mode = 2
 
-[node name="Tree" type="Tree" parent="VBoxContainer"]
+[node name="Tree" type="Tree" parent="VBoxContainer" unique_id=1696140797]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

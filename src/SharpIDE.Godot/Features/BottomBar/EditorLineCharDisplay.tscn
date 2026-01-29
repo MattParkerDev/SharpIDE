@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://df55cl01wdfuv"]
+[gd_scene format=3 uid="uid://df55cl01wdfuv"]
 
 [ext_resource type="Script" uid="uid://b2qyiyncm4sk5" path="res://Features/BottomBar/EditorLineCharDisplay.cs" id="1_ugdln"]
 
-[node name="EditorLineCharDisplay" type="HBoxContainer"]
+[node name="EditorLineCharDisplay" type="HBoxContainer" unique_id=832895168]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -10,13 +10,13 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_ugdln")
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="." unique_id=1753504818]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
 theme_override_font_sizes/font_size = 14
 text = "65:71"
 
-[node name="SelectionInfoLabel" type="Label" parent="."]
+[node name="SelectionInfoLabel" type="Label" parent="." unique_id=140834606]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)

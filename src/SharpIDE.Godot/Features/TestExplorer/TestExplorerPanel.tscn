@@ -1,11 +1,11 @@
-[gd_scene load_steps=5 format=3 uid="uid://hwdok1kch3b3"]
+[gd_scene format=3 uid="uid://hwdok1kch3b3"]
 
 [ext_resource type="Script" uid="uid://8o78ti2hb0pu" path="res://Features/TestExplorer/TestExplorerPanel.cs" id="1_b5miy"]
 [ext_resource type="Texture2D" uid="uid://cmwkpdv6pxaai" path="res://Resources/refresh.svg" id="2_4bhqg"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="3_b7h3i"]
 [ext_resource type="PackedScene" uid="uid://dt50f2of66dlt" path="res://Features/TestExplorer/TestNodeEntry.tscn" id="3_vj6ii"]
 
-[node name="TestExplorerPanel" type="Control"]
+[node name="TestExplorerPanel" type="Control" unique_id=1252938737]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -14,7 +14,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_b5miy")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1769157350]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -23,30 +23,30 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=1741249696]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer" unique_id=1251049983]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=553021471]
 layout_mode = 2
 text = "Test Explorer"
 
-[node name="RefreshButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer"]
+[node name="RefreshButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=1316682408]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 15
 icon = ExtResource("2_4bhqg")
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1906677459]
 layout_mode = 2
 
-[node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer" unique_id=503618344]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 8
@@ -54,51 +54,51 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/MarginContainer2"]
+[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/MarginContainer2" unique_id=221216555]
 layout_mode = 2
+split_offsets = PackedInt32Array(600)
 split_offset = 600
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer" unique_id=1430173019]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer" unique_id=1451968356]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer"]
+[node name="LineEdit" type="LineEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer" unique_id=605079004]
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Filter tests"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer" unique_id=1878308517]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2" unique_id=707015393]
 layout_mode = 2
 
-[node name="RunAllTestsButton" type="Button" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2/VBoxContainer"]
+[node name="RunAllTestsButton" type="Button" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2/VBoxContainer" unique_id=533393593]
 unique_name_in_owner = true
 layout_mode = 2
 icon = ExtResource("3_b7h3i")
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2"]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2" unique_id=706651455]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="TestNodesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2/ScrollContainer"]
+[node name="TestNodesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2/ScrollContainer" unique_id=572274104]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="TestNodeEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2/ScrollContainer/TestNodesVBoxContainer" instance=ExtResource("3_vj6ii")]
+[node name="TestNodeEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer2/ScrollContainer/TestNodesVBoxContainer" unique_id=1279479859 instance=ExtResource("3_vj6ii")]
 layout_mode = 2
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer"]
+[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer" unique_id=1777548425]
 layout_mode = 2
 
-[node name="TextEdit" type="TextEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer2"]
+[node name="TextEdit" type="TextEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer2" unique_id=967321892]
 layout_mode = 2
 size_flags_vertical = 3
-focus_mode = 0
 editable = false

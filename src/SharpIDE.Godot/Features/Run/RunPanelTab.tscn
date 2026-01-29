@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://cjopkm4osnp27"]
+[gd_scene format=3 uid="uid://cjopkm4osnp27"]
 
 [ext_resource type="Script" uid="uid://ouskvcd0yaub" path="res://Features/Run/RunPanelTab.cs" id="1_dx3i6"]
-[ext_resource type="Theme" uid="uid://bswaamju2blyt" path="res://Features/TerminalBase/TerminalTheme.tres" id="2_6d1fj"]
+[ext_resource type="PackedScene" uid="uid://beo6fg8r0ogxc" path="res://Features/TerminalBase/SharpIdeTerminal.tscn" id="2_6d1fj"]
 
-[node name="RunPanelTab" type="MarginContainer"]
+[node name="RunPanelTab" type="MarginContainer" unique_id=1492614733]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -11,7 +11,5 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_dx3i6")
 
-[node name="Terminal" type="Terminal" parent="."]
-copy_on_selection = true
+[node name="SharpIdeTerminal" parent="." unique_id=1494492756 instance=ExtResource("2_6d1fj")]
 layout_mode = 2
-theme = ExtResource("2_6d1fj")

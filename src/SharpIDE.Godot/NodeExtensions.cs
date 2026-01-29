@@ -40,6 +40,53 @@ public class RequiresGodotUiThreadAttribute : Attribute
 
 public static class NodeExtensions
 {
+    extension(RenderingServerInstance renderingServerInstance)
+    {
+        // https://github.com/godotengine/godot/blob/a4bbad2ba8a8ecd4e756e49de5c83666f12a9bd5/scene/main/canvas_item.cpp#L717
+        public void DrawDashedLine(Rid canvasItemRid, Vector2 from, Vector2 to, Color color, float width = -1.0f, float dash = 2.0f, bool aligned = true, bool antialiased = false)
+        {
+            if (dash <= 0.0f)
+            {
+                GD.PushError("draw_dashed_line: dash length must be greater than 0");
+                return;
+            }
+
+            var length = (to - from).Length();
+            var step = dash * (to - from).Normalized();
+
+            if (length < dash || step == Vector2.Zero)
+            {
+                renderingServerInstance.CanvasItemAddLine(canvasItemRid, from, to, color, width, antialiased);
+                return;
+            }
+
+            int steps = aligned ? Mathf.CeilToInt(length / dash) : Mathf.FloorToInt(length / dash);
+            if (steps % 2 == 0)
+            {
+                steps--;
+            }
+
+            var off = from;
+            if (aligned)
+            {
+                off += (to - from).Normalized() * (length - steps * dash) / 2.0f;
+            }
+
+            //Span<Vector2> points = steps <= 128 ? stackalloc Vector2[steps + 1] : new Vector2[steps + 1];
+            Span<Vector2> points = stackalloc Vector2[steps + 1];
+            for (var i = 0; i < steps; i += 2)
+            {
+                points[i] = (i == 0) ? from : off;
+                points[i + 1] = (aligned && i == steps - 1) ? to : (off + step);
+                off += step * 2;
+            }
+
+            ReadOnlySpan<Color> colors = stackalloc Color[1] { color };
+
+            renderingServerInstance.CanvasItemAddMultiline(canvasItemRid, points, colors, width, antialiased);
+        }
+    }
+
     extension(TreeItem treeItem)
     {
         public T? GetTypedMetadata<T>(int column) where T : RefCounted?

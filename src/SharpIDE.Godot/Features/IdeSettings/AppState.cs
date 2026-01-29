@@ -11,6 +11,7 @@ public class IdeSettings
 {
     public bool AutoOpenLastSolution { get; set; }
     public string? DebuggerExecutablePath { get; set; }
+    public bool DebuggerUseSharpDbg { get; set; } = true;
     public float UiScale { get; set; } = 1.0f;
 }
 

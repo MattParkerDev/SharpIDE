@@ -1,4 +1,4 @@
-[gd_resource type="FontVariation" load_steps=2 format=3 uid="uid://vmgmcu8gc6nt"]
+[gd_resource type="FontVariation" format=3 uid="uid://vmgmcu8gc6nt"]
 
 [ext_resource type="FontFile" uid="uid://c51gnbjamppg" path="res://addons/godot_xterm/themes/fonts/jet_brains_mono/jet_brains_mono_nl-regular-2.304.ttf" id="1_8kori"]
 

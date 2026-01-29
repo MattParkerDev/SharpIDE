@@ -1,4 +1,4 @@
-[gd_resource type="FontVariation" load_steps=2 format=3 uid="uid://cctwlwcoycek7"]
+[gd_resource type="FontVariation" format=3 uid="uid://cctwlwcoycek7"]
 
 [ext_resource type="FontFile" uid="uid://bkibovvrnhwtt" path="res://Features/CodeEditor/Resources/CascadiaMono.ttf" id="1_ba3y1"]
 

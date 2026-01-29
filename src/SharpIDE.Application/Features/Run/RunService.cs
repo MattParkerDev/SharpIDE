@@ -5,6 +5,7 @@ using AsyncReadProcess;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Events;
@@ -14,15 +15,18 @@ using Breakpoint = SharpIDE.Application.Features.Debugging.Breakpoint;
 
 namespace SharpIDE.Application.Features.Run;
 
-public partial class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysis)
+public partial class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysis, BuildService buildService, DebuggingService debuggingService)
 {
 	private readonly ConcurrentDictionary<SharpIdeProjectModel, SemaphoreSlim> _projectLocks = [];
-	private Debugger? _debugger; // TODO: Support multiple debuggers for multiple running projects
+	//private readonly ConcurrentDictionary<SharpIdeProjectModel, DebuggerSessionId> _projectDebuggerSessionIds = [];
+	private DebuggerSessionId? _debuggerSessionId; // TODO: Support multiple debuggers for multiple running projects
 
 	private readonly ILogger<RunService> _logger = logger;
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
+	private readonly BuildService _buildService = buildService;
+	private readonly DebuggingService _debuggingService = debuggingService;
 
-	public async Task RunProject(SharpIdeProjectModel project, bool isDebug = false, string? debuggerExecutablePath = null)
+	public async Task RunProject(SharpIdeProjectModel project, bool isDebug = false, DebuggerExecutableInfo? debuggerExecutableInfo = null)
 	{
 		Guard.Against.Null(project, nameof(project));
 		Guard.Against.NullOrWhiteSpace(project.FilePath, nameof(project.FilePath), "Project file path cannot be null or empty.");
@@ -31,17 +35,41 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 		var semaphoreSlim = _projectLocks.GetOrAdd(project, new SemaphoreSlim(1, 1));
 		var waitResult = await semaphoreSlim.WaitAsync(0).ConfigureAwait(false);
 		if (waitResult is false) throw new InvalidOperationException($"Project {project.Name} is already running.");
-		if (project.RunningCancellationTokenSource is not null) throw new InvalidOperationException($"Project {project.Name} is already running with a cancellation token source.");
 
-		project.RunningCancellationTokenSource = new CancellationTokenSource();
-		var launchProfiles = await LaunchSettingsParser.GetLaunchSettingsProfiles(project);
-		var launchProfile = launchProfiles.FirstOrDefault();
 		try
 		{
+			if (project.RunningCancellationTokenSource is not null) throw new InvalidOperationException($"Project {project.Name} is already running with a cancellation token source.");
+
+			var buildResult = await _buildService.MsBuildAsync(project.FilePath);
+			if (buildResult is not SharpIdeBuildResult.Success)
+			{
+				_logger.LogInformation("Build failed for project {ProjectName}. Aborting run/debug.", project.Name);
+				project.ProjectRunFailed.InvokeParallelFireAndForget();
+				return;
+			}
+
+			project.RunningCancellationTokenSource = new CancellationTokenSource();
+
+			var launchProfiles = await LaunchSettingsParser.GetLaunchSettingsProfiles(project);
+			var launchProfile = launchProfiles.FirstOrDefault();
+
+			var fileName = launchProfile?.CommandName switch
+			{
+				"Executable" => launchProfile.ExecutablePath,
+				"Project" or _ => "dotnet",
+			} ?? "dotnet";
+
+			var workingDirectory = launchProfile?.WorkingDirectory switch
+			{
+				"$(ProjectDir)" => project.DirectoryPath,
+				null => project.DirectoryPath,
+				{} nonNullString => nonNullString,
+			};
+
 			var processStartInfo = new ProcessStartInfo2
 			{
-				FileName = "dotnet",
-				WorkingDirectory = Path.GetDirectoryName(project.FilePath),
+				FileName = fileName,
+				WorkingDirectory = workingDirectory,
 				//Arguments = $"run --project \"{project.FilePath}\" --no-restore",
 				Arguments = await GetRunArguments(project),
 				RedirectStandardOutput = true,
@@ -91,9 +119,9 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			if (isDebug)
 			{
 				// Attach debugger (which internally uses a DiagnosticClient to resume startup)
-				var debugger = new Debugger { Project = project, ProcessId = process.ProcessId };
-				_debugger = debugger;
-				await debugger.Attach(debuggerExecutablePath, Breakpoints.ToDictionary(), project, project.RunningCancellationTokenSource.Token).ConfigureAwait(false);
+				var debuggerSessionId = await _debuggingService.Attach(process.ProcessId, debuggerExecutableInfo, Breakpoints.ToDictionary(), project, project.RunningCancellationTokenSource.Token);
+				//_projectDebuggerSessionIds[project] = debuggerSessionId;
+				_debuggerSessionId = debuggerSessionId;
 			}
 
 			project.Running = true;
@@ -122,6 +150,9 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			project.Running = false;
 			if (isDebug)
 			{
+				await _debuggingService.CloseDebuggerSession(_debuggerSessionId!.Value);
+				//_projectDebuggerSessionIds.TryRemove(project, out _);
+				_debuggerSessionId = null;
 				GlobalEvents.Instance.ProjectStoppedDebugging.InvokeParallelFireAndForget(project);
 			}
 			else
@@ -149,26 +180,26 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 		await project.RunningCancellationTokenSource.CancelAsync().ConfigureAwait(false);
 	}
 
-	public async Task SendDebuggerStepOver(int threadId) => await _debugger!.StepOver(threadId);
-	public async Task SendDebuggerStepInto(int threadId) => await _debugger!.StepInto(threadId);
-	public async Task SendDebuggerStepOut(int threadId) => await _debugger!.StepOut(threadId);
-	public async Task SendDebuggerContinue(int threadId) => await _debugger!.Continue(threadId);
+	public async Task SendDebuggerStepOver(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.StepOver(_debuggerSessionId!.Value, threadId, cancellationToken);
+	public async Task SendDebuggerStepInto(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.StepInto(_debuggerSessionId!.Value, threadId, cancellationToken);
+	public async Task SendDebuggerStepOut(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.StepOut(_debuggerSessionId!.Value, threadId, cancellationToken);
+	public async Task SendDebuggerContinue(int threadId, CancellationToken cancellationToken = default) => await _debuggingService!.Continue(_debuggerSessionId!.Value, threadId, cancellationToken);
 
 	public async Task<List<ThreadModel>> GetThreadsAtStopPoint()
 	{
-		return await _debugger!.GetThreadsAtStopPoint();
+		return await _debuggingService!.GetThreadsAtStopPoint(_debuggerSessionId!.Value);
 	}
 	public async Task<List<StackFrameModel>> GetStackFrames(int threadId)
 	{
-		return await _debugger!.GetStackFramesForThread(threadId);
+		return await _debuggingService!.GetStackFramesForThread(_debuggerSessionId!.Value, threadId);
 	}
 	public async Task<List<Variable>> GetVariablesForStackFrame(int frameId)
 	{
-		return await _debugger!.GetVariablesForStackFrame(frameId);
+		return await _debuggingService!.GetVariablesForStackFrame(_debuggerSessionId!.Value, frameId);
 	}
 	public async Task<List<Variable>> GetVariablesForVariablesReference(int variablesReferenceId)
 	{
-		return await _debugger!.GetVariablesForVariablesReference(variablesReferenceId);
+		return await _debuggingService!.GetVariablesForVariablesReference(_debuggerSessionId!.Value, variablesReferenceId);
 	}
 
 	private async Task<string> GetRunArguments(SharpIdeProjectModel project)

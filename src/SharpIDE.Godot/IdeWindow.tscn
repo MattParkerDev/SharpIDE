@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://b70jhun5a4las"]
+[gd_scene format=3 uid="uid://b70jhun5a4las"]
 
 [ext_resource type="Script" uid="uid://bul4kkrg1yhqx" path="res://IdeWindow.cs" id="1_3do1e"]
 
-[node name="IdeWindow" type="Control"]
+[node name="IdeWindow" type="Control" unique_id=1496874493]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_3do1e")
 
-[node name="Window" type="Window" parent="."]
+[node name="Window" type="Window" parent="." unique_id=14782108]
 oversampling_override = 1.0
 title = "Open Solution"
 initial_position = 2

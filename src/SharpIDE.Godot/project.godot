@@ -12,17 +12,17 @@ config_version=5
 
 config/name="SharpIDE"
 run/main_scene="uid://b70jhun5a4las"
-config/features=PackedStringArray("4.5", "C#", "Forward Plus")
+config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 run/max_fps=60
-boot_splash/fullsize=false
+boot_splash/stretch_mode=0
 boot_splash/image="uid://c58xmy2syss8s"
 config/icon="uid://tpjfx7mo6cwj"
 
 [autoload]
 
 DiAutoload="*res://DiAutoload.cs"
-FrameProviderDispatcher="*res://addons/R3.Godot/FrameProviderDispatcher.cs"
-ObservableTrackerRuntimeHook="*res://addons/R3.Godot/ObservableTrackerRuntimeHook.cs"
+FrameProviderDispatcher="*uid://ngclnv5y220f"
+ObservableTrackerRuntimeHook="*uid://dwd2efc46qc0v"
 
 [display]
 
@@ -37,6 +37,10 @@ project/assembly_name="SharpIDE.Godot"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/R3.Godot/plugin.cfg", "res://addons/csharp_gdextension_bindgen/plugin.cfg")
+
+[gui]
+
+common/show_focus_state_on_pointer_event=0
 
 [input]
 
@@ -98,6 +102,11 @@ EditorFontSizeIncrease={
 EditorFontSizeDecrease={
 "deadzone": 0.2,
 "events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":true,"meta_pressed":false,"button_mask":16,"position":Vector2(120, 12),"global_position":Vector2(129, 60),"factor":1.0,"button_index":5,"canceled":false,"pressed":true,"double_click":false,"script":null)
+]
+}
+CodeEditorRequestCompletions={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":true,"meta_pressed":false,"pressed":false,"keycode":32,"physical_keycode":0,"key_label":0,"unicode":32,"location":0,"echo":false,"script":null)
 ]
 }
 

@@ -127,13 +127,15 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		? MsBuildEvaluationProjectTask.Result
 		: throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
 
-	public bool IsRunnable => IsBlazorProject || MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe";
+	public bool IsRunnable => MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
 	public bool IsBlazorProject => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
+	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");
 	public bool IsMtpTestProject => MsBuildEvaluationProject.GetPropertyValue("IsTestingPlatformApplication") is "true";
 	public string BlazorDevServerVersion => MsBuildEvaluationProject.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version");
 	public bool OpenInRunPanel { get; set; }
 	public Channel<byte[]>? RunningOutputChannel { get; set; }
 
+	public EventWrapper<Task> ProjectRunFailed { get; } = new(() => Task.CompletedTask);
 	public EventWrapper<Task> ProjectStartedRunning { get; } = new(() => Task.CompletedTask);
 	public EventWrapper<Task> ProjectStoppedRunning { get; } = new(() => Task.CompletedTask);
 

@@ -169,15 +169,16 @@ public partial class CodeEditorPanel : MarginContainer
 	{
 		Guard.Against.Null(Solution, nameof(Solution));
 		
-		var currentSharpIdeFile = await this.InvokeAsync<SharpIdeFile>(() => _tabContainer.GetChild<SharpIdeCodeEdit>(_tabContainer.CurrentTab).SharpIdeFile);
-		
-		if (executionStopInfo.FilePath != currentSharpIdeFile?.Path)
-		{
-			var file = Solution.AllFiles[executionStopInfo.FilePath];
-			await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, null).ConfigureAwait(false);
-		}
 		var lineInt = executionStopInfo.Line - 1; // Debugging is 1-indexed, Godot is 0-indexed
-		Guard.Against.Negative(lineInt, nameof(lineInt));
+		Guard.Against.Negative(lineInt);
+		
+		var file = Solution.AllFiles[executionStopInfo.FilePath];
+		// A line being darkened by the caret being on that line completely obscures the executing line color, so as a "temporary" workaround, move the caret to the previous line
+		// Ideally, like Rider, we would only yellow highlight the sequence point range, with the cursor line black being behind it
+		var fileLinePosition = new SharpIdeFileLinePosition(lineInt is 0 ? 0 : lineInt - 1, 0);
+		// Although the file may already be the selected tab, we need to also move the caret
+		await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, fileLinePosition).ConfigureAwait(false);
+		
 		if (_debuggerExecutionStopInfoByProject.TryGetValue(executionStopInfo.Project, out _)) throw new InvalidOperationException("Debugger is already stopped for this project.");
 		_debuggerExecutionStopInfoByProject[executionStopInfo.Project] = executionStopInfo;
 		

@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bkcyv0w3setep"]
+[gd_scene format=3 uid="uid://bkcyv0w3setep"]
 
 [ext_resource type="Script" uid="uid://cgjg4p52appdp" path="res://addons/godot_xterm/editor_plugins/terminal/editor_terminal.gd" id="1"]
 
-[node name="Terminal" type="Terminal"]
+[node name="Terminal" type="Terminal" unique_id=867610912]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -13,12 +13,12 @@ size_flags_vertical = 4
 focus_mode = 1
 script = ExtResource("1")
 
-[node name="PTY" type="PTY" parent="."]
+[node name="PTY" type="PTY" parent="." unique_id=1706106357]
 cols = 114
 rows = 29
 terminal_path = NodePath("..")
 
-[node name="Bell" type="AudioStreamPlayer" parent="."]
+[node name="Bell" type="AudioStreamPlayer" parent="." unique_id=76671042]
 
 [connection signal="data_sent" from="." to="PTY" method="write"]
 [connection signal="size_changed" from="." to="PTY" method="resizev"]

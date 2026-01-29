@@ -98,6 +98,14 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var task = GodotGlobalEvents.Instance.FileSelected.InvokeParallelAsync(file, fileLinePosition);
+		// First check if the file is already selected
+		var selectedItem = _tree.GetSelected();
+		if (selectedItem is not null)
+		{
+			var selectedFile = selectedItem.GetTypedMetadata<RefCountedContainer<SharpIdeFile>?>(0)?.Item;
+			if (selectedFile == file)
+				return;
+		}
 		var item = FindItemRecursive(_tree.GetRoot(), file);
 		if (item is not null)
 		{

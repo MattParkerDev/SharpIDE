@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://1bbofax8nht1"]
 
-[node name="ThreadListItem" type="MarginContainer"]
+[node name="ThreadListItem" type="MarginContainer" unique_id=946790452]
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="." unique_id=1110257360]
 layout_mode = 2
 text = "Thread Name"

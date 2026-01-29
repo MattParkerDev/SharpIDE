@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://cfcgmyhahblw"]
+[gd_scene format=3 uid="uid://cfcgmyhahblw"]
 
 [ext_resource type="Script" uid="uid://c4ppo6t4kcegp" path="res://Features/CodeEditor/RenameSymbolDialog.cs" id="1_2s4mn"]
 
-[node name="RenameSymbolDialog" type="ConfirmationDialog"]
+[node name="RenameSymbolDialog" type="ConfirmationDialog" unique_id=1304425498]
 oversampling_override = 1.0
 title = "Rename: Symbol"
 position = Vector2i(0, 36)
@@ -10,17 +10,17 @@ size = Vector2i(405, 115)
 visible = true
 script = ExtResource("1_2s4mn")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1081443761]
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 397.0
 offset_bottom = 66.0
 
-[node name="Label" type="Label" parent="VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=70387887]
 layout_mode = 2
 text = "Enter new name:"
 
-[node name="SymbolNameLineEdit" type="LineEdit" parent="VBoxContainer"]
+[node name="SymbolNameLineEdit" type="LineEdit" parent="VBoxContainer" unique_id=1137714534]
 unique_name_in_owner = true
 layout_mode = 2
 text = "ExistingSymbolName"

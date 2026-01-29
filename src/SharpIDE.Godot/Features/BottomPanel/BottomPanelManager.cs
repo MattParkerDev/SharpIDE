@@ -1,4 +1,5 @@
 using Godot;
+using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.Build;
 using SharpIDE.Godot.Features.Debug_;
@@ -44,7 +45,12 @@ public partial class BottomPanelManager : Panel
         };
 
         GodotGlobalEvents.Instance.BottomPanelTabSelected.Subscribe(OnBottomPanelTabSelected);
+        GlobalEvents.Instance.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
+        GlobalEvents.Instance.ProjectStartedDebugging.Subscribe(OnProjectStartedDebugging);
     }
+
+    private async Task OnProjectStartedRunning(SharpIdeProjectModel _) => GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Run);
+    private async Task OnProjectStartedDebugging(SharpIdeProjectModel arg) => GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Debug);
 
     public override void _ExitTree()
     {

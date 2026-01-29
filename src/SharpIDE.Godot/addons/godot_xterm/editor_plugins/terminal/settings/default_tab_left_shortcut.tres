@@ -1,4 +1,4 @@
-[gd_resource type="Shortcut" load_steps=2 format=3 uid="uid://dpb1qwlv6mkfs"]
+[gd_resource type="Shortcut" format=3 uid="uid://dpb1qwlv6mkfs"]
 
 [sub_resource type="InputEventKey" id="InputEventKey_v5b4d"]
 ctrl_pressed = true
