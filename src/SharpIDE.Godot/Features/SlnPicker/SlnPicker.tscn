@@ -207,6 +207,7 @@ text = "Project Type"
 
 [node name="BlazorButton" type="Button" parent="SolutionDialog/HSplitContainer/Panel/MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 toggle_mode = true
 text = "Blazor"
