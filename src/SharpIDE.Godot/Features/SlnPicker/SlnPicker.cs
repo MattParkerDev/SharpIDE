@@ -53,7 +53,8 @@ public partial class SlnPicker : Control
 			var gitCheckbox = _solutionDialog.GetNode<CheckBox>("%GitRepoCheckBox").ButtonPressed;
 			
 			projectCreator.CreateProject(solutionDir, solutionName, projectName, projectTemplate, "C#", sdkVersion);
-			if(gitCheckbox) _ = gitCommandLine.InitializeGitRepoAsync(solutionDir);
+			if(gitCheckbox) _ = gitCommandLine.InitializeGitRepoAsync(solutionDir + "/" + solutionName);
+			_tcs.SetResult(solutionDir + "/" + solutionName + "/" + solutionName + ".sln");
 		};
 		_openSlnButton = GetNode<Button>("%OpenSlnButton");
 		_openSlnButton.Pressed += () => _fileDialog.PopupCentered();
