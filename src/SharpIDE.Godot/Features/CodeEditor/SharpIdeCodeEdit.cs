@@ -48,25 +48,25 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool _fileDeleted;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
 	
-	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
-	[Inject] private readonly RunService _runService = null!;
-	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-	[Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
-	[Inject] private readonly FileChangedService _fileChangedService = null!;
-	[Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
-	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
-	[Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
+    [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
+    [Inject] private readonly RunService _runService = null!;
+    [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+    [Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
+    [Inject] private readonly FileChangedService _fileChangedService = null!;
+    [Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
+    [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+    [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
 
-	private readonly List<string> _codeCompletionTriggers =
-	[
-		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-		"_", "<", ".", "#"
-	];
-	private readonly List<string> _additionalCodeCompletionPrefixes =
+    private readonly List<string> _codeCompletionTriggers =
+    [
+	    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+	    "_", "<", ".", "#"
+    ];
+    private readonly List<string> _additionalCodeCompletionPrefixes =
 	[
 		//"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
 		//"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-		"(", ",", "=", "\t", ":"
+	    "(", ",", "=", "\t", ":"
 	];
 
 	public SharpIdeCodeEdit()
