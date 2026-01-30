@@ -39,6 +39,7 @@ enabled=PackedStringArray("res://addons/R3.Godot/plugin.cfg", "res://addons/csha
 [gui]
 
 common/show_focus_state_on_pointer_event=0
+theme/custom="uid://epmt8kq6efrs"
 
 [input]
 

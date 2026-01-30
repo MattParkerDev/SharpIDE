@@ -12,13 +12,13 @@ script = ExtResource("1_ugdln")
 
 [node name="Label" type="Label" parent="." unique_id=1753504818]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
 text = "65:71"
 
 [node name="SelectionInfoLabel" type="Label" parent="." unique_id=140834606]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
 text = "(5 chars, 2 line breaks)"

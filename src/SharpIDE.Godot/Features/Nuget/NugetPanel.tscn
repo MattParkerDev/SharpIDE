@@ -106,24 +106,24 @@ theme_override_constants/separation = 0
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1733055884]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "Installed Packages in "
 
 [node name="InstalledPackagesSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=479190710]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "Application"
 
 [node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1660023931]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = ": "
 
 [node name="InstalledPackagesResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=989261814]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "0"
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1351131590]
@@ -162,24 +162,24 @@ theme_override_constants/separation = 0
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=2123233617]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "Implicitly Installed Packages in "
 
 [node name="ImplicitlyInstalledPackagesSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=2111917140]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "Application"
 
 [node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=634398114]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = ": "
 
 [node name="ImplicitlyInstalledPackagesResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=1733748545]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "0"
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=2016740907]
@@ -215,12 +215,12 @@ theme_override_constants/separation = 0
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=665734724]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "Available Packages: "
 
 [node name="PackageSearchResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=640578649]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+theme_type_variation = &"Gray600Label"
 text = "Top 100"
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=546716895]

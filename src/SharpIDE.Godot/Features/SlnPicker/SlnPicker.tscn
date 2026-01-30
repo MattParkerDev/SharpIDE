@@ -69,7 +69,7 @@ text = "SharpIDE"
 [node name="VersionLabel" type="Label" parent="VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=474176672]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5689727, 0.56897277, 0.5689727, 1)
+theme_type_variation = &"Gray500Label"
 text = "v0.1.2"
 
 [node name="Panel" type="Panel" parent="VSplitContainer" unique_id=663586740]

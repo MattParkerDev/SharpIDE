@@ -51,11 +51,11 @@ size_flags_horizontal = 3
 [node name="FileNameLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1559981213]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.7411765)
+theme_type_variation = &"Gray700Label"
 text = "FileName.cs"
 
 [node name="LineNumberLabel" type="Label" parent="MarginContainer/HBoxContainer" unique_id=772313473]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.7411765)
+theme_type_variation = &"Gray700Label"
 text = "24"

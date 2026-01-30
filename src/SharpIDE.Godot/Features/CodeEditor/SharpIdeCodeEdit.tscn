@@ -17,7 +17,6 @@ corner_radius_bottom_left = 3
 corner_detail = 5
 
 [node name="SharpIdeCodeEdit" type="CodeEdit" unique_id=2021737984]
-theme_override_colors/current_line_color = Color(0.0588235, 0.0588235, 0.0588235, 1)
 theme_override_fonts/font = ExtResource("1_s7ira")
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = SubResource("StyleBoxFlat_v06ln")

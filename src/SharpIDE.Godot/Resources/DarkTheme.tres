@@ -1,0 +1,11 @@
+[gd_resource type="Theme" format=3 uid="uid://epmt8kq6efrs"]
+
+[resource]
+CodeEdit/colors/current_line_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
+Gray500Label/base_type = &"Label"
+Gray500Label/colors/font_color = Color(0.5137255, 0.5137255, 0.5137255, 1)
+Gray600Label/base_type = &"Label"
+Gray600Label/colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+Gray700Label/base_type = &"Label"
+Gray700Label/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+Tree/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)

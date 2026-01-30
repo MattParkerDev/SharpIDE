@@ -70,7 +70,7 @@ custom_arrow_step = 0.1
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=1451296891]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5686275, 0.5686275, 0.5686275, 1)
+theme_type_variation = &"Gray500Label"
 text = "Experimental. Non-integer scales will be blurry."
 
 [node name="VBoxContainer3" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1724284108]
@@ -94,7 +94,7 @@ layout_mode = 2
 
 [node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer3/HBoxContainer" unique_id=1566337417]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5686275, 0.5686275, 0.5686275, 1)
+theme_type_variation = &"Gray500Label"
 text = "Use the included SharpDbg debugger"
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1049513313]
@@ -118,7 +118,7 @@ layout_mode = 2
 
 [node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2/HBoxContainer" unique_id=742843520]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5686275, 0.5686275, 0.5686275, 1)
+theme_type_variation = &"Gray500Label"
 text = "Necessary if 'Use SharpDbg' is disabled. Get netcoredbg from"
 
 [node name="LinkButton" type="LinkButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2/HBoxContainer" unique_id=1607764631]

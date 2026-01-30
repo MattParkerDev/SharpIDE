@@ -69,6 +69,6 @@ text_overrun_behavior = 3
 [node name="SlnPathLabel" type="Label" parent="Button/MarginContainer/PreviousSlnEntry/VBoxContainer" unique_id=946949283]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5132329, 0.5132329, 0.5132329, 1)
+theme_type_variation = &"Gray500Label"
 text = "C:\\Users\\Matthew\\Documents\\Git\\BlazorCodeBreaker\\BlazorCodeBreaker.slnx"
 text_overrun_behavior = 3

@@ -39,7 +39,7 @@ expand_mode = 3
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+theme_type_variation = &"Gray700Label"
 theme_override_font_sizes/font_size = 16
 text = "Application"
 
@@ -48,7 +48,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 6
 mouse_filter = 1
-theme_override_colors/font_color = Color(0.6706895, 0.6706895, 0.6706895, 1)
+theme_type_variation = &"Gray600Label"
 text = "1.12.0"
 
 [node name="Spacer" type="Control" parent="HBoxContainer" unique_id=249353635]
