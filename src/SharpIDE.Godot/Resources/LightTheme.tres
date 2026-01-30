@@ -134,6 +134,26 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5ivbl"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lw7yc"]
+bg_color = Color(0.82, 0.82, 0.82, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.11764706)
+shadow_size = 4
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amw38"]
 bg_color = Color(0.82, 0.82, 0.82, 1)
 corner_radius_top_left = 5
@@ -190,6 +210,8 @@ CheckBox/styles/hover_pressed = SubResource("StyleBoxEmpty_xtark")
 CheckBox/styles/normal = SubResource("StyleBoxEmpty_xtark")
 CheckBox/styles/pressed = SubResource("StyleBoxEmpty_xtark")
 CheckButton/colors/button_checked_color = Color(0.3372549, 0.61960787, 1, 1)
+CheckButton/styles/hover = SubResource("StyleBoxEmpty_6nunt")
+CheckButton/styles/hover_pressed = SubResource("StyleBoxEmpty_6nunt")
 CheckButton/styles/normal = SubResource("StyleBoxEmpty_6nunt")
 CheckButton/styles/pressed = SubResource("StyleBoxEmpty_6nunt")
 CodeEdit/colors/current_line_color = Color(0.9, 0.9, 0.9, 1)
@@ -213,6 +235,9 @@ LineEdit/colors/font_placeholder_color = Color(0.12, 0.12, 0.12, 0.6)
 LineEdit/styles/normal = SubResource("StyleBoxFlat_guqd5")
 Panel/styles/panel = SubResource("StyleBoxFlat_3gh6f")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_3gh6f")
+PopupMenu/colors/font_color = Color(0.12, 0.12, 0.12, 1)
+PopupMenu/styles/hover = SubResource("StyleBoxFlat_5ivbl")
+PopupMenu/styles/panel = SubResource("StyleBoxFlat_lw7yc")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
 TabContainer/colors/font_hovered_color = Color(0.05, 0.05, 0.05, 1)
 TabContainer/colors/font_selected_color = Color(0.16862746, 0.16862746, 0.16862746, 1)
