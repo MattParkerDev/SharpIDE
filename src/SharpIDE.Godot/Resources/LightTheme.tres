@@ -48,6 +48,42 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1icbt"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.98, 0.98, 0.98, 1)
+border_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_21uq4"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.95, 0.95, 0.95, 0.6)
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 0.7490196)
+corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a8yiy"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.9, 0.9, 0.9, 0.6)
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 0)
+corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5oigc"]
+bg_color = Color(0.98039216, 0.98039216, 0.98039216, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_guqd5"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -124,7 +160,12 @@ Button/styles/disabled = SubResource("StyleBoxFlat_f60rw")
 Button/styles/hover = SubResource("StyleBoxFlat_s0gn1")
 Button/styles/normal = SubResource("StyleBoxFlat_xtark")
 Button/styles/pressed = SubResource("StyleBoxFlat_6nunt")
-CodeEdit/colors/current_line_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
+CodeEdit/colors/current_line_color = Color(0.9, 0.9, 0.9, 1)
+CodeEdit/styles/normal = SubResource("StyleBoxFlat_1icbt")
+CodeEditorTabContainer/base_type = &"TabContainer"
+CodeEditorTabContainer/styles/tab_selected = SubResource("StyleBoxFlat_21uq4")
+CodeEditorTabContainer/styles/tab_unselected = SubResource("StyleBoxFlat_a8yiy")
+CodeEditorTabContainer/styles/tabbar_background = SubResource("StyleBoxFlat_5oigc")
 Gray500Label/base_type = &"Label"
 Gray500Label/colors/font_color = Color(0.49, 0.49, 0.49, 1)
 Gray600Label/base_type = &"Label"
