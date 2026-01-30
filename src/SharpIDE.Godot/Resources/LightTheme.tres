@@ -48,6 +48,20 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_guqd5"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1, 0.1, 0.1, 0.105882354)
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 0.29411766)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3gh6f"]
 content_margin_left = 0.0
 content_margin_top = 0.0
@@ -77,6 +91,10 @@ Gray600Label/colors/font_color = Color(0.33, 0.33, 0.33, 1)
 Gray700Label/base_type = &"Label"
 Gray700Label/colors/font_color = Color(0.17, 0.17, 0.17, 1)
 Label/colors/font_color = Color(0.17, 0.17, 0.17, 1)
+LineEdit/colors/caret_color = Color(0.05, 0.05, 0.05, 1)
+LineEdit/colors/font_color = Color(0.12, 0.12, 0.12, 1)
+LineEdit/colors/font_placeholder_color = Color(0.12, 0.12, 0.12, 0.6)
+LineEdit/styles/normal = SubResource("StyleBoxFlat_guqd5")
 Panel/styles/panel = SubResource("StyleBoxFlat_3gh6f")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_3gh6f")
 Tree/colors/font_color = Color(0.16862746, 0.16862746, 0.16862746, 1)
