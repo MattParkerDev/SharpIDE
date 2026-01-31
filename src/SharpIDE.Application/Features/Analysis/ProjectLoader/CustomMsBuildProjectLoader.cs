@@ -1,8 +1,7 @@
-﻿using System.Collections.Immutable;
 using Microsoft.Build.Framework;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.MSBuild;
+using System.Collections.Immutable;
 
 namespace SharpIDE.Application.Features.Analysis.ProjectLoader;
 // I really don't like having to duplicate this, but we need to use IAnalyzerAssemblyLoaderProvider rather than IAnalyzerService,
@@ -52,7 +51,19 @@ public partial class CustomMsBuildProjectLoader(Workspace workspace, ImmutableDi
 			discoveredProjectOptions,
 			this.LoadMetadataForReferencedProjects);
 
-		return await worker.LoadAsync(cancellationToken).ConfigureAwait(false);
+		var allProjectInfos = ImmutableArray.CreateBuilder<ProjectInfo>();
+		var allFileInfoMap = new Dictionary<ProjectId, ProjectFileInfo>();
+
+		await foreach (var (projectInfos, fileInfoMap) in worker.LoadInShardsAsync(cancellationToken).ConfigureAwait(false))
+		{
+			allProjectInfos.AddRange(projectInfos);
+			foreach (var kvp in fileInfoMap)
+			{
+				allFileInfoMap.TryAdd(kvp.Key, kvp.Value);
+			}
+		}
+
+		return (allProjectInfos.ToImmutable(), allFileInfoMap);
 	}
 
 	/// <summary>
@@ -70,10 +81,7 @@ public partial class CustomMsBuildProjectLoader(Workspace workspace, ImmutableDi
 		ILogger? msbuildLogger = null,
 		CancellationToken cancellationToken = default)
 	{
-		if (solutionFilePath == null)
-		{
-			throw new ArgumentNullException(nameof(solutionFilePath));
-		}
+		ArgumentNullException.ThrowIfNull(solutionFilePath);
 
 		var reportingMode = GetReportingModeForUnrecognizedProjects();
 
@@ -109,15 +117,25 @@ public partial class CustomMsBuildProjectLoader(Workspace workspace, ImmutableDi
 			discoveredProjectOptions: reportingOptions,
 			preferMetadataForReferencesOfDiscoveredProjects: false);
 
-		var (projectInfos, projectFileInfos) = await worker.LoadAsync(cancellationToken).ConfigureAwait(false);
+		var allSolutionInfos = ImmutableArray.CreateBuilder<ProjectInfo>();
+		var allFileInfoMap = new Dictionary<ProjectId, ProjectFileInfo>();
+
+		await foreach (var (projectInfos, fileInfoMap) in worker.LoadInShardsAsync(cancellationToken).ConfigureAwait(false))
+		{
+			allSolutionInfos.AddRange(projectInfos);
+			foreach (var kvp in fileInfoMap)
+			{
+				allFileInfoMap.TryAdd(kvp.Key, kvp.Value);
+			}
+		}
 
 		// construct workspace from loaded project infos
 		var solutionInfo = SolutionInfo.Create(
 			SolutionId.CreateNewId(debugName: absoluteSolutionPath),
 			version: default,
 			absoluteSolutionPath,
-			projectInfos);
+			allSolutionInfos);
 
-		return (solutionInfo, projectFileInfos);
+		return (solutionInfo, allFileInfoMap);
 	}
 }
