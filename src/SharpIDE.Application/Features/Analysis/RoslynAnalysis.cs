@@ -13,7 +13,9 @@ using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Host.Mef;
+using Microsoft.CodeAnalysis.MetadataAsSource;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.PooledObjects;
@@ -1042,6 +1044,100 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var semanticInfo = await SymbolFinder.GetSemanticInfoAtPositionAsync(semanticModel!, mappedPosition.Value, generatedDocument.Project.Solution.Services, cancellationToken).ConfigureAwait(false);
 		return (symbol, linePositionSpan, semanticInfo);
 	}
+
+	public async Task<(SharpIdeFile? metadataFile, FileLinePositionSpan? fileLinePositionSpan)> LookupMetadataDefinition(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
+	{
+		// TODO:
+		//	1. We should add a cache and look in the cache first, right now we just keep generating files for the same symbol over and over
+		//  2. Clean after ourselves. On start of the application, we should clear (remove) all the cached files. We wanna do it on start, because closing the app
+		//		can be inconsistent -> sudden crash, process kill, regular close request, etc
+		//  3. Would be cool to add option like "IsReadOnly" to the SharpIdeFile so we can force immutability of a source generated file (because it will have 0 effect if changed)
+	    var project = GetProjectForSharpIdeFile(fileModel);
+	    var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+	    Guard.Against.Null(document, nameof(document));
+
+	    var sourceText = await document.GetTextAsync(cancellationToken);
+	    var position = sourceText.GetPosition(linePosition);
+	    var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
+	    Guard.Against.Null(semanticModel, nameof(semanticModel));
+
+	    var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken);
+	    var (symbol, _) = GetSymbolAtPosition(semanticModel, syntaxRoot!, position);
+
+	    if (symbol is null)
+	        return (null, null);
+
+	    var compilation = await project.GetCompilationAsync(cancellationToken)
+	        ?? throw new NullReferenceException("Project compilation is null.");
+
+		// Create a temporary host document for metadata generation
+	    var tempMetadataDocId = DocumentId.CreateNewId(project.Id);
+
+	    var newSolution = project.Solution.AddDocument(
+		    tempMetadataDocId,
+		    name: $"__MetadataHost_{Guid.NewGuid():N}.cs",
+		    text: "",
+		    folders: ["Metadata"]
+	    );
+
+		// Retrieve the document from the new temporary solution
+	    var tempMetadataDoc = newSolution.GetDocument(tempMetadataDocId)
+	        ?? throw  new NullReferenceException("Temporary project document is null.");
+
+	    var metadataService = project.Services.GetRequiredService<IMetadataAsSourceService>();
+
+	    var generatedDoc = await metadataService.AddSourceToAsync(
+		    tempMetadataDoc,
+		    compilation,
+		    symbol,
+		    new SyntaxFormattingOptions { WrappingColumn = 120 },
+		    cancellationToken
+	    );
+
+		// Write metadata file to disk so IDE can load it
+		// TODO: This could be maybe done only with memory buffer, although this approach also can work as a cache for current session
+	    var tempFolder = Path.Combine(Path.GetTempPath(), "SharpIDEMetadata");
+	    Directory.CreateDirectory(tempFolder);
+
+	    var safeFileName = $"{generatedDoc.Name}_{Guid.NewGuid():N}.cs";
+	    var tempFilePath = Path.Combine(tempFolder, safeFileName);
+
+	    var generatedText = await generatedDoc.GetTextAsync(cancellationToken);
+	    await File.WriteAllTextAsync(tempFilePath, generatedText.ToString(), cancellationToken);
+
+	    // TODO: Theoretically we could create some kind of "Metadata" solution under the hood just for this session
+		// Create metadata IDE file model
+	    var newFile = new SharpIdeFile(
+		    tempFilePath,
+		    generatedDoc.Name,
+		    ".cs",
+		    // TODO: I think we have no parent for this use-case?
+		    null!,
+		    []
+	    );
+
+	    var metadataSemanticModel = await generatedDoc.GetSemanticModelAsync(cancellationToken)
+		    ??  throw new NullReferenceException("Generated temporary document is null.");
+
+	    var metadataSymbol = metadataSemanticModel.Compilation.GetSymbolsWithName(
+		    symbol.Name,
+		    SymbolFilter.Member,
+		    cancellationToken
+	    ).FirstOrDefault(s => s.MetadataToken == symbol.MetadataToken);
+
+	    if (metadataSymbol == null)
+		    return (newFile, null);
+
+	    var loc = metadataSymbol.Locations.FirstOrDefault(l => l.IsInSource);
+	    if (loc is null)
+		    return (newFile, null);
+
+	    var lineSpan = loc.GetMappedLineSpan();
+
+	    return (newFile, lineSpan);
+	}
+
+
 
 	private (ISymbol? symbol, LinePositionSpan? linePositionSpan) GetSymbolAtPosition(SemanticModel semanticModel, SyntaxNode root, int position)
 	{
