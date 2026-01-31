@@ -9,11 +9,6 @@ public partial class SettingsWindow : Window
     private CheckButton _debuggerUseSharpDbgCheckButton = null!;
     private OptionButton _themeOptionButton = null!;
     
-    private Theme _lightTheme = ResourceLoader.Load<Theme>("uid://dc7l6bjhn61i5");
-    private Color _lightThemeClearColor = new Color("fdfdfd");
-    private Theme _darkTheme = ResourceLoader.Load<Theme>("uid://epmt8kq6efrs");
-    private Color _darkThemeClearColor = new Color("4d4d4d");
-    
     public override void _Ready()
     {
         CloseRequested += Hide;
@@ -57,16 +52,6 @@ public partial class SettingsWindow : Window
     private void OnThemeItemSelected(long index)
     {
         var selectedTheme = _themeOptionButton.GetItemText((int)index);
-        var rootWindow = GetTree().GetRoot();
-        if (selectedTheme is "Light")
-        {
-            RenderingServer.Singleton.SetDefaultClearColor(_lightThemeClearColor);
-            rootWindow.Theme = _lightTheme;
-        }
-        else if (selectedTheme is "Dark")
-        {
-            RenderingServer.Singleton.SetDefaultClearColor(_darkThemeClearColor);
-            rootWindow.Theme = _darkTheme;
-        }
+        this.SetIdeTheme(selectedTheme);
     }
 }
