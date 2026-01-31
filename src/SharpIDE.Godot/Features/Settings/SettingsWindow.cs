@@ -1,4 +1,5 @@
 using Godot;
+using SharpIDE.Godot.Features.IdeSettings;
 
 namespace SharpIDE.Godot.Features.Settings;
 
@@ -28,7 +29,7 @@ public partial class SettingsWindow : Window
         _uiScaleSpinBox.Value = Singletons.AppState.IdeSettings.UiScale;
         _debuggerFilePathLineEdit.Text = Singletons.AppState.IdeSettings.DebuggerExecutablePath;
         _debuggerUseSharpDbgCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg;
-        var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme);
+        var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme.ToString());
         if (themeOptionIndex is not null) _themeOptionButton.Selected = themeOptionIndex.Value;
     }
 
@@ -54,7 +55,14 @@ public partial class SettingsWindow : Window
     private void OnThemeItemSelected(long index)
     {
         var selectedTheme = _themeOptionButton.GetItemText((int)index);
-        Singletons.AppState.IdeSettings.Theme = selectedTheme;
-        this.SetIdeTheme(selectedTheme);
+        var lightOrDarkTheme = selectedTheme switch
+        {
+            "Light" => LightOrDarkTheme.Light,
+            "Dark" => LightOrDarkTheme.Dark,
+            _ => throw new InvalidOperationException($"Unknown theme selected: {selectedTheme}")
+        };
+        Singletons.AppState.IdeSettings.Theme = lightOrDarkTheme;
+        this.SetIdeTheme(lightOrDarkTheme);
+        GodotGlobalEvents.Instance.TextEditorThemeChanged.InvokeParallelFireAndForget(lightOrDarkTheme);
     }
 }

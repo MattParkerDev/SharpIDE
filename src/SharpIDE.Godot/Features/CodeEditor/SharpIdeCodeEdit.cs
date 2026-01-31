@@ -63,6 +63,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _Ready()
 	{
+		UpdateEditorThemeForCurrentTheme();
 		SyntaxHighlighter = _syntaxHighlighter;
 		_popupMenu = GetNode<PopupMenu>("CodeFixesMenu");
 		_aboveCanvasItem = GetNode<CanvasItem>("%AboveCanvasItem");
@@ -80,6 +81,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SymbolLookup += OnSymbolLookup;
 		LinesEditedFrom += OnLinesEditedFrom;
 		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
+		GodotGlobalEvents.Instance.TextEditorThemeChanged.Subscribe(UpdateEditorThemeAsync);
 		SetCodeRegionTags("#region", "#endregion");
 		//AddGitGutter();
 	}
@@ -162,6 +164,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
 		_projectDiagnosticsObserveDisposable?.Dispose();
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
+		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
 	
