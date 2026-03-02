@@ -51,15 +51,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool _fileDeleted;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
 	
-    [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
-    [Inject] private readonly RunService _runService = null!;
-    [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-    [Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
-    [Inject] private readonly FileChangedService _fileChangedService = null!;
-    [Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
-    [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
-    [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
-    [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
+	[Inject] private readonly RunService _runService = null!;
+	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+	[Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
+	[Inject] private readonly FileChangedService _fileChangedService = null!;
+	[Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
+	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+	[Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
+	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
 
 	public SharpIdeCodeEdit()
 	{
@@ -425,30 +425,30 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	/// Remove all whitespace to the left of the cursor.
 	/// </summary>
 	private void EatAllWhitespace(string lineText, int line, int col)
-    {
-        int i = col - 1; // Previous char
-        while (i >= 0 && lineText[i].IsSpace()) i--;
-        int startCol = i + 1; // Start of line
+	{
+		int i = col - 1; // Previous char
+		while (i >= 0 && lineText[i].IsSpace()) i--;
+		int startCol = i + 1; // Start of line
 		
-        if (startCol >= col) return; // No whitespace to remove
-        int globalIndex = 0;
-        for (int ln = 0; ln < line; ln++)
-            globalIndex += GetLine(ln).Length + 1; // +1 for newline
-        globalIndex += startCol;
-        int deleteLen = col - startCol;
+		if (startCol >= col) return; // No whitespace to remove
+		int globalIndex = 0;
+		for (int ln = 0; ln < line; ln++)
+			globalIndex += GetLine(ln).Length + 1; // +1 for newline
+		globalIndex += startCol;
+		int deleteLen = col - startCol;
 
-        BeginComplexOperation(); // Need to do this otherwise undo with ctrl+z doesn't work properly
-        _settingWholeDocumentTextSuppressLineEditsEvent = true; // All code goes gray if don't suppress
-        Text = Text.Remove(globalIndex, deleteLen);
-        _settingWholeDocumentTextSuppressLineEditsEvent = false;
+		BeginComplexOperation(); // Need to do this otherwise undo with ctrl+z doesn't work properly
+		_settingWholeDocumentTextSuppressLineEditsEvent = true; // All code goes gray if don't suppress
+		Text = Text.Remove(globalIndex, deleteLen);
+		_settingWholeDocumentTextSuppressLineEditsEvent = false;
 		EndComplexOperation();
 
-        SetCaretLine(line);
-        SetCaretColumn(startCol);
-    }
+		SetCaretLine(line);
+		SetCaretColumn(startCol);
+	}
 
-    // This only gets invoked if the Node is focused
-    public override void _GuiInput(InputEvent @event)
+	// This only gets invoked if the Node is focused
+	public override void _GuiInput(InputEvent @event)
 	{
 		// Backspace
 		if (@event is InputEventKey { Pressed: true, Keycode: Key.Backspace } keyEvent && !keyEvent.Echo)
