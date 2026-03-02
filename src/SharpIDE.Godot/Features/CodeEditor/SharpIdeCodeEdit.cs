@@ -3,6 +3,7 @@ using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
+using Microsoft.CodeAnalysis.Shared.Utilities;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Threading;
 using ObservableCollections;
@@ -151,8 +152,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		if (_settingWholeDocumentTextSuppressLineEditsEvent) return;
 		var fromLineText = GetLine((int)fromLine);
 		var caretPosition = this.GetCaretPosition();
-		var textFrom0ToCaret = fromLineText[..caretPosition.col];
 		var caretPositionEnum = LineEditOrigin.Unknown;
+
+		// Only slice if caret is actually on the edited line and the column is within bounds
+		if (caretPosition.line != (int)fromLine || caretPosition.col < 0 || caretPosition.col > fromLineText.Length)
+		{
+			_syntaxHighlighter.LinesChanged(fromLine, toLine, caretPositionEnum);
+			return;
+		}
+		
+		var textFrom0ToCaret = fromLineText[..caretPosition.col]; // causes out of bounds error when doing ctrl+z and other edits but check above fixes this
 		if (string.IsNullOrWhiteSpace(textFrom0ToCaret))
 		{
 			caretPositionEnum = LineEditOrigin.StartOfLine;
@@ -412,9 +421,50 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		DrawCompletionsPopup();
 	}
 
-	// This only gets invoked if the Node is focused
-	public override void _GuiInput(InputEvent @event)
+	/// <summary>
+	/// Remove all whitespace to the left of the cursor.
+	/// </summary>
+	private void EatAllWhitespace(string lineText, int line, int col)
+    {
+        int i = col - 1; // Previous char
+        while (i >= 0 && lineText[i].IsSpace()) i--;
+        int startCol = i + 1; // Start of line
+		
+        if (startCol >= col) return; // No whitespace to remove
+        int globalIndex = 0;
+        for (int ln = 0; ln < line; ln++)
+            globalIndex += GetLine(ln).Length + 1; // +1 for newline
+        globalIndex += startCol;
+        int deleteLen = col - startCol;
+
+        BeginComplexOperation(); // Need to do this otherwise undo with ctrl+z doesn't work properly
+        _settingWholeDocumentTextSuppressLineEditsEvent = true; // All code goes gray if don't suppress
+        Text = Text.Remove(globalIndex, deleteLen);
+        _settingWholeDocumentTextSuppressLineEditsEvent = false;
+		EndComplexOperation();
+
+        SetCaretLine(line);
+        SetCaretColumn(startCol);
+    }
+
+    // This only gets invoked if the Node is focused
+    public override void _GuiInput(InputEvent @event)
 	{
+		// Backspace
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.Backspace } keyEvent && !keyEvent.Echo)
+		{
+			var line = GetCaretLine();
+			var col = GetCaretColumn();
+			var lineText = GetLine(line);
+
+			if (col > 1 && lineText[col - 1].IsSpace())
+			{
+				EatAllWhitespace(lineText, line, col);
+				AcceptEvent();
+				return;
+			}
+		}
+
 		if (@event is InputEventMouseMotion) return;
 		if (MethodSignatureHelpPopupTryConsumeGuiInput(@event))
 		{
