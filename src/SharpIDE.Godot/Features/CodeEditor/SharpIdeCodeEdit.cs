@@ -460,7 +460,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (col > 1 && lineText[col - 1].IsSpace())
 			{
 				EatAllWhitespace(lineText, line, col);
-				AcceptEvent();
 				return;
 			}
 		}
