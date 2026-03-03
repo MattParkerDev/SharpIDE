@@ -416,6 +416,28 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public override void _GuiInput(InputEvent @event)
 	{
 		if (@event is InputEventMouseMotion) return;
+		if (@event.IsActionPressed(InputStringNames.Backspace, true))
+		{
+			var (caretLine, caretCol) = GetCaretPosition();
+			if (caretLine > 0 && caretCol > 0)
+			{
+				var lineText = GetLine(caretLine); // I do not like allocating every time backspace is pressed
+				var textBeforeCaret = lineText.AsSpan()[..caretCol];
+				if (textBeforeCaret.IsEmpty || textBeforeCaret.IsWhiteSpace())
+				{
+					BeginComplexOperation();
+					var prevLine = caretLine - 1;
+					var prevLineLength = GetLine(prevLine).Length;
+					RemoveText(fromLine: prevLine, fromColumn: prevLineLength, toLine: caretLine, toColumn: caretCol);
+					SetCaretLine(prevLine);
+					SetCaretColumn(prevLineLength);
+					EndComplexOperation();
+					ResetCompletionPopupState();
+					AcceptEvent();
+					return;
+				}
+			}
+		}
 		if (MethodSignatureHelpPopupTryConsumeGuiInput(@event))
 		{
 			AcceptEvent();
