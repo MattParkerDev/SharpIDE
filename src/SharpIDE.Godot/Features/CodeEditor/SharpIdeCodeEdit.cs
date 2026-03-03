@@ -439,10 +439,22 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		int startCol = i + 1; // Start of line
 		
 		if (startCol >= col) return; // No whitespace to remove
+
+		var text = Text;
 		int globalIndex = 0;
-		for (int ln = 0; ln < line; ln++)
-			globalIndex += GetLine(ln).Length + 1; // +1 for newline
-		globalIndex += startCol;
+		int currentLine = 0;
+		
+		for (int j = 0; j < text.Length; j++)
+		{
+			if (currentLine == line)
+			{
+				globalIndex = j + startCol;
+				break;
+			}
+			if (text[j] == '\n')
+				currentLine++;
+		}
+		
 		int deleteLen = col - startCol;
 
 		ComplexOperation(() =>
