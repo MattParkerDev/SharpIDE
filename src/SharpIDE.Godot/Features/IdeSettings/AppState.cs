@@ -16,6 +16,10 @@ public class IdeSettings
     public bool DebuggerUseSharpDbg { get; set; } = true;
     public float UiScale { get; set; } = 1.0f;
     public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
+    public string BackgroundImagePath { get; set; } = "";
+    public double BackgroundImageTransparency { get; set; } = 0.7;
+    public double CodeBackgroundTransparency { get; set; } = 0.05;
+    public string CurrentLineHighlightColor { get; set; } = "#0f0f0f";
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
