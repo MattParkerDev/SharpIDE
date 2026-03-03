@@ -19,12 +19,13 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     public EditorThemeColorSet ColourSetForTheme = null!;
     
-    public void UpdateThemeColorCache(LightOrDarkTheme themeType)
+    public void UpdateThemeColorCache(IdeTheme themeType)
     {
         ColourSetForTheme = themeType switch
         {
-            LightOrDarkTheme.Light => EditorThemeColours.Light,
-            LightOrDarkTheme.Dark => EditorThemeColours.Dark,
+            IdeTheme.Light => EditorThemeColours.Light,
+            IdeTheme.Dark => EditorThemeColours.Dark,
+            IdeTheme.ExtraDark => EditorThemeColours.ExtraDark,
             _ => throw new NotImplementedException("Unknown theme type")
         };
     }

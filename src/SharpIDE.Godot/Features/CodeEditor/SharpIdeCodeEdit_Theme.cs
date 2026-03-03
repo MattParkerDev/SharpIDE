@@ -5,9 +5,6 @@ namespace SharpIDE.Godot.Features.CodeEditor;
 
 public partial class SharpIdeCodeEdit
 {
-    private static readonly StringName ThemeInfoStringName = "ThemeInfo";
-    private static readonly StringName IsLight1OrDark2StringName = "IsLight1OrDark2";
-
     private void UpdateEditorThemeForCurrentTheme()
     {
         var ideTheme = Singletons.AppState.IdeSettings.Theme;
@@ -15,14 +12,15 @@ public partial class SharpIdeCodeEdit
     }
     
     // Only async for the EventWrapper subscription
-    private Task UpdateEditorThemeAsync(LightOrDarkTheme lightOrDarkTheme)
+    private Task UpdateEditorThemeAsync(IdeTheme theme)
     {
-        UpdateEditorTheme(lightOrDarkTheme);
+        UpdateEditorTheme(theme);
         return Task.CompletedTask;
     }
-    private void UpdateEditorTheme(LightOrDarkTheme lightOrDarkTheme)
+    
+    private void UpdateEditorTheme(IdeTheme theme)
     {
-        _syntaxHighlighter.UpdateThemeColorCache(lightOrDarkTheme);
+        _syntaxHighlighter.UpdateThemeColorCache(theme);
         SyntaxHighlighter = null;
         SyntaxHighlighter = _syntaxHighlighter; // Reassign to trigger redraw
     }

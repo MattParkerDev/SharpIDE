@@ -45,6 +45,27 @@ public static class EditorThemeColours
         RazorMetaCodePurple = TextEditorDotnetColoursDark.RazorMetaCodePurple,
         HtmlDelimiterGray = TextEditorDotnetColoursDark.HtmlDelimiterGray
     };
+
+    public static readonly EditorThemeColorSet ExtraDark = new EditorThemeColorSet
+    {
+        Orange = TextEditorDotnetColoursDark.Orange,
+        White = TextEditorDotnetColoursDark.White,
+        Yellow = TextEditorDotnetColoursDark.Yellow,
+        CommentGreen = TextEditorDotnetColoursDark.CommentGreen,
+        KeywordBlue = TextEditorDotnetColoursDark.KeywordBlue,
+        LightOrangeBrown = TextEditorDotnetColoursDark.LightOrangeBrown,
+        NumberGreen = TextEditorDotnetColoursDark.NumberGreen,
+        InterfaceGreen = TextEditorDotnetColoursDark.InterfaceGreen,
+        ClassGreen = TextEditorDotnetColoursDark.ClassGreen,
+        VariableBlue = TextEditorDotnetColoursDark.VariableBlue,
+        Gray = TextEditorDotnetColoursDark.Gray,
+        Pink = TextEditorDotnetColoursDark.Pink,
+        ErrorRed = TextEditorDotnetColoursDark.ErrorRed,
+        
+        RazorComponentGreen = TextEditorDotnetColoursDark.RazorComponentGreen,
+        RazorMetaCodePurple = TextEditorDotnetColoursDark.RazorMetaCodePurple,
+        HtmlDelimiterGray = TextEditorDotnetColoursDark.HtmlDelimiterGray
+    };
 }
 
 public class EditorThemeColorSet

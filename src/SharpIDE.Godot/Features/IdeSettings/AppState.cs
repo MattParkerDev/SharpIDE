@@ -15,11 +15,11 @@ public class IdeSettings
     public string? DebuggerExecutablePath { get; set; }
     public bool DebuggerUseSharpDbg { get; set; } = true;
     public float UiScale { get; set; } = 1.0f;
-    public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
+    public IdeTheme Theme { get; set; } = IdeTheme.Dark;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum LightOrDarkTheme { Light, Dark }
+public enum IdeTheme { Light, Dark, ExtraDark }
 
 public record RecentSln
 {

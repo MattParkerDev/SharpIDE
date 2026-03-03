@@ -57,8 +57,9 @@ public partial class SettingsWindow : Window
         var selectedTheme = _themeOptionButton.GetItemText((int)index);
         var lightOrDarkTheme = selectedTheme switch
         {
-            "Light" => LightOrDarkTheme.Light,
-            "Dark" => LightOrDarkTheme.Dark,
+            "Light" => IdeTheme.Light,
+            "Dark" => IdeTheme.Dark,
+            "Extra Dark" => IdeTheme.ExtraDark,
             _ => throw new InvalidOperationException($"Unknown theme selected: {selectedTheme}")
         };
         Singletons.AppState.IdeSettings.Theme = lightOrDarkTheme;

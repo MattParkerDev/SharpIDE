@@ -142,11 +142,13 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 selected = 0
-item_count = 2
-popup/item_0/text = "Dark"
-popup/item_0/id = 0
-popup/item_1/text = "Light"
-popup/item_1/id = 1
+item_count = 3
+popup/item_0/text = "Light"
+popup/item_0/id = 1
+popup/item_1/text = "Dark"
+popup/item_1/id = 0
+popup/item_2/text = "Extra Dark"
+popup/item_2/id = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer4" unique_id=1201262823]
 layout_mode = 2
