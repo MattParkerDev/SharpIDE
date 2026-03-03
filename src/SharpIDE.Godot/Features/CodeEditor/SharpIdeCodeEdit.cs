@@ -458,7 +458,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			var col = GetCaretColumn();
 			var lineText = GetLine(line);
 
-			if (!string.IsNullOrEmpty(lineText) && lineText[col - 1].IsSpace())
+			if (!string.IsNullOrEmpty(lineText) && col > 0 && lineText[col - 1].IsSpace())
 			{
 				EatAllWhitespace(lineText, line, col);
 				return;
