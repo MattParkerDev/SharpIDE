@@ -296,10 +296,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			(int line, int col) currentCaretPosition = linePosition is null ? GetCaretPosition() : (linePosition.Value.Line, linePosition.Value.Column);
 			var vScroll = GetVScroll();
-			ComplexOperation(() => SetText(fileContents));
-			SetCaretLine(currentCaretPosition.line);
-			SetCaretColumn(currentCaretPosition.col);
-			SetVScroll(vScroll);
+			ComplexOperation(() =>
+			{
+				SetText(fileContents);
+				SetCaretLine(currentCaretPosition.line);
+				SetCaretColumn(currentCaretPosition.col);
+				SetVScroll(vScroll);
+			});
 		});
 	}
 
@@ -442,10 +445,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		globalIndex += startCol;
 		int deleteLen = col - startCol;
 
-		ComplexOperation(() => Text = Text.Remove(globalIndex, deleteLen));
-
-		SetCaretLine(line);
-		SetCaretColumn(startCol);
+		ComplexOperation(() =>
+		{
+			Text = Text.Remove(globalIndex, deleteLen);
+			SetCaretLine(line);
+			SetCaretColumn(startCol);
+		});
 	}
 
 	// This only gets invoked if the Node is focused
