@@ -151,8 +151,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		if (_settingWholeDocumentTextSuppressLineEditsEvent) return;
 		var fromLineText = GetLine((int)fromLine);
 		var caretPosition = this.GetCaretPosition();
-		var textFrom0ToCaret = fromLineText[..caretPosition.col];
 		var caretPositionEnum = LineEditOrigin.Unknown;
+
+		if (caretPosition.line != (int)fromLine || caretPosition.col < 0 || caretPosition.col > fromLineText.Length)
+		{
+			_syntaxHighlighter.LinesChanged(fromLine, toLine, caretPositionEnum);
+			return;
+		}
+
+		var textFrom0ToCaret = fromLineText[..caretPosition.col];
 		if (string.IsNullOrWhiteSpace(textFrom0ToCaret))
 		{
 			caretPositionEnum = LineEditOrigin.StartOfLine;
