@@ -279,6 +279,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		});
 	}
 
+	private void ComplexOperation(Action operation)
+	{
+		BeginComplexOperation(); // Need to do this otherwise undo redo history breaks
+		_settingWholeDocumentTextSuppressLineEditsEvent = true; // All code goes gray if don't suppress
+		operation();
+		_settingWholeDocumentTextSuppressLineEditsEvent = false;
+		EndComplexOperation();
+	}
+
 	private async Task OnFileChangedExternally(SharpIdeFileLinePosition? linePosition)
 	{
 		if (_fileDeleted) return; // We have QueueFree'd this node, however it may not have been freed yet.
@@ -287,14 +296,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			(int line, int col) currentCaretPosition = linePosition is null ? GetCaretPosition() : (linePosition.Value.Line, linePosition.Value.Column);
 			var vScroll = GetVScroll();
-			BeginComplexOperation();
-			_settingWholeDocumentTextSuppressLineEditsEvent = true;
-			SetText(fileContents);
-			_settingWholeDocumentTextSuppressLineEditsEvent = false;
+			ComplexOperation(() => SetText(fileContents));
 			SetCaretLine(currentCaretPosition.line);
 			SetCaretColumn(currentCaretPosition.col);
 			SetVScroll(vScroll);
-			EndComplexOperation();
 		});
 	}
 
@@ -437,11 +442,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		globalIndex += startCol;
 		int deleteLen = col - startCol;
 
-		BeginComplexOperation(); // Need to do this otherwise undo with ctrl+z doesn't work properly
-		_settingWholeDocumentTextSuppressLineEditsEvent = true; // All code goes gray if don't suppress
-		Text = Text.Remove(globalIndex, deleteLen);
-		_settingWholeDocumentTextSuppressLineEditsEvent = false;
-		EndComplexOperation();
+		ComplexOperation(() => Text = Text.Remove(globalIndex, deleteLen));
 
 		SetCaretLine(line);
 		SetCaretColumn(startCol);
