@@ -278,18 +278,6 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 			{
 				var settings = new DecompilerSettings();
 				var ts = new DecompilerTypeSystem(file, resolver, settings);
-				var decompiler = new CSharpDecompiler(ts, settings)
-				{
-					AstTransforms = {
-						new TransformFieldAndConstructorInitializers(),
-						new AddXmlDocumentationTransform(),
-						new EscapeInvalidIdentifiers(),
-						new FixNameCollisions(),
-						new RemoveCLSCompliantAttribute(),
-						new ReplaceMethodCallsWithOperators()
-					}
-				};
-
 				// Determine PDB cache path.
 				var assemblyName = assemblyLocation is not null ? Path.GetFileNameWithoutExtension(assemblyLocation) : file.Name;
 				var pdbDir = Path.Combine(SharpIdeDecompilationConstants.SymbolCachePath, assemblyName, assemblyKey.Mvid.ToString());
@@ -297,7 +285,7 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 				Directory.CreateDirectory(pdbDir);
 
 				using var pdbStream = new FileStream(pdbPath, FileMode.Create, FileAccess.Write, FileShare.None);
-				var sourceFiles = PortablePdbWriter2.WritePdb(file, decompiler, settings, pdbStream, noLogo: true);
+				var sourceFiles = PortablePdbWriter2.WritePdb(file, ts, settings, pdbStream, noLogo: true);
 
 				return sourceFiles.Count > 0 ? sourceFiles : null;
 			}
