@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Godot;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Analysis.WorkspaceServices;
@@ -38,26 +39,16 @@ public partial class RunningTasksDisplay : HBoxContainer
     private async Task OnActivityChanged(Activity activity)
     {
         var isOccurring = !activity.IsStopped;
-        if (activity.DisplayName == $"{nameof(RoslynAnalysis)}.{nameof(RoslynAnalysis.UpdateSolutionDiagnostics)}")
+        ref var fieldToUpdate = ref Unsafe.NullRef<bool>();
+        switch(activity.DisplayName) 
         {
-            _isSolutionDiagnosticsBeingRetrieved = isOccurring;
-        }
-        else if (activity.DisplayName == "OpenSolution")
-        {
-            _isSolutionLoading = isOccurring;
-        }
-        else if (activity.DisplayName == "RestoreSolution")
-        {
-            _isSolutionRestoring = isOccurring;
-        }
-        else if (activity.DisplayName == $"{nameof(PortablePdbWriter2)}.{nameof(PortablePdbWriter2.DecompiledAndWritePdb)}")
-        {
-            _isDecompilingAssembly = isOccurring;
-        }
-        else
-        {
-            return;
-        }
+            case $"{nameof(RoslynAnalysis)}.{nameof(RoslynAnalysis.UpdateSolutionDiagnostics)}": fieldToUpdate = ref _isSolutionDiagnosticsBeingRetrieved; break;
+            case "OpenSolution": fieldToUpdate = ref _isSolutionLoading; break;
+            case "RestoreSolution": fieldToUpdate = ref _isSolutionRestoring; break;
+            case $"{nameof(PortablePdbWriter2)}.{nameof(PortablePdbWriter2.DecompiledAndWritePdb)}": fieldToUpdate = ref _isDecompilingAssembly; break;
+            default: return;
+        };
+        fieldToUpdate = isOccurring;
         
         var visible = _isSolutionDiagnosticsBeingRetrieved || _isSolutionLoading || _isSolutionRestoring || _isDecompilingAssembly;
         await this.InvokeAsync(() =>
