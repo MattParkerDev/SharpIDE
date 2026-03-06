@@ -89,6 +89,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		LinesEditedFrom += OnLinesEditedFrom;
 		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Subscribe(UpdateEditorThemeAsync);
+		GodotGlobalEvents.Instance.BackgroundTransparencyChanged.Subscribe(OnBackgroundTransparencyChangedAsync);
+		GodotGlobalEvents.Instance.CodeBackgroundTransparencyChanged.Subscribe(OnCodeBackgroundTransparencyChangedAsync);
+		GodotGlobalEvents.Instance.CurrentLineHighlightColorChanged.Subscribe(OnCurrentLineHighlightColorChangedAsync);
 		SetCodeRegionTags("#region", "#endregion");
 		//AddGitGutter();
 		var hScrollBar = GetHScrollBar();

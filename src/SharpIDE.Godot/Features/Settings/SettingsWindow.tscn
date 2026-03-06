@@ -155,3 +155,101 @@ layout_mode = 2
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "The Light theme is experimental, and may contain visual inconsistencies/glitches"
+
+[node name="VBoxContainer5" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1007606942]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=2024377048]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1649629266]
+layout_mode = 2
+text = "Background Image"
+
+[node name="BackgroundImageLineEdit" type="LineEdit" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=392549596]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+editable = false
+
+[node name="BackgroundImageSelectBtn" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=77243447]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Select"
+
+[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=1432013284]
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "Change the background image."
+
+[node name="VBoxContainer6" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=358197057]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6" unique_id=1788181380]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=182831859]
+layout_mode = 2
+text = "Background Transparency"
+
+[node name="BackgroundImageTransparencySlider" type="HSlider" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=1062301543]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.7
+
+[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6" unique_id=1859335402]
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "Change the background images transparency."
+
+[node name="VBoxContainer7" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=724859160]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer7" unique_id=1973428951]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer7/HBoxContainer" unique_id=805517832]
+layout_mode = 2
+text = "Current Line Highlight Color"
+
+[node name="CurrentLineHighlightColorPickerButton" type="ColorPickerButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer7/HBoxContainer" unique_id=392847619]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+color = Color(0.0588235, 0.0588235, 0.0588235, 1)
+edit_alpha = false
+
+[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer7" unique_id=1528364002]
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "The color used to highlight the current line in the code editor."
+
+[node name="VBoxContainer8" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1827465392]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer8" unique_id=1563928471]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer8/HBoxContainer" unique_id=784629512]
+layout_mode = 2
+text = "Code Transparency"
+
+[node name="CodeBackgroundTransparencySlider" type="HSlider" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer8/HBoxContainer" unique_id=1947362853]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.01
+value = 0.05
+
+[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer8" unique_id=1738294650]
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "Adjust the transparency of code."

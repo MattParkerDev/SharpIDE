@@ -29,6 +29,13 @@ public partial class CustomHighlighter : SyntaxHighlighter
         };
     }
     
+    private Color ApplyTransparency(Color color)
+    {
+        var transparency = (float)Singletons.AppState.IdeSettings.CodeBackgroundTransparency;
+        color.A = 1f - transparency;
+        return color;
+    }
+    
     
     public void SetHighlightingData(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
     {
@@ -160,7 +167,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
             
             var highlightInfo = new Dictionary
             {
-                { ColorStringName, GetColorForRazorSpanKind(razorSpan.Kind, razorSpan.CodeClassificationType, razorSpan.VsSemanticRangeType) }
+                { ColorStringName, ApplyTransparency(GetColorForRazorSpanKind(razorSpan.Kind, razorSpan.CodeClassificationType, razorSpan.VsSemanticRangeType)) }
             };
 
             highlights[columnIndex] = highlightInfo;
@@ -226,7 +233,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
             // Build the highlight entry
             var highlightInfo = new Dictionary
             {
-                { ColorStringName, ClassificationToColorMapper.GetColorForClassification(ColourSetForTheme, classifiedSpans.Single().ClassificationType) }
+                { ColorStringName, ApplyTransparency(ClassificationToColorMapper.GetColorForClassification(ColourSetForTheme, classifiedSpans.Single().ClassificationType)) }
             };
 
             highlights[columnIndex] = highlightInfo;
