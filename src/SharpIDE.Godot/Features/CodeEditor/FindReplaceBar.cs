@@ -534,7 +534,7 @@ public partial class FindReplaceBar : HBoxContainer
 			_matchesLabel.Show();
 
 			var fontColor = _resultsCount > 0
-				? GetThemeColor(ThemeStringNames.FontColor, "Gray700Label")
+				? GetThemeColor(ThemeStringNames.FontColor, ThemeVariationStringNames.Gray700Label)
 				: new Color("fc776a");
 			_matchesLabel.AddThemeColorOverride(ThemeStringNames.FontColor, fontColor);
 
@@ -708,8 +708,8 @@ public partial class FindReplaceBar : HBoxContainer
 
 		_textEditor.SetVScroll(vsval);
 
-		var color = rc > 0 ? GetThemeColor("font_color", "Label") : GetThemeColor("error_color", "Editor");
-		_matchesLabel.AddThemeColorOverride("font_color", color);
+		var color = rc > 0 ? GetThemeColor(ThemeStringNames.FontColor, ThemeVariationStringNames.Gray700Label) : new Color("fc776a");
+		_matchesLabel.AddThemeColorOverride(ThemeStringNames.FontColor, color);
 		_matchesLabel.Show();
 		_matchesLabel.Text = $"{rc} replaced.";
 

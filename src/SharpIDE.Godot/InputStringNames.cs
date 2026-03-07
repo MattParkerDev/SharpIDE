@@ -47,3 +47,8 @@ public static class ThemeStringNames
     public static readonly StringName CompletionExistingColor = "completion_existing_color";
     public static readonly StringName CompletionColorBgIcon = "completion_color_bg";
 }
+
+public static class ThemeVariationStringNames
+{
+    public static readonly StringName Gray700Label = nameof(Gray700Label);
+}
