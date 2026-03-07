@@ -96,6 +96,7 @@ public partial class FindReplaceBar : HBoxContainer
 		_searchText.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		_searchText.TextChanged += OnSearchTextChanged;
 		_searchText.TextSubmitted += OnSearchTextSubmitted;
+		_searchText.KeepEditingOnTextSubmit = true;
 		vbcLineEdit.AddChild(_searchText);
 
 		// Matches label
@@ -145,6 +146,7 @@ public partial class FindReplaceBar : HBoxContainer
 		_replaceText.CustomMinimumSize = new Vector2(150, 0);
 		_replaceText.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		_replaceText.TextSubmitted += OnReplaceTextSubmitted;
+		_replaceText.KeepEditingOnTextSubmit = true;
 		vbcLineEdit.AddChild(_replaceText);
 
 		// Replace button
