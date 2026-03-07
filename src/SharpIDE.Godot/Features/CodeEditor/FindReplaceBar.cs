@@ -188,8 +188,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 	public override void _Input(InputEvent @event)
 	{
-		if (@event is InputEventKey { Pressed: true } key &&
-			key.IsAction(InputStringNames.Cancel, true))
+		if (@event is InputEventKey { Pressed: true } key && key.IsAction(InputStringNames.Cancel, true))
 		{
 			var focusOwner = GetViewport().GuiGetFocusOwner();
 			if (_textEditor is not null && (_textEditor.HasFocus() || (focusOwner is not null && IsAncestorOf(focusOwner))))
@@ -313,12 +312,12 @@ public partial class FindReplaceBar : HBoxContainer
 		if (focusReplace)
 		{
 			_searchText.Deselect();
-			Callable.From(() => _replaceText.GrabFocus()).CallDeferred();
+			Callable.From(() => _replaceText.GrabFocus(true)).CallDeferred();
 		}
 		else
 		{
 			_replaceText.Deselect();
-			Callable.From(() => _searchText.GrabFocus()).CallDeferred();
+			Callable.From(() => _searchText.GrabFocus(true)).CallDeferred();
 		}
 
 		if (onOneLine && _textEditor is not null)
@@ -349,7 +348,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 	private void HideBar()
 	{
-		_textEditor?.GrabFocus();
+		_textEditor?.GrabFocus(true);
 		_textEditor?.SetSearchText(string.Empty);
 		_resultLine = -1;
 		_resultCol = -1;
@@ -535,9 +534,9 @@ public partial class FindReplaceBar : HBoxContainer
 			_matchesLabel.Show();
 
 			var fontColor = _resultsCount > 0
-				? GetThemeColor("font_color", "Label")
-				: GetThemeColor("error_color", "Editor");
-			_matchesLabel.AddThemeColorOverride("font_color", fontColor);
+				? GetThemeColor(ThemeStringNames.FontColor, "Gray700Label")
+				: new Color("fc776a");
+			_matchesLabel.AddThemeColorOverride(ThemeStringNames.FontColor, fontColor);
 
 			if (_resultsCount == 0)
 				_matchesLabel.Text = "No match";
@@ -670,7 +669,7 @@ public partial class FindReplaceBar : HBoxContainer
 			do
 			{
 				// Break if we wrapped around
-				if (_resultLine < prevMatchLine || (_resultLine == prevMatchLine && _resultCol <= prevMatchCol))
+				if (_resultLine < prevMatchLine || (_resultLine == prevMatchLine && _resultCol < prevMatchCol))
 					break;
 
 				prevMatchLine = _resultLine;
