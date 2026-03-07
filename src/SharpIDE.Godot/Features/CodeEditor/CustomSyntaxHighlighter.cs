@@ -76,9 +76,15 @@ public partial class CustomHighlighter : SyntaxHighlighter
             var newDict = new System.Collections.Generic.Dictionary<int, T>();
             foreach (var kvp in existingDictionary)
             {
+                // StartOfLine: the new blank line was inserted *before* the existing content on fromLine,
+                //              so fromLine's old content has shifted down — shift it.
+                // EndOfLine:   the caret was at the end; the new line is blank and below; fromLine keeps its content.
+                // MidLine:     the content before the caret stays on fromLine; only lines after shift.
+                //              Treat the same as EndOfLine — fromLine's highlighting data stays put.
+                // Unknown:     we don't know; conservatively keep fromLine's data in place (same as EndOfLine).
                 bool shouldShift =
-                    kvp.Key > fromLine ||                // always shift lines after the insertion point
-                    (origin == SharpIdeCodeEdit.LineEditOrigin.StartOfLine && kvp.Key == fromLine); // shift current line if origin is Start
+                    kvp.Key > fromLine ||
+                    (origin == SharpIdeCodeEdit.LineEditOrigin.StartOfLine && kvp.Key == fromLine);
 
                 int newKey = shouldShift ? kvp.Key + difference : kvp.Key;
                 newDict[newKey] = kvp.Value;

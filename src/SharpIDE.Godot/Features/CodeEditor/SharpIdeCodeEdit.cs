@@ -49,6 +49,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool _fileChangingSuppressBreakpointToggleEvent;
 	private bool _settingWholeDocumentTextSuppressLineEditsEvent; // A dodgy workaround - setting the whole document doesn't guarantee that the line count stayed the same etc. We are still going to have broken highlighting. TODO: Investigate getting minimal text change ranges, and change those ranges only
 	private bool _fileDeleted;
+	// Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
+	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
+	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
 	
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
@@ -140,43 +143,42 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public enum LineEditOrigin
 	{
 		StartOfLine,
+		MidLine,
 		EndOfLine,
 		Unknown
 	}
 	// Line removed - fromLine 55, toLine 54
 	// Line added - fromLine 54, toLine 55
 	// Multi cursor gets a single line event for each
-	// problem is 10 to 11 gets returned for 'Enter' at the start of line 10, as well as 'Enter' at the end of line 10
-	// This means that the line that moves down needs to be based on whether the new line was from the start or end of the line
 	private void OnLinesEditedFrom(long fromLine, long toLine)
 	{
 		if (fromLine == toLine) return;
 		if (_settingWholeDocumentTextSuppressLineEditsEvent) return;
-		var fromLineText = GetLine((int)fromLine);
-		var caretPosition = this.GetCaretPosition();
-		var caretPositionEnum = LineEditOrigin.Unknown;
 
-		if (caretPosition.col > fromLineText.Length)
+		// Consume the pre-edit snapshot captured in _GuiInput (if any).
+		// Because the snapshot was taken *before* the edit, the caret position and line text
+		// are exactly what they were at the moment the key was pressed — no post-edit guesswork.
+		var snapshot = _pendingLineEditOrigin;
+		_pendingLineEditOrigin = null;
+
+		var origin = LineEditOrigin.Unknown;
+		if (snapshot is not null)
 		{
-			_syntaxHighlighter.LinesChanged(fromLine, toLine, caretPositionEnum);
-			return;
+			var (_, snapCol, snapText) = snapshot.Value;
+			var clampedCol = Math.Min(snapCol, snapText.Length);
+			var textBeforeCaret = snapText.AsSpan()[..clampedCol];
+			var textAfterCaret  = snapText.AsSpan()[clampedCol..];
+
+			if (textBeforeCaret.IsEmpty || textBeforeCaret.IsWhiteSpace())
+				origin = LineEditOrigin.StartOfLine;
+			else if (textAfterCaret.IsEmpty || textAfterCaret.IsWhiteSpace())
+				origin = LineEditOrigin.EndOfLine;
+			else
+				origin = LineEditOrigin.MidLine;
 		}
 
-		var textFrom0ToCaret = fromLineText.AsSpan()[..caretPosition.col];
-		if (textFrom0ToCaret.IsEmpty || textFrom0ToCaret.IsWhiteSpace())
-		{
-			caretPositionEnum = LineEditOrigin.StartOfLine;
-		}
-		else
-		{
-			var textfromCaretToEnd = fromLineText.AsSpan()[caretPosition.col..];
-			if (textfromCaretToEnd.IsEmpty || textfromCaretToEnd.IsWhiteSpace())
-			{
-				caretPositionEnum = LineEditOrigin.EndOfLine;
-			}
-		}
-		//GD.Print($"Lines edited from {fromLine} to {toLine}, origin: {caretPositionEnum}, current caret position: {caretPosition}");
-		_syntaxHighlighter.LinesChanged(fromLine, toLine, caretPositionEnum);
+		//GD.Print($"Lines edited from {fromLine} to {toLine}, origin: {origin}");
+		_syntaxHighlighter.LinesChanged(fromLine, toLine, origin);
 	}
 
 	public override void _ExitTree()
@@ -428,6 +430,30 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public override void _GuiInput(InputEvent @event)
 	{
 		if (@event is InputEventMouseMotion) return;
+
+		// Capture pre-edit caret state for line-modifying keystrokes, so that OnLinesEditedFrom
+		// can determine LineEditOrigin from the state *before* the edit happened.
+		// We only do this for single-caret edits; multi-caret falls back to Unknown.
+		if (@event is InputEventKey { Pressed: true } keyEvent && GetCaretCount() == 1)
+		{
+			var (caretLine, caretCol) = GetCaretPosition();
+			switch (keyEvent.Keycode)
+			{
+				// Enter / numpad Enter — line(s) added
+				case Key.Enter or Key.KpEnter:
+					_pendingLineEditOrigin = (caretLine, caretCol, GetLine(caretLine));
+					break;
+				// Forward-delete at end of line merges the next line up — line removed
+				case Key.Delete when !HasSelection():
+				{
+					var lineText = GetLine(caretLine);
+					if (caretCol == lineText.Length && caretLine < GetLineCount() - 1)
+						_pendingLineEditOrigin = (caretLine, caretCol, lineText);
+					break;
+				}
+			}
+		}
+
 		if (@event.IsActionPressed(InputStringNames.Backspace, true) && HasSelection() is false)
 		{
 			var (caretLine, caretCol) = GetCaretPosition();
@@ -437,6 +463,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				var textBeforeCaret = lineText.AsSpan()[..caretCol];
 				if (textBeforeCaret.IsEmpty || textBeforeCaret.IsWhiteSpace())
 				{
+					// Capture pre-edit state before RemoveText triggers LinesEditedFrom
+					if (GetCaretCount() == 1) _pendingLineEditOrigin = (caretLine, caretCol, lineText);
 					BeginComplexOperation();
 					var prevLine = caretLine - 1;
 					var prevLineLength = GetLine(prevLine).Length;
