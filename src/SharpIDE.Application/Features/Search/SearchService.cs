@@ -25,9 +25,7 @@ public class SearchService(ILogger<SearchService> logger)
 		}
 
 		var timer = Stopwatch.StartNew();
-
 		var files = solutionModel.AllFiles.Values;
-
 		var resultChannel = Channel.CreateUnbounded<FindInFilesSearchResult>(
 			new UnboundedChannelOptions
 			{
@@ -35,11 +33,27 @@ public class SearchService(ILogger<SearchService> logger)
 				SingleWriter = false
 			});
 
-		var searchTask = Parallel.ForEachAsync(
-			                         files,
-			                         cancellationToken,
-			                         (file, ct) => new ValueTask(FindInFile(file, searchTerm, resultChannel.Writer, ct)))
-		                         .ContinueWith(_ => resultChannel.Writer.Complete(), cancellationToken);
+		var searchTask = Task.Run(async () =>
+		{
+			try
+			{
+				var parallelOptions = new ParallelOptions
+				{
+					CancellationToken = cancellationToken,
+					MaxDegreeOfParallelism = Environment.ProcessorCount
+				};
+
+				await Parallel.ForEachAsync(
+					files,
+					parallelOptions,
+					(file, ct) => new ValueTask(FindInFile(file, searchTerm, resultChannel.Writer, ct)));
+			}
+			finally
+			{
+				resultChannel.Writer.Complete();
+			}
+		},
+		cancellationToken);
 
 		var resultCount = 0;
 		await foreach (var result in resultChannel.Reader.ReadAllAsync(cancellationToken))
