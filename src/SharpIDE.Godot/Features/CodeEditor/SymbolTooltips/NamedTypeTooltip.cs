@@ -8,7 +8,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetNamedTypeSymbolInfo(INamedTypeSymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddAccessibilityModifier(symbol);
@@ -39,7 +39,7 @@ public static partial class SymbolInfoComponents
     
     private static void AddNamedTypeSymbolType(this RichTextLabel label, INamedTypeSymbol symbol)
     {
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
         label.AddText(GetNamedTypeSymbolTypeName(symbol));
         label.Pop();
         label.AddText(" ");
@@ -80,7 +80,7 @@ public static partial class SymbolInfoComponents
         if (containingModule is not null)
         {
             label.Newline();
-            label.PushColor(CachedColors.White);
+            label.PushColor(TextEditorDotnetColoursDark.White);
             label.AddText($"from module {containingModule.Name}");
             label.Pop();
         }
@@ -90,7 +90,7 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.IsReadOnly)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("readonly");
             label.Pop();
             label.AddText(" ");

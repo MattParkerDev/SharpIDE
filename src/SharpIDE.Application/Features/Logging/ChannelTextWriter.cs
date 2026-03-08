@@ -20,7 +20,7 @@ public class ChannelTextWriter : TextWriter
 	}
 	public override void WriteLine(string? value)
 	{
-		ConsoleChannel.Writer.TryWrite(value + '\n');
+		ConsoleChannel.Writer.TryWrite($"{value}\r\n");
 	}
 	public override void WriteLine(char value)
 	{

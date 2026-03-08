@@ -2,9 +2,7 @@ using System.Collections.Immutable;
 using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
-using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
-using Microsoft.CodeAnalysis.Tags;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Threading;
 using ObservableCollections;
@@ -21,7 +19,6 @@ using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.Problems;
 using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -38,6 +35,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	
 	private CustomHighlighter _syntaxHighlighter = new();
 	private PopupMenu _popupMenu = null!;
+	private CanvasItem _aboveCanvasItem = null!;
+	private Rid? _aboveCanvasItemRid = null!;
+	private Window _completionDescriptionWindow = null!;
+	private Window _methodSignatureHelpWindow = null!;
+	private RichTextLabel _completionDescriptionLabel = null!;
+	private FindReplaceBar _findReplaceBar = null!;
 
 	private ImmutableArray<SharpIdeDiagnostic> _fileDiagnostics = [];
 	private ImmutableArray<SharpIdeDiagnostic> _fileAnalyzerDiagnostics = [];
@@ -46,6 +49,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool _fileChangingSuppressBreakpointToggleEvent;
 	private bool _settingWholeDocumentTextSuppressLineEditsEvent; // A dodgy workaround - setting the whole document doesn't guarantee that the line count stayed the same etc. We are still going to have broken highlighting. TODO: Investigate getting minimal text change ranges, and change those ranges only
 	private bool _fileDeleted;
+	// Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
+	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
+	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
 	
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
@@ -56,18 +62,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
-
-    private readonly List<string> _codeCompletionTriggers =
-    [
-	    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-	    "_", "<", ".", "#"
-    ];
-    private readonly List<string> _additionalCodeCompletionPrefixes =
-	[
-		//"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-		//"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-	    "(", ",", "=", "\t", ":"
-	];
+    [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
 
 	public SharpIdeCodeEdit()
 	{
@@ -76,14 +71,19 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _Ready()
 	{
-		// _filter_code_completion_candidates_impl uses these prefixes to determine where the completions menu is allowed to show.
-		// It is quite annoying as we cannot override it via _FilterCodeCompletionCandidates, as we would lose the filtering as well.
-		// Currently, it is not possible to show completions on a new line at col 0
-		CodeCompletionPrefixes = [.._codeCompletionTriggers, .._additionalCodeCompletionPrefixes];
+		UpdateEditorThemeForCurrentTheme();
 		SyntaxHighlighter = _syntaxHighlighter;
 		_popupMenu = GetNode<PopupMenu>("CodeFixesMenu");
+		_aboveCanvasItem = GetNode<CanvasItem>("%AboveCanvasItem");
+		_aboveCanvasItemRid = _aboveCanvasItem.GetCanvasItem();
+		_completionDescriptionWindow = GetNode<Window>("%CompletionDescriptionWindow");
+		_methodSignatureHelpWindow = GetNode<Window>("%MethodSignatureHelpWindow");
+		_completionDescriptionLabel = _completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
+		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, GetCanvasItem());
+		_findReplaceBar = GetNode<FindReplaceBar>("%FindReplaceBar");
+		_findReplaceBar.SetTextEdit(this);
 		_popupMenu.IdPressed += OnCodeFixSelected;
-		CodeCompletionRequested += OnCodeCompletionRequested;
+		CustomCodeCompletionRequested.Subscribe(OnCodeCompletionRequested);
 		CodeFixesRequested += OnCodeFixesRequested;
 		BreakpointToggled += OnBreakpointToggled;
 		CaretChanged += OnCaretChanged;
@@ -93,10 +93,14 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SymbolValidate += OnSymbolValidate;
 		SymbolLookup += OnSymbolLookup;
 		LinesEditedFrom += OnLinesEditedFrom;
-		MouseEntered += GrabFocus; // fixes symbol hover not appearing when e.g. solution explorer is focused. Same as godot editor
 		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
+		GodotGlobalEvents.Instance.TextEditorThemeChanged.Subscribe(UpdateEditorThemeAsync);
 		SetCodeRegionTags("#region", "#endregion");
 		//AddGitGutter();
+		var hScrollBar = GetHScrollBar();
+		var vScrollBar = GetVScrollBar();
+		hScrollBar.ValueChanged += OnCodeEditScrolled;
+		vScrollBar.ValueChanged += OnCodeEditScrolled;
 	}
 
 	private readonly CancellationSeries _solutionAlteredCancellationTokenSeries = new();
@@ -139,36 +143,42 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public enum LineEditOrigin
 	{
 		StartOfLine,
+		MidLine,
 		EndOfLine,
 		Unknown
 	}
 	// Line removed - fromLine 55, toLine 54
 	// Line added - fromLine 54, toLine 55
 	// Multi cursor gets a single line event for each
-	// problem is 10 to 11 gets returned for 'Enter' at the start of line 10, as well as 'Enter' at the end of line 10
-	// This means that the line that moves down needs to be based on whether the new line was from the start or end of the line
 	private void OnLinesEditedFrom(long fromLine, long toLine)
 	{
 		if (fromLine == toLine) return;
 		if (_settingWholeDocumentTextSuppressLineEditsEvent) return;
-		var fromLineText = GetLine((int)fromLine);
-		var caretPosition = this.GetCaretPosition();
-		var textFrom0ToCaret = fromLineText[..caretPosition.col];
-		var caretPositionEnum = LineEditOrigin.Unknown;
-		if (string.IsNullOrWhiteSpace(textFrom0ToCaret))
+
+		// Consume the pre-edit snapshot captured in _GuiInput (if any).
+		// Because the snapshot was taken *before* the edit, the caret position and line text
+		// are exactly what they were at the moment the key was pressed — no post-edit guesswork.
+		var snapshot = _pendingLineEditOrigin;
+		_pendingLineEditOrigin = null;
+
+		var origin = LineEditOrigin.Unknown;
+		if (snapshot is not null)
 		{
-			caretPositionEnum = LineEditOrigin.StartOfLine;
+			var (_, snapCol, snapText) = snapshot.Value;
+			var clampedCol = Math.Min(snapCol, snapText.Length);
+			var textBeforeCaret = snapText.AsSpan()[..clampedCol];
+			var textAfterCaret  = snapText.AsSpan()[clampedCol..];
+
+			if (textBeforeCaret.IsEmpty || textBeforeCaret.IsWhiteSpace())
+				origin = LineEditOrigin.StartOfLine;
+			else if (textAfterCaret.IsEmpty || textAfterCaret.IsWhiteSpace())
+				origin = LineEditOrigin.EndOfLine;
+			else
+				origin = LineEditOrigin.MidLine;
 		}
-		else
-		{
-			var textfromCaretToEnd = fromLineText[caretPosition.col..];
-			if (string.IsNullOrWhiteSpace(textfromCaretToEnd))
-			{
-				caretPositionEnum = LineEditOrigin.EndOfLine;
-			}
-		}
-		//GD.Print($"Lines edited from {fromLine} to {toLine}, origin: {caretPositionEnum}, current caret position: {caretPosition}");
-		_syntaxHighlighter.LinesChanged(fromLine, toLine, caretPositionEnum);
+
+		//GD.Print($"Lines edited from {fromLine} to {toLine}, origin: {origin}");
+		_syntaxHighlighter.LinesChanged(fromLine, toLine, origin);
 	}
 
 	public override void _ExitTree()
@@ -177,6 +187,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
 		_projectDiagnosticsObserveDisposable?.Dispose();
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
+		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
 	
@@ -224,15 +235,38 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			_editorCaretPositionService.SelectionInfo = null;
 		}
 		_editorCaretPositionService.CaretPosition = caretPosition;
+		_findReplaceBar.LineColChangedForResult = false;
 	}
 
 	private void OnTextChanged()
 	{
+		_findReplaceBar.NeedsToCountResults = true;
+		var text = Text;
+		var pendingCompletionTrigger = _pendingCompletionTrigger;
+		_pendingCompletionTrigger = null;
+		var cursorPosition = GetCaretPosition();
 		_ = Task.GodotRun(async () =>
 		{
 			var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnTextChanged)}");
 			_currentFile.IsDirty.Value = true;
-			await _fileChangedService.SharpIdeFileChanged(_currentFile, Text, FileChangeType.IdeUnsavedChange);
+			await _fileChangedService.SharpIdeFileChanged(_currentFile, text, FileChangeType.IdeUnsavedChange);
+			if (pendingCompletionTrigger is not null)
+			{
+				_completionTrigger = pendingCompletionTrigger;
+				var linePosition = new LinePosition(cursorPosition.line, cursorPosition.col);
+				var shouldTriggerCompletion = await _roslynAnalysis.ShouldTriggerCompletionAsync(_currentFile, text, linePosition, _completionTrigger!.Value);
+				GD.Print($"Code completion trigger typed: '{_completionTrigger.Value.Character}' at {linePosition.Line}:{linePosition.Character} should trigger: {shouldTriggerCompletion}");
+				if (shouldTriggerCompletion)
+				{
+					await OnCodeCompletionRequested(_completionTrigger.Value, text, cursorPosition);
+				}
+			}
+			else if (_pendingCompletionFilterReason is not null)
+			{
+				var filterReason = _pendingCompletionFilterReason.Value;
+				_pendingCompletionFilterReason = null;
+				await CustomFilterCodeCompletionCandidates(filterReason);
+			}
 			__?.Dispose();
 		});
 	}
@@ -277,8 +311,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SetCaretColumn(column);
 		Callable.From(() =>
 		{
-			GrabFocus();
-			CenterViewportToCaret();
+			GrabFocus(true);
+			var (firstVisibleLine, lastFullVisibleLine) = (GetFirstVisibleLine(), GetLastFullVisibleLine());
+			var caretLine = GetCaretLine();
+			if (caretLine < firstVisibleLine || caretLine > lastFullVisibleLine)
+			{
+				CenterViewportToCaret();
+			}
 		}).CallDeferred();
 	}
 
@@ -314,6 +353,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
+			if (file.IsMetadataAsSourceFile) Editable = false;
 		});
 		_ = Task.GodotRun(async () =>
 		{
@@ -363,11 +403,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			endPos.X += 10;
 		}
-		DrawDashedLine(startPos, endPos, color, thickness);
-		//DrawLine(startPos, endPos, color, thickness);
+
+		RenderingServer.Singleton.DrawDashedLine(_aboveCanvasItemRid!.Value, startPos, endPos, color, thickness);
 	}
 	public override void _Draw()
 	{
+		RenderingServer.Singleton.CanvasItemClear(_aboveCanvasItemRid!.Value);
 		//UnderlineRange(_currentLine, _selectionStartCol, _selectionEndCol, new Color(1, 0, 0));
 		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 		{
@@ -382,17 +423,92 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			};
 			UnderlineRange(line, startCol, endCol, color);
 		}
+		DrawCompletionsPopup();
 	}
-
-	// public override Array<Dictionary> _FilterCodeCompletionCandidates(Array<Dictionary> candidates)
-	// {
-	// 	return base._FilterCodeCompletionCandidates(candidates);
-	// }
 
 	// This only gets invoked if the Node is focused
 	public override void _GuiInput(InputEvent @event)
 	{
-		if (@event is InputEventMouseButton { Pressed: true } mouseEvent)
+		if (@event is InputEventMouseMotion) return;
+
+		// Capture pre-edit caret state for line-modifying keystrokes, so that OnLinesEditedFrom
+		// can determine LineEditOrigin from the state *before* the edit happened.
+		// We only do this for single-caret edits; multi-caret falls back to Unknown.
+		if (@event is InputEventKey { Pressed: true } keyEvent && GetCaretCount() == 1)
+		{
+			var (caretLine, caretCol) = GetCaretPosition();
+			switch (keyEvent.Keycode)
+			{
+				// Enter / numpad Enter — line(s) added
+				case Key.Enter or Key.KpEnter:
+					_pendingLineEditOrigin = (caretLine, caretCol, GetLine(caretLine));
+					break;
+				// Forward-delete at end of line merges the next line up — line removed
+				case Key.Delete when !HasSelection():
+				{
+					var lineText = GetLine(caretLine);
+					if (caretCol == lineText.Length && caretLine < GetLineCount() - 1)
+						_pendingLineEditOrigin = (caretLine, caretCol, lineText);
+					break;
+				}
+			}
+		}
+
+		if (@event.IsActionPressed(InputStringNames.Backspace, true) && HasSelection() is false)
+		{
+			var (caretLine, caretCol) = GetCaretPosition();
+			if (caretLine > 0 && caretCol > 0)
+			{
+				var lineText = GetLine(caretLine); // I do not like allocating every time backspace is pressed
+				var textBeforeCaret = lineText.AsSpan()[..caretCol];
+				if (textBeforeCaret.IsEmpty || textBeforeCaret.IsWhiteSpace())
+				{
+					// Capture pre-edit state before RemoveText triggers LinesEditedFrom
+					if (GetCaretCount() == 1) _pendingLineEditOrigin = (caretLine, caretCol, lineText);
+					BeginComplexOperation();
+					var prevLine = caretLine - 1;
+					var prevLineLength = GetLine(prevLine).Length;
+					RemoveText(fromLine: prevLine, fromColumn: prevLineLength, toLine: caretLine, toColumn: caretCol);
+					SetCaretLine(prevLine);
+					SetCaretColumn(prevLineLength);
+					EndComplexOperation();
+					ResetCompletionPopupState();
+					AcceptEvent();
+					return;
+				}
+			}
+		}
+		if (@event.IsActionPressed(InputStringNames.CodeEditorDuplicateLine))
+		{
+			DuplicateSelection();
+			return;
+		}
+		if (MethodSignatureHelpPopupTryConsumeGuiInput(@event))
+		{
+			AcceptEvent();
+			return;
+		}
+		if (CompletionsPopupTryConsumeGuiInput(@event))
+		{
+			AcceptEvent();
+			return;
+		}
+		if (@event.IsActionPressed(InputStringNames.CodeEditorRemoveLine))
+		{
+			DeleteLines();
+			return;
+		}
+		if (@event.IsActionPressed(InputStringNames.CodeEditorMoveLineUp))
+		{
+			MoveLinesUp();
+			return;
+		}
+		if (@event.IsActionPressed(InputStringNames.CodeEditorMoveLineDown))
+		{
+			MoveLinesDown();
+			return;
+		}
+		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left or MouseButton.Right } mouseEvent)
 		{
 			var (col, line) = GetLineColumnAtPos((Vector2I)mouseEvent.Position);
 			var current = _navigationHistoryService.Current.Value;
@@ -402,43 +518,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				_navigationHistoryService.RecordNavigation(_currentFile, new SharpIdeFileLinePosition(line, col));
 			}
 		}
-		else if (@event is InputEventKey { Pressed: true } keyEvent)
-		{
-			var codeCompletionSelectedIndex = GetCodeCompletionSelectedIndex();
-			var isCodeCompletionPopupOpen = codeCompletionSelectedIndex is not -1;
-			if (keyEvent is { Keycode: Key.Backspace, CtrlPressed: false })
-			{
-				
-			}
-			if (keyEvent is { Keycode: Key.Delete, CtrlPressed: false })
-			{
-				
-			}
-			else if (keyEvent.Unicode != 0)
-			{
-				var unicodeString = char.ConvertFromUtf32((int)keyEvent.Unicode);
-				if (isCodeCompletionPopupOpen && unicodeString is " ")
-				{
-					Callable.From(() => CancelCodeCompletion()).CallDeferred();
-				}
-				else if (isCodeCompletionPopupOpen is false && _codeCompletionTriggers.Contains(unicodeString, StringComparer.OrdinalIgnoreCase))
-				{
-					void OnAction()
-					{
-						TextChanged -= OnAction;
-						Callable.From(() => RequestCodeCompletion(true)).CallDeferred();
-					}
-					TextChanged += OnAction; // We need to wait for the text to actually change before requesting completions
-				}
-			}
-		}
-		// else if (@event.IsActionPressed("ui_text_completion_query"))
-		// {
-		// 	GD.Print("Entering CompletionQueryBuiltin _GuiInput");
-		// 	AcceptEvent();
-		// 	//GetViewport().SetInputAsHandled();
-  //           Callable.From(() => RequestCodeCompletion(true)).CallDeferred();
-		// }
 	}
 
 	public override void _UnhandledKeyInput(InputEvent @event)
@@ -455,7 +534,17 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 		// Now we filter to only the focused tab
 		if (HasFocus() is false) return;
-		if (@event.IsActionPressed(InputStringNames.RenameSymbol))
+		if (@event.IsActionPressed(InputStringNames.FindInCurrentFile))
+		{
+			AcceptEvent();
+			_findReplaceBar.PopupSearch();
+		}
+		else if (@event.IsActionPressed(InputStringNames.ReplaceInCurrentFile))
+		{
+			AcceptEvent();
+			_findReplaceBar.PopupReplace();
+		}
+		else if (@event.IsActionPressed(InputStringNames.RenameSymbol))
 		{
 			_ = Task.GodotRun(async () => await RenameSymbol());
 		}
@@ -545,75 +634,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				if (codeActions.Length is not 0) _popupMenu.SetFocusedItem(0);
 				GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
 			});
-		});
-	}
-
-	public override void _ConfirmCodeCompletion(bool replace)
-	{
-		var selectedIndex = GetCodeCompletionSelectedIndex();
-		var selectedText = GetCodeCompletionOption(selectedIndex);
-		if (selectedText is null) return;
-		var completionItem = selectedText["default_value"].As<GodotObjectContainer<IdeCompletionItem>>().Item;
-		_ = Task.GodotRun(async () =>
-		{
-			await _ideApplyCompletionService.ApplyCompletion(_currentFile, completionItem.CompletionItem, completionItem.Document);
-		});
-		CancelCodeCompletion();
-	}
-
-	private record struct IdeCompletionItem(CompletionItem CompletionItem, Document Document);
-	private void OnCodeCompletionRequested()
-	{
-		var (caretLine, caretColumn) = GetCaretPosition();
-		
-		GD.Print($"Code completion requested at line {caretLine}, column {caretColumn}");
-		_ = Task.GodotRun(async () =>
-		{
-			var linePos = new LinePosition(caretLine, caretColumn);
-				
-			var completionsResult = await _roslynAnalysis.GetCodeCompletionsForDocumentAtPosition(_currentFile, linePos);
-			var completionOptions = new List<(CodeCompletionKind kind, string displayText, Texture2D? icon, GodotObjectContainer<IdeCompletionItem> refCountedContainer)>(completionsResult.CompletionList.ItemsList.Count);
-
-			foreach (var completionItem in completionsResult.CompletionList.ItemsList)
-			{
-				var symbolKindString = CollectionExtensions.GetValueOrDefault(completionItem.Properties, "SymbolKind");
-				var symbolKind = symbolKindString is null ? null : (SymbolKind?)int.Parse(symbolKindString);
-				var wellKnownTags = completionItem.Tags;
-				var typeKindString = completionItem.Tags[0];
-				var accessibilityModifierString = completionItem.Tags.Skip(1).FirstOrDefault(); // accessibility is not always supplied, and I don't think there's actually any guarantee on the order of tags. See WellKnownTags and WellKnownTagArrays
-				TypeKind? typeKind = Enum.TryParse<TypeKind>(typeKindString, out var tk) ? tk : null;
-				Accessibility? accessibilityModifier = Enum.TryParse<Accessibility>(accessibilityModifierString, out var am) ? am : null;
-				var godotCompletionType = symbolKind switch
-				{
-					SymbolKind.Method => CodeCompletionKind.Function,
-					SymbolKind.NamedType => CodeCompletionKind.Class,
-					SymbolKind.Local => CodeCompletionKind.Variable,
-					SymbolKind.Parameter => CodeCompletionKind.Variable,
-					SymbolKind.Property => CodeCompletionKind.Member,
-					SymbolKind.Field => CodeCompletionKind.Member,
-					_ => CodeCompletionKind.PlainText
-				};
-				var isKeyword = wellKnownTags.Contains(WellKnownTags.Keyword);
-				var isExtensionMethod = wellKnownTags.Contains(WellKnownTags.ExtensionMethod);
-				var isMethod = wellKnownTags.Contains(WellKnownTags.Method);
-				if (symbolKind is null && (isMethod || isExtensionMethod)) symbolKind = SymbolKind.Method;
-				var icon = GetIconForCompletion(symbolKind, typeKind, accessibilityModifier, isKeyword);
-				var ideItem = new IdeCompletionItem(completionItem, completionsResult.Document);
-				// TODO: This is a GodotObjectContainer to avoid errors with the RefCountedContainer?? But the workaround 100% causes a memory leak as these are never freed, unlike RefCounted. Do this better
-				var refContainer = new GodotObjectContainer<IdeCompletionItem>(ideItem);
-
-				completionOptions.Add((godotCompletionType, completionItem.DisplayText, icon, refContainer));
-			}
-			await this.InvokeAsync(() =>
-			{
-				foreach (var (godotCompletionType, displayText, icon, refCountedContainer) in completionOptions)
-				{
-					AddCodeCompletionOption(godotCompletionType, displayText, displayText, icon: icon, value: refCountedContainer);
-				}
-				UpdateCodeCompletionOptions(true);
-				//RequestCodeCompletion(true);
-			});
-			GD.Print($"Found {completionsResult.CompletionList.ItemsList.Count} completions, displaying menu");
 		});
 	}
 	

@@ -15,6 +15,7 @@ public partial class ThreadsVariablesSubTab : Control
 	private readonly Texture2D _fieldIcon = ResourceLoader.Load<Texture2D>("uid://c4y7d5m4upfju");
 	private readonly Texture2D _propertyIcon = ResourceLoader.Load<Texture2D>("uid://y5pwrwwrjqmc");
 	private readonly Texture2D _staticMembersIcon = ResourceLoader.Load<Texture2D>("uid://dudntp20myuxb");
+	private readonly Texture2D _arrayElementIcon = ResourceLoader.Load<Texture2D>("uid://cppysddplcd6d");
 	
 	private Tree _threadsTree = null!;
 	private Tree _stackFramesTree = null!;
@@ -144,11 +145,11 @@ public partial class ThreadsVariablesSubTab : Control
 		_variableReferenceLookup[variableItem] = variable;
 		
 		variableItem.SetMetadata(0, new Vector2I(0, variable.VariablesReference));
-		if (variable.Name == "Static members")
+		if (variable.Name is "Static members" or "Raw View")
 		{
 			variableItem.SetTooltipText(0, null);
 			variableItem.SetIcon(0, _staticMembersIcon);
-			variableItem.SetText(0, "Static members");
+			variableItem.SetText(0, variable.Name);
 		}
 		else
 		{

@@ -13,7 +13,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetUnknownTooltip(ISymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddText($"UNHANDLED SYMBOL TYPE: {symbol.GetType().Name} - please create an issue!");
         label.Newline();
@@ -44,7 +44,7 @@ public static partial class SymbolInfoComponents
 
     private static void AddAccessibilityModifier(this RichTextLabel label, ISymbol methodSymbol)
     {
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
         label.AddText(methodSymbol.DeclaredAccessibility.GetAccessibilityString());
         label.Pop();
     }
@@ -53,7 +53,7 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.IsSealed)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("sealed");
             label.Pop();
             label.AddText(" ");
@@ -64,7 +64,7 @@ public static partial class SymbolInfoComponents
     {
         if (methodSymbol.IsOverride)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("override");
             label.Pop();
             label.AddText(" ");
@@ -76,7 +76,7 @@ public static partial class SymbolInfoComponents
         if (symbol is INamedTypeSymbol { TypeKind: TypeKind.Interface }) return;
         if (symbol.IsAbstract)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("abstract");
             label.Pop();
             label.AddText(" ");
@@ -87,7 +87,7 @@ public static partial class SymbolInfoComponents
     {
         if (methodSymbol.IsVirtual)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("virtual");
             label.Pop();
             label.AddText(" ");
@@ -141,7 +141,7 @@ public static partial class SymbolInfoComponents
         
         foreach (var (index, ns) in namespaces.Index())
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText(ns);
             label.Pop();
             if (index < namespaces.Length - 1) label.AddText(".");
@@ -151,7 +151,7 @@ public static partial class SymbolInfoComponents
     private static void AddAttribute(this RichTextLabel label, AttributeData attribute, bool newLines)
     {
         label.AddText("[");
-        label.PushColor(CachedColors.ClassGreen);
+        label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
         var displayString = attribute.AttributeClass?.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         if (displayString?.EndsWith("Attribute") is true) displayString = displayString[..^9]; // remove last 9 chars
         label.AddText(displayString ?? "unknown");
@@ -167,13 +167,13 @@ public static partial class SymbolInfoComponents
         var typeChar = metadataName[0];
         var typeColour = typeChar switch
         {
-            'N' => CachedColors.KeywordBlue,
-            'T' => CachedColors.ClassGreen,
-            'F' => CachedColors.White,
-            'P' => CachedColors.White,
-            'M' => CachedColors.Yellow,
-            'E' => CachedColors.White,
-            _ => CachedColors.Orange
+            'N' => TextEditorDotnetColoursDark.KeywordBlue,
+            'T' => TextEditorDotnetColoursDark.ClassGreen,
+            'F' => TextEditorDotnetColoursDark.White,
+            'P' => TextEditorDotnetColoursDark.White,
+            'M' => TextEditorDotnetColoursDark.Yellow,
+            'E' => TextEditorDotnetColoursDark.White,
+            _ => TextEditorDotnetColoursDark.Orange
         };
         var minimalTypeName = (typeChar, metadataName) switch
         {
@@ -216,13 +216,19 @@ public static partial class SymbolInfoComponents
                         label.Pop();
                     label.Pop(); // meta
                 }
+                else if (reader.GetAttribute(DocumentationCommentXmlNames.LangwordAttributeName) is {} langword)
+                {
+                    label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+                        label.AddText(langword);
+                    label.Pop();
+                }
             }
             else if (reader is { NodeType: System.Xml.XmlNodeType.Element, Name: DocumentationCommentXmlNames.TypeParameterReferenceElementName })
             {
                 var name = reader.GetAttribute(DocumentationCommentXmlNames.NameAttributeName);
                 if (name is not null)
                 {
-                    label.PushColor(CachedColors.ClassGreen);
+                    label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
                         label.AddText(name);
                     label.Pop();
                 }
@@ -232,7 +238,7 @@ public static partial class SymbolInfoComponents
                 var name = reader.GetAttribute(DocumentationCommentXmlNames.NameAttributeName);
                 if (name is not null)
                 {
-                    label.PushColor(CachedColors.VariableBlue);
+                    label.PushColor(TextEditorDotnetColoursDark.VariableBlue);
                         label.AddText(name);
                     label.Pop();
                 }
@@ -242,7 +248,7 @@ public static partial class SymbolInfoComponents
                 var nameOrCref =  reader.GetAttribute(DocumentationCommentXmlNames.CrefAttributeName) ?? reader.GetAttribute(DocumentationCommentXmlNames.NameAttributeName);
                 if (nameOrCref is not null)
                 {
-                    label.PushColor(CachedColors.White);
+                    label.PushColor(TextEditorDotnetColoursDark.White);
                     label.AddText(nameOrCref);
                     label.Pop();
                 }
@@ -270,7 +276,7 @@ public static partial class SymbolInfoComponents
         if (docComment.ParameterNames.Length is not 0)
         {
             label.PushCell();
-            label.PushColor(CachedColors.Gray);
+            label.PushColor(TextEditorDotnetColoursDark.Gray);
             label.AddText("Params: ");
             label.Pop();
             label.Pop();
@@ -279,7 +285,7 @@ public static partial class SymbolInfoComponents
                 var parameterText = docComment.GetParameterText(parameterName);
                 if (parameterText is null) continue;
                 label.PushCell();
-                label.PushColor(CachedColors.VariableBlue);
+                label.PushColor(TextEditorDotnetColoursDark.VariableBlue);
                 label.AddText(parameterName);
                 label.Pop();
                 label.AddText(" - ");
@@ -296,7 +302,7 @@ public static partial class SymbolInfoComponents
         if (docComment.TypeParameterNames.Length is not 0)
         {
             label.PushCell();
-            label.PushColor(CachedColors.Gray);
+            label.PushColor(TextEditorDotnetColoursDark.Gray);
             label.AddText("Type Params: ");
             label.Pop();
             label.Pop();
@@ -305,7 +311,7 @@ public static partial class SymbolInfoComponents
                 var typeParameterText = docComment.GetTypeParameterText(typeParameterName);
                 if (typeParameterText is null) continue;
                 label.PushCell();
-                label.PushColor(CachedColors.ClassGreen);
+                label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
                 label.AddText(typeParameterName);
                 label.Pop();
                 label.AddText(" - ");
@@ -321,7 +327,7 @@ public static partial class SymbolInfoComponents
         if (docComment.ReturnsText is not null)
         {
             label.PushCell();
-                label.PushColor(CachedColors.Gray);
+                label.PushColor(TextEditorDotnetColoursDark.Gray);
                     label.AddText("Returns: ");
                 label.Pop();
             label.Pop();
@@ -333,7 +339,7 @@ public static partial class SymbolInfoComponents
         if (docComment.ExceptionTypes.Length is not 0)
         {
             label.PushCell();
-                label.PushColor(CachedColors.Gray);
+                label.PushColor(TextEditorDotnetColoursDark.Gray);
                     label.AddText("Exceptions: ");
                 label.Pop();
             label.Pop();
@@ -342,7 +348,7 @@ public static partial class SymbolInfoComponents
                 var exceptionText = docComment.GetExceptionTexts(exceptionTypeName).FirstOrDefault();
                 if (exceptionText is null) continue;
                 label.PushCell();
-                label.PushColor(CachedColors.ClassGreen);
+                label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
                 label.AddText(exceptionTypeName.Split('.').Last());
                 label.Pop();
                 label.AddText(" - ");
@@ -359,7 +365,7 @@ public static partial class SymbolInfoComponents
         if (docComment.RemarksText is not null)
         {
             label.PushCell();
-                label.PushColor(CachedColors.Gray);
+                label.PushColor(TextEditorDotnetColoursDark.Gray);
                     label.AddText("Remarks: ");
                 label.Pop();
             label.Pop();
@@ -389,7 +395,7 @@ public static partial class SymbolInfoComponents
     
     private static RichTextLabel AddUnknownType(this RichTextLabel label, ITypeSymbol symbol)
     {
-        label.PushColor(CachedColors.Orange);
+        label.PushColor(TextEditorDotnetColoursDark.Orange);
         label.AddText("[UNKNOWN TYPE]");
         label.AddText(symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
         label.Pop();
@@ -443,7 +449,7 @@ public static partial class SymbolInfoComponents
 
     private static RichTextLabel AddTypeParameter(this RichTextLabel label, ITypeParameterSymbol symbol)
     {
-        label.PushColor(CachedColors.ClassGreen);
+        label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
         label.AddText(symbol.Name);
         label.Pop();
         return label;
@@ -451,7 +457,7 @@ public static partial class SymbolInfoComponents
 
     private static RichTextLabel AddDynamicType(this RichTextLabel label, IDynamicTypeSymbol symbol)
     {
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
         label.AddText(symbol.Name);
         label.Pop();
         return label;
@@ -464,29 +470,29 @@ public static partial class SymbolInfoComponents
         {
             {SpecialType: not SpecialType.None} => symbol.SpecialType switch
             {
-                SpecialType.System_Collections_IEnumerable => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_Generic_IEnumerable_T => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_Generic_IList_T => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_Generic_ICollection_T => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_IEnumerator => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_Generic_IEnumerator_T => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_Generic_IReadOnlyList_T => CachedColors.InterfaceGreen,
-                SpecialType.System_Collections_Generic_IReadOnlyCollection_T => CachedColors.InterfaceGreen,
-                SpecialType.System_IDisposable => CachedColors.InterfaceGreen,
-                SpecialType.System_IAsyncResult => CachedColors.InterfaceGreen,
-                _ => CachedColors.KeywordBlue
+                SpecialType.System_Collections_IEnumerable => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IEnumerable_T => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IList_T => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_Generic_ICollection_T => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_IEnumerator => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IEnumerator_T => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IReadOnlyList_T => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_Collections_Generic_IReadOnlyCollection_T => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_IDisposable => TextEditorDotnetColoursDark.InterfaceGreen,
+                SpecialType.System_IAsyncResult => TextEditorDotnetColoursDark.InterfaceGreen,
+                _ => TextEditorDotnetColoursDark.KeywordBlue
             },
             INamedTypeSymbol namedTypeSymbol => namedTypeSymbol.TypeKind switch
             {
-                TypeKind.Class => CachedColors.ClassGreen,
-                TypeKind.Interface => CachedColors.InterfaceGreen,
-                TypeKind.Struct => CachedColors.ClassGreen,
-                TypeKind.Enum => CachedColors.InterfaceGreen,
-                TypeKind.Delegate => CachedColors.ClassGreen,
-                TypeKind.Dynamic => CachedColors.KeywordBlue,
-                _ => CachedColors.Orange
+                TypeKind.Class => TextEditorDotnetColoursDark.ClassGreen,
+                TypeKind.Interface => TextEditorDotnetColoursDark.InterfaceGreen,
+                TypeKind.Struct => TextEditorDotnetColoursDark.ClassGreen,
+                TypeKind.Enum => TextEditorDotnetColoursDark.InterfaceGreen,
+                TypeKind.Delegate => TextEditorDotnetColoursDark.ClassGreen,
+                TypeKind.Dynamic => TextEditorDotnetColoursDark.KeywordBlue,
+                _ => TextEditorDotnetColoursDark.Orange
             },
-            _ => CachedColors.Orange
+            _ => TextEditorDotnetColoursDark.Orange
         };
         return colour;
     }

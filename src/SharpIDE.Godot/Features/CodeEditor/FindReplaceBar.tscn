@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://b4m8xvyw3nq6t"]
+
+[ext_resource type="Script" uid="uid://1v0x636g3s8r" path="res://Features/CodeEditor/FindReplaceBar.cs" id="1_frbar"]
+
+[node name="FindReplaceBar" type="HBoxContainer" unique_id=745423253]
+visible = false
+script = ExtResource("1_frbar")

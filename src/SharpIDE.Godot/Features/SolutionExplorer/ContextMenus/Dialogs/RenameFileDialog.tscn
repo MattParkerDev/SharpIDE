@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://b775b5j4rkxxw"]
+[gd_scene format=3 uid="uid://b775b5j4rkxxw"]
 
 [ext_resource type="Script" uid="uid://dq72hpd4r54w4" path="res://Features/SolutionExplorer/ContextMenus/Dialogs/RenameFileDialog.cs" id="1_0pttq"]
 
-[node name="RenameFileDialog" type="ConfirmationDialog"]
+[node name="RenameFileDialog" type="ConfirmationDialog" unique_id=2029410099]
 oversampling_override = 1.0
 title = "Rename: File"
 position = Vector2i(0, 36)
@@ -10,17 +10,17 @@ size = Vector2i(405, 115)
 visible = true
 script = ExtResource("1_0pttq")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=71864949]
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 397.0
 offset_bottom = 66.0
 
-[node name="Label" type="Label" parent="VBoxContainer"]
+[node name="Label" type="Label" parent="VBoxContainer" unique_id=1618981170]
 layout_mode = 2
 text = "Enter name:"
 
-[node name="FileNameLineEdit" type="LineEdit" parent="VBoxContainer"]
+[node name="FileNameLineEdit" type="LineEdit" parent="VBoxContainer" unique_id=361457622]
 unique_name_in_owner = true
 layout_mode = 2
 text = "ExistingFileName.cs"

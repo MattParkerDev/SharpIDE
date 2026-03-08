@@ -1,29 +1,26 @@
-[gd_scene load_steps=5 format=3 uid="uid://cinaqbdghcvoi"]
+[gd_scene format=3 uid="uid://cinaqbdghcvoi"]
 
 [ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_s7ira"]
+[ext_resource type="Script" uid="uid://blwx5v5ufga65" path="res://Features/CodeEditor/SharpIdeCodeEditContainer.cs" id="1_so235"]
 [ext_resource type="Script" uid="uid://du2lt7r1p1qfy" path="res://Features/CodeEditor/SharpIdeCodeEdit.cs" id="2_kp2fd"]
+[ext_resource type="PackedScene" uid="uid://b4m8xvyw3nq6t" path="res://Features/CodeEditor/FindReplaceBar.tscn" id="3_frbar"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_v06ln"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.117647, 0.117647, 0.117647, 1)
-border_color = Color(0, 0, 0, 0.6)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
+[node name="SharpIdeCodeEditContainer" type="VBoxContainer" unique_id=921667605 node_paths=PackedStringArray("CodeEdit")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 2
+script = ExtResource("1_so235")
+CodeEdit = NodePath("SharpIdeCodeEdit")
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_7ptyn"]
-
-[node name="SharpIdeCodeEdit" type="CodeEdit"]
-theme_override_colors/current_line_color = Color(0.0588235, 0.0588235, 0.0588235, 1)
+[node name="SharpIdeCodeEdit" type="CodeEdit" parent="." unique_id=2021737984]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_fonts/font = ExtResource("1_s7ira")
 theme_override_font_sizes/font_size = 18
-theme_override_styles/normal = SubResource("StyleBoxFlat_v06ln")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_7ptyn")
 highlight_all_occurrences = true
 highlight_current_line = true
 symbol_lookup_on_click = true
@@ -32,15 +29,73 @@ gutters_draw_breakpoints_gutter = true
 gutters_draw_executing_lines = true
 gutters_draw_line_numbers = true
 delimiter_strings = Array[String]([])
-code_completion_enabled = true
 code_completion_prefixes = Array[String]([".", " "])
 indent_automatic = true
 auto_brace_completion_enabled = true
 auto_brace_completion_highlight_matching = true
 script = ExtResource("2_kp2fd")
 
-[node name="CodeFixesMenu" type="PopupMenu" parent="."]
+[node name="CodeFixesMenu" type="PopupMenu" parent="SharpIdeCodeEdit" unique_id=54277800]
 size = Vector2i(217, 100)
 item_count = 1
 item_0/text = "Getting Context Actions..."
 item_0/id = 0
+
+[node name="AboveCanvasItem" type="Control" parent="SharpIdeCodeEdit" unique_id=650087366]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+
+[node name="CompletionDescriptionWindow" type="Window" parent="SharpIdeCodeEdit" unique_id=1776589946]
+unique_name_in_owner = true
+transparent_bg = true
+oversampling_override = 1.0
+visible = false
+wrap_controls = true
+borderless = true
+transparent = true
+unfocusable = true
+popup_window = true
+
+[node name="PanelContainer" type="PanelContainer" parent="SharpIdeCodeEdit/CompletionDescriptionWindow" unique_id=1912640024]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"EditorHoverPopupPanelContainer"
+
+[node name="RichTextLabel" type="RichTextLabel" parent="SharpIdeCodeEdit/CompletionDescriptionWindow/PanelContainer" unique_id=1926560774]
+layout_mode = 2
+fit_content = true
+autowrap_mode = 0
+
+[node name="MethodSignatureHelpWindow" type="Window" parent="SharpIdeCodeEdit" unique_id=687652298]
+unique_name_in_owner = true
+transparent_bg = true
+oversampling_override = 1.0
+visible = false
+wrap_controls = true
+borderless = true
+transparent = true
+unfocusable = true
+popup_window = true
+
+[node name="PanelContainer" type="PanelContainer" parent="SharpIdeCodeEdit/MethodSignatureHelpWindow" unique_id=1449181862]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"EditorHoverPopupPanelContainer"
+
+[node name="RichTextLabel" type="RichTextLabel" parent="SharpIdeCodeEdit/MethodSignatureHelpWindow/PanelContainer" unique_id=2089385442]
+layout_mode = 2
+fit_content = true
+autowrap_mode = 0
+
+[node name="FindReplaceBar" parent="." unique_id=-447676240 instance=ExtResource("3_frbar")]
+unique_name_in_owner = true
+layout_mode = 2

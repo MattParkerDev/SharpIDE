@@ -1,9 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://co6dkhdolriej"]
+[gd_scene format=3 uid="uid://co6dkhdolriej"]
 
 [ext_resource type="Script" uid="uid://dt46krpl6ds28" path="res://Features/Build/BuildPanel.cs" id="1_tx1bg"]
-[ext_resource type="Theme" uid="uid://bswaamju2blyt" path="res://Features/TerminalBase/TerminalTheme.tres" id="2_5bb6p"]
+[ext_resource type="PackedScene" uid="uid://beo6fg8r0ogxc" path="res://Features/TerminalBase/SharpIdeTerminal.tscn" id="2_5bb6p"]
 
-[node name="BuildPanel" type="Control"]
+[node name="BuildPanel" type="Control" unique_id=21524966]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,7 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_tx1bg")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=292896521]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,28 +21,21 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=2054551781]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer" unique_id=511833969]
 layout_mode = 2
 text = "Build"
 
-[node name="TerminalContainer" type="Control" parent="VBoxContainer"]
+[node name="TerminalContainer" type="Control" parent="VBoxContainer" unique_id=1082876912]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Terminal" type="Terminal" parent="VBoxContainer/TerminalContainer"]
+[node name="SharpIdeTerminal" parent="VBoxContainer/TerminalContainer" unique_id=1439611787 instance=ExtResource("2_5bb6p")]
 unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_vertical = 3
-theme = ExtResource("2_5bb6p")

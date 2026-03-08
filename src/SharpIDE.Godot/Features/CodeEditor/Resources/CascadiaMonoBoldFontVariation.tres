@@ -1,0 +1,12 @@
+[gd_resource type="FontVariation" format=3 uid="uid://bix80oipv61ew"]
+
+[ext_resource type="FontFile" uid="uid://bkibovvrnhwtt" path="res://Features/CodeEditor/Resources/CascadiaMono.ttf" id="1_idpqh"]
+
+[resource]
+base_font = ExtResource("1_idpqh")
+variation_opentype = {
+2003265652: 700
+}
+spacing_top = 3
+spacing_bottom = 2
+baseline_offset = 0.05

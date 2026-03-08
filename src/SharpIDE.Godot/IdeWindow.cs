@@ -2,6 +2,7 @@ using Godot;
 using Microsoft.Extensions.Hosting;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Godot.Features.IdeSettings;
+using SharpIDE.Godot.Features.Settings;
 using SharpIDE.Godot.Features.SlnPicker;
 using Environment = System.Environment;
 
@@ -32,6 +33,7 @@ public partial class IdeWindow : Control
         GodotOtelExtensions.AddServiceDefaults();
         Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
         GetTree().GetRoot().ContentScaleFactor = Singletons.AppState.IdeSettings.UiScale;
+        SetIdeThemeFromAppState();
         //GetWindow().SetMinSize(new Vector2I(1152, 648));
         Callable.From(() => PickSolution(true)).CallDeferred();
     }
@@ -55,6 +57,12 @@ public partial class IdeWindow : Control
         var refreshRateBelowCapRoundedDownToInt = (int)refreshRateBelowCap;
         GD.Print($"Detected display refresh rate: {refreshRate} Hz, setting max FPS to {refreshRateBelowCapRoundedDownToInt} Hz");
         Engine.MaxFps = refreshRateBelowCapRoundedDownToInt;
+    }
+
+    private void SetIdeThemeFromAppState()
+    {
+        var theme = Singletons.AppState.IdeSettings.Theme;
+        this.SetIdeTheme(theme);
     }
     
     public void PickSolution(bool fullscreen = false)

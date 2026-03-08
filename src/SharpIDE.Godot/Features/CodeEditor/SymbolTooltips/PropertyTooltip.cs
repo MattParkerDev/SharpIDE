@@ -8,7 +8,7 @@ public partial class SymbolInfoComponents
     public static RichTextLabel GetPropertySymbolInfo(IPropertySymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddAccessibilityModifier(symbol);
@@ -35,7 +35,7 @@ public partial class SymbolInfoComponents
     {
         if (symbol.IsReadOnly)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("readonly");
             label.Pop();
             label.AddText(" ");
@@ -46,7 +46,7 @@ public partial class SymbolInfoComponents
     {
         if (symbol.IsRequired)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("required");
             label.Pop();
             label.AddText(" ");
@@ -61,7 +61,7 @@ public partial class SymbolInfoComponents
     
     private static void AddPropertyName(this RichTextLabel label, IPropertySymbol symbol)
     {
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.AddText(symbol.Name);
         label.Pop();
     }
@@ -72,10 +72,10 @@ public partial class SymbolInfoComponents
         
         if (symbol.GetMethod is not null)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("get");
             label.Pop();
-            label.PushColor(CachedColors.White);
+            label.PushColor(TextEditorDotnetColoursDark.White);
             label.AddText(";");
             label.Pop();
             label.AddText(" ");
@@ -84,7 +84,7 @@ public partial class SymbolInfoComponents
         {
             if (setMethod.DeclaredAccessibility != symbol.DeclaredAccessibility)
             {
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText(setMethod.DeclaredAccessibility.ToString().ToLower());
                 label.Pop();
                 label.AddText(" ");
@@ -92,19 +92,19 @@ public partial class SymbolInfoComponents
 
             if (setMethod.IsInitOnly)
             {
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("init");
                 label.Pop();
-                label.PushColor(CachedColors.White);
+                label.PushColor(TextEditorDotnetColoursDark.White);
                 label.AddText(";");
                 label.Pop();
             }
             else
             {
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("set");
                 label.Pop();
-                label.PushColor(CachedColors.White);
+                label.PushColor(TextEditorDotnetColoursDark.White);
                 label.AddText(";");
                 label.Pop();
             }

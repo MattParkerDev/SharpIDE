@@ -1,4 +1,4 @@
-[gd_resource type="Shortcut" load_steps=2 format=3 uid="uid://d3iu5cplfailp"]
+[gd_resource type="Shortcut" format=3 uid="uid://d3iu5cplfailp"]
 
 [sub_resource type="InputEventKey" id="InputEventKey_0hq5g"]
 shift_pressed = true

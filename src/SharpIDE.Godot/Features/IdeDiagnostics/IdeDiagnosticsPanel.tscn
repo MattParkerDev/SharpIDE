@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://b0tjuqq3bca5e"]
+[gd_scene format=3 uid="uid://b0tjuqq3bca5e"]
 
 [ext_resource type="Script" uid="uid://1dbtk7cifd25" path="res://Features/IdeDiagnostics/IdeDiagnosticsPanel.cs" id="1_qw18f"]
 
-[node name="IdeDiagnosticsPanel" type="Control"]
+[node name="IdeDiagnosticsPanel" type="Control" unique_id=557090688]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +11,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_qw18f")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1212524444]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,21 +20,21 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=684802679]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer"]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer" unique_id=766217265]
 layout_mode = 2
 text = "IDE Diagnostics"
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1671161213]
 layout_mode = 2
 
-[node name="GraphEdit" type="GraphEdit" parent="VBoxContainer"]
+[node name="GraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=1638449533]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -70,7 +70,7 @@ connections = Array[Dictionary]([{
 "to_port": 0
 }])
 
-[node name="GraphNode" type="GraphNode" parent="VBoxContainer/GraphEdit"]
+[node name="GraphNode" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=2011173866]
 layout_mode = 0
 offset_left = 25.0
 offset_top = 75.0
@@ -89,12 +89,12 @@ slot/0/right_color = Color(1, 1, 1, 1)
 slot/0/right_icon = null
 slot/0/draw_stylebox = true
 
-[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode"]
+[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode" unique_id=298212357]
 layout_mode = 2
 text = "Read File
 Map to Model"
 
-[node name="GraphNode2" type="GraphNode" parent="VBoxContainer/GraphEdit"]
+[node name="GraphNode2" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=504206710]
 layout_mode = 0
 offset_left = 222.0
 offset_top = 75.0
@@ -113,12 +113,12 @@ slot/0/right_color = Color(1, 1, 1, 1)
 slot/0/right_icon = null
 slot/0/draw_stylebox = true
 
-[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode2"]
+[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode2" unique_id=1000020033]
 layout_mode = 2
 text = "Create CompositionHost
 Create Workspace"
 
-[node name="GraphNode3" type="GraphNode" parent="VBoxContainer/GraphEdit"]
+[node name="GraphNode3" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=740509426]
 layout_mode = 0
 offset_left = 492.0
 offset_top = 87.0
@@ -137,11 +137,11 @@ slot/0/right_color = Color(1, 1, 1, 1)
 slot/0/right_icon = null
 slot/0/draw_stylebox = true
 
-[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode3"]
+[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode3" unique_id=716502703]
 layout_mode = 2
 text = "OpenSolutionAsync"
 
-[node name="GraphNode4" type="GraphNode" parent="VBoxContainer/GraphEdit"]
+[node name="GraphNode4" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=1781829831]
 layout_mode = 0
 offset_left = 751.0
 offset_top = 73.0
@@ -160,12 +160,12 @@ slot/0/right_color = Color(1, 1, 1, 1)
 slot/0/right_icon = null
 slot/0/draw_stylebox = true
 
-[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode4"]
+[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode4" unique_id=335398118]
 layout_mode = 2
 text = "GetCompilation
 GetDiagnostics"
 
-[node name="GraphNode5" type="GraphNode" parent="VBoxContainer/GraphEdit"]
+[node name="GraphNode5" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=1879576385]
 layout_mode = 0
 offset_left = 750.0
 offset_top = 199.0
@@ -184,14 +184,14 @@ slot/0/right_color = Color(1, 1, 1, 1)
 slot/0/right_icon = null
 slot/0/draw_stylebox = true
 
-[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode5"]
+[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode5" unique_id=1679278045]
 layout_mode = 2
 text = "GetSyntaxTreeAsync
 GetRootAsync
 GetClassifiedSpansAsync
 GetMappedLineSpan"
 
-[node name="GraphNode6" type="GraphNode" parent="VBoxContainer/GraphEdit"]
+[node name="GraphNode6" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=341937258]
 layout_mode = 0
 offset_left = 228.0
 offset_top = 345.0
@@ -210,6 +210,6 @@ slot/0/right_color = Color(1, 1, 1, 1)
 slot/0/right_icon = null
 slot/0/draw_stylebox = true
 
-[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode6"]
+[node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode6" unique_id=967855113]
 layout_mode = 2
 text = "LoadProject"

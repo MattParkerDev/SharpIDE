@@ -15,12 +15,12 @@ public static partial class SymbolInfoComponents
         }
 
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddFieldName(symbol);
         label.AddText(" = ");
-        label.PushColor(CachedColors.NumberGreen);
+        label.PushColor(TextEditorDotnetColoursDark.NumberGreen);
         label.AddText($"{symbol.ConstantValue}");
         label.Pop();
         label.AddText(";");

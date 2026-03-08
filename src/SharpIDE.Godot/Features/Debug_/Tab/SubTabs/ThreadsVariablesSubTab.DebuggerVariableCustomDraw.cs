@@ -20,7 +20,7 @@ public partial class ThreadsVariablesSubTab
         const int iconSize = 18;
         var icon = variable.PresentationHint?.Kind switch
         {
-            VariablePresentationHint.KindValue.Data => _fieldIcon,
+            VariablePresentationHint.KindValue.Data => _arrayElementIcon,
             VariablePresentationHint.KindValue.Property => _propertyIcon,
             VariablePresentationHint.KindValue.Class => _staticMembersIcon,
             _ => null
@@ -34,11 +34,12 @@ public partial class ThreadsVariablesSubTab
 
         var variableValueDisplayColour = variable switch
         {
-            { Value: "null" } => CachedColors.KeywordBlue,
-            { Value: "true" or "false" } => CachedColors.KeywordBlue,
-            { Type: "string" or "char" } => CachedColors.LightOrangeBrown,
-            { Type: "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double" or "decimal" } => CachedColors.NumberGreen,
-            { Type: "byte?" or "sbyte?" or "short?" or "ushort?" or "int?" or "uint?" or "long?" or "ulong?" or "nint?" or "nuint?" or "float?" or "double?" or "decimal?" } => CachedColors.NumberGreen, // value here will never actually be null, as we handled "null" value above
+            _ when variable.PresentationHint?.Attributes is { } attrs && (attrs & VariablePresentationHint.AttributesValue.FailedEvaluation) != 0 => TextEditorDotnetColoursDark.ErrorRed,
+            { Value: "null" } => TextEditorDotnetColoursDark.KeywordBlue,
+            { Value: "true" or "false" } => TextEditorDotnetColoursDark.KeywordBlue,
+            { Type: "string" or "char" } => TextEditorDotnetColoursDark.LightOrangeBrown,
+            { Type: "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double" or "decimal" } => TextEditorDotnetColoursDark.NumberGreen,
+            { Type: "byte?" or "sbyte?" or "short?" or "ushort?" or "int?" or "uint?" or "long?" or "ulong?" or "nint?" or "nuint?" or "float?" or "double?" or "decimal?" } => TextEditorDotnetColoursDark.NumberGreen, // value here will never actually be null, as we handled "null" value above
             _ => VariableWhiteColor
         };
 

@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=4 format=3 uid="uid://bswaamju2blyt"]
+[gd_resource type="Theme" format=3 uid="uid://bswaamju2blyt"]
 
 [ext_resource type="FontVariation" uid="uid://vmgmcu8gc6nt" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="1_7v0pk"]
 

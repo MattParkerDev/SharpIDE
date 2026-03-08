@@ -11,7 +11,7 @@
 
 	protected override async Task OnInitializedAsync()
 	{
-		BuildService.BuildStarted += ClearPreviousOutput;
+		BuildService.BuildStarted.Subscribe(ClearPreviousOutput);
 		_ = Task.Run(async () =>
 		{
 			try
@@ -28,11 +28,11 @@
 		});
 	}
 
-	private async Task ClearPreviousOutput()
+	private async Task ClearPreviousOutput(BuildStartedFlags _)
 	{
 		await _terminalDisplayRef.Clear();
 		await InvokeAsync(StateHasChanged);
 	}
 
-	public void Dispose() => BuildService.BuildStarted -= ClearPreviousOutput;
+	public void Dispose() => BuildService.BuildStarted.Unsubscribe(ClearPreviousOutput);
 }

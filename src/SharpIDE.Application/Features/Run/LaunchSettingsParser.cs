@@ -27,7 +27,10 @@ public static class LaunchSettingsParser
 		var result = launchSettings.Profiles.Select(s => new ProjectLaunchSettingsModel
 		{
 			LaunchProfileName = s.Key,
-			CommandLineArgs = s.Value.CommandName,
+			CommandName = s.Value.CommandName,
+			CommandLineArgs = s.Value.CommandLineArgs,
+			ExecutablePath = s.Value.ExecutablePath,
+			WorkingDirectory = s.Value.WorkingDirectory,
 			DotNetRunMessages = s.Value.DotnetRunMessages,
 			LaunchBrowser = s.Value.LaunchBrowser,
 			LaunchUrl = s.Value.LaunchUrl,
@@ -41,7 +44,10 @@ public static class LaunchSettingsParser
 public class ProjectLaunchSettingsModel
 {
 	public required string? LaunchProfileName { get; set; }
+	public required string? CommandName { get; set; }
 	public required string? CommandLineArgs { get; set; }
+	public required string? ExecutablePath { get; set; }
+	public required string? WorkingDirectory { get; set; }
 	public required bool LaunchBrowser { get; set; }
 	public required string? LaunchUrl { get; set; }
 	public required string? ApplicationUrl { get; set; }
@@ -58,6 +64,9 @@ public class LaunchSettings
 public class Profile
 {
 	public string? CommandName { get; set; }
+	public string? CommandLineArgs { get; set; }
+	public string? ExecutablePath { get; set; }
+	public string? WorkingDirectory { get; set; }
 	public bool DotnetRunMessages { get; set; }
 	public bool LaunchBrowser { get; set; }
 	public string? LaunchUrl { get; set; }

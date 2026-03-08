@@ -1,15 +1,15 @@
-[gd_scene load_steps=4 format=3 uid="uid://c6xurjdabssao"]
+[gd_scene format=3 uid="uid://c6xurjdabssao"]
 
 [ext_resource type="Texture2D" uid="uid://ctwb5vyjuy5m1" path="res://Resources/settings.svg" id="1_0ups8"]
 [ext_resource type="Script" uid="uid://cry5oglh3nyt1" path="res://Features/Settings/SettingsButton.cs" id="2_e87mh"]
 [ext_resource type="PackedScene" uid="uid://dnh73b3speojs" path="res://Features/Settings/SettingsWindow.tscn" id="3_x07a0"]
 
-[node name="SettingsButton" type="Button"]
+[node name="SettingsButton" type="Button" unique_id=1354495950]
 size_flags_vertical = 4
 icon = ExtResource("1_0ups8")
 icon_alignment = 1
 script = ExtResource("2_e87mh")
 
-[node name="SettingsWindow" parent="." instance=ExtResource("3_x07a0")]
+[node name="SettingsWindow" parent="." unique_id=628523139 instance=ExtResource("3_x07a0")]
 unique_name_in_owner = true
 visible = false

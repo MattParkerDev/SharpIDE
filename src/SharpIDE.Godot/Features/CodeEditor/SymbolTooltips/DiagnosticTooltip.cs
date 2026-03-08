@@ -8,7 +8,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetDiagnostic(SharpIdeDiagnostic diagnostic)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFontSize(14);
         label.AddText(diagnostic.Diagnostic.GetMessage());
         label.Pop();

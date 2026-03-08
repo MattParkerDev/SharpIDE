@@ -10,7 +10,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetMethodSymbolInfo(IMethodSymbol methodSymbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(methodSymbol);
         label.AddAccessibilityModifier(methodSymbol);
@@ -41,7 +41,7 @@ public static partial class SymbolInfoComponents
     {
         if (methodSymbol.IsStatic || methodSymbol.ReducedFrom?.IsStatic is true)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("static");
             label.Pop();
             label.AddText(" ");
@@ -52,7 +52,7 @@ public static partial class SymbolInfoComponents
     {
         if (methodSymbol.IsAsync)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("async");
             label.Pop();
             label.AddText(" ");
@@ -63,7 +63,7 @@ public static partial class SymbolInfoComponents
     {
         if (methodSymbol.ReturnsVoid)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("void");
             label.Pop();
             return;
@@ -74,7 +74,7 @@ public static partial class SymbolInfoComponents
     
     private static void AddMethodName(this RichTextLabel label, IMethodSymbol methodSymbol)
     {
-        label.PushColor(CachedColors.Yellow);
+        label.PushColor(TextEditorDotnetColoursDark.Yellow);
         label.AddText(methodSymbol.Name);
         label.Pop();
     }
@@ -82,12 +82,12 @@ public static partial class SymbolInfoComponents
     private static void AddTypeParameters(this RichTextLabel label, IMethodSymbol methodSymbol)
     {
         if (methodSymbol.TypeParameters.Length == 0) return;
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.AddText("<");
         label.Pop();
         foreach (var (index, typeParameter) in methodSymbol.TypeParameters.Index())
         {
-            label.PushColor(CachedColors.ClassGreen);
+            label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
             label.AddText(typeParameter.Name);
             label.Pop();
             if (index < methodSymbol.TypeParameters.Length - 1)
@@ -95,7 +95,7 @@ public static partial class SymbolInfoComponents
                 label.AddText(", ");
             }
         }
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.AddText(">");
         label.Pop();
     }
@@ -104,7 +104,7 @@ public static partial class SymbolInfoComponents
     {
         if (methodSymbol.IsExtensionMethod)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("this");
             label.Pop();
             label.AddText(" ");
@@ -123,21 +123,21 @@ public static partial class SymbolInfoComponents
             }
             if (parameterSymbol.RefKind != RefKind.None) // ref, in, out
             {
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText(parameterSymbol.RefKind.ToString().ToLower());
                 label.Pop();
                 label.AddText(" ");
             }
             else if (parameterSymbol.IsParams)
             {
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("params");
                 label.Pop();
                 label.AddText(" ");
             }
             label.AddType(parameterSymbol.Type);
             label.AddText(" ");
-            label.PushColor(CachedColors.VariableBlue);
+            label.PushColor(TextEditorDotnetColoursDark.VariableBlue);
             label.AddText(parameterSymbol.Name);
             label.Pop();
             // default value
@@ -146,7 +146,7 @@ public static partial class SymbolInfoComponents
                 label.AddText(" = ");
                 if (parameterSymbol.ExplicitDefaultValue is null)
                 {
-                    label.PushColor(CachedColors.KeywordBlue);
+                    label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                     label.AddText("null");
                     label.Pop();
                 }
@@ -160,19 +160,19 @@ public static partial class SymbolInfoComponents
 
                     if (enumMember != null)
                     {
-                        label.PushColor(CachedColors.InterfaceGreen);
+                        label.PushColor(TextEditorDotnetColoursDark.InterfaceGreen);
                         label.AddText(parameterSymbol.Type.Name);
                         label.Pop();
-                        label.PushColor(CachedColors.White);
+                        label.PushColor(TextEditorDotnetColoursDark.White);
                         label.AddText(".");
                         label.Pop();
-                        label.PushColor(CachedColors.White);
+                        label.PushColor(TextEditorDotnetColoursDark.White);
                         label.AddText(enumMember.Name);
                         label.Pop();
                     }
                     else
                     {
-                        label.PushColor(CachedColors.InterfaceGreen);
+                        label.PushColor(TextEditorDotnetColoursDark.InterfaceGreen);
                         label.AddText(parameterSymbol.Type.Name);
                         label.Pop();
                         label.AddText($"({explicitDefaultValue})");
@@ -180,7 +180,7 @@ public static partial class SymbolInfoComponents
                 }
                 else if (parameterSymbol.ExplicitDefaultValue is string str)
                 {
-                    label.PushColor(CachedColors.LightOrangeBrown);
+                    label.PushColor(TextEditorDotnetColoursDark.LightOrangeBrown);
                     label.AddText($"""
                                    "{str}"
                                    """);
@@ -188,7 +188,7 @@ public static partial class SymbolInfoComponents
                 }
                 else if (parameterSymbol.ExplicitDefaultValue is bool b)
                 {
-                    label.PushColor(CachedColors.KeywordBlue);
+                    label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                     label.AddText(b ? "true" : "false");
                     label.Pop();
                 }
@@ -214,7 +214,7 @@ public static partial class SymbolInfoComponents
         if (typeParameters.Length != typeArguments.Length) throw new Exception("Type parameters and type arguments length mismatch.");
         foreach (var (index, (typeArgument, typeParameter)) in methodSymbol.TypeArguments.Zip(typeParameters).Index())
         {
-            label.PushColor(CachedColors.ClassGreen);
+            label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
             label.AddType(typeParameter);
             label.Pop();
             label.AddText(" is ");
@@ -234,7 +234,7 @@ public static partial class SymbolInfoComponents
             if (hasConstraints is false) continue;
             
             label.AddText(" ");
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("where");
             label.Pop();
             label.AddText(" ");
@@ -244,7 +244,7 @@ public static partial class SymbolInfoComponents
 
             if (typeParameter.HasReferenceTypeConstraint)
             {
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("class");
                 label.Pop();
             }
@@ -252,7 +252,7 @@ public static partial class SymbolInfoComponents
             if (typeParameter.HasValueTypeConstraint)
             {
                 MaybeAddComma();
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("struct");
                 label.Pop();
             }
@@ -260,7 +260,7 @@ public static partial class SymbolInfoComponents
             if (typeParameter.HasUnmanagedTypeConstraint)
             {
                 MaybeAddComma();
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("unmanaged");
                 label.Pop();
             }
@@ -268,7 +268,7 @@ public static partial class SymbolInfoComponents
             if (typeParameter.HasNotNullConstraint)
             {
                 MaybeAddComma();
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("notnull");
                 label.Pop();
             }
@@ -282,7 +282,7 @@ public static partial class SymbolInfoComponents
             if (typeParameter.HasConstructorConstraint)
             {
                 MaybeAddComma();
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("new");
                 label.Pop();
                 label.AddText("()");
@@ -291,7 +291,7 @@ public static partial class SymbolInfoComponents
             if (typeParameter.AllowsRefLikeType)
             {
                 MaybeAddComma();
-                label.PushColor(CachedColors.KeywordBlue);
+                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
                 label.AddText("allows ref struct");
                 label.Pop();
             }

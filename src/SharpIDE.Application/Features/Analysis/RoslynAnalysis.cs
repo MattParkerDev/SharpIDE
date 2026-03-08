@@ -10,11 +10,16 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.Completion;
+using Microsoft.CodeAnalysis.CSharp.DecompiledSource;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Host.Mef;
+using Microsoft.CodeAnalysis.MetadataAsSource;
 using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.Options;
+using Microsoft.CodeAnalysis.PdbSourceDocument;
+using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.Razor.DocumentMapping;
 using Microsoft.CodeAnalysis.Razor.Remote;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
@@ -22,23 +27,27 @@ using Microsoft.CodeAnalysis.Remote.Razor.ProjectSystem;
 using Microsoft.CodeAnalysis.Remote.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Shared.Extensions;
+using Microsoft.CodeAnalysis.SignatureHelp;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using NuGet.Frameworks;
-using Roslyn.LanguageServer.Protocol;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
+using SharpIDE.Application.Features.Analysis.WorkspaceServices;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using static Roslyn.Utilities.EnumerableExtensions;
 using CodeAction = Microsoft.CodeAnalysis.CodeActions.CodeAction;
 using CompletionItem = Microsoft.CodeAnalysis.Completion.CompletionItem;
 using CompletionList = Microsoft.CodeAnalysis.Completion.CompletionList;
+using CompletionOptions = Microsoft.CodeAnalysis.Completion.CompletionOptions;
 using Diagnostic = Microsoft.CodeAnalysis.Diagnostic;
 using DiagnosticSeverity = Microsoft.CodeAnalysis.DiagnosticSeverity;
+using VSInternalClientCapabilities = Roslyn.LanguageServer.Protocol.VSInternalClientCapabilities;
 
 namespace SharpIDE.Application.Features.Analysis;
 
@@ -55,6 +64,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static ICodeFixService? _codeFixService;
 	private static ICodeRefactoringService? _codeRefactoringService;
 	private static IDocumentMappingService? _documentMappingService;
+	private static IMetadataAsSourceFileService _metadataAsSourceFileService = null!;
+	private static IImplementationAssemblyLookupService _implementationAssemblyLookupService = null!;
+	private static SignatureHelpService _signatureHelpService = null!;
 	private static HashSet<CodeRefactoringProvider> _codeRefactoringProviders = [];
 	private static HashSet<CodeFixProvider> _codeFixProviders = [];
 
@@ -90,7 +102,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			using var __ = SharpIdeOtel.Source.StartActivity("CreateWorkspace");
 			var configuration = new ContainerConfiguration()
 				.WithAssemblies(MefHostServices.DefaultAssemblies)
-				.WithAssembly(typeof(RemoteSnapshotManager).Assembly);
+				.WithAssembly(typeof(RemoteSnapshotManager).Assembly)
+				.WithPart<CSharpDecompilationService2>()
+				.WithPart<DecompileWholeAssemblyToProjectMetadataAsSourceFileProvider>()
+				.WithPart<PythiaStub>();
 
 			// TODO: dispose container at some point?
 			var container = configuration.CreateContainer();
@@ -104,7 +119,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 			_codeFixService = container.GetExports<ICodeFixService>().FirstOrDefault();
 			_codeRefactoringService = container.GetExports<ICodeRefactoringService>().FirstOrDefault();
-
+			_signatureHelpService = container.GetExports<SignatureHelpService>().FirstOrDefault()!;
+			// TODO: Write an implementation of ISourceLinkService, as MS's implementation does not appear to be open source
+			_metadataAsSourceFileService = container.GetExports<IMetadataAsSourceFileService>().FirstOrDefault()!;
+			_implementationAssemblyLookupService = container.GetExports<IImplementationAssemblyLookupService>().FirstOrDefault()!;
 			_semanticTokensLegendService = (RemoteSemanticTokensLegendService)container.GetExports<ISemanticTokensLegendService>().FirstOrDefault()!;
 			_semanticTokensLegendService!.OnLspInitialized(new RemoteClientLSPInitializationOptions
 			{
@@ -120,7 +138,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		using (var ___ = SharpIdeOtel.Source.StartActivity("RestoreSolution"))
 		{
 			// MsBuildProjectLoader doesn't do a restore which is absolutely required for resolving PackageReferences, if they have changed. I am guessing it just reads from project.assets.json
-			await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, cancellationToken);
+			await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
 		}
 		using (var ___ = SharpIdeOtel.Source.StartActivity("OpenSolution"))
 		{
@@ -187,7 +205,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
 
 		// It is important to note that a Workspace has no concept of MSBuild, nuget packages etc. It is just told about project references and "metadata" references, which are dlls. This is the what MSBuild does - it reads the csproj, and most importantly resolves nuget package references to dlls
-		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, cancellationToken);
+		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.MSBuildProjectLoader.LoadSolutionInfoAsync");
 		// This call is the expensive part - MSBuild is slow. There doesn't seem to be any incrementalism for solutions.
 		// The best we could do to speed it up is do .LoadProjectInfoAsync for the single project, and somehow munge that into the existing solution
@@ -214,7 +232,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(_workspace, nameof(_workspace));
 		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
 
-		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, cancellationToken);
+		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.Internal, cancellationToken);
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(CustomMsBuildProjectLoader)}.{nameof(CustomMsBuildProjectLoader.LoadProjectInfosAsync)}");
 
 		var thisProject = GetProjectForSharpIdeProjectModel(projectModel);
@@ -392,6 +410,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
 		if (fileModel.IsRoslynWorkspaceFile is false) return [];
+		if (fileModel.IsMetadataAsSourceFile) return []; // Due to the current nature of IMetadataAsSourceFileService, which only decompiles a single document (not the whole project), if this was enabled, we would get error diagnostics for missing references to other "files" in the same dll
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentDiagnostics)}");
 		await _solutionLoadedTcs.Task;
 
@@ -416,6 +435,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentAnalyzerDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
 		if (fileModel.IsRoslynWorkspaceFile is false) return [];
+		if (fileModel.IsMetadataAsSourceFile) return []; // Decompiled/SourceLink files should not/will not have analyzers
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentAnalyzerDiagnostics)}");
 		await _solutionLoadedTcs.Task;
 
@@ -528,7 +548,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		// 		return span;
 		// 	}).ToList();
 		//var test = _semanticTokensLegendService.TokenTypes.All;
-		var sourceMappings = razorCSharpDocument.SourceMappings.Select(s => s.ToSharpIdeSourceMapping()).ToImmutableArray();
+		var sourceMappings = razorCSharpDocument.SourceMappingsSortedByOriginal.Select(s => s.ToSharpIdeSourceMapping()).ToImmutableArray();
 		List<SharpIdeRazorClassifiedSpan> sharpIdeRazorSpans = [];
 
 		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(generatedDocument, generatedDocSyntaxRoot!.FullSpan, cancellationToken);
@@ -591,6 +611,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var root = await syntaxTree!.GetRootAsync(cancellationToken);
 
 		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, root.FullSpan, cancellationToken);
+		//var classifiedSpans = await ClassifierHelper.GetClassifiedSpansAsync(document, root.FullSpan, ClassificationOptions.Default, true, cancellationToken);
 		var result = classifiedSpans.Select(s => new SharpIdeClassifiedSpan(syntaxTree.GetMappedLineSpan(s.TextSpan).Span, s)).ToImmutableArray();
 		return result;
 	}
@@ -598,15 +619,65 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	// We store the document here, so that we have the correct version of the document when we compute completions
 	// This may not be the best way to do this, but it seems to work okay. It may only be a problem because I continue to update the doc in the workspace as the user continues typing, filtering the completion
 	// I could possibly pause updating the document while the completion list is open, but that seems more complex - handling accepted vs cancelled completions etc
-	public record IdeCompletionListResult(Document Document, CompletionList CompletionList);
-	public async Task<IdeCompletionListResult> GetCodeCompletionsForDocumentAtPosition(SharpIdeFile fileModel, LinePosition linePosition)
+	public record IdeCompletionListResult(Document Document, CompletionList CompletionList, LinePosition LinePosition);
+	public async Task<IdeCompletionListResult> GetCodeCompletionsForDocumentAtPosition(SharpIdeFile fileModel, string documentText, LinePosition linePosition, CompletionTrigger completionTrigger)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeCompletionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel);
 		Guard.Against.Null(document, nameof(document));
-		var completions = await GetCompletionsAsync(document, linePosition).ConfigureAwait(false);
-		return new IdeCompletionListResult(document, completions);
+		// The document in the workspace may have been further updated since the completion request was made, so we need to fork a document with the text at the time of the completion request
+		document = document.WithText(SourceText.From(documentText, Encoding.UTF8));
+		var (completions, triggerLinePosition) = await GetCompletionsAsync(document, linePosition, completionTrigger).ConfigureAwait(false);
+		return new IdeCompletionListResult(document, completions, triggerLinePosition);
+	}
+
+	public async Task<CompletionDescription> GetCompletionDescription(SharpIdeFile file, CompletionItem completionItem, CancellationToken cancellationToken = default)
+	{
+		await _solutionLoadedTcs.Task;
+		var document = await GetDocumentForSharpIdeFile(file, cancellationToken);
+		var completionService = CompletionService.GetService(document);
+		var description = await completionService!.GetDescriptionAsync(document, completionItem, cancellationToken);
+		return description!;
+	}
+
+	public async Task<SharpIdeSignatureHelpItems?> GetMethodSignatureInfo(SharpIdeFile file, LinePosition linePosition, CancellationToken cancellationToken = default)
+	{
+		await _solutionLoadedTcs.Task;
+		var document = await GetDocumentForSharpIdeFile(file, cancellationToken);
+		var sourceText = await document.GetTextAsync(cancellationToken);
+		var position = sourceText.Lines.GetPosition(linePosition);
+
+		// var semanticModel = await document.GetRequiredSemanticModelAsync(cancellationToken);
+		// var syntaxRoot = await document.GetRequiredSyntaxRootAsync(cancellationToken);
+		// var token = syntaxRoot.FindToken(position);
+		// var argumentListSyntax = token.Parent;
+		// var invocationExpressionSyntax = argumentListSyntax?.FirstAncestorOrSelf<InvocationExpressionSyntax>();
+		// if (invocationExpressionSyntax is null) return null;
+		// var symbolInfo = semanticModel.GetSymbolInfo(invocationExpressionSyntax, cancellationToken);
+		// var symbol = symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault();
+		// if (symbol is not IMethodSymbol methodSymbol) return null;
+
+		var triggerInfo = new SignatureHelpTriggerInfo(SignatureHelpTriggerReason.InvokeSignatureHelpCommand);
+		var (_, signatureHelpItems) = await _signatureHelpService.GetSignatureHelpAsync(document, position, triggerInfo, cancellationToken);
+		if (signatureHelpItems is null) return null;
+
+		var applicableSpan = signatureHelpItems.ApplicableSpan;
+		var mappedLineSpan = (await document.GetRequiredSyntaxTreeAsync(cancellationToken)).GetMappedLineSpan(applicableSpan, cancellationToken);
+		var mappedLinePositionSpan = mappedLineSpan.Span;
+
+		var sharpIdeSignatureHelpItems = new SharpIdeSignatureHelpItems
+		{
+			Items =  signatureHelpItems,
+			ApplicableSpan = mappedLinePositionSpan
+		};
+
+		return sharpIdeSignatureHelpItems;
+
+		// var symbols = semanticModel.LookupSymbols(position, methodSymbol.ReceiverType, methodSymbol.Name, true)
+		// 	.OfType<IMethodSymbol>()
+		// 	.ToImmutableArray();
+		// return symbols;
 	}
 
 	// TODO: Pass in LinePositionSpan for refactorings that span multiple characters, e.g. extract method
@@ -722,30 +793,78 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return codeActions.ToImmutableArray();
 	}
 
-	private static async Task<CompletionList> GetCompletionsAsync(Document document, LinePosition linePosition, CancellationToken cancellationToken = default)
+	private static async Task<(CompletionList completions, LinePosition triggerLinePosition)> GetCompletionsAsync(Document document, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
 	{
 		var completionService = CompletionService.GetService(document);
 		if (completionService is null) throw new InvalidOperationException("Completion service is not available for the document.");
 
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.Lines.GetPosition(linePosition);
-		var completions = await completionService.GetCompletionsAsync(document, position, cancellationToken: cancellationToken);
-		//var filterItems = completionService.FilterItems(document, completions.ItemsList.AsImmutable(), "va");
-		return completions;
+		var completions = await completionService.GetCompletionsAsync(document, position, completionTrigger, cancellationToken: cancellationToken);
+		var triggerLinePosition = sourceText.GetLinePosition(completions.Span.Start);
+		return (completions, triggerLinePosition);
 	}
 
-	// Currently unused
-	private async Task<bool> ShouldTriggerCompletionAsync(SharpIdeFile file, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
+	public async Task<bool> ShouldTriggerCompletionAsync(SharpIdeFile file, string documentText, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
 	{
+		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(file, cancellationToken);
 		var completionService = CompletionService.GetService(document);
 		if (completionService is null) throw new InvalidOperationException("Completion service is not available for the document.");
 
-		var sourceText = await document.GetTextAsync(cancellationToken);
+		var sourceText = SourceText.From(documentText, Encoding.UTF8);
 		var position = sourceText.Lines.GetPosition(linePosition);
-		var shouldTrigger = completionService.ShouldTriggerCompletion(sourceText, position, completionTrigger);
+		var shouldTrigger = completionService.ShouldTriggerCompletion(document.Project, document.Project.Services, sourceText, position, completionTrigger, CompletionOptions.Default, document.Project.Solution.Options ?? OptionSet.Empty);
 		return shouldTrigger;
 	}
+
+	public static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(SharpIdeFile file, string documentText, LinePosition linePosition, CompletionList completionList, CompletionTrigger completionTrigger, CompletionFilterReason filterReason)
+	{
+		var sourceText = SourceText.From(documentText, Encoding.UTF8);
+		var position = sourceText.Lines.GetPosition(linePosition);
+
+		var filterSpanLength = position - completionList.Span.Start;
+		// user has backspaced past the trigger span
+		if (filterSpanLength < 0) return [];
+		var filterSpan = new TextSpan(completionList.Span.Start, length: filterSpanLength);
+
+		var filteredCompletionItems = FilterCompletionList(completionList, filterSpan, completionTrigger, filterReason, sourceText);
+		return filteredCompletionItems;
+	}
+
+	private static ImmutableArray<SharpIdeCompletionItem> FilterCompletionList(CompletionList completionList, TextSpan filterSpan, CompletionTrigger completionTrigger, CompletionFilterReason filterReason, SourceText sourceText)
+    {
+        var filterText = sourceText.GetSubText(filterSpan).ToString();
+		Console.WriteLine($"Filter text: '{filterText}'");
+
+        // Use pattern matching to determine which items are most relevant out of the calculated items.
+        using var _ = ArrayBuilder<MatchResult>.GetInstance(out var matchResultsBuilder);
+        var index = 0;
+        using var helper = new PatternMatchHelper(filterText);
+        foreach (var item in completionList.ItemsList)
+        {
+            if (helper.TryCreateMatchResult(
+                item,
+                completionTrigger.Kind,
+                filterReason,
+                recentItemIndex: -1,
+                includeMatchSpans: true,
+                index,
+                out var matchResult))
+            {
+                matchResultsBuilder.Add(matchResult);
+                index++;
+            }
+        }
+
+        // Next, we sort the list based on the pattern matching result.
+        matchResultsBuilder.Sort(MatchResult.SortingComparer);
+
+        var filteredList = matchResultsBuilder.SelectAsArray(matchResult =>
+	        new SharpIdeCompletionItem(matchResult.CompletionItem, matchResult.PatternMatch?.MatchedSpans));
+
+        return filteredList;
+    }
 
 	public async Task<(string updatedText, SharpIdeFileLinePosition sharpIdeFileLinePosition)> GetCompletionApplyChanges(SharpIdeFile file, CompletionItem completionItem, Document document, CancellationToken cancellationToken = default)
 	{
@@ -870,6 +989,77 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var newSolution = await Renamer.RenameSymbolAsync(currentSolution, symbol, symbolRenameOptions, newName, cancellationToken);
 		var changedFilesWithText = await GetNaiveSolutionChanges(currentSolution, newSolution, cancellationToken);
 		return changedFilesWithText;
+	}
+
+	public async Task<string?> GetMetadataAsSourceFromDebuggingAssemblyAndType(string typeName, string assemblyName, Guid mvid, string userCodeCallingAssemblyPath, CancellationToken cancellationToken = default)
+	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(FindAllSymbolReferences)}");
+		await _solutionLoadedTcs.Task;
+
+		var callingProject = _workspace!.CurrentSolution.Projects.SingleOrDefault(p => p.OutputFilePath == userCodeCallingAssemblyPath);
+		if (callingProject is null) return null;
+
+		var compilation = await callingProject.GetRequiredCompilationAsync(cancellationToken);
+		var symbols = compilation.GetTypesByMetadataName(typeName);
+
+		var symbol = symbols.SingleOrDefault(s =>
+		{
+			if (Path.GetFileNameWithoutExtension(s.ContainingModule.Name) != assemblyName) return false;
+
+			var containingAssembly = s.ContainingAssembly;
+			var metadataReference = compilation.GetMetadataReference(containingAssembly) as PortableExecutableReference;
+			if (metadataReference is null) return false;
+			var referenceAssemblyFilePath = metadataReference.FilePath;
+			// Runtime loads implementation assemblies, but Roslyn only has reference assemblies, so try to resolve the implementation assembly
+			if (referenceAssemblyFilePath is not null && MetadataAsSourceHelpers.IsReferenceAssembly(containingAssembly))
+			{
+				if (_implementationAssemblyLookupService.TryFindImplementationAssemblyPath(referenceAssemblyFilePath, out var implementationAssemblyLocation))
+				{
+					// TODO: Do we need to follow type forwards here?
+					// read the metadata from the implementation assembly, instead of the reference assembly, to get the correct MVID for comparison
+					metadataReference = MetadataReference.CreateFromFile(implementationAssemblyLocation);
+				}
+			}
+			if (metadataReference.GetMetadata() is not AssemblyMetadata assemblyMetadata) return false;
+			return assemblyMetadata.GetMvid() == mvid;
+		});
+		if (symbol is null) return null;
+
+		var options = MetadataAsSourceOptions.Default;// with { NavigateToSourceLinkAndEmbeddedSources = false };
+		var metadataAsSourceFile = await _metadataAsSourceFileService.GetGeneratedFileAsync(_workspace, callingProject, symbol, false, options, cancellationToken);
+		var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace();
+		var documentId = metadataAsSourceWorkspace!.CurrentSolution.GetDocumentIdsWithFilePath(metadataAsSourceFile.FilePath).SingleOrDefault();
+		var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId);
+		return document?.FilePath;
+	}
+
+	public async Task<string?> WriteSourceFromMetadataAsSourceWorkspaceToDisk(string filePath, CancellationToken cancellationToken = default)
+	{
+		await _solutionLoadedTcs.Task;
+		var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace();
+		var documentId = metadataAsSourceWorkspace!.CurrentSolution.GetDocumentIdsWithFilePath(filePath).SingleOrDefault();
+		var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId);
+		if (document is null) return null;
+		await DecompileWholeAssemblyToProjectMetadataAsSourceFileProvider.WriteFileToDiskAsync(document, cancellationToken);
+		return document.FilePath;
+	}
+
+	public async Task<(string FilePath, string PdbSourceFilePath, Location Location)?> GetMetadataAsSourceForSymbol(SharpIdeFile currentFile, ISymbol symbol, CancellationToken cancellationToken = default)
+	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(FindAllSymbolReferences)}");
+		await _solutionLoadedTcs.Task;
+		if (_metadataAsSourceFileService.IsNavigableMetadataSymbol(symbol) is false) return null;
+
+		var documentContainingMetadataReference = await GetDocumentForSharpIdeFile(currentFile, cancellationToken);
+
+		var options = MetadataAsSourceOptions.Default;// with { NavigateToSourceLinkAndEmbeddedSources = false };
+		var metadataAsSourceFile = await _metadataAsSourceFileService.GetGeneratedFileAsync(_workspace!, documentContainingMetadataReference.Project, symbol, false, options, cancellationToken);
+		var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace();
+		var documentId = metadataAsSourceWorkspace!.CurrentSolution.GetDocumentIdsWithFilePath(metadataAsSourceFile.FilePath).SingleOrDefault();
+		if (documentId is null) return null;
+		var document = await metadataAsSourceWorkspace.CurrentSolution.GetRequiredDocumentAsync(documentId, cancellationToken);
+		if (document.FilePath is null) return null;
+		return (document.FilePath, document.Name, metadataAsSourceFile.IdentifierLocation);
 	}
 
 	public async Task<ImmutableArray<ReferencedSymbol>> FindAllSymbolReferences(ISymbol symbol, CancellationToken cancellationToken = default)
@@ -1215,6 +1405,14 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private static Project GetProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
 	{
+		if (sharpIdeFile.IsMetadataAsSourceFile)
+		{
+			var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace() ?? throw new InvalidOperationException("Metadata as source workspace is not available");
+			var documentId = metadataAsSourceWorkspace.CurrentSolution.GetDocumentIdsWithFilePath(sharpIdeFile.Path).SingleOrDefault() ?? throw new InvalidOperationException($"Document with path '{sharpIdeFile.Path}' not found in metadata as source workspace");
+			var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId) ?? throw new InvalidOperationException($"Document with id '{documentId}' not found in metadata as source workspace");
+			var metadataAsSourceProject = document.Project;
+			return metadataAsSourceProject;
+		}
 		var sharpIdeProjectModel = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
 		var project = GetProjectForSharpIdeProjectModel(sharpIdeProjectModel);
 		return project;
@@ -1255,5 +1453,18 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			.First();
 
 		return selectedProject;
+	}
+}
+
+internal static class AssemblyMetadataExtensions
+{
+	public static Guid GetMvid(this AssemblyMetadata assemblyMetadata)
+	{
+		var module = assemblyMetadata.GetModules()[0];
+		var reader = module.GetMetadataReader();
+
+		var moduleDef = reader.GetModuleDefinition();
+		var mvid = reader.GetGuid(moduleDef.Mvid);
+		return mvid;
 	}
 }

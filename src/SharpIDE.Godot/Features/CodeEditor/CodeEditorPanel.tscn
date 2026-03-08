@@ -1,14 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://c5dlwgcx3ubyp"]
+[gd_scene format=3 uid="uid://c5dlwgcx3ubyp"]
 
 [ext_resource type="Script" uid="uid://cy7erscaagrtj" path="res://Features/CodeEditor/CodeEditorPanel.cs" id="1_eraxv"]
 [ext_resource type="PackedScene" uid="uid://cinaqbdghcvoi" path="res://Features/CodeEditor/SharpIdeCodeEdit.tscn" id="1_y4okr"]
 [ext_resource type="Texture2D" uid="uid://do0edciarrnp0" path="res://Features/SolutionExplorer/Resources/CsharpFile.svg" id="2_dbtmr"]
-[ext_resource type="StyleBox" uid="uid://bun830pn1vfxw" path="res://Features/CodeEditor/Resources/TabBarTabStyle.tres" id="2_m4iuw"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m4iuw"]
-bg_color = Color(0.11764706, 0.11764706, 0.11764706, 1)
-
-[node name="CodeEditorPanel" type="MarginContainer"]
+[node name="CodeEditorPanel" type="MarginContainer" unique_id=154728753]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -17,16 +13,15 @@ grow_vertical = 2
 script = ExtResource("1_eraxv")
 CsFileTexture = ExtResource("2_dbtmr")
 
-[node name="TabContainer" type="TabContainer" parent="."]
+[node name="TabContainer" type="TabContainer" parent="." unique_id=2126230228]
 layout_mode = 2
+theme_type_variation = &"CodeEditorTabContainer"
 theme_override_constants/side_margin = 0
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 15
-theme_override_styles/tabbar_background = SubResource("StyleBoxFlat_m4iuw")
-theme_override_styles/tab_selected = ExtResource("2_m4iuw")
 current_tab = 0
 drag_to_rearrange_enabled = true
 
-[node name="SharpIdeCodeEdit" parent="TabContainer" instance=ExtResource("1_y4okr")]
+[node name="SharpIdeCodeEdit" parent="TabContainer" unique_id=170225652 instance=ExtResource("1_y4okr")]
 layout_mode = 2
 metadata/_tab_index = 0

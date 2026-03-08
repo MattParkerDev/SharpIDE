@@ -35,7 +35,8 @@ public partial class CustomMsBuildProjectLoader(Workspace workspace, ImmutableDi
 			onPathFailure: reportingMode,
 			onLoaderFailure: reportingMode);
 
-		var buildHostProcessManager = new BuildHostProcessManager(Properties, loggerFactory: _loggerFactory);
+		var knownCommandLineParserLanguages = _solutionServices.GetSupportedLanguages<ICommandLineParserService>();
+		var buildHostProcessManager = new BuildHostProcessManager(knownCommandLineParserLanguages, Properties, loggerFactory: _loggerFactory);
 		await using var _ = buildHostProcessManager.ConfigureAwait(false);
 
 		var worker = new CustomWorker(
@@ -91,7 +92,8 @@ public partial class CustomMsBuildProjectLoader(Workspace workspace, ImmutableDi
 
 		IBinLogPathProvider binLogPathProvider = null!; // TODO: Fix
 
-		var buildHostProcessManager = new BuildHostProcessManager(Properties, binLogPathProvider, _loggerFactory);
+		var knownCommandLineParserLanguages = _solutionServices.GetSupportedLanguages<ICommandLineParserService>();
+		var buildHostProcessManager = new BuildHostProcessManager(knownCommandLineParserLanguages, Properties, binLogPathProvider, _loggerFactory);
 		await using var _ = buildHostProcessManager.ConfigureAwait(false);
 
 		var worker = new CustomWorker(

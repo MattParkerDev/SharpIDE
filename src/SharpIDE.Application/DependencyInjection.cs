@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.FilePersistence;
@@ -19,6 +20,7 @@ public static class DependencyInjection
 	{
 		services.AddScoped<BuildService>();
 		services.AddScoped<RunService>();
+		services.AddScoped<DebuggingService>();
 		services.AddScoped<SearchService>();
 		services.AddScoped<IdeFileExternalChangeHandler>();
 		services.AddScoped<IdeCodeActionService>();
@@ -37,6 +39,7 @@ public static class DependencyInjection
 		services.AddScoped<SharpIdeSolutionModificationService>();
 		services.AddScoped<AnalyzerFileWatcher>();
 		services.AddScoped<EditorCaretPositionService>();
+		services.AddScoped<SharpIdeMetadataAsSourceService>();
 		services.AddLogging();
 		return services;
 	}

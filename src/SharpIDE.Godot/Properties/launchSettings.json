@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Run": {
+      "commandName": "Executable",
+      "executablePath": "godot",
+      "workingDirectory": "$(ProjectDir)"
+    }
+  }
+}

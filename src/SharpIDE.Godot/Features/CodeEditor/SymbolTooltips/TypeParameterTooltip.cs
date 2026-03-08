@@ -8,7 +8,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetTypeParameterSymbolInfo(ITypeParameterSymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddTypeParameter(symbol);
         label.AddText(" in ");

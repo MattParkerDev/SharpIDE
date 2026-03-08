@@ -74,22 +74,44 @@ public partial class SharpIdeCodeEdit
             }
             else if (semanticInfo.Value.ReferencedSymbols.Length is not 0)
             {
-                var referencedSymbol =
-                    semanticInfo.Value.ReferencedSymbols.Single(); // Handle more than one when I run into it
+                var referencedSymbol = semanticInfo.Value.ReferencedSymbols.Single(); // Handle more than one when I run into it
                 var locations = referencedSymbol.Locations;
                 if (locations.Length is 1)
                 {
                     // Lets jump to the definition
                     var definitionLocation = locations[0];
-                    var definitionLineSpan = definitionLocation.GetMappedLineSpan();
-                    var sharpIdeFile = Solution!.AllFiles.GetValueOrDefault(definitionLineSpan.Path);
-                    if (sharpIdeFile is null)
+                    if (definitionLocation.IsInSource)
                     {
-                        GD.Print($"Definition file not found in solution: {definitionLineSpan.Path}");
-                        return;
+                        var definitionLineSpan = definitionLocation.GetMappedLineSpan();
+                        var sharpIdeFile = Solution!.AllFiles.GetValueOrDefault(definitionLineSpan.Path);
+                        if (sharpIdeFile is null)
+                        {
+                            // This file may have been decompiled, but IsInSource=true as it is in the MetadataAsSource workspace. Lets try to find a metadata as source file
+                            sharpIdeFile = await _sharpIdeMetadataAsSourceService.GetOrCreateSharpIdeFileForAlreadyDecompiledMetadataAsSourceAsync(definitionLineSpan.Path);
+                            if (sharpIdeFile is null)
+                            {
+                                GD.PrintErr($"Definition file not found in solution or as metadata as source for symbol: {referencedSymbol.Name}, definition location: {definitionLineSpan.Path}");
+                                return;
+                            }
+                        }
+                        await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(sharpIdeFile, new SharpIdeFileLinePosition(definitionLineSpan.Span.Start.Line, definitionLineSpan.Span.Start.Character));
                     }
-
-                    await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(sharpIdeFile, new SharpIdeFileLinePosition(definitionLineSpan.Span.Start.Line, definitionLineSpan.Span.Start.Character));
+                    else
+                    {
+                        GD.Print($"Definition is not in source code, attempting to navigate to metadata as source: {referencedSymbol.Name}");
+                        var result = await _sharpIdeMetadataAsSourceService.CreateSharpIdeFileForMetadataAsSourceAsync(_currentFile, referencedSymbol);
+                        if (result is not null)
+                        {
+                            var (metadataAsSourceSharpIdeFile, location) = result.Value;
+                            var definitionInMetadataSourceLineSpan = location.GetMappedLineSpan();
+                            var linePosition = new SharpIdeFileLinePosition(definitionInMetadataSourceLineSpan.Span.Start.Line, definitionInMetadataSourceLineSpan.Span.Start.Character);
+                            await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(metadataAsSourceSharpIdeFile, linePosition);
+                        }
+                        else
+                        {
+                            GD.PrintErr($"Failed to create metadata as source file for symbol: {referencedSymbol.Name}");
+                        }
+                    }
                 }
                 else
                 {

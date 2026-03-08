@@ -9,7 +9,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetEventSymbolInfo(IEventSymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAccessibilityModifier(symbol);
         label.AddEventKeyword(symbol);
@@ -26,7 +26,7 @@ public static partial class SymbolInfoComponents
 
     private static void AddEventKeyword(this RichTextLabel label, IEventSymbol symbol)
     {
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
         label.AddText("event ");
         label.Pop();
     }
@@ -39,7 +39,7 @@ public static partial class SymbolInfoComponents
 
     private static void AddEventName(this RichTextLabel label, IEventSymbol symbol)
     {
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.AddText(symbol.Name);
         label.Pop();
     }
@@ -47,11 +47,11 @@ public static partial class SymbolInfoComponents
     private static void AddEventMethods(this RichTextLabel label, IEventSymbol symbol)
     {
         label.AddText(" { ");
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
         label.AddText("add");
         label.Pop();
         label.AddText("; ");
-        label.PushColor(CachedColors.KeywordBlue);
+        label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
         label.AddText("remove");
         label.Pop();
         label.AddText("; }");

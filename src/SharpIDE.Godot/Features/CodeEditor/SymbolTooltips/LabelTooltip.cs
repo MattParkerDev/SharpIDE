@@ -9,7 +9,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetLabelSymbolInfo(ILabelSymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddText("label ");
         label.AddLabelName(symbol);
@@ -20,7 +20,7 @@ public static partial class SymbolInfoComponents
 
     private static void AddLabelName(this RichTextLabel label, ILabelSymbol symbol)
     {
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.AddText(symbol.Name);
         label.Pop();
     }

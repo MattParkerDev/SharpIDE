@@ -8,7 +8,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetFieldSymbolInfo(IFieldSymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddAccessibilityModifier(symbol);
@@ -35,7 +35,7 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.IsStatic)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("static");
             label.Pop();
             label.AddText(" ");
@@ -46,7 +46,7 @@ public static partial class SymbolInfoComponents
     {
         if (fieldSymbol.IsReadOnly)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("readonly");
             label.Pop();
             label.AddText(" ");
@@ -57,7 +57,7 @@ public static partial class SymbolInfoComponents
     {
         if (symbol.IsRequired)
         {
-            label.PushColor(CachedColors.KeywordBlue);
+            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
             label.AddText("required");
             label.Pop();
             label.AddText(" ");
@@ -72,7 +72,7 @@ public static partial class SymbolInfoComponents
     
     private static void AddFieldName(this RichTextLabel label, IFieldSymbol fieldSymbol)
     {
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.AddText(fieldSymbol.Name);
         label.Pop();
     }

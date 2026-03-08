@@ -133,12 +133,6 @@ public class PTY
 
 	#region Inherited Properties
 
-	public Godot.NodePath ImportPath
-	{
-		get => _object._ImportPath;
-		set => _object._ImportPath = value;
-	}
-
 	public Godot.StringName Name
 	{
 		get => _object.Name;

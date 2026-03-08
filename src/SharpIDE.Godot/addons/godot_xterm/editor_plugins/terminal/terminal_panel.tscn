@@ -1,11 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://cbxovnvw5o4mo"]
+[gd_scene format=3 uid="uid://cbxovnvw5o4mo"]
 
 [ext_resource type="Script" uid="uid://cufcnr6pxqofk" path="res://addons/godot_xterm/editor_plugins/terminal/terminal_panel.gd" id="1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_osmrc"]
 bg_color = Color(0.113329, 0.129458, 0.156802, 1)
 
-[node name="Panel" type="Panel"]
+[node name="Panel" type="Panel" unique_id=2053106337]
 custom_minimum_size = Vector2(0, 190)
 anchors_preset = 15
 anchor_right = 1.0
@@ -16,7 +16,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=276895988]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -25,23 +25,23 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="TabbarContainer" type="HBoxContainer" parent="VBoxContainer"]
+[node name="TabbarContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=749675859]
 layout_mode = 2
 
-[node name="Tabs" type="TabBar" parent="VBoxContainer/TabbarContainer"]
+[node name="Tabs" type="TabBar" parent="VBoxContainer/TabbarContainer" unique_id=2038607791]
 layout_mode = 2
 size_flags_horizontal = 3
 focus_mode = 0
 tab_close_display_policy = 2
 drag_to_rearrange_enabled = true
 
-[node name="AddButton" type="Button" parent="VBoxContainer/TabbarContainer"]
+[node name="AddButton" type="Button" parent="VBoxContainer/TabbarContainer" unique_id=1112980960]
 layout_mode = 2
 tooltip_text = "New Terminal (Ctrl+Shift+T)"
 theme_override_colors/icon_normal_color = Color(0.6, 0.6, 0.6, 0.8)
 flat = true
 
-[node name="PopupMenu" type="PopupMenu" parent="VBoxContainer/TabbarContainer"]
+[node name="PopupMenu" type="PopupMenu" parent="VBoxContainer/TabbarContainer" unique_id=870068639]
 item_count = 4
 item_0/text = "Kill"
 item_0/id = 0
@@ -52,7 +52,7 @@ item_2/id = 2
 item_3/text = "Kill All"
 item_3/id = 3
 
-[node name="TabContainer" type="TabContainer" parent="VBoxContainer"]
+[node name="TabContainer" type="TabContainer" parent="VBoxContainer" unique_id=2120435833]
 clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -60,7 +60,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_osmrc")
 tabs_visible = false
 deselect_enabled = true
 
-[node name="TerminalPopupMenu" type="PopupMenu" parent="VBoxContainer"]
+[node name="TerminalPopupMenu" type="PopupMenu" parent="VBoxContainer" unique_id=369164402]
 size = Vector2i(136, 178)
 item_count = 8
 item_0/text = "New Terminal"
@@ -81,7 +81,7 @@ item_6/id = 6
 item_7/text = "Kill Terminal"
 item_7/id = 7
 
-[node name="SizeLabel" type="Label" parent="."]
+[node name="SizeLabel" type="Label" parent="." unique_id=725642505]
 visible = false
 layout_mode = 1
 anchors_preset = 8
@@ -98,7 +98,7 @@ grow_vertical = 2
 text = "Size:
 (3456 x 1035 px)"
 
-[node name="Panel" type="Panel" parent="SizeLabel"]
+[node name="Panel" type="Panel" parent="SizeLabel" unique_id=1880306589]
 show_behind_parent = true
 layout_mode = 1
 anchors_preset = 15
@@ -111,7 +111,7 @@ offset_bottom = 5.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="SizeLabelTimer" type="Timer" parent="SizeLabel"]
+[node name="SizeLabelTimer" type="Timer" parent="SizeLabel" unique_id=391279031]
 
 [connection signal="resized" from="." to="." method="_on_Panel_resized"]
 [connection signal="tab_changed" from="VBoxContainer/TabbarContainer/Tabs" to="." method="_on_Tabs_tab_changed"]

@@ -17,12 +17,12 @@ public static class GitColours
     public static readonly Color GitEditedFileTransparentColour = new Color(EditedFileColourHexCode, 0.4f);
     public static readonly Color GitUnalteredFileTransparentColour = new Color(UnalteredFileColourHexCode, 0.4f);
     
-    public static Color GetColorForGitFileStatus(GitFileStatus fileStatus) => fileStatus switch
+    public static Color? GetColorForGitFileStatus(GitFileStatus fileStatus) => fileStatus switch
     {
         GitFileStatus.Added => GitNewFileColour,
         GitFileStatus.Modified => GitEditedFileColour,
-        GitFileStatus.Unaltered => GitUnalteredFileColour,
-        _ => GitUnalteredFileColour
+        GitFileStatus.Unaltered => null,
+        _ => null
     };
     
     public static Color GetColorForGitLineStatus(GitLineStatus lineStatus) => lineStatus switch

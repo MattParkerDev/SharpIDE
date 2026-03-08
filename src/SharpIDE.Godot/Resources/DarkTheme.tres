@@ -1,0 +1,169 @@
+[gd_resource type="Theme" format=3 uid="uid://epmt8kq6efrs"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_38n5o"]
+bg_color = Color(0.16862746, 0.1764706, 0.1882353, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.24313726, 0.2509804, 0.27058825, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+expand_margin_left = -2.0
+expand_margin_top = -2.0
+expand_margin_right = -2.0
+expand_margin_bottom = -2.0
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_82udi"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.117647, 0.117647, 0.117647, 1)
+border_color = Color(0, 0, 0, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_21uq4"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.75)
+corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5oigc"]
+bg_color = Color(0.11764706, 0.11764706, 0.11764706, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dvhtt"]
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(0.16862746, 0.1764706, 0.1882353, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.24313726, 0.2509804, 0.27058825, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+expand_margin_left = -2.0
+expand_margin_top = -2.0
+expand_margin_right = -2.0
+expand_margin_bottom = -2.0
+shadow_color = Color(0, 0, 0, 0.5019608)
+shadow_size = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hrgw7"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsk6k"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+draw_center = false
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_njudc"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0.39215687)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3gh6f"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6e8is"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amw38"]
+bg_color = Color(0.1764706, 0.1764706, 0.1764706, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.11764706)
+shadow_size = 4
+
+[resource]
+CodeEdit/colors/completion_background_color = Color(1, 1, 1, 0)
+CodeEdit/colors/completion_selected_color = Color(0.18039216, 0.2627451, 0.43137255, 1)
+CodeEdit/colors/current_line_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
+CodeEdit/colors/font_readonly_color = Color(1, 1, 1, 1)
+CodeEdit/colors/search_result_border_color = Color(0.14117648, 0.35686275, 0.50980395, 1)
+CodeEdit/colors/search_result_color = Color(0.3, 0.3, 0.3, 0.4117647)
+CodeEdit/colors/selection_color = Color(0.14117648, 0.35686275, 0.50980395, 1)
+CodeEdit/styles/completion = SubResource("StyleBoxFlat_38n5o")
+CodeEdit/styles/normal = SubResource("StyleBoxFlat_82udi")
+CodeEdit/styles/read_only = SubResource("StyleBoxFlat_82udi")
+CodeEditorTabContainer/base_type = &"TabContainer"
+CodeEditorTabContainer/styles/tab_selected = SubResource("StyleBoxFlat_21uq4")
+CodeEditorTabContainer/styles/tabbar_background = SubResource("StyleBoxFlat_5oigc")
+EditorHoverPopupPanelContainer/base_type = &"PanelContainer"
+EditorHoverPopupPanelContainer/styles/panel = SubResource("StyleBoxFlat_dvhtt")
+FoldableContainer/styles/title_collapsed_panel = SubResource("StyleBoxFlat_hrgw7")
+Gray500Label/base_type = &"Label"
+Gray500Label/colors/font_color = Color(0.5137255, 0.5137255, 0.5137255, 1)
+Gray600Label/base_type = &"Label"
+Gray600Label/colors/font_color = Color(0.67058825, 0.67058825, 0.67058825, 1)
+Gray700Label/base_type = &"Label"
+Gray700Label/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+IdeSidebarButton/base_type = &"Button"
+IdeSidebarButton/styles/normal = SubResource("StyleBoxFlat_dsk6k")
+IdeSidebarButton/styles/pressed = SubResource("StyleBoxFlat_njudc")
+Panel/styles/panel = SubResource("StyleBoxFlat_3gh6f")
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_6e8is")
+PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
+ThemeInfo/constants/IsLight1OrDark2 = 2
+Tree/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)

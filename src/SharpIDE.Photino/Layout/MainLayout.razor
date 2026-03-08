@@ -197,7 +197,7 @@
 	{
 		if (AppState.IdeSettings.OpenTerminalOnBuildRebuildRestore) SelectBottomPanel(BottomPanelType.Build);
 		_cancellationTokenSource = new CancellationTokenSource();
-		await BuildService.MsBuildAsync(_solutionFilePath!, buildType, _cancellationTokenSource.Token);
+		await BuildService.MsBuildAsync(_solutionFilePath!, buildType, BuildStartedFlags.UserFacing, _cancellationTokenSource.Token);
 		_cancellationTokenSource = null;
 	}
 	private async Task CancelBuild() => await _cancellationTokenSource!.CancelAsync();

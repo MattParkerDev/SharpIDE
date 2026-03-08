@@ -1,4 +1,6 @@
-﻿namespace SharpIDE.Godot.Features.IdeSettings;
+﻿using System.Text.Json.Serialization;
+
+namespace SharpIDE.Godot.Features.IdeSettings;
 
 public class AppState
 {
@@ -11,8 +13,13 @@ public class IdeSettings
 {
     public bool AutoOpenLastSolution { get; set; }
     public string? DebuggerExecutablePath { get; set; }
+    public bool DebuggerUseSharpDbg { get; set; } = true;
     public float UiScale { get; set; } = 1.0f;
+    public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
 }
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum LightOrDarkTheme { Light, Dark }
 
 public record RecentSln
 {

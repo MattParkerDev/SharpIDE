@@ -8,7 +8,7 @@ public static partial class SymbolInfoComponents
     public static RichTextLabel GetLocalVariableSymbolInfo(ILocalSymbol symbol)
     {
         var label = new RichTextLabel();
-        label.PushColor(CachedColors.White);
+        label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFont(MonospaceFont);
         label.AddAttributes(symbol);
         label.AddText("local variable ");
@@ -35,7 +35,7 @@ public static partial class SymbolInfoComponents
     
     private static void AddLocalVariableName(this RichTextLabel label, ILocalSymbol symbol)
     {
-        label.PushColor(CachedColors.VariableBlue);
+        label.PushColor(TextEditorDotnetColoursDark.VariableBlue);
         label.AddText(symbol.Name);
         label.Pop();
     }

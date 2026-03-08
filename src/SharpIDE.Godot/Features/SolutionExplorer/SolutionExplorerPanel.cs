@@ -98,6 +98,19 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var task = GodotGlobalEvents.Instance.FileSelected.InvokeParallelAsync(file, fileLinePosition);
+		if (file.IsMetadataAsSourceFile)
+		{
+			await task;
+			return;
+		}
+		// First check if the file is already selected
+		var selectedItem = _tree.GetSelected();
+		if (selectedItem is not null)
+		{
+			var selectedFile = selectedItem.GetTypedMetadata<RefCountedContainer<SharpIdeFile>?>(0)?.Item;
+			if (selectedFile == file)
+				return;
+		}
 		var item = FindItemRecursive(_tree.GetRoot(), file);
 		if (item is not null)
 		{
@@ -311,7 +324,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 		var fileItem = tree.CreateItem(parent, newStartingIndex);
 		fileItem.SetText(0, sharpIdeFile.Name);
 		fileItem.SetIconsForFileExtension(sharpIdeFile);
-		fileItem.SetCustomColor(0, GitColours.GetColorForGitFileStatus(sharpIdeFile.GitStatus));
+		if (GitColours.GetColorForGitFileStatus(sharpIdeFile.GitStatus) is { } notnullColor) fileItem.SetCustomColor(0, notnullColor);
+		else fileItem.ClearCustomColor(0);
 		fileItem.SetMetadata(0, new RefCountedContainer<SharpIdeFile>(sharpIdeFile));
 		
 		Observable.EveryValueChanged(sharpIdeFile, file => file.Name)

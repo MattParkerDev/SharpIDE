@@ -99,7 +99,7 @@ public partial class SolutionExplorerPanel
     }
     private async Task MsBuildProject(SharpIdeProjectModel project, BuildType buildType)
     {
-        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
+        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(buildType);
         await _buildService.MsBuildAsync(project.FilePath, buildType);
     }
 }
