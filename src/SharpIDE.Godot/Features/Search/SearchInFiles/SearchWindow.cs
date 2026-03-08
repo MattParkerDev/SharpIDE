@@ -38,16 +38,22 @@ public partial class SearchWindow : PopupPanel
         _lineEdit.SelectAll();
         Callable.From(_lineEdit.GrabFocus).CallDeferred();
         
-        await BeginSearchAsync(_lineEdit.Text);
+        await BeginSearch(_lineEdit.Text);
     }
 
     private async void OnTextChanged(string newText)
     {
-        await BeginSearchAsync(newText);
+        await BeginSearch(newText);
     }
     
-    private async Task BeginSearchAsync(string searchText)
+    private async Task BeginSearch(string searchText)
     {
+        _resultCountLabel.Text = string.Empty;
+        foreach (var child in _searchResultsContainer.GetChildren())
+        {
+            child.QueueFree();
+        }
+        
         await _cancellationTokenSource.CancelAsync();
         // TODO: Investigate allocations
         _cancellationTokenSource = new CancellationTokenSource();
@@ -57,19 +63,26 @@ public partial class SearchWindow : PopupPanel
 
     private async Task Search(string text, CancellationToken cancellationToken)
     {
-        var result = await _searchService.FindInFiles(Solution, text, cancellationToken);
-        if (cancellationToken.IsCancellationRequested) return;
-        await this.InvokeAsync(() =>
+        var resultCount = 0;
+
+        await foreach (var searchResults in _searchService.FindInFiles(Solution, text, cancellationToken)
+                                                          .Chunk(size: 10)
+                                                          .WithCancellation(cancellationToken))
         {
-            _searchResultsContainer.GetChildren().ToList().ForEach(s => s.QueueFree());
-            foreach (var searchResult in result)
+            await this.InvokeAsync(async () =>
             {
-                var resultNode = _searchResultEntryScene.Instantiate<SearchResultComponent>();
-                resultNode.Result = searchResult;
-                resultNode.ParentSearchWindow = this;
-                _searchResultsContainer.AddChild(resultNode);
-            }
-            _resultCountLabel.Text = $"{result.Count} files(s) found";
-        });
+                foreach (var searchResult in searchResults)
+                {
+                    var resultNode = _searchResultEntryScene.Instantiate<SearchResultComponent>();
+                    resultNode.Result = searchResult;
+                    resultNode.ParentSearchWindow = this;
+                    _searchResultsContainer.AddChild(resultNode);
+
+                    resultCount++;
+                }
+            });
+        }
+
+        await this.InvokeAsync(async () => { _resultCountLabel.Text = $"{resultCount} files(s) found"; });
     }
 }

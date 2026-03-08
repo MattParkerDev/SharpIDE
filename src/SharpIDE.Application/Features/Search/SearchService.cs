@@ -1,7 +1,13 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
+
 using Microsoft.Extensions.Logging;
+
+using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.Search;
@@ -10,38 +16,48 @@ public class SearchService(ILogger<SearchService> logger)
 {
 	private readonly ILogger<SearchService> _logger = logger;
 
-	public async Task<List<FindInFilesSearchResult>> FindInFiles(SharpIdeSolutionModel solutionModel, string searchTerm, CancellationToken cancellationToken)
+	public async IAsyncEnumerable<FindInFilesSearchResult> FindInFiles(
+		SharpIdeSolutionModel solutionModel,
+		string searchTerm,
+		[EnumeratorCancellation] CancellationToken cancellationToken)
 	{
 		if (searchTerm.Length < 4) // TODO: halt search once 100 results are found, and remove this restriction
 		{
-			return [];
+			yield break;
 		}
 
 		var timer = Stopwatch.StartNew();
-		var files = solutionModel.AllFiles.Values.ToList();
-		ConcurrentBag<FindInFilesSearchResult> results = [];
-		await Parallel.ForEachAsync(files, cancellationToken, async (file, ct) =>
+
+		var files = solutionModel.AllFiles.Values;
+
+		var resultChannel = Channel.CreateUnbounded<FindInFilesSearchResult>(
+			new UnboundedChannelOptions
 			{
-				if (cancellationToken.IsCancellationRequested) return;
-				await foreach (var (index, line) in File.ReadLinesAsync(file.Path, ct).Index().WithCancellation(ct))
-				{
-					if (cancellationToken.IsCancellationRequested) return;
-					if (line.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-					{
-						results.Add(new FindInFilesSearchResult
-						{
-							File = file,
-							Line = index + 1,
-							StartColumn = line.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) + 1,
-							LineText = line.Trim()
-						});
-					}
-				}
-			}
-		).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+				SingleReader = true,
+				SingleWriter = false
+			});
+
+		var searchTask = Parallel.ForEachAsync(
+			                         files,
+			                         cancellationToken,
+			                         (file, ct) => new ValueTask(FindInFile(file, searchTerm, resultChannel.Writer, ct)))
+		                         .ContinueWith(_ => resultChannel.Writer.Complete(), cancellationToken);
+
+		var resultCount = 0;
+		await foreach (var result in resultChannel.Reader.ReadAllAsync(cancellationToken))
+		{
+			resultCount++;
+			yield return result;
+		}
+
+		await searchTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+
 		timer.Stop();
-		_logger.LogInformation("Search completed in {ElapsedMilliseconds}ms. Found {ResultCount} results. {Cancelled}", timer.ElapsedMilliseconds, results.Count, cancellationToken.IsCancellationRequested ? "(Cancelled)" : "");
-		return results.ToList();
+		_logger.LogInformation(
+			"Search completed in {ElapsedMilliseconds}ms. Found {ResultCount} results. {Cancelled}",
+			timer.ElapsedMilliseconds,
+			resultCount,
+			cancellationToken.IsCancellationRequested ? "(Cancelled)" : "");
 	}
 
 	public async Task<List<FindFilesSearchResult>> FindFiles(SharpIdeSolutionModel solutionModel, string searchTerm, CancellationToken cancellationToken)
@@ -69,5 +85,46 @@ public class SearchService(ILogger<SearchService> logger)
 		timer.Stop();
 		_logger.LogInformation("File search completed in {ElapsedMilliseconds}ms. Found {ResultCount} results. {Cancelled}", timer.ElapsedMilliseconds, results.Count, cancellationToken.IsCancellationRequested ? "(Cancelled)" : "");
 		return results.ToList();
+	}
+
+	private static async Task FindInFile(
+		SharpIdeFile file,
+		string searchTerm,
+		ChannelWriter<FindInFilesSearchResult> resultWriter,
+		CancellationToken ct)
+	{
+		if (ct.IsCancellationRequested)
+		{
+			return;
+		}
+
+		await foreach (var (index, line) in File.ReadLinesAsync(file.Path, ct)
+		                                        .Index()
+		                                        .WithCancellation(ct))
+		{
+			if (ct.IsCancellationRequested)
+			{
+				return;
+			}
+
+			if (!line.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			var result =
+				new FindInFilesSearchResult
+				{
+					File = file,
+					Line = index + 1,
+					StartColumn = line.IndexOf(
+						              searchTerm,
+						              StringComparison.OrdinalIgnoreCase)
+					            + 1,
+					LineText = line.Trim()
+				};
+
+			await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
+		}
 	}
 }
