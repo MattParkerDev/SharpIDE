@@ -7,9 +7,6 @@ namespace SharpIDE.Godot.Features.Layout;
 public partial class ToolButton : Button
 {
 	public IdeToolId ToolId { get; set; }
-	
-	[Export]
-	public Color DragPreviewColor { get; set; }
 
 	/// <inheritdoc />
 	public override Variant _GetDragData(Vector2 atPosition)
@@ -39,7 +36,7 @@ public partial class ToolButton : Button
 	{
 		var rect = new ColorRect();
 		rect.Size = Size;
-		rect.Color = DragPreviewColor;
+		rect.Color = GetThemeColor(ThemeStringNames.DragPreviewColor);
 		
 		var icon = new TextureRect
 		{

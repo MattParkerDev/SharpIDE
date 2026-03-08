@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bbdbcqg3jys2b"]
+[gd_scene format=3 uid="uid://bbdbcqg3jys2b"]
 
 [ext_resource type="Script" uid="uid://bu3a3xbolcijl" path="res://Features/Layout/IdeMainLayout.cs" id="1_tq23w"]
 [ext_resource type="PackedScene" uid="uid://cy2a1p2twwni0" path="res://Features/Layout/Sidebar.tscn" id="2_e53sf"]
@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://f1hvt1gn1adf" path="res://Features/Layout/ToolDragOverlay.tscn" id="5_e53sf"]
 [ext_resource type="Script" uid="uid://dh8sh21lx7p34" path="res://Features/Layout/DropZone.cs" id="6_yv27d"]
 
-[node name="IdeMainLayout" type="Control"]
+[node name="IdeMainLayout" type="Control" unique_id=977925076]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -18,7 +18,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_tq23w")
 
-[node name="Root" type="HBoxContainer" parent="."]
+[node name="Root" type="HBoxContainer" parent="." unique_id=1830575877]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,65 +26,69 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="LeftSidebar" parent="Root" instance=ExtResource("2_e53sf")]
+[node name="LeftSidebar" parent="Root" unique_id=1545637864 instance=ExtResource("2_e53sf")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CenterArea" type="VSplitContainer" parent="Root"]
+[node name="CenterArea" type="VSplitContainer" parent="Root" unique_id=1457244086]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="TopArea" type="HSplitContainer" parent="Root/CenterArea"]
+[node name="TopArea" type="HSplitContainer" parent="Root/CenterArea" unique_id=678105161]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 2.0
 theme_override_constants/separation = 0
+split_offsets = PackedInt32Array(-400)
+split_offset = -400
 
-[node name="LeftTopToolArea" parent="Root/CenterArea/TopArea" instance=ExtResource("3_cxuiw")]
+[node name="LeftTopToolArea" parent="Root/CenterArea/TopArea" unique_id=172379913 instance=ExtResource("3_cxuiw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HSplitContainer" type="HSplitContainer" parent="Root/CenterArea/TopArea"]
+[node name="HSplitContainer" type="HSplitContainer" parent="Root/CenterArea/TopArea" unique_id=531391758]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 5.0
 theme_override_constants/separation = 0
+split_offsets = PackedInt32Array(-100)
+split_offset = -100
 
-[node name="CodeEditor" parent="Root/CenterArea/TopArea/HSplitContainer" instance=ExtResource("4_kocsp")]
+[node name="CodeEditor" parent="Root/CenterArea/TopArea/HSplitContainer" unique_id=1082997514 instance=ExtResource("4_kocsp")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 5.0
 
-[node name="RightTopToolArea" parent="Root/CenterArea/TopArea/HSplitContainer" instance=ExtResource("3_cxuiw")]
+[node name="RightTopToolArea" parent="Root/CenterArea/TopArea/HSplitContainer" unique_id=1558470213 instance=ExtResource("3_cxuiw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BottomArea" type="HSplitContainer" parent="Root/CenterArea"]
+[node name="BottomArea" type="HSplitContainer" parent="Root/CenterArea" unique_id=266782248]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 theme_override_constants/minimum_grab_thickness = 6
 
-[node name="BottomLeftToolArea" parent="Root/CenterArea/BottomArea" instance=ExtResource("3_cxuiw")]
+[node name="BottomLeftToolArea" parent="Root/CenterArea/BottomArea" unique_id=871429206 instance=ExtResource("3_cxuiw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BottomRightToolArea" parent="Root/CenterArea/BottomArea" instance=ExtResource("3_cxuiw")]
+[node name="BottomRightToolArea" parent="Root/CenterArea/BottomArea" unique_id=1039308546 instance=ExtResource("3_cxuiw")]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RightSidebar" parent="Root" instance=ExtResource("2_e53sf")]
+[node name="RightSidebar" parent="Root" unique_id=1823365824 instance=ExtResource("2_e53sf")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ToolDragOverlay" parent="." node_paths=PackedStringArray("LeftSidebar", "RightSidebar", "LeftTopZone", "RightTopZone", "BottomLeftZone", "BottomRightZone") instance=ExtResource("5_e53sf")]
+[node name="ToolDragOverlay" parent="." unique_id=14763511 node_paths=PackedStringArray("LeftSidebar", "RightSidebar", "LeftTopZone", "RightTopZone", "BottomLeftZone", "BottomRightZone") instance=ExtResource("5_e53sf")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -96,7 +100,7 @@ RightTopZone = NodePath("RightTopDropZone")
 BottomLeftZone = NodePath("BottomLeftDropZone")
 BottomRightZone = NodePath("BottomRightDropZone")
 
-[node name="LeftTopDropZone" type="Control" parent="ToolDragOverlay"]
+[node name="LeftTopDropZone" type="Control" parent="ToolDragOverlay" unique_id=1346414612]
 layout_mode = 1
 anchor_right = 0.2
 anchor_bottom = 0.5
@@ -105,7 +109,7 @@ size_flags_vertical = 0
 mouse_filter = 1
 script = ExtResource("6_yv27d")
 
-[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/LeftTopDropZone"]
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/LeftTopDropZone" unique_id=996345081]
 visible = false
 layout_mode = 1
 anchors_preset = -1
@@ -113,9 +117,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 50.227203
 mouse_filter = 2
-color = Color(0, 0.7268333, 0.89, 0.5137255)
+color = Color(0, 0.7254902, 0.8901961, 0.5137255)
 
-[node name="RightTopDropZone" type="Control" parent="ToolDragOverlay"]
+[node name="RightTopDropZone" type="Control" parent="ToolDragOverlay" unique_id=1635662572]
 layout_mode = 1
 anchor_left = 0.8
 anchor_right = 1.0
@@ -125,7 +129,7 @@ size_flags_vertical = 0
 mouse_filter = 1
 script = ExtResource("6_yv27d")
 
-[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/RightTopDropZone"]
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/RightTopDropZone" unique_id=463529506]
 visible = false
 layout_mode = 1
 anchors_preset = -1
@@ -135,7 +139,7 @@ offset_right = -49.99678
 mouse_filter = 2
 color = Color(0, 0.7254902, 0.8901961, 0.5137255)
 
-[node name="BottomLeftDropZone" type="Control" parent="ToolDragOverlay"]
+[node name="BottomLeftDropZone" type="Control" parent="ToolDragOverlay" unique_id=1133175129]
 layout_mode = 1
 anchor_top = 0.5
 anchor_right = 0.2
@@ -146,7 +150,7 @@ size_flags_vertical = 0
 mouse_filter = 1
 script = ExtResource("6_yv27d")
 
-[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/BottomLeftDropZone"]
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/BottomLeftDropZone" unique_id=260060701]
 visible = false
 layout_mode = 1
 anchors_preset = -1
@@ -158,7 +162,7 @@ offset_top = -0.07600403
 mouse_filter = 2
 color = Color(0, 0.7254902, 0.8901961, 0.5137255)
 
-[node name="BottomRightDropZone" type="Control" parent="ToolDragOverlay"]
+[node name="BottomRightDropZone" type="Control" parent="ToolDragOverlay" unique_id=1652004342]
 layout_mode = 1
 anchor_left = 0.8
 anchor_top = 0.5
@@ -169,7 +173,7 @@ size_flags_vertical = 0
 mouse_filter = 1
 script = ExtResource("6_yv27d")
 
-[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/BottomRightDropZone"]
+[node name="Highlight" type="ColorRect" parent="ToolDragOverlay/BottomRightDropZone" unique_id=428713925]
 visible = false
 layout_mode = 1
 anchors_preset = -1

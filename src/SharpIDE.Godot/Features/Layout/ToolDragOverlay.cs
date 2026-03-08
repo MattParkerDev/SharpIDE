@@ -64,7 +64,7 @@ public partial class ToolDragOverlay : Control
 		if (TryGetAnchorAndZoneAtPosition(mousePosition, out var anchor, out var dropZone))
 		{
 			ShowGhostPreview(anchor.Value, mousePosition);
-			dropZone.Highlight.Show();
+			dropZone.ShowHighlight();
 			return true;
 		}
 
@@ -156,7 +156,7 @@ public partial class ToolDragOverlay : Control
 	{
 		foreach (var zone in _dropZoneAnchorMap.Keys)
 		{
-			zone.Highlight.Hide();
+			zone.HideHighlight();
 		}
 	}
 

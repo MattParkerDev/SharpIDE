@@ -17,7 +17,8 @@ public partial class IdeMainLayout : Control
 
 	private Sidebar _leftSidebar = null!;
 	private Sidebar _rightSidebar = null!;
-	private Control _bottomArea = null!;
+	private SplitContainer _topArea = null!;
+	private SplitContainer _bottomArea = null!;
 	private ToolDragOverlay _toolDragOverlay = null!;
 	private IdeLayoutState _layout = null!;
 
@@ -25,7 +26,8 @@ public partial class IdeMainLayout : Control
 	{
 		_leftSidebar = GetNode<Sidebar>("%LeftSidebar");
 		_rightSidebar = GetNode<Sidebar>("%RightSidebar");
-		_bottomArea = GetNode<Control>("%BottomArea");
+		_topArea = GetNode<SplitContainer>("%TopArea");
+		_bottomArea = GetNode<SplitContainer>("%BottomArea");
 		_toolDragOverlay = GetNode<ToolDragOverlay>("%ToolDragOverlay");
 
 		_anchorStateMap[ToolAnchor.LeftTop] = new AnchorState(

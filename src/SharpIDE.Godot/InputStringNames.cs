@@ -47,6 +47,9 @@ public static class ThemeStringNames
     public static readonly StringName CompletionScrollColor = "completion_scroll_color";
     public static readonly StringName CompletionExistingColor = "completion_existing_color";
     public static readonly StringName CompletionColorBgIcon = "completion_color_bg";
+
+    public static readonly StringName DragPreviewColor = "drag_preview_color";
+    public static readonly StringName DropHighlightColor = "drop_highlight_color";
 }
 
 public static class ThemeVariationStringNames

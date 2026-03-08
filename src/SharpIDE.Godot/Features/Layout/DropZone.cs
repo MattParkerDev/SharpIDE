@@ -4,10 +4,21 @@ namespace SharpIDE.Godot.Features.Layout;
 
 public partial class DropZone : Control
 {
-	public ColorRect Highlight { get; set; } = null!;
+	private ColorRect _highlight = null!;
 	
 	public override void _Ready()
 	{
-		Highlight = GetNode<ColorRect>("Highlight");
+		_highlight = GetNode<ColorRect>("Highlight");
+	}
+
+	public void ShowHighlight()
+	{
+		_highlight.Color = GetThemeColor(ThemeStringNames.DropHighlightColor, nameof(Sidebar));
+		_highlight.Show();
+	}
+
+	public void HideHighlight()
+	{
+		_highlight.Hide();
 	}
 }

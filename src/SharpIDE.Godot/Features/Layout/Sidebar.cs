@@ -10,9 +10,6 @@ public partial class Sidebar : Panel
 	public Container TopTools { get; private set; } = null!;
 	public Container BottomTools { get; private set; } = null!;
 
-	[Export]
-	public Color PreviewColor { get; set; }
-
 	public Control ToolPreview = null!;
 
 	public override void _Ready()
@@ -26,7 +23,7 @@ public partial class Sidebar : Panel
 	private ColorRect CreateToolPreview()
 	{
 		var rect = new ColorRect();
-		rect.Color = PreviewColor;
+		rect.Color = GetThemeColor(ThemeStringNames.DropHighlightColor);
 		rect.CustomMinimumSize = ToolMinimumSize;
 		rect.SizeFlagsHorizontal = SizeFlags.Fill;
 		rect.SizeFlagsVertical = SizeFlags.Fill;
