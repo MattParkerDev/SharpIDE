@@ -92,7 +92,6 @@ public partial class IdeRoot : Control
 		_cancelMsBuildActionButton.Pressed += async () => await _buildService.CancelBuildAsync();
 		_buildService.BuildStarted.Subscribe(OnBuildStarted);
 		_buildService.BuildFinished.Subscribe(OnBuildFinished);
-		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
 	}
@@ -101,7 +100,7 @@ public partial class IdeRoot : Control
 	private async Task OnBuildFinished() => await OnBuildRunningStateChanged(false);
 	private async Task OnBuildRunningStateChanged(bool running, BuildStartedFlags? flags = null)
 	{
-		if (running && flags is BuildStartedFlags.UserFacing) GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		if (running && flags is BuildStartedFlags.UserFacing) GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await this.InvokeAsync(() =>
 		{
 			_cancelMsBuildActionButton.Disabled = !running;

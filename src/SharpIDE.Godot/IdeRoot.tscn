@@ -1,21 +1,23 @@
-[gd_scene load_steps=11 format=3 uid="uid://b2oniigcp5ew5"]
+[gd_scene format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
 [ext_resource type="PackedScene" uid="uid://bgpc5vsddmakc" path="res://Features/Navigation/ForwardBackwardButtonContainer.tscn" id="3_ptnvy"]
-[ext_resource type="Texture2D" uid="uid://dhwm7cehq2ftr" path="res://Resources/cancel.svg" id="4_4dy53"]
-[ext_resource type="Texture2D" uid="uid://hshkb0fxldrg" path="res://Resources/cancel-lighter.svg" id="5_ghsri"]
 [ext_resource type="PackedScene" uid="uid://c6xurjdabssao" path="res://Features/Settings/SettingsButton.tscn" id="5_pm5al"]
 [ext_resource type="PackedScene" uid="uid://bbdbcqg3jys2b" path="res://Features/Layout/IdeMainLayout.tscn" id="6_rllbf"]
 [ext_resource type="PackedScene" uid="uid://8lk0qj233a7p" path="res://Features/Search/SearchInFiles/SearchWindow.tscn" id="13_7ptyn"]
 [ext_resource type="PackedScene" uid="uid://b8kytk23cfo4x" path="res://Features/Search/SearchAllFiles/SearchAllFilesWindow.tscn" id="15_gh8b1"]
 [ext_resource type="PackedScene" uid="uid://dr41a4isv0dd5" path="res://Features/BottomBar/BottomBar.tscn" id="18_gyy5s"]
+[ext_resource type="Texture2D" uid="uid://dhwm7cehq2ftr" path="res://Resources/cancel.svg" id="4_4dy53"]
+[ext_resource type="Texture2D" uid="uid://hshkb0fxldrg" path="res://Resources/cancel-lighter.svg" id="5_ghsri"]
+[ext_resource type="Texture2D" uid="uid://ccj73acbnukyt" path="res://Resources/cancel-disabled.svg" id="5_qo7tr"]
+[ext_resource type="Texture2D" uid="uid://c0gl3rvabse1f" path="res://Resources/cancel-darker.svg" id="5_uvk4l"]
 
 [sub_resource type="Theme" id="Theme_s2dv6"]
 default_font = ExtResource("1_7ptyn")
 
-[node name="IdeRoot" type="Control"]
+[node name="IdeRoot" type="Control" unique_id=1740368105]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -126,7 +128,7 @@ layout_mode = 2
 [node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
 layout_mode = 2
 
-[node name="MainLayout" parent="VBoxContainer" instance=ExtResource("6_rllbf")]
+[node name="MainLayout" parent="VBoxContainer" unique_id=474376670 instance=ExtResource("6_rllbf")]
 unique_name_in_owner = true
 layout_mode = 2
 
