@@ -129,19 +129,13 @@ public partial class CodeEditorPanel : MarginContainer
 		if (tabIndex == _tabContainer.CurrentTab)
 		{
 			var siblingIndex = tabIndex is 0 ? 1 : tabIndex - 1;
-
 			var siblingTab = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)siblingIndex)?.CodeEdit;
 			if (siblingTab is not null)
 			{
 				var sharpIdeFile = siblingTab.SharpIdeFile;
-				var caretLinePosition = new SharpIdeFileLinePosition(
-					siblingTab.GetCaretLine(),
-					siblingTab.GetCaretColumn());
-
+				var caretLinePosition = new SharpIdeFileLinePosition(siblingTab.GetCaretLine(), siblingTab.GetCaretColumn());
 				// This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
-				GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(
-					sharpIdeFile,
-					caretLinePosition);
+				GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, caretLinePosition);
 			}
 		}
 
@@ -203,6 +197,7 @@ public partial class CodeEditorPanel : MarginContainer
 					CloseTab(newTab.GetIndex());
 				});
 			});
+			
 			file.FileRenamed.Subscribe(async () =>
 			{
 				await UpdateTabFileName(newTab.GetIndex(), file.Name, file.IsDirty.CurrentValue);
