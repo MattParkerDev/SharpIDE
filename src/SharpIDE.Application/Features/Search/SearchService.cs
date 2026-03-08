@@ -1,7 +1,5 @@
-﻿using System.Buffers;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
@@ -112,17 +110,16 @@ public class SearchService(ILogger<SearchService> logger)
 				continue;
 			}
 
-			var result =
-				new FindInFilesSearchResult
-				{
-					File = file,
-					Line = index + 1,
-					StartColumn = line.IndexOf(
-						              searchTerm,
-						              StringComparison.OrdinalIgnoreCase)
-					            + 1,
-					LineText = line.Trim()
-				};
+			var result = new FindInFilesSearchResult
+			{
+				File = file,
+				Line = index + 1,
+				StartColumn = line.IndexOf(
+					              searchTerm,
+					              StringComparison.OrdinalIgnoreCase)
+				            + 1,
+				LineText = line.Trim()
+			};
 
 			await resultWriter.WriteAsync(result, ct).ConfigureAwait(false);
 		}

@@ -37,6 +37,11 @@ public partial class SearchWindow : PopupPanel
     {
         _lineEdit.SelectAll();
         Callable.From(_lineEdit.GrabFocus).CallDeferred();
+
+        if (string.IsNullOrEmpty(_lineEdit.Text))
+        {
+            return;
+        }
         
         await BeginSearch(_lineEdit.Text);
     }
