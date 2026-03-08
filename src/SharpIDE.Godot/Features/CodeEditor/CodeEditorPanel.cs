@@ -130,13 +130,13 @@ public partial class CodeEditorPanel : MarginContainer
 		{
 			var siblingIndex = tabIndex is 0 ? 1 : tabIndex - 1;
 
-			var previousSibling = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)siblingIndex)?.CodeEdit;
-			if (previousSibling is not null)
+			var siblingTab = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)siblingIndex)?.CodeEdit;
+			if (siblingTab is not null)
 			{
-				var sharpIdeFile = previousSibling.SharpIdeFile;
+				var sharpIdeFile = siblingTab.SharpIdeFile;
 				var caretLinePosition = new SharpIdeFileLinePosition(
-					previousSibling.GetCaretLine(),
-					previousSibling.GetCaretColumn());
+					siblingTab.GetCaretLine(),
+					siblingTab.GetCaretColumn());
 
 				// This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
 				GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(
@@ -195,20 +195,36 @@ public partial class CodeEditorPanel : MarginContainer
 			_tabContainer.SetTabTitle(newTabIndex, file.Name);
 			_tabContainer.SetTabTooltip(newTabIndex, file.Path);
 			_tabContainer.CurrentTab = newTabIndex;
+
+			file.FileDeleted.Subscribe(async () =>
+			{
+				await this.InvokeAsync(() =>
+				{
+					CloseTab(newTab.GetIndex());
+				});
+			});
+			file.FileRenamed.Subscribe(async () =>
+			{
+				await UpdateTabFileName(newTab.GetIndex(), file.Name, file.IsDirty.CurrentValue);
+			});
 			
 			file.IsDirty.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (isDirty, ct) =>
 			{
 				//GD.Print($"File dirty state changed: {file.Path} is now {(isDirty ? "dirty" : "clean")}");
-				await this.InvokeAsync(() =>
-				{
-					var tabIndex = newTab.GetIndex();
-					var title = file.Name + (isDirty ? " (*)" : "");
-					_tabContainer.SetTabTitle(tabIndex, title);
-				});
+				await UpdateTabFileName(newTab.GetIndex(), file.Name, isDirty);
 			}).AddTo(newTab); // needs to be on ui thread
 		});
 		
 		await newTab.CodeEdit.SetSharpIdeFile(file, fileLinePosition);
+	}
+
+	private async Task UpdateTabFileName(int tabIndex, string name, bool isDirty)
+	{
+		await this.InvokeAsync(() =>
+		{
+			var title = name + (isDirty ? " (*)" : "");
+			_tabContainer.SetTabTitle(tabIndex, title);
+		});
 	}
 	
 	private static readonly Color ExecutingLineColor = new Color("665001");

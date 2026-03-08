@@ -1,11 +1,5 @@
 ﻿using Godot;
-using SharpIDE.Application.Features.Analysis;
-using SharpIDE.Application.Features.Build;
-using SharpIDE.Application.Features.Evaluation;
-using SharpIDE.Application.Features.Events;
-using SharpIDE.Application.Features.Run;
-using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.BottomPanel;
+
 using SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -17,13 +11,13 @@ file enum TabContextMenuOptions
     CloseAllTabs = 2,
     CopyFullPath = 3,
     RenameFile = 4,
-    RevealInFileExplorer = 5,
+    RevealInFileExplorer = 5
 }
 
 public partial class CodeEditorPanel
 {
     private readonly PackedScene _renameFileDialogScene = GD.Load<PackedScene>("uid://b775b5j4rkxxw");
-    
+
     private void OpenContextMenuTab(long tabIndex)
     {
         var menu = new PopupMenu();
@@ -41,7 +35,7 @@ public partial class CodeEditorPanel
         menu.IdPressed += id =>
         {
             var file = _tabContainer.GetChild<SharpIdeCodeEditContainer>((int)tabIndex).CodeEdit.SharpIdeFile;
-            
+
             var actionId = (TabContextMenuOptions)id;
             if (actionId is TabContextMenuOptions.Close)
             {

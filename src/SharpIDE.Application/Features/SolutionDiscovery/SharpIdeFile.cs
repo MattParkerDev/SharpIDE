@@ -26,6 +26,7 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	public required DateTimeOffset? LastIdeWriteTime { get; set; }
 	public EventWrapper<SharpIdeFileLinePosition?, Task> FileContentsChangedExternally { get; } = new((_) => Task.CompletedTask);
 	public EventWrapper<Task> FileDeleted { get; } = new(() => Task.CompletedTask);
+	public EventWrapper<Task> FileRenamed { get; } = new(() => Task.CompletedTask);
 
 	[SetsRequiredMembers]
 	internal SharpIdeFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, bool isMetadataAsSourceFile = false, string? pdbSourceFilePath = null)
