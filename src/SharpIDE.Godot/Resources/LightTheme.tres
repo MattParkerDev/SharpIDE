@@ -302,7 +302,6 @@ TabContainer/styles/tab_hovered = SubResource("StyleBoxFlat_w7sqp")
 TabContainer/styles/tab_selected = SubResource("StyleBoxFlat_xvfqr")
 TabContainer/styles/tab_unselected = SubResource("StyleBoxFlat_8xmn6")
 ThemeInfo/constants/IsLight1OrDark2 = 1
-ToolButton/colors/drag_preview_color = Color(0.70796657, 0.7079665, 0.7079665, 0.7294118)
 Tree/colors/font_color = Color(0.16862746, 0.16862746, 0.16862746, 1)
 Tree/colors/font_hovered_color = Color(0.16862746, 0.16862746, 0.16862746, 1)
 Tree/colors/font_hovered_selected_color = Color(0.16862746, 0.16862746, 0.16862746, 1)
