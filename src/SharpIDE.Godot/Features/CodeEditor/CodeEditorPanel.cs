@@ -32,6 +32,7 @@ public partial class CodeEditorPanel : MarginContainer
 		var tabBar = _tabContainer.GetTabBar();
 		tabBar.TabCloseDisplayPolicy = TabBar.CloseButtonDisplayPolicy.ShowAlways;
 		tabBar.TabClosePressed += OnTabClosePressed;
+		tabBar.TabRmbClicked += OnTabRmbClicked;
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
 	}
@@ -113,17 +114,61 @@ public partial class CodeEditorPanel : MarginContainer
 
 	private void OnTabClosePressed(long tabIndex)
 	{
+		CloseTab(tabIndex);
+	}
+
+	private void OnTabRmbClicked(long tabIndex)
+	{
+		OpenContextMenuTab(tabIndex);
+	}
+
+	private void CloseTab(long tabIndex)
+	{
 		var tab = _tabContainer.GetChild<Control>((int)tabIndex);
-		var previousSibling = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)tabIndex - 1)?.CodeEdit;
-		if (previousSibling is not null)
+
+		if (tabIndex == _tabContainer.CurrentTab)
 		{
-			var sharpIdeFile = previousSibling.SharpIdeFile;
-			var caretLinePosition = new SharpIdeFileLinePosition(previousSibling.GetCaretLine(), previousSibling.GetCaretColumn());
-			// This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
-			GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, caretLinePosition);
+			var siblingIndex = tabIndex is 0 ? 1 : tabIndex - 1;
+
+			var previousSibling = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)siblingIndex)?.CodeEdit;
+			if (previousSibling is not null)
+			{
+				var sharpIdeFile = previousSibling.SharpIdeFile;
+				var caretLinePosition = new SharpIdeFileLinePosition(
+					previousSibling.GetCaretLine(),
+					previousSibling.GetCaretColumn());
+
+				// This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
+				GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(
+					sharpIdeFile,
+					caretLinePosition);
+			}
 		}
+
 		_tabContainer.RemoveChild(tab);
 		tab.QueueFree();
+	}
+
+	private void CloseTabs(IReadOnlyCollection<long> tabIndices)
+	{
+		if (tabIndices.Contains(_tabContainer.CurrentTab))
+		{
+			var otherTabs = tabIndices.Except([_tabContainer.CurrentTab]).ToList();
+			CloseTabs(otherTabs);
+			CloseTab(_tabContainer.CurrentTab);
+		}
+		else
+		{
+			var tabs = tabIndices.Select(tabIndex => _tabContainer.GetChildOrNull<Node>((int)tabIndex))
+			                     .Where(tab => tab is not null)
+			                     .ToList();
+
+			foreach (var tab in tabs)
+			{
+				_tabContainer.RemoveChild(tab);
+				tab.QueueFree();
+			}
+		}
 	}
 
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
