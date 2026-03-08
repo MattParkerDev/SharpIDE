@@ -126,6 +126,13 @@ public partial class CodeEditorPanel : MarginContainer
 		tab.QueueFree();
 	}
 
+	public CodeEdit? GetCurrentCodeEdit()
+	{
+		var currentTabIndex = _tabContainer.GetCurrentTab();
+
+		return _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>(currentTabIndex)?.CodeEdit;
+	}
+
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);

@@ -28,19 +28,31 @@ public partial class SearchWindow : PopupPanel
         AboutToPopup += OnAboutToPopup;
     }
 
-    private void OnAboutToPopup()
+    public void SetSearchText(string searchText)
+    {
+        _lineEdit.Text = searchText;
+    }
+
+    private async void OnAboutToPopup()
     {
         _lineEdit.SelectAll();
         Callable.From(_lineEdit.GrabFocus).CallDeferred();
+        
+        await BeginSearchAsync(_lineEdit.Text);
     }
 
     private async void OnTextChanged(string newText)
+    {
+        await BeginSearchAsync(newText);
+    }
+    
+    private async Task BeginSearchAsync(string searchText)
     {
         await _cancellationTokenSource.CancelAsync();
         // TODO: Investigate allocations
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
-        await Task.GodotRun(() => Search(newText, token));
+        await Task.GodotRun(() => Search(searchText, token));
     }
 
     private async Task Search(string text, CancellationToken cancellationToken)
