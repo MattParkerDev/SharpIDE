@@ -76,7 +76,7 @@ public partial class RunMenuItem : HBoxContainer
     private StringName _buildAnimationName = "BuildingAnimation";
     private async void OnRunButtonPressed()
     {
-		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
+	    GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
         SetAttemptingRunState();
         await _runService.RunProject(Project).ConfigureAwait(false);
     }

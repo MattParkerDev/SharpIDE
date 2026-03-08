@@ -170,6 +170,7 @@ public static class NodeExtensions
                 node.RemoveChild(child);
             }
         }
+        
         public Task<T> InvokeAsync<T>(Func<T> workItem)
         {
             var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);

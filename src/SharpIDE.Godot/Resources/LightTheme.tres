@@ -292,6 +292,7 @@ PopupMenu/colors/font_color = Color(0.12, 0.12, 0.12, 1)
 PopupMenu/styles/hover = SubResource("StyleBoxFlat_5ivbl")
 PopupMenu/styles/panel = SubResource("StyleBoxFlat_lw7yc")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
+Sidebar/base_type = &"Sidebar"
 Sidebar/colors/drop_highlight_color = Color(0.51189226, 0.8771274, 1, 0.5137255)
 TabContainer/colors/font_hovered_color = Color(0.05, 0.05, 0.05, 1)
 TabContainer/colors/font_selected_color = Color(0.16862746, 0.16862746, 0.16862746, 1)
