@@ -66,14 +66,17 @@ public partial class SearchWindow : PopupPanel
         // TODO: Investigate allocations
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
+        _newFileResultToDisplayQueue.CancelExistingWork();
         _isNewSearch = true;
         _ = Task.GodotRun(() => Search(searchText, token));
     }
 
     private async ValueTask RenderBatchAsync(ImmutableSegmentedList<FindInFilesSearchResult> batch, CancellationToken cancellationToken)
     {
+        if (cancellationToken.IsCancellationRequested) return;
         await this.InvokeAsync(async () =>
         {
+            if (cancellationToken.IsCancellationRequested) return;
             if (_isNewSearch)
             {
                 // Delay removing old results until the first batch of new results is ready, to reduce UI flickering
@@ -112,6 +115,11 @@ public partial class SearchWindow : PopupPanel
 
         if (_resultCount is 0)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // Search was cancelled, so don't clear previous results, to prevent UI flickering
+                return;
+            }
             // no items would have been added to the render queue, so we need to clear old results and show "0 files found" message here
             await this.InvokeAsync(() =>
             {
