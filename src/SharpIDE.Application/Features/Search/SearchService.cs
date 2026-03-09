@@ -8,15 +8,26 @@ using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.Search;
 
+public enum SearchResult { Ok, InvalidSearch }
 public class SearchService(ILogger<SearchService> logger)
 {
 	private readonly ILogger<SearchService> _logger = logger;
 
-	public async IAsyncEnumerable<FindInFilesSearchResult> FindInFiles(SharpIdeSolutionModel solutionModel, string searchTerm, [EnumeratorCancellation] CancellationToken cancellationToken)
+	public (IAsyncEnumerable<FindInFilesSearchResult>, SearchResult) FindInFiles(SharpIdeSolutionModel solutionModel, string searchTerm, CancellationToken cancellationToken)
 	{
 		if (searchTerm.Length < 4) // TODO: halt search once 100 results are found, and remove this restriction
 		{
-			yield break;
+			return (AsyncEnumerable.Empty<FindInFilesSearchResult>(), SearchResult.InvalidSearch);
+		}
+
+		return (FindInFilesInternal(solutionModel, searchTerm, cancellationToken), SearchResult.Ok);
+	}
+
+	private async IAsyncEnumerable<FindInFilesSearchResult> FindInFilesInternal(SharpIdeSolutionModel solutionModel, string searchTerm, [EnumeratorCancellation] CancellationToken cancellationToken)
+	{
+		if (searchTerm.Length < 4) // TODO: halt search once 100 results are found, and remove this restriction
+		{
+			throw new UnreachableException();
 		}
 
 		var timer = Stopwatch.StartNew();
@@ -27,13 +38,7 @@ public class SearchService(ILogger<SearchService> logger)
 		{
 			try
 			{
-				var parallelOptions = new ParallelOptions
-				{
-					CancellationToken = cancellationToken,
-					MaxDegreeOfParallelism = Environment.ProcessorCount
-				};
-
-				await Parallel.ForEachAsync(files, parallelOptions, (file, ct) => FindInFile(file, searchTerm, resultChannel.Writer, ct));
+				await Parallel.ForEachAsync(files, cancellationToken, (file, ct) => FindInFile(file, searchTerm, resultChannel.Writer, ct)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 			}
 			finally
 			{
@@ -43,8 +48,9 @@ public class SearchService(ILogger<SearchService> logger)
 		cancellationToken);
 
 		var resultCount = 0;
-		await foreach (var result in resultChannel.Reader.ReadAllAsync(cancellationToken))
+		await foreach (var result in resultChannel.Reader.ReadAllAsync(CancellationToken.None)) // Don't pass the ct here, as we cannot configure SuppressThrowing on an IAsyncEnumerable, and would rather not have the overhead and logging of an exception. The channel will be completed when cancellation is requested, so the loop will exit in a timely manner.
 		{
+			if (cancellationToken.IsCancellationRequested) yield break;
 			resultCount++;
 			yield return result;
 		}
