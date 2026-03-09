@@ -30,7 +30,7 @@ public partial class SearchWindow : PopupPanel
         _lineEdit = GetNode<LineEdit>("%SearchLineEdit");
         _lineEdit.Text = "";
         _searchResultsContainer = GetNode<VBoxContainer>("%SearchResultsVBoxContainer");
-        _searchResultsContainer.QueueFreeChildren();
+        _searchResultsContainer.RemoveAndQueueFreeChildren();
         _newFileResultToDisplayQueue = new AsyncBatchingWorkQueue<FindInFilesSearchResult>(TimeSpan.FromMilliseconds(50), RenderBatchAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
         _lineEdit.TextChanged += OnTextChanged;
         AboutToPopup += OnAboutToPopup;
@@ -80,7 +80,7 @@ public partial class SearchWindow : PopupPanel
             if (_isNewSearch)
             {
                 // Delay removing old results until the first batch of new results is ready, to reduce UI flickering
-                _searchResultsContainer.QueueFreeChildren();
+                _searchResultsContainer.RemoveAndQueueFreeChildren();
                 _resultCountLabel.Text = string.Empty;
                 _isNewSearch = false;
             }
@@ -103,7 +103,7 @@ public partial class SearchWindow : PopupPanel
         {
             await this.InvokeAsync(() =>
             {
-                _searchResultsContainer.QueueFreeChildren();
+                _searchResultsContainer.RemoveAndQueueFreeChildren();
                 _resultCountLabel.Text = string.Empty;
             });
             return;
@@ -123,7 +123,7 @@ public partial class SearchWindow : PopupPanel
             // no items would have been added to the render queue, so we need to clear old results and show "0 files found" message here
             await this.InvokeAsync(() =>
             {
-                _searchResultsContainer.QueueFreeChildren();
+                _searchResultsContainer.RemoveAndQueueFreeChildren();
                 _resultCountLabel.Text = "0 file(s) found";
              });
         }

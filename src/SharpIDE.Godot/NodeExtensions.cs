@@ -157,6 +157,14 @@ public static class NodeExtensions
                 child.QueueFree();
             }
         }
+        public void RemoveAndQueueFreeChildren()
+        {
+            foreach (var child in node.GetChildren())
+            {
+                node.RemoveChild(child);
+                child.QueueFree();
+            }
+        }
         public void RemoveChildAndQueueFree(Node child)
         {
             node.RemoveChild(child);
