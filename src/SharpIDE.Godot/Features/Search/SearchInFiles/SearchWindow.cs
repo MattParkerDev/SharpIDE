@@ -30,7 +30,7 @@ public partial class SearchWindow : PopupPanel
         _lineEdit = GetNode<LineEdit>("%SearchLineEdit");
         _lineEdit.Text = "";
         _searchResultsContainer = GetNode<VBoxContainer>("%SearchResultsVBoxContainer");
-        _searchResultsContainer.GetChildren().ToList().ForEach(s => s.QueueFree());
+        _searchResultsContainer.QueueFreeChildren();
         _newFileResultToDisplayQueue = new AsyncBatchingWorkQueue<FindInFilesSearchResult>(TimeSpan.FromMilliseconds(50), RenderBatchAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
         _lineEdit.TextChanged += OnTextChanged;
         AboutToPopup += OnAboutToPopup;
