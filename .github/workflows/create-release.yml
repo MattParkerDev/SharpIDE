@@ -14,17 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
-      - uses: chickensoft-games/setup-godot@v2
-        with:
-          version: 4.6.1
-          use-dotnet: true
-          include-templates: true
       - name: Determine If Release Necessary
         id: determine-if-release-necessary
         run: |
           SHOULD_RELEASE=$(dotnet ./iac/should-release.cs)
           echo "Command output: $SHOULD_RELEASE"
           echo "should_release=$SHOULD_RELEASE" >> $GITHUB_OUTPUT
+      - uses: chickensoft-games/setup-godot@v2
+        if: steps.determine-if-release-necessary.outputs.should_release == 'true'
+        with:
+          version: 4.6.1
+          use-dotnet: true
+          include-templates: true
       - name: Dotnet Run Pipeline
         if: steps.determine-if-release-necessary.outputs.should_release == 'true'
         env:

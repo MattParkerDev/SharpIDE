@@ -48,6 +48,8 @@ public partial class CodeEditorPanel : MarginContainer
 			AdjustCodeEditorUiScale(false);
 		}
 	}
+	
+	public SharpIdeCodeEdit? GetCurrentCodeEdit() => _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>(_tabContainer.CurrentTab)?.CodeEdit;
 
 	private void AdjustCodeEditorUiScale(bool increase)
 	{
