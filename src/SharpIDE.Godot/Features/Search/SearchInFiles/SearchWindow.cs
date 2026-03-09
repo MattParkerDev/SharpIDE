@@ -33,7 +33,7 @@ public partial class SearchWindow : PopupPanel
         _lineEdit.Text = searchText;
     }
 
-    private async void OnAboutToPopup()
+    private void OnAboutToPopup()
     {
         _lineEdit.SelectAll();
         Callable.From(_lineEdit.GrabFocus).CallDeferred();
@@ -43,15 +43,15 @@ public partial class SearchWindow : PopupPanel
             return;
         }
         
-        await BeginSearch(_lineEdit.Text);
+        BeginSearch(_lineEdit.Text);
     }
 
-    private async void OnTextChanged(string newText)
+    private void OnTextChanged(string newText)
     {
-        await BeginSearch(newText);
+        BeginSearch(newText);
     }
     
-    private async Task BeginSearch(string searchText)
+    private void BeginSearch(string searchText)
     {
         _resultCountLabel.Text = string.Empty;
         foreach (var child in _searchResultsContainer.GetChildren())
@@ -59,11 +59,11 @@ public partial class SearchWindow : PopupPanel
             child.QueueFree();
         }
         
-        await _cancellationTokenSource.CancelAsync();
+        _cancellationTokenSource.Cancel();
         // TODO: Investigate allocations
         _cancellationTokenSource = new CancellationTokenSource();
         var token = _cancellationTokenSource.Token;
-        await Task.GodotRun(() => Search(searchText, token));
+        _ = Task.GodotRun(() => Search(searchText, token));
     }
 
     private async Task Search(string text, CancellationToken cancellationToken)
