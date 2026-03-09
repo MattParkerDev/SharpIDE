@@ -99,39 +99,20 @@ public class SearchService(ILogger<SearchService> logger)
 		return results.ToList();
 	}
 
-	private static async ValueTask FindInFile(
-		SharpIdeFile file,
-		string searchTerm,
-		ChannelWriter<FindInFilesSearchResult> resultWriter,
-		CancellationToken ct)
+	private static async ValueTask FindInFile(SharpIdeFile file, string searchTerm, ChannelWriter<FindInFilesSearchResult> resultWriter, CancellationToken ct)
 	{
-		if (ct.IsCancellationRequested)
-		{
-			return;
-		}
+		if (ct.IsCancellationRequested) return;
 
-		await foreach (var (index, line) in File.ReadLinesAsync(file.Path, ct)
-		                                        .Index()
-		                                        .WithCancellation(ct))
+		await foreach (var (index, line) in File.ReadLinesAsync(file.Path, ct).Index().WithCancellation(ct))
 		{
-			if (ct.IsCancellationRequested)
-			{
-				return;
-			}
-
-			if (!line.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-			{
-				continue;
-			}
+			if (ct.IsCancellationRequested) return;
+			if (line.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) is false) continue;
 
 			var result = new FindInFilesSearchResult
 			{
 				File = file,
 				Line = index + 1,
-				StartColumn = line.IndexOf(
-					              searchTerm,
-					              StringComparison.OrdinalIgnoreCase)
-				            + 1,
+				StartColumn = line.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) + 1,
 				LineText = line.Trim()
 			};
 
