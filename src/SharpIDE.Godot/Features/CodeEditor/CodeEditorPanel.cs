@@ -47,6 +47,8 @@ public partial class CodeEditorPanel : MarginContainer
 			AdjustCodeEditorUiScale(false);
 		}
 	}
+	
+	public SharpIdeCodeEdit? GetCurrentCodeEdit() => _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>(_tabContainer.CurrentTab)?.CodeEdit;
 
 	private void AdjustCodeEditorUiScale(bool increase)
 	{
@@ -124,13 +126,6 @@ public partial class CodeEditorPanel : MarginContainer
 		}
 		_tabContainer.RemoveChild(tab);
 		tab.QueueFree();
-	}
-
-	public CodeEdit? GetCurrentCodeEdit()
-	{
-		var currentTabIndex = _tabContainer.GetCurrentTab();
-
-		return _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>(currentTabIndex)?.CodeEdit;
 	}
 
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)

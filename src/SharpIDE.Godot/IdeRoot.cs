@@ -217,9 +217,7 @@ public partial class IdeRoot : Control
 		if (@event.IsActionPressed(InputStringNames.FindInFiles))
 		{
 			AcceptEvent();
-
 			var currentCodeEdit = _codeEditorPanel.GetCurrentCodeEdit();
-
 			if (currentCodeEdit?.HasSelection() is true)
 			{
 				_searchWindow.SetSearchText(currentCodeEdit.GetSelectedText());
