@@ -2,9 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-
 using Microsoft.Extensions.Logging;
-
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
@@ -14,10 +12,7 @@ public class SearchService(ILogger<SearchService> logger)
 {
 	private readonly ILogger<SearchService> _logger = logger;
 
-	public async IAsyncEnumerable<FindInFilesSearchResult> FindInFiles(
-		SharpIdeSolutionModel solutionModel,
-		string searchTerm,
-		[EnumeratorCancellation] CancellationToken cancellationToken)
+	public async IAsyncEnumerable<FindInFilesSearchResult> FindInFiles(SharpIdeSolutionModel solutionModel, string searchTerm, [EnumeratorCancellation] CancellationToken cancellationToken)
 	{
 		if (searchTerm.Length < 4) // TODO: halt search once 100 results are found, and remove this restriction
 		{
@@ -25,13 +20,8 @@ public class SearchService(ILogger<SearchService> logger)
 		}
 
 		var timer = Stopwatch.StartNew();
-		var files = solutionModel.AllFiles.Values;
-		var resultChannel = Channel.CreateUnbounded<FindInFilesSearchResult>(
-			new UnboundedChannelOptions
-			{
-				SingleReader = true,
-				SingleWriter = false
-			});
+		var files = solutionModel.AllFiles.Values.ToList();
+		var resultChannel = Channel.CreateUnbounded<FindInFilesSearchResult>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
 
 		var searchTask = Task.Run(async () =>
 		{
@@ -43,10 +33,7 @@ public class SearchService(ILogger<SearchService> logger)
 					MaxDegreeOfParallelism = Environment.ProcessorCount
 				};
 
-				await Parallel.ForEachAsync(
-					files,
-					parallelOptions,
-					(file, ct) => FindInFile(file, searchTerm, resultChannel.Writer, ct));
+				await Parallel.ForEachAsync(files, parallelOptions, (file, ct) => FindInFile(file, searchTerm, resultChannel.Writer, ct));
 			}
 			finally
 			{
@@ -65,11 +52,7 @@ public class SearchService(ILogger<SearchService> logger)
 		await searchTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
 		timer.Stop();
-		_logger.LogInformation(
-			"Search completed in {ElapsedMilliseconds}ms. Found {ResultCount} results. {Cancelled}",
-			timer.ElapsedMilliseconds,
-			resultCount,
-			cancellationToken.IsCancellationRequested ? "(Cancelled)" : "");
+		_logger.LogInformation("Search completed in {ElapsedMilliseconds}ms. Found {ResultCount} results. {Cancelled}", timer.ElapsedMilliseconds, resultCount, cancellationToken.IsCancellationRequested ? "(Cancelled)" : "");
 	}
 
 	public async Task<List<FindFilesSearchResult>> FindFiles(SharpIdeSolutionModel solutionModel, string searchTerm, CancellationToken cancellationToken)
