@@ -46,7 +46,7 @@ public class SearchService(ILogger<SearchService> logger)
 				await Parallel.ForEachAsync(
 					files,
 					parallelOptions,
-					(file, ct) => new ValueTask(FindInFile(file, searchTerm, resultChannel.Writer, ct)));
+					(file, ct) => FindInFile(file, searchTerm, resultChannel.Writer, ct));
 			}
 			finally
 			{
@@ -99,7 +99,7 @@ public class SearchService(ILogger<SearchService> logger)
 		return results.ToList();
 	}
 
-	private static async Task FindInFile(
+	private static async ValueTask FindInFile(
 		SharpIdeFile file,
 		string searchTerm,
 		ChannelWriter<FindInFilesSearchResult> resultWriter,
