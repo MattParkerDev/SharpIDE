@@ -535,7 +535,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		// Now we filter to only the focused tab
 		if (HasFocus() is false) return;
 
-		if (@event.IsActionPressed(InputStringNames.FindInCurrentFile) && !@event.IsActionPressed(InputStringNames.FindInFiles))
+		if (@event.IsActionPressed(InputStringNames.FindInCurrentFile, exactMatch: true))
 		{
 			AcceptEvent();
 			_findReplaceBar.PopupSearch();
