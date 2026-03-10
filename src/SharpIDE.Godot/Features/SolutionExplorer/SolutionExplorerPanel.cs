@@ -5,8 +5,6 @@ using ObservableCollections;
 using R3;
 using SharpIDE.Application;
 using SharpIDE.Application.Features.Analysis;
-using SharpIDE.Application.Features.Events;
-using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.BottomPanel;
@@ -201,18 +199,6 @@ public partial class SolutionExplorerPanel : MarginContainer
 	    });
 	}
 
-	private async Task OnProjectEvaluationChanged(SharpIdeProjectModel project, TreeItemContainer container, TreeItem parent)
-	{
-		var index = container.Value?.GetIndex();
-		await FreeTreeItem(container.Value);
-		await this.InvokeAsync(() =>
-		{
-			var item = container.Value = CreateProjectTreeItem(_tree, parent, project);
-			if (index.HasValue && item.GetIndex() != index.Value)
-				item.MoveToIndexInParent(item.GetIndex(), index.Value);
-		});
-	}
-
 	[RequiresGodotUiThread]
 	private TreeItem CreateSlnFolderTreeItem(Tree tree, TreeItem parent, SharpIdeSolutionFolder slnFolder)
 	{
@@ -258,6 +244,18 @@ public partial class SolutionExplorerPanel : MarginContainer
 	                _ => Task.CompletedTask
 	            })).AddToDeferred(this);
 	        return folderItem;
+	}
+
+	private async Task OnProjectEvaluationChanged(SharpIdeProjectModel project, TreeItemContainer container, TreeItem parent)
+	{
+		var index = container.Value?.GetIndex();
+		await FreeTreeItem(container.Value);
+		await this.InvokeAsync(() =>
+		{
+			var item = container.Value = CreateProjectTreeItem(_tree, parent, project);
+			if (index.HasValue && item.GetIndex() != index.Value)
+				item.MoveToIndexInParent(item.GetIndex(), index.Value);
+		});
 	}
 
 	[RequiresGodotUiThread]

@@ -2,17 +2,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 
-using Microsoft.Build.Exceptions;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.Razor.ProjectSystem;
-using Microsoft.CodeAnalysis.Text;
-
 using ObservableCollections;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Events;
-using Project = Microsoft.Build.Evaluation.Project;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
@@ -116,7 +109,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public bool Running { get; set; }
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
-	public required Task MsBuildEvaluationProjectTask { get; set; }
+	public required Task<ProjectLoadResult> MsBuildEvaluationProjectTask { get; set; }
 
 	[SetsRequiredMembers]
 	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent)
@@ -131,8 +124,8 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		{
 			await Task.Delay(2000);
 			var result = await ProjectEvaluation.LoadProject(FilePath);
-
 			UpdateProjectEvaluation(result);
+			return result;
 		});
 		allProjects.Add(this);
 	}
@@ -154,6 +147,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		                                                      ? _projectEvaluation
 		                                                      : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject when it is not loaded");
 
+	// TODO: This might need to be changed when we allow unloading projects
 	public bool IsLoading => !MsBuildEvaluationProjectTask.IsCompletedSuccessfully;
 	public bool IsLoaded => MsBuildEvaluationProject.IsLoaded;
 	public bool IsInvalid => MsBuildEvaluationProject.IsInvalid;

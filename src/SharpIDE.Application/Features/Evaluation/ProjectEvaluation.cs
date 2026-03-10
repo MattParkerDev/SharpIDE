@@ -21,12 +21,9 @@ public sealed record ProjectLoadResult
 {
 	[MemberNotNullWhen(true, nameof(Project))]
 	public bool IsLoaded { get; init; }
-
 	[MemberNotNullWhen(true, nameof(Diagnostic))]
 	public bool IsInvalid { get; init; }
-
 	public Project? Project { get; init; }
-
 	public SharpIdeDiagnostic? Diagnostic { get; init; }
 }
 
@@ -86,6 +83,7 @@ public static class ProjectEvaluation
 			return new ProjectLoadResult
 			{
 				IsLoaded = false,
+				IsInvalid = true,
 				Diagnostic = ex.ToDiagnostic()
 			};
 		}
