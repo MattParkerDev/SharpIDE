@@ -262,14 +262,10 @@ public partial class SolutionExplorerPanel : MarginContainer
 	private TreeItem CreateProjectTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
 	{
 		if (projectModel.IsLoading)
-		{
 			return CreateProjectLoadingTreeItem(tree, parent, projectModel);
-		}
 		
-		if (!projectModel.IsLoaded)
-		{
+		if (!projectModel.IsInvalid)
 			return CreateProjectLoadFailedTreeItem(tree, parent, projectModel);
-		}
 		
 		var projectItem = tree.CreateItem(parent);
 		projectItem.SetText(0, projectModel.Name);
@@ -310,7 +306,6 @@ public partial class SolutionExplorerPanel : MarginContainer
 		projectItem.SetText(0, projectModel.Name);
 		projectItem.SetIcon(0, LoadingProjectIcon);
 		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
-
 		return projectItem;
 	}
 
@@ -320,9 +315,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 		var projectItem = tree.CreateItem(parent);
 		projectItem.SetText(0, projectModel.Name);
 		projectItem.SetIcon(0, UnloadedProjectIcon);
-		projectItem.SetSuffix(0, "load failed");
+		projectItem.SetSuffix(0, " · load failed");
 		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
-
 		return projectItem;
 	}
 
