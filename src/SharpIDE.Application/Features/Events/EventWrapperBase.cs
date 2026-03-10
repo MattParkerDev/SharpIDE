@@ -9,7 +9,6 @@ public abstract class EventWrapperBase<TDelegate>(TDelegate @event) where TDeleg
 	public IDisposable Subscribe(TDelegate handler)
 	{
 		Event = (TDelegate) Delegate.Combine(Event, handler);
-
 		return Disposable.Create(() => Unsubscribe(handler));
 	}
 

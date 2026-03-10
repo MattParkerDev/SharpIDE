@@ -4,7 +4,6 @@ using Ardalis.GuardClauses;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Exceptions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.ExternalAccess.Razor.Cohost.Handlers;
 using Microsoft.CodeAnalysis.Text;
 
 using NuGet.ProjectModel;
@@ -189,7 +188,6 @@ public static class ProjectEvaluation
 		var linePosition = new LinePositionSpan(new LinePosition(ex.LineNumber, ex.ColumnNumber), new LinePosition(ex.LineNumber, ex.ColumnNumber));
 		var diagnostic = Diagnostic.Create(new DiagnosticDescriptor(id: ex.ErrorCode, title: string.Empty, ex.BaseMessage, ex.ErrorSubcategory ?? "MSBuild", DiagnosticSeverity.Error, isEnabledByDefault: true, helpLinkUri: ex.HelpLink), Location.Create(ex.ProjectFile, TextSpan.FromBounds(0, 0), linePosition));
 		return new SharpIdeDiagnostic(linePosition, diagnostic, ex.ProjectFile);
-
 	}
 }
 
