@@ -121,7 +121,6 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		Folders = new ObservableList<SharpIdeFolder>(TreeMapperV2.GetSubFolders(projectModel.FullFilePath, this, allFiles, allFolders));
 		MsBuildEvaluationProjectTask = Task.Run(async () =>
 		{
-			await Task.Delay(3000);
 			var result = await ProjectEvaluation.LoadProject(FilePath);
 			UpdateProjectEvaluation(result);
 			return result;
