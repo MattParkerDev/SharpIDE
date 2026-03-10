@@ -5,9 +5,11 @@ using ObservableCollections;
 using R3;
 using SharpIDE.Application;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.BottomPanel;
 using SharpIDE.Godot.Features.Common;
 using SharpIDE.Godot.Features.Git;
 using SharpIDE.Godot.Features.Problems;
@@ -24,6 +26,10 @@ public partial class SolutionExplorerPanel : MarginContainer
 	public Texture2D SlnFolderIcon { get; set; } = null!;
 	[Export]
 	public Texture2D CsprojIcon { get; set; } = null!;
+	[Export]
+	public Texture2D LoadingProjectIcon { get; set; } = null!;
+	[Export]
+	public Texture2D UnloadedProjectIcon { get; set; } = null!;
 	[Export]
 	public Texture2D SlnIcon { get; set; } = null!;
 	
@@ -85,7 +91,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		{
 			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeFile> fileContainer): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(fileContainer.Item, null); break;
 			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeFile> fileContainer): OpenContextMenuFile(fileContainer.Item); break;
-			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeProjectModel>): break;
+			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeProjectModel> { Item.IsInvalid: true }): GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Problems); break;
 			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeProjectModel> projectContainer): OpenContextMenuProject(projectContainer.Item); break;
 			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeFolder>): break;
 			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeFolder> folderContainer): OpenContextMenuFolder(folderContainer.Item, selected); break;
@@ -162,8 +168,12 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	    // Observe Projects
 	    var projectsView = solution.Projects.CreateView(y => new TreeItemContainer());
-		projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, rootItem, s.Value));
-	        
+		projectsView.Unfiltered.ToList().ForEach(s =>
+		{
+			s.View.Value = CreateProjectTreeItem(_tree, rootItem, s.Value);
+			s.Value.ProjectEvaluationChanged.Subscribe(() => OnProjectEvaluationChanged(s.Value, s.View, rootItem)).AddToDeferred(this);
+		});
+		
 	    projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
 	        .SubscribeAwait(async (e, ct) => await (e.Action switch
 	        {
@@ -191,6 +201,18 @@ public partial class SolutionExplorerPanel : MarginContainer
 	    });
 	}
 
+	private async Task OnProjectEvaluationChanged(SharpIdeProjectModel project, TreeItemContainer container, TreeItem parent)
+	{
+		var index = container.Value?.GetIndex();
+		await FreeTreeItem(container.Value);
+		await this.InvokeAsync(() =>
+		{
+			var item = container.Value = CreateProjectTreeItem(_tree, parent, project);
+			if (index.HasValue && item.GetIndex() != index.Value)
+				item.MoveToIndexInParent(item.GetIndex(), index.Value);
+		});
+	}
+
 	[RequiresGodotUiThread]
 	private TreeItem CreateSlnFolderTreeItem(Tree tree, TreeItem parent, SharpIdeSolutionFolder slnFolder)
 	{
@@ -212,7 +234,12 @@ public partial class SolutionExplorerPanel : MarginContainer
 	            })).AddToDeferred(this);
 
 	        var projectsView = slnFolder.Projects.CreateView(y => new TreeItemContainer());
-	        projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value));
+	        projectsView.Unfiltered.ToList().ForEach(s =>
+	        {
+		        s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value);
+		        s.Value.ProjectEvaluationChanged.Subscribe(() => OnProjectEvaluationChanged(s.Value, s.View, folderItem)).AddToDeferred(this);
+	        });
+	        
 	        projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
 	            .SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
 	            {
@@ -236,6 +263,16 @@ public partial class SolutionExplorerPanel : MarginContainer
 	[RequiresGodotUiThread]
 	private TreeItem CreateProjectTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
 	{
+		if (projectModel.IsLoading)
+		{
+			return CreateProjectLoadingTreeItem(tree, parent, projectModel);
+		}
+		
+		if (!projectModel.IsLoaded)
+		{
+			return CreateProjectLoadFailedTreeItem(tree, parent, projectModel);
+		}
+		
 		var projectItem = tree.CreateItem(parent);
 		projectItem.SetText(0, projectModel.Name);
 		projectItem.SetIcon(0, CsprojIcon);
@@ -253,7 +290,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
 			})).AddToDeferred(this);
-
+		
 		// Observe project files
 		var filesView = projectModel.Files.CreateView(y => new TreeItemContainer());
 		filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateFileTreeItem(_tree, projectItem, s.Value));
@@ -265,6 +302,29 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
 			})).AddToDeferred(this);
+		return projectItem;
+	}
+	
+	[RequiresGodotUiThread]
+	private TreeItem CreateProjectLoadingTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
+	{
+		var projectItem = tree.CreateItem(parent);
+		projectItem.SetText(0, projectModel.Name);
+		projectItem.SetIcon(0, LoadingProjectIcon);
+		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
+
+		return projectItem;
+	}
+
+	[RequiresGodotUiThread]
+	private TreeItem CreateProjectLoadFailedTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
+	{
+		var projectItem = tree.CreateItem(parent);
+		projectItem.SetText(0, projectModel.Name);
+		projectItem.SetIcon(0, UnloadedProjectIcon);
+		projectItem.SetSuffix(0, "load failed");
+		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
+
 		return projectItem;
 	}
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs1" /><g
+     id="g3-5"
+     transform="matrix(0.26458333,0,0,0.26458333,3.0166811,4.0504893)"
+     style="display:inline"><path
+       id="rect2-7"
+       style="display:inline;fill:#4b4d50;fill-opacity:0.356688;stroke:#dfe5e9;stroke-width:3.45639;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:20.7384, 6.91277;stroke-dashoffset:13.8256"
+       d="m 9.180306,6.762904 h 53.791176 a 4.1138337,4.1145526 0 0 1 4.113832,4.114553 v 41.050257 a 4.1138337,4.1145526 0 0 1 -4.113832,4.114553 H 9.180306 A 4.1138337,4.1145526 0 0 1 5.0664722,51.927714 V 10.877457 A 4.1138337,4.1145526 0 0 1 9.180306,6.762904 Z" /><path
+       style="display:inline;fill:none;stroke:#dfe5e9;stroke-width:3.77953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:7.55906, 7.55906;stroke-dashoffset:1.88976;stroke-opacity:1"
+       d="M 11.096019,15.717206 H 60.515873"
+       id="path2-1" /><rect
+       width="90.708664"
+       height="90.708664"
+       fill="none"
+       id="rect1-1"
+       x="-11.401629"
+       y="-15.308936"
+       style="stroke-width:3.77953" /><path
+       style="fill:#4b4d50;fill-opacity:0;stroke:#0092da;stroke-width:0.945886;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1;paint-order:normal"
+       id="path6"
+       d="m 13.029132,14.937164 1.738232,-4.16545 2.73827,3.588077 z"
+       transform="matrix(3.3634398,0.44227856,-0.44227856,3.3634398,8.8574265,12.716713)" /><path
+       style="display:inline;fill:#4b4d50;fill-opacity:0;stroke:#0092da;stroke-width:0.945883;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1;paint-order:normal"
+       id="path6-1"
+       d="m 13.029132,14.937164 1.738232,-4.16545 2.73827,3.588077 z"
+       transform="matrix(-3.3629523,-0.446049,0.446049,-3.3629523,98.673042,99.058062)" /></g></svg>

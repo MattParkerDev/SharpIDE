@@ -1,7 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
+
+using Microsoft.Build.Exceptions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Razor.ProjectSystem;
+using Microsoft.CodeAnalysis.Text;
+
 using ObservableCollections;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Evaluation;
@@ -98,6 +104,8 @@ public class SharpIdeSolutionFolder : ISharpIdeNode, IExpandableSharpIdeNode, IC
 }
 public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChildSharpIdeNode, IFolderOrProject, ISolutionOrProject
 {
+	private ProjectLoadResult? _projectEvaluation;
+
 	public required string Name { get; set; }
 	public required string FilePath { get; set; }
 	public required string DirectoryPath { get; set; }
@@ -108,7 +116,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public bool Running { get; set; }
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
-	public required Task<Project> MsBuildEvaluationProjectTask { get; set; }
+	public required Task MsBuildEvaluationProjectTask { get; set; }
 
 	[SetsRequiredMembers]
 	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent)
@@ -119,25 +127,48 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
 		Files = new ObservableList<SharpIdeFile>(TreeMapperV2.GetFiles(projectModel.FullFilePath, this, allFiles));
 		Folders = new ObservableList<SharpIdeFolder>(TreeMapperV2.GetSubFolders(projectModel.FullFilePath, this, allFiles, allFolders));
-		MsBuildEvaluationProjectTask = Task.Run(() => ProjectEvaluation.GetProject(projectModel.FullFilePath));
+		MsBuildEvaluationProjectTask = Task.Run(async () =>
+		{
+			await Task.Delay(2000);
+			var result = await ProjectEvaluation.LoadProject(FilePath);
+
+			UpdateProjectEvaluation(result);
+		});
 		allProjects.Add(this);
 	}
 
-	public Project MsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully
-		? MsBuildEvaluationProjectTask.Result
-		: throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
+	public void UpdateProjectEvaluation(ProjectLoadResult? evaluation)
+	{
+		if (_projectEvaluation?.Diagnostic is { } oldDiagnostic)
+			Diagnostics.Remove(oldDiagnostic);
 
-	public bool IsRunnable => MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
-	public bool IsBlazorProject => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
-	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");
-	public bool IsMtpTestProject => MsBuildEvaluationProject.GetPropertyValue("IsTestingPlatformApplication") is "true";
-	public string BlazorDevServerVersion => MsBuildEvaluationProject.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version");
+		_projectEvaluation = evaluation;
+
+		if (_projectEvaluation?.Diagnostic is { } newDiagnostic)
+			Diagnostics.Add(newDiagnostic);
+
+		ProjectEvaluationChanged.InvokeParallelFireAndForget();
+	}
+
+	private ProjectLoadResult MsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully && _projectEvaluation is not null
+		                                                      ? _projectEvaluation
+		                                                      : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject when it is not loaded");
+
+	public bool IsLoading => !MsBuildEvaluationProjectTask.IsCompletedSuccessfully;
+	public bool IsLoaded => MsBuildEvaluationProject.IsLoaded;
+	public bool IsInvalid => MsBuildEvaluationProject.IsInvalid;
+	public bool IsRunnable => MsBuildEvaluationProject.IsLoaded && MsBuildEvaluationProject.Project.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
+	public bool IsBlazorProject => MsBuildEvaluationProject.IsLoaded && MsBuildEvaluationProject.Project.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
+	public bool IsGodotProject => MsBuildEvaluationProject.IsLoaded && MsBuildEvaluationProject.Project.Xml.Sdk.StartsWith("Godot.NET.Sdk");
+	public bool IsMtpTestProject => MsBuildEvaluationProject.IsLoaded && MsBuildEvaluationProject.Project.GetPropertyValue("IsTestingPlatformApplication") is "true";
+	public string BlazorDevServerVersion => MsBuildEvaluationProject.IsLoaded ? MsBuildEvaluationProject.Project.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version") : string.Empty;
 	public bool OpenInRunPanel { get; set; }
 	public Channel<byte[]>? RunningOutputChannel { get; set; }
 
 	public EventWrapper<Task> ProjectRunFailed { get; } = new(() => Task.CompletedTask);
 	public EventWrapper<Task> ProjectStartedRunning { get; } = new(() => Task.CompletedTask);
 	public EventWrapper<Task> ProjectStoppedRunning { get; } = new(() => Task.CompletedTask);
+	public EventWrapper<Task> ProjectEvaluationChanged { get; } = new(() => Task.CompletedTask);
 
 
 	public ObservableHashSet<SharpIdeDiagnostic> Diagnostics { get; internal set; } = [];

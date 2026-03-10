@@ -1,35 +1,94 @@
-﻿using Ardalis.GuardClauses;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Ardalis.GuardClauses;
 using Microsoft.Build.Evaluation;
+using Microsoft.Build.Exceptions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.ExternalAccess.Razor.Cohost.Handlers;
+using Microsoft.CodeAnalysis.Text;
+
 using NuGet.ProjectModel;
 using NuGet.Versioning;
+
+using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
+using Project = Microsoft.Build.Evaluation.Project;
+
 namespace SharpIDE.Application.Features.Evaluation;
+
+public sealed record ProjectLoadResult
+{
+	[MemberNotNullWhen(true, nameof(Project))]
+	public bool IsLoaded { get; init; }
+
+	[MemberNotNullWhen(true, nameof(Diagnostic))]
+	public bool IsInvalid { get; init; }
+
+	public Project? Project { get; init; }
+
+	public SharpIdeDiagnostic? Diagnostic { get; init; }
+}
 
 public static class ProjectEvaluation
 {
 	private static readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
-	public static async Task<Project> GetProject(string projectFilePath)
+	public static async Task<ProjectLoadResult> LoadProject(string projectFilePath)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(GetProject)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
 
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-		var project = _projectCollection.LoadProject(projectFilePath);
-		//Console.WriteLine($"ProjectEvaluation: loaded {project.FullPath}");
-		return project;
+		try
+		{
+			var project = _projectCollection.LoadProject(projectFilePath);
+
+			//Console.WriteLine($"ProjectEvaluation: loaded {project.FullPath}");
+			return new ProjectLoadResult
+			{
+				IsLoaded = true,
+				IsInvalid = false,
+				Project = project
+			};
+		}
+		catch (InvalidProjectFileException ex)
+		{
+			return new ProjectLoadResult
+			{
+				IsLoaded = false,
+				IsInvalid = true,
+				Diagnostic = ex.ToDiagnostic()
+			};
+		}
 	}
 
-	public static async Task ReloadProject(string projectFilePath)
+	public static async Task<ProjectLoadResult> ReloadProject(string projectFilePath)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(ReloadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
 
-		var project = _projectCollection.GetLoadedProjects(projectFilePath).Single();
-		var projectRootElement = project.Xml;
-		projectRootElement.Reload(false);
-		project.ReevaluateIfNecessary();
+		try
+		{
+			var project = _projectCollection.GetLoadedProjects(projectFilePath).Single();
+			var projectRootElement = project.Xml;
+			projectRootElement.Reload(false);
+			project.ReevaluateIfNecessary();
+
+			return new ProjectLoadResult
+			{
+				IsLoaded = true,
+				Project = project
+			};
+		}
+		catch (InvalidProjectFileException ex)
+		{
+			return new ProjectLoadResult
+			{
+				IsLoaded = false,
+				Diagnostic = ex.ToDiagnostic()
+			};
+		}
 	}
 
 	public static Guid GetOrCreateDotnetUserSecretsId(SharpIdeProjectModel projectModel)
@@ -125,6 +184,14 @@ public static class ProjectEvaluation
 			}
 		}
 		return allPackages.Values.ToList();
+	}
+
+	private static SharpIdeDiagnostic ToDiagnostic(this InvalidProjectFileException ex)
+	{
+		var linePosition = new LinePositionSpan(new LinePosition(ex.LineNumber, ex.ColumnNumber), new LinePosition(ex.LineNumber, ex.ColumnNumber));
+		var diagnostic = Diagnostic.Create(new DiagnosticDescriptor(id: ex.ErrorCode, title: string.Empty, ex.BaseMessage, ex.ErrorSubcategory ?? "MSBuild", DiagnosticSeverity.Error, isEnabledByDefault: true, helpLinkUri: ex.HelpLink), Location.Create(ex.ProjectFile, TextSpan.FromBounds(0, 0), linePosition));
+		return new SharpIdeDiagnostic(linePosition, diagnostic, ex.ProjectFile);
+
 	}
 }
 
