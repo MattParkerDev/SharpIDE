@@ -5,6 +5,7 @@ public abstract class EventWrapperBase<TDelegate>(TDelegate @event) where TDeleg
 	protected TDelegate Event = @event;
 
 	public void Subscribe(TDelegate handler) => Event = (TDelegate)Delegate.Combine(Event, handler);
+
 	public void Unsubscribe(TDelegate handler) => Event = (TDelegate)Delegate.Remove(Event, handler)!;
 
 	protected static async void FireAndForget(Func<Task> action)

@@ -5,9 +5,10 @@ using ObservableCollections;
 using R3;
 using SharpIDE.Application;
 using SharpIDE.Application.Features.Analysis;
-using SharpIDE.Application.Features.NavigationHistory;
+using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.BottomPanel;
 using SharpIDE.Godot.Features.Common;
 using SharpIDE.Godot.Features.Git;
 using SharpIDE.Godot.Features.Problems;
@@ -24,6 +25,10 @@ public partial class SolutionExplorerPanel : MarginContainer
 	public Texture2D SlnFolderIcon { get; set; } = null!;
 	[Export]
 	public Texture2D CsprojIcon { get; set; } = null!;
+	[Export]
+	public Texture2D LoadingProjectIcon { get; set; } = null!;
+	[Export]
+	public Texture2D UnloadedProjectIcon { get; set; } = null!;
 	[Export]
 	public Texture2D SlnIcon { get; set; } = null!;
 	
@@ -85,7 +90,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		{
 			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeFile> fileContainer): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(fileContainer.Item, null); break;
 			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeFile> fileContainer): OpenContextMenuFile(fileContainer.Item); break;
-			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeProjectModel>): break;
+			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeProjectModel> { Item.IsInvalid: true }): GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Problems); break;
 			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeProjectModel> projectContainer): OpenContextMenuProject(projectContainer.Item); break;
 			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeFolder>): break;
 			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeFolder> folderContainer): OpenContextMenuFolder(folderContainer.Item, selected); break;
@@ -163,7 +168,6 @@ public partial class SolutionExplorerPanel : MarginContainer
 	    // Observe Projects
 	    var projectsView = solution.Projects.CreateView(y => new TreeItemContainer());
 		projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, rootItem, s.Value));
-	        
 	    projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
 	        .SubscribeAwait(async (e, ct) => await (e.Action switch
 	        {
@@ -238,8 +242,28 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		var projectItem = tree.CreateItem(parent);
 		projectItem.SetText(0, projectModel.Name);
-		projectItem.SetIcon(0, CsprojIcon);
+		var icon = projectModel.IsLoading ? LoadingProjectIcon : projectModel.IsInvalid ? UnloadedProjectIcon : CsprojIcon;
+		projectItem.SetIcon(0, icon);
+		if (projectModel.IsLoading is false && projectModel.IsInvalid) projectItem.SetSuffix(0, " ·  load failed");
 		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
+		
+		projectModel.MsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadState, ct) =>
+		{
+			var newIcon = loadState switch
+			{
+				MsBuildProjectLoadState.Loading => LoadingProjectIcon,
+				MsBuildProjectLoadState.Loaded => CsprojIcon,
+				MsBuildProjectLoadState.Invalid => UnloadedProjectIcon,
+				MsBuildProjectLoadState.Unloaded => UnloadedProjectIcon,
+				_ => throw new ArgumentOutOfRangeException(nameof(loadState), loadState, null)
+			};
+			var suffix = loadState is MsBuildProjectLoadState.Invalid ? " ·  load failed" : string.Empty;
+			await this.InvokeAsync(() =>
+			{
+				projectItem.SetIcon(0, newIcon);
+				projectItem.SetSuffix(0, suffix);
+			});
+		}).AddToDeferred(this);
 
 		// Observe project folders
 		var foldersView = projectModel.Folders.CreateView(y => new TreeItemContainer());
@@ -253,7 +277,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
 			})).AddToDeferred(this);
-
+		
 		// Observe project files
 		var filesView = projectModel.Files.CreateView(y => new TreeItemContainer());
 		filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateFileTreeItem(_tree, projectItem, s.Value));

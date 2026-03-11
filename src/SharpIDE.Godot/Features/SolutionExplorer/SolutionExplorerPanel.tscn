@@ -6,6 +6,8 @@
 [ext_resource type="Texture2D" uid="uid://bbfxltr1fcomt" path="res://Features/SolutionExplorer/Resources/SlnFolderIcon.svg" id="4_8ymw0"]
 [ext_resource type="Texture2D" uid="uid://cqt30ma6xgder" path="res://Features/SolutionExplorer/Resources/Csproj.svg" id="5_r1qfc"]
 [ext_resource type="Texture2D" uid="uid://btlxqx3c08fjj" path="res://Features/SolutionExplorer/Resources/SlnIcon.svg" id="6_idvpu"]
+[ext_resource type="Texture2D" uid="uid://mnpe6bcnycfh" path="res://Features/SolutionExplorer/Resources/LoadingProjectIcon.svg" id="6_wpvwf"]
+[ext_resource type="Texture2D" uid="uid://b4n5n20uey34i" path="res://Features/SolutionExplorer/Resources/UnloadedProjectIcon.svg" id="7_ykfad"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_idvpu"]
 content_margin_left = 4.0
@@ -45,6 +47,8 @@ CsharpFileIcon = ExtResource("2_8ymw0")
 FolderIcon = ExtResource("3_r1qfc")
 SlnFolderIcon = ExtResource("4_8ymw0")
 CsprojIcon = ExtResource("5_r1qfc")
+LoadingProjectIcon = ExtResource("6_wpvwf")
+UnloadedProjectIcon = ExtResource("7_ykfad")
 SlnIcon = ExtResource("6_idvpu")
 
 [node name="PanelContainer" type="PanelContainer" parent="." unique_id=1468166306]

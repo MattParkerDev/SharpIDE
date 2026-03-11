@@ -1,35 +1,68 @@
 ﻿using Ardalis.GuardClauses;
 using Microsoft.Build.Evaluation;
+using Microsoft.Build.Exceptions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
+using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using Project = Microsoft.Build.Evaluation.Project;
 
 namespace SharpIDE.Application.Features.Evaluation;
+
+public enum MsBuildProjectLoadState
+{
+	Loading = 1,
+	Loaded,
+	Unloaded,
+	Invalid
+}
+public sealed record MsBuildProjectLoadResult
+{
+	public MsBuildProjectLoadState LoadState { get; set; }
+	public Project? Project { get; init; }
+	public SharpIdeDiagnostic? Diagnostic { get; init; }
+}
 
 public static class ProjectEvaluation
 {
 	private static readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
-	public static async Task<Project> GetProject(string projectFilePath)
+	public static async Task<MsBuildProjectLoadResult> LoadOrReloadProject(string projectFilePath)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(GetProject)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadOrReloadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
 
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
-		var project = _projectCollection.LoadProject(projectFilePath);
-		//Console.WriteLine($"ProjectEvaluation: loaded {project.FullPath}");
-		return project;
-	}
-
-	public static async Task ReloadProject(string projectFilePath)
-	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(ReloadProject)}");
-		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
-
-		var project = _projectCollection.GetLoadedProjects(projectFilePath).Single();
-		var projectRootElement = project.Xml;
-		projectRootElement.Reload(false);
-		project.ReevaluateIfNecessary();
+		try
+		{
+			Project project;
+			if (_projectCollection.GetLoadedProjects(projectFilePath).SingleOrDefault() is {} existingProject)
+			{
+				var projectRootElement = existingProject.Xml;
+				projectRootElement.Reload(false);
+				existingProject.ReevaluateIfNecessary();
+				project = existingProject;
+			}
+			else
+			{
+				project = _projectCollection.LoadProject(projectFilePath);
+			}
+			return new MsBuildProjectLoadResult
+			{
+				LoadState = MsBuildProjectLoadState.Loaded,
+				Project = project
+			};
+		}
+		catch (InvalidProjectFileException ex)
+		{
+			return new MsBuildProjectLoadResult
+			{
+				LoadState = MsBuildProjectLoadState.Invalid,
+				Diagnostic = ex.ToDiagnostic()
+			};
+		}
 	}
 
 	public static Guid GetOrCreateDotnetUserSecretsId(SharpIdeProjectModel projectModel)
@@ -125,6 +158,14 @@ public static class ProjectEvaluation
 			}
 		}
 		return allPackages.Values.ToList();
+	}
+
+	private static SharpIdeDiagnostic ToDiagnostic(this InvalidProjectFileException ex)
+	{
+		var linePosition = new LinePosition(ex.LineNumber - 1, ex.ColumnNumber - 1);
+		var linePositionSpan = new LinePositionSpan(linePosition, linePosition);
+		var diagnostic = Diagnostic.Create(new DiagnosticDescriptor(id: ex.ErrorCode, title: string.Empty, ex.BaseMessage, ex.ErrorSubcategory ?? "MSBuild", DiagnosticSeverity.Error, isEnabledByDefault: true, helpLinkUri: ex.HelpLink), Location.Create(ex.ProjectFile, TextSpan.FromBounds(0, 0), linePositionSpan));
+		return new SharpIdeDiagnostic(linePositionSpan, diagnostic, ex.ProjectFile);
 	}
 }
 

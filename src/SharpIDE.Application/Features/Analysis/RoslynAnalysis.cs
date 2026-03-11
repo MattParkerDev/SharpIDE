@@ -306,7 +306,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		static ImmutableArray<DocumentInfo> MapDocuments(Solution oldSolution, ProjectId mappedProjectId, IReadOnlyList<DocumentInfo> documents)
 			=> documents.Select(docInfo =>
 			{
-				var mappedDocumentId = oldSolution.GetDocumentIdsWithFilePath(docInfo.FilePath).Single(id => id.ProjectId == mappedProjectId);
+				var mappedDocumentId = oldSolution.GetDocumentIdsWithFilePath(docInfo.FilePath).SingleOrDefault(id => id.ProjectId == mappedProjectId) ?? DocumentId.CreateNewId(mappedProjectId);
 				return docInfo.WithId(mappedDocumentId);
 			}).ToImmutableArray();
 	}
@@ -351,6 +351,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	public async Task UpdateProjectDiagnostics(SharpIdeProjectModel project, CancellationToken cancellationToken = default)
 	{
+		if (project.IsLoaded is false) return;
 		var projectDiagnostics = await GetProjectDiagnostics(project, cancellationToken);
 		// TODO: only add and remove diffs
 		project.Diagnostics.RemoveRange(project.Diagnostics);

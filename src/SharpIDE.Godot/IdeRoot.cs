@@ -197,7 +197,7 @@ public partial class IdeRoot : Control
 
 			var tasks = solutionModel.AllProjects.Select(p => p.MsBuildEvaluationProjectTask).ToList();
 			await Task.WhenAll(tasks).ConfigureAwait(false);
-			var runnableProjects = solutionModel.AllProjects.Where(p => p.IsRunnable).ToList();
+			var runnableProjects = solutionModel.AllProjects.Where(p => p.IsLoaded && p.IsRunnable).ToList();
 			await this.InvokeAsync(() =>
 			{
 				var runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");

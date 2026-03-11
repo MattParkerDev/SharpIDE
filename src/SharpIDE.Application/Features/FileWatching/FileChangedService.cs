@@ -132,7 +132,8 @@ public class FileChangedService
 	{
 		var project = SolutionModel.AllProjects.SingleOrDefault(p => p.FilePath == file.Path);
 		if (project is null) return;
-		await ProjectEvaluation.ReloadProject(file.Path);
+		project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
+		await project.MsBuildEvaluationProjectTask;
 		await _roslynAnalysis.ReloadProject(project, CancellationToken.None);
 		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
 		_updateSolutionDiagnosticsQueue.AddWork();

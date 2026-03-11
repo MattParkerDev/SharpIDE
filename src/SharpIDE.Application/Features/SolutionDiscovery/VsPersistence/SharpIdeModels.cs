@@ -1,12 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
-using Microsoft.CodeAnalysis;
+using Ardalis.GuardClauses;
+using Microsoft.Build.Evaluation;
 using ObservableCollections;
+using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Events;
-using Project = Microsoft.Build.Evaluation.Project;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
@@ -96,6 +97,7 @@ public class SharpIdeSolutionFolder : ISharpIdeNode, IExpandableSharpIdeNode, IC
 		Projects = new ObservableHashSet<SharpIdeProjectModel>(intermediateModel.Projects.Select(x => new SharpIdeProjectModel(x, allProjects, allFiles, allFolders, this)));
 	}
 }
+
 public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChildSharpIdeNode, IFolderOrProject, ISolutionOrProject
 {
 	public required string Name { get; set; }
@@ -108,6 +110,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public bool Running { get; set; }
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
+	public ReactiveProperty<MsBuildProjectLoadState> MsBuildProjectLoadState { get; set; }
 	public required Task<Project> MsBuildEvaluationProjectTask { get; set; }
 
 	[SetsRequiredMembers]
@@ -119,14 +122,32 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
 		Files = new ObservableList<SharpIdeFile>(TreeMapperV2.GetFiles(projectModel.FullFilePath, this, allFiles));
 		Folders = new ObservableList<SharpIdeFolder>(TreeMapperV2.GetSubFolders(projectModel.FullFilePath, this, allFiles, allFolders));
-		MsBuildEvaluationProjectTask = Task.Run(() => ProjectEvaluation.GetProject(projectModel.FullFilePath));
+		MsBuildProjectLoadState = new ReactiveProperty<MsBuildProjectLoadState>(Evaluation.MsBuildProjectLoadState.Loading);
+		MsBuildEvaluationProjectTask = LoadOrReloadProjectInMsBuild();
 		allProjects.Add(this);
 	}
 
-	public Project MsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully
-		? MsBuildEvaluationProjectTask.Result
-		: throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
+	public async Task<Project> LoadOrReloadProjectInMsBuild()
+	{
+		return await Task.Run(async () =>
+		{
+			var result = await ProjectEvaluation.LoadOrReloadProject(FilePath);
+			MsBuildProjectLoadState.Value = result.LoadState;
+			Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
+			if (result.LoadState is Evaluation.MsBuildProjectLoadState.Invalid)
+			{
+				Guard.Against.Null(result.Diagnostic);
+				Diagnostics.Add(result.Diagnostic.Value);
+			}
+			return result.Project!;
+		});
+	}
 
+	public Project MsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully ? MsBuildEvaluationProjectTask.Result : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
+
+	public bool IsLoading => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loading;
+	public bool IsLoaded => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded;
+	public bool IsInvalid => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Invalid;
 	public bool IsRunnable => MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
 	public bool IsBlazorProject => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
 	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");
@@ -138,7 +159,6 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public EventWrapper<Task> ProjectRunFailed { get; } = new(() => Task.CompletedTask);
 	public EventWrapper<Task> ProjectStartedRunning { get; } = new(() => Task.CompletedTask);
 	public EventWrapper<Task> ProjectStoppedRunning { get; } = new(() => Task.CompletedTask);
-
 
 	public ObservableHashSet<SharpIdeDiagnostic> Diagnostics { get; internal set; } = [];
 }
