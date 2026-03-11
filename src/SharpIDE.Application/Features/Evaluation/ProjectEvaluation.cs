@@ -28,44 +28,29 @@ public sealed record MsBuildProjectLoadResult
 public static class ProjectEvaluation
 {
 	private static readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
-	public static async Task<MsBuildProjectLoadResult> LoadProject(string projectFilePath)
+	public static async Task<MsBuildProjectLoadResult> LoadOrReloadProject(string projectFilePath)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadProject)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadOrReloadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
 
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
 		try
 		{
+			var existingProject = _projectCollection.GetLoadedProjects(projectFilePath).SingleOrDefault();
+			if (existingProject is not null)
+			{
+				var projectRootElement = existingProject.Xml;
+				projectRootElement.Reload(false);
+				existingProject.ReevaluateIfNecessary();
+
+				return new MsBuildProjectLoadResult
+				{
+					LoadState = MsBuildProjectLoadState.Loaded,
+					Project = existingProject
+				};
+			}
 			var project = _projectCollection.LoadProject(projectFilePath);
-			return new MsBuildProjectLoadResult
-			{
-				LoadState = MsBuildProjectLoadState.Loaded,
-				Project = project
-			};
-		}
-		catch (InvalidProjectFileException ex)
-		{
-			return new MsBuildProjectLoadResult
-			{
-				LoadState = MsBuildProjectLoadState.Invalid,
-				Diagnostic = ex.ToDiagnostic()
-			};
-		}
-	}
-
-	public static async Task<MsBuildProjectLoadResult> ReloadProject(string projectFilePath)
-	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(ReloadProject)}");
-		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
-
-		try
-		{
-			var project = _projectCollection.GetLoadedProjects(projectFilePath).Single();
-			var projectRootElement = project.Xml;
-			projectRootElement.Reload(false);
-			project.ReevaluateIfNecessary();
-
 			return new MsBuildProjectLoadResult
 			{
 				LoadState = MsBuildProjectLoadState.Loaded,

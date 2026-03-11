@@ -131,7 +131,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	{
 		return await Task.Run(async () =>
 		{
-			var result = MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded ? await ProjectEvaluation.ReloadProject(FilePath) : await ProjectEvaluation.LoadProject(FilePath);
+			var result = await ProjectEvaluation.LoadOrReloadProject(FilePath);
 			MsBuildProjectLoadState.Value = result.LoadState;
 			Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
 			if (result.LoadState is Evaluation.MsBuildProjectLoadState.Invalid)
