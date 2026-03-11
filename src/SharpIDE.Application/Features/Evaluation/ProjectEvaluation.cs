@@ -162,9 +162,10 @@ public static class ProjectEvaluation
 
 	private static SharpIdeDiagnostic ToDiagnostic(this InvalidProjectFileException ex)
 	{
-		var linePosition = new LinePositionSpan(new LinePosition(ex.LineNumber, ex.ColumnNumber), new LinePosition(ex.LineNumber, ex.ColumnNumber));
-		var diagnostic = Diagnostic.Create(new DiagnosticDescriptor(id: ex.ErrorCode, title: string.Empty, ex.BaseMessage, ex.ErrorSubcategory ?? "MSBuild", DiagnosticSeverity.Error, isEnabledByDefault: true, helpLinkUri: ex.HelpLink), Location.Create(ex.ProjectFile, TextSpan.FromBounds(0, 0), linePosition));
-		return new SharpIdeDiagnostic(linePosition, diagnostic, ex.ProjectFile);
+		var linePosition = new LinePosition(ex.LineNumber - 1, ex.ColumnNumber - 1);
+		var linePositionSpan = new LinePositionSpan(linePosition, linePosition);
+		var diagnostic = Diagnostic.Create(new DiagnosticDescriptor(id: ex.ErrorCode, title: string.Empty, ex.BaseMessage, ex.ErrorSubcategory ?? "MSBuild", DiagnosticSeverity.Error, isEnabledByDefault: true, helpLinkUri: ex.HelpLink), Location.Create(ex.ProjectFile, TextSpan.FromBounds(0, 0), linePositionSpan));
+		return new SharpIdeDiagnostic(linePositionSpan, diagnostic, ex.ProjectFile);
 	}
 }
 
