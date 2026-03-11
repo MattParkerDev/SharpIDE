@@ -351,6 +351,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	public async Task UpdateProjectDiagnostics(SharpIdeProjectModel project, CancellationToken cancellationToken = default)
 	{
+		if (project.IsLoaded is false) return;
 		var projectDiagnostics = await GetProjectDiagnostics(project, cancellationToken);
 		// TODO: only add and remove diffs
 		project.Diagnostics.RemoveRange(project.Diagnostics);
