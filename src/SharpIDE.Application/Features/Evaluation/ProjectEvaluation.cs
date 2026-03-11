@@ -37,20 +37,18 @@ public static class ProjectEvaluation
 
 		try
 		{
-			var existingProject = _projectCollection.GetLoadedProjects(projectFilePath).SingleOrDefault();
-			if (existingProject is not null)
+			Project project;
+			if (_projectCollection.GetLoadedProjects(projectFilePath).SingleOrDefault() is {} existingProject)
 			{
 				var projectRootElement = existingProject.Xml;
 				projectRootElement.Reload(false);
 				existingProject.ReevaluateIfNecessary();
-
-				return new MsBuildProjectLoadResult
-				{
-					LoadState = MsBuildProjectLoadState.Loaded,
-					Project = existingProject
-				};
+				project = existingProject;
 			}
-			var project = _projectCollection.LoadProject(projectFilePath);
+			else
+			{
+				project = _projectCollection.LoadProject(projectFilePath);
+			}
 			return new MsBuildProjectLoadResult
 			{
 				LoadState = MsBuildProjectLoadState.Loaded,
