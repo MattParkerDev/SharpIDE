@@ -264,7 +264,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (projectModel.IsLoading)
 			return CreateProjectLoadingTreeItem(tree, parent, projectModel);
 		
-		if (!projectModel.IsInvalid)
+		if (projectModel.IsInvalid)
 			return CreateProjectLoadFailedTreeItem(tree, parent, projectModel);
 		
 		var projectItem = tree.CreateItem(parent);
