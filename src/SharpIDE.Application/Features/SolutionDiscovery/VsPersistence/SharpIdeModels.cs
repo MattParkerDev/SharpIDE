@@ -97,13 +97,7 @@ public class SharpIdeSolutionFolder : ISharpIdeNode, IExpandableSharpIdeNode, IC
 		Projects = new ObservableHashSet<SharpIdeProjectModel>(intermediateModel.Projects.Select(x => new SharpIdeProjectModel(x, allProjects, allFiles, allFolders, this)));
 	}
 }
-public enum MsBuildProjectLoadState
-{
-	Loading = 1,
-	Loaded,
-	Unloaded,
-	Invalid
-}
+
 public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChildSharpIdeNode, IFolderOrProject, ISolutionOrProject
 {
 	public required string Name { get; set; }
@@ -128,7 +122,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
 		Files = new ObservableList<SharpIdeFile>(TreeMapperV2.GetFiles(projectModel.FullFilePath, this, allFiles));
 		Folders = new ObservableList<SharpIdeFolder>(TreeMapperV2.GetSubFolders(projectModel.FullFilePath, this, allFiles, allFolders));
-		MsBuildProjectLoadState = new ReactiveProperty<MsBuildProjectLoadState>(VsPersistence.MsBuildProjectLoadState.Loading);
+		MsBuildProjectLoadState = new ReactiveProperty<MsBuildProjectLoadState>(Evaluation.MsBuildProjectLoadState.Loading);
 		MsBuildEvaluationProjectTask = LoadOrReloadProjectInMsBuild();
 		allProjects.Add(this);
 	}
@@ -137,10 +131,10 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	{
 		return await Task.Run(async () =>
 		{
-			var result = MsBuildProjectLoadState.Value is VsPersistence.MsBuildProjectLoadState.Loaded ? await ProjectEvaluation.ReloadProject(FilePath) : await ProjectEvaluation.LoadProject(FilePath);
+			var result = MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded ? await ProjectEvaluation.ReloadProject(FilePath) : await ProjectEvaluation.LoadProject(FilePath);
 			MsBuildProjectLoadState.Value = result.LoadState;
 			Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
-			if (result.LoadState is VsPersistence.MsBuildProjectLoadState.Invalid)
+			if (result.LoadState is Evaluation.MsBuildProjectLoadState.Invalid)
 			{
 				Guard.Against.Null(result.Diagnostic);
 				Diagnostics.Add(result.Diagnostic.Value);
@@ -151,9 +145,9 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 
 	public Project MsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully ? MsBuildEvaluationProjectTask.Result : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
 
-	public bool IsLoading => MsBuildProjectLoadState.Value is VsPersistence.MsBuildProjectLoadState.Loading;
-	public bool IsLoaded => MsBuildProjectLoadState.Value is VsPersistence.MsBuildProjectLoadState.Loaded;
-	public bool IsInvalid => MsBuildProjectLoadState.Value is VsPersistence.MsBuildProjectLoadState.Invalid;
+	public bool IsLoading => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loading;
+	public bool IsLoaded => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded;
+	public bool IsInvalid => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Invalid;
 	public bool IsRunnable => MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
 	public bool IsBlazorProject => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
 	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");

@@ -11,6 +11,13 @@ using Project = Microsoft.Build.Evaluation.Project;
 
 namespace SharpIDE.Application.Features.Evaluation;
 
+public enum MsBuildProjectLoadState
+{
+	Loading = 1,
+	Loaded,
+	Unloaded,
+	Invalid
+}
 public sealed record MsBuildProjectLoadResult
 {
 	public MsBuildProjectLoadState LoadState { get; set; }
