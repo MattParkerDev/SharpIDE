@@ -1,16 +1,10 @@
-using R3;
-
 namespace SharpIDE.Application.Features.Events;
 
 public abstract class EventWrapperBase<TDelegate>(TDelegate @event) where TDelegate : Delegate
 {
 	protected TDelegate Event = @event;
 
-	public IDisposable Subscribe(TDelegate handler)
-	{
-		Event = (TDelegate) Delegate.Combine(Event, handler);
-		return Disposable.Create(() => Unsubscribe(handler));
-	}
+	public void Subscribe(TDelegate handler) => Event = (TDelegate)Delegate.Combine(Event, handler);
 
 	public void Unsubscribe(TDelegate handler) => Event = (TDelegate)Delegate.Remove(Event, handler)!;
 
