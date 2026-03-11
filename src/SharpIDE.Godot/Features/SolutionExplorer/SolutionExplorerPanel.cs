@@ -166,12 +166,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	    // Observe Projects
 	    var projectsView = solution.Projects.CreateView(y => new TreeItemContainer());
-		projectsView.Unfiltered.ToList().ForEach(s =>
-		{
-			s.View.Value = CreateProjectTreeItem(_tree, rootItem, s.Value);
-			s.Value.ProjectEvaluationChanged.Subscribe(() => OnProjectEvaluationChanged(s.Value, s.View, rootItem)).AddToDeferred(this);
-		});
-		
+		projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, rootItem, s.Value));
 	    projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
 	        .SubscribeAwait(async (e, ct) => await (e.Action switch
 	        {
@@ -220,12 +215,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	            })).AddToDeferred(this);
 
 	        var projectsView = slnFolder.Projects.CreateView(y => new TreeItemContainer());
-	        projectsView.Unfiltered.ToList().ForEach(s =>
-	        {
-		        s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value);
-		        s.Value.ProjectEvaluationChanged.Subscribe(() => OnProjectEvaluationChanged(s.Value, s.View, folderItem)).AddToDeferred(this);
-	        });
-	        
+	        projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value));
 	        projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
 	            .SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
 	            {
@@ -246,31 +236,33 @@ public partial class SolutionExplorerPanel : MarginContainer
 	        return folderItem;
 	}
 
-	private async Task OnProjectEvaluationChanged(SharpIdeProjectModel project, TreeItemContainer container, TreeItem parent)
-	{
-		var index = container.Value?.GetIndex();
-		await FreeTreeItem(container.Value);
-		await this.InvokeAsync(() =>
-		{
-			var item = container.Value = CreateProjectTreeItem(_tree, parent, project);
-			if (index.HasValue && item.GetIndex() != index.Value)
-				item.MoveToIndexInParent(item.GetIndex(), index.Value);
-		});
-	}
-
 	[RequiresGodotUiThread]
 	private TreeItem CreateProjectTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
 	{
-		if (projectModel.IsLoading)
-			return CreateProjectLoadingTreeItem(tree, parent, projectModel);
-		
-		if (projectModel.IsInvalid)
-			return CreateProjectLoadFailedTreeItem(tree, parent, projectModel);
-		
 		var projectItem = tree.CreateItem(parent);
 		projectItem.SetText(0, projectModel.Name);
-		projectItem.SetIcon(0, CsprojIcon);
+		var icon = projectModel.IsLoading ? LoadingProjectIcon : projectModel.IsInvalid ? UnloadedProjectIcon : CsprojIcon;
+		projectItem.SetIcon(0, icon);
+		if (projectModel.IsLoading is false && projectModel.IsInvalid) projectItem.SetSuffix(0, " ·  load failed");
 		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
+		
+		projectModel.MsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadState, ct) =>
+		{
+			var newIcon = loadState switch
+			{
+				MsBuildProjectLoadState.Loading => LoadingProjectIcon,
+				MsBuildProjectLoadState.Loaded => CsprojIcon,
+				MsBuildProjectLoadState.Invalid => UnloadedProjectIcon,
+				MsBuildProjectLoadState.Unloaded => UnloadedProjectIcon,
+				_ => throw new ArgumentOutOfRangeException(nameof(loadState), loadState, null)
+			};
+			var suffix = loadState is MsBuildProjectLoadState.Invalid ? " ·  load failed" : string.Empty;
+			await this.InvokeAsync(() =>
+			{
+				projectItem.SetIcon(0, newIcon);
+				projectItem.SetSuffix(0, suffix);
+			});
+		}).AddToDeferred(this);
 
 		// Observe project folders
 		var foldersView = projectModel.Folders.CreateView(y => new TreeItemContainer());
@@ -296,27 +288,6 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
 			})).AddToDeferred(this);
-		return projectItem;
-	}
-	
-	[RequiresGodotUiThread]
-	private TreeItem CreateProjectLoadingTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
-	{
-		var projectItem = tree.CreateItem(parent);
-		projectItem.SetText(0, projectModel.Name);
-		projectItem.SetIcon(0, LoadingProjectIcon);
-		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
-		return projectItem;
-	}
-
-	[RequiresGodotUiThread]
-	private TreeItem CreateProjectLoadFailedTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
-	{
-		var projectItem = tree.CreateItem(parent);
-		projectItem.SetText(0, projectModel.Name);
-		projectItem.SetIcon(0, UnloadedProjectIcon);
-		projectItem.SetSuffix(0, " · load failed");
-		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
 		return projectItem;
 	}
 

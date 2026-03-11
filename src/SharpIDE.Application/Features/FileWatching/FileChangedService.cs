@@ -131,9 +131,8 @@ public class FileChangedService
 	{
 		var project = SolutionModel.AllProjects.SingleOrDefault(p => p.FilePath == file.Path);
 		if (project is null) return;
-		// If the project file was invalid when the solution was opened the project will not be loaded.
-		var loadResult = project.IsLoaded ? await ProjectEvaluation.ReloadProject(file.Path) : await ProjectEvaluation.LoadProject(file.Path);
-		project.UpdateProjectEvaluation(loadResult);
+		project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
+		await project.MsBuildEvaluationProjectTask;
 		await _roslynAnalysis.ReloadProject(project, CancellationToken.None);
 		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
 		_updateSolutionDiagnosticsQueue.AddWork();

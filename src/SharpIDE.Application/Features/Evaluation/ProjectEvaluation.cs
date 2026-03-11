@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Ardalis.GuardClauses;
+﻿using Ardalis.GuardClauses;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Exceptions;
 using Microsoft.CodeAnalysis;
@@ -12,12 +11,9 @@ using Project = Microsoft.Build.Evaluation.Project;
 
 namespace SharpIDE.Application.Features.Evaluation;
 
-public sealed record ProjectLoadResult
+public sealed record MsBuildProjectLoadResult
 {
-	[MemberNotNullWhen(true, nameof(Project))]
-	public bool IsLoaded { get; init; }
-	[MemberNotNullWhen(true, nameof(Diagnostic))]
-	public bool IsInvalid { get; init; }
+	public MsBuildProjectLoadState LoadState { get; set; }
 	public Project? Project { get; init; }
 	public SharpIdeDiagnostic? Diagnostic { get; init; }
 }
@@ -25,7 +21,7 @@ public sealed record ProjectLoadResult
 public static class ProjectEvaluation
 {
 	private static readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
-	public static async Task<ProjectLoadResult> LoadProject(string projectFilePath)
+	public static async Task<MsBuildProjectLoadResult> LoadProject(string projectFilePath)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
@@ -35,27 +31,23 @@ public static class ProjectEvaluation
 		try
 		{
 			var project = _projectCollection.LoadProject(projectFilePath);
-
-			//Console.WriteLine($"ProjectEvaluation: loaded {project.FullPath}");
-			return new ProjectLoadResult
+			return new MsBuildProjectLoadResult
 			{
-				IsLoaded = true,
-				IsInvalid = false,
+				LoadState = MsBuildProjectLoadState.Loaded,
 				Project = project
 			};
 		}
 		catch (InvalidProjectFileException ex)
 		{
-			return new ProjectLoadResult
+			return new MsBuildProjectLoadResult
 			{
-				IsLoaded = false,
-				IsInvalid = true,
+				LoadState = MsBuildProjectLoadState.Invalid,
 				Diagnostic = ex.ToDiagnostic()
 			};
 		}
 	}
 
-	public static async Task<ProjectLoadResult> ReloadProject(string projectFilePath)
+	public static async Task<MsBuildProjectLoadResult> ReloadProject(string projectFilePath)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(ReloadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
@@ -67,18 +59,17 @@ public static class ProjectEvaluation
 			projectRootElement.Reload(false);
 			project.ReevaluateIfNecessary();
 
-			return new ProjectLoadResult
+			return new MsBuildProjectLoadResult
 			{
-				IsLoaded = true,
+				LoadState = MsBuildProjectLoadState.Loaded,
 				Project = project
 			};
 		}
 		catch (InvalidProjectFileException ex)
 		{
-			return new ProjectLoadResult
+			return new MsBuildProjectLoadResult
 			{
-				IsLoaded = false,
-				IsInvalid = true,
+				LoadState = MsBuildProjectLoadState.Invalid,
 				Diagnostic = ex.ToDiagnostic()
 			};
 		}
