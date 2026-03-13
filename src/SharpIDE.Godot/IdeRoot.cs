@@ -1,22 +1,25 @@
 using System.Diagnostics;
+
 using Godot;
+
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
+
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.NavigationHistory;
-using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.BottomPanel;
 using SharpIDE.Godot.Features.CodeEditor;
-using SharpIDE.Godot.Features.CustomControls;
+using SharpIDE.Godot.Features.Layout;
 using SharpIDE.Godot.Features.Run;
 using SharpIDE.Godot.Features.Search;
 using SharpIDE.Godot.Features.Search.SearchAllFiles;
 using SharpIDE.Godot.Features.SolutionExplorer;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot;
 
@@ -33,11 +36,9 @@ public partial class IdeRoot : Control
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
 	private SolutionExplorerPanel _solutionExplorerPanel = null!;
-	private InvertedVSplitContainer _invertedVSplitContainer = null!;
-	private RunPanel _runPanel = null!;
 	private Button _runMenuButton = null!;
 	private Popup _runMenuPopup = null!;
-	private BottomPanelManager _bottomPanelManager = null!;
+	private IdeMainLayout _mainLayout = null!;
 	
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -46,12 +47,13 @@ public partial class IdeRoot : Control
 	[Inject] private readonly IdeFileExternalChangeHandler _fileExternalChangeHandler = null!;
 	[Inject] private readonly IdeFileWatcher _fileWatcher = null!;
 	[Inject] private readonly BuildService _buildService = null!;
-    [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
-    [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-    [Inject] private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = null!;
-    [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
-    [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
-    [Inject] private readonly ILogger<IdeRoot> _logger = null!;
+	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
+	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+	[Inject] private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = null!;
+	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
+	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+	[Inject] private readonly SharpIdeToolManager _toolManager = null!;
+	[Inject] private readonly ILogger<IdeRoot> _logger = null!;
 
 	public override void _EnterTree()
 	{
@@ -75,14 +77,11 @@ public partial class IdeRoot : Control
 		_cancelMsBuildActionButton = GetNode<TextureButton>("%CancelMsBuildActionButton");
 		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
 		_runMenuButton = GetNode<Button>("%RunMenuButton");
-		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
-		_solutionExplorerPanel = GetNode<SolutionExplorerPanel>("%SolutionExplorerPanel");
-		_runPanel = GetNode<RunPanel>("%RunPanel");
-		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
-		_bottomPanelManager = GetNode<BottomPanelManager>("%BottomPanel");
-		
+		_mainLayout = GetNode<IdeMainLayout>("%MainLayout");
+		_codeEditorPanel = _mainLayout.GetNode<CodeEditorPanel>("%CodeEditor");
+
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
@@ -93,7 +92,6 @@ public partial class IdeRoot : Control
 		_cancelMsBuildActionButton.Pressed += async () => await _buildService.CancelBuildAsync();
 		_buildService.BuildStarted.Subscribe(OnBuildStarted);
 		_buildService.BuildFinished.Subscribe(OnBuildFinished);
-		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
 	}
@@ -102,7 +100,7 @@ public partial class IdeRoot : Control
 	private async Task OnBuildFinished() => await OnBuildRunningStateChanged(false);
 	private async Task OnBuildRunningStateChanged(bool running, BuildStartedFlags? flags = null)
 	{
-		if (running && flags is BuildStartedFlags.UserFacing) GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Build);
+		if (running && flags is BuildStartedFlags.UserFacing) GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await this.InvokeAsync(() =>
 		{
 			_cancelMsBuildActionButton.Disabled = !running;
@@ -136,6 +134,7 @@ public partial class IdeRoot : Control
 	private void OnRestoreSlnButtonPressed() => MsBuild(BuildType.Restore);
 	private async void MsBuild(BuildType buildType)
 	{
+		GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		await _buildService.MsBuildAsync(_solutionExplorerPanel.SolutionModel.FilePath, buildType);
 	}
@@ -157,16 +156,17 @@ public partial class IdeRoot : Control
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
+			var solutionExplorer = _toolManager.GetControl<SolutionExplorerPanel>(IdeToolId.SolutionExplorer);
+			solutionExplorer.SolutionModel = solutionModel;
+			_codeEditorPanel.Solution = solutionModel;
 			_sharpIdeSolutionAccessor.SolutionModel = solutionModel;
 			_sharpIdeSolutionAccessor.SolutionReadyTcs.SetResult();
-			_solutionExplorerPanel.SolutionModel = solutionModel;
-			_codeEditorPanel.Solution = solutionModel;
 			_searchWindow.Solution = solutionModel;
 			_searchAllFilesWindow.Solution = solutionModel;
 			_fileExternalChangeHandler.SolutionModel = solutionModel;
 			_fileChangedService.SolutionModel = solutionModel;
 			_sharpIdeSolutionModificationService.SolutionModel = solutionModel;
-			_ = Task.GodotRun(_solutionExplorerPanel.BindToSolution);
+			_ = Task.GodotRun(solutionExplorer.BindToSolution);
 			_roslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);
 			_fileWatcher.StartWatching(solutionModel);
 			

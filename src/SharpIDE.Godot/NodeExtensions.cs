@@ -170,6 +170,15 @@ public static class NodeExtensions
             node.RemoveChild(child);
             child.QueueFree();
         }
+
+        public void RemoveChildren()
+        {
+            foreach (var child in node.GetChildren())
+            {
+                node.RemoveChild(child);
+            }
+        }
+        
         public Task<T> InvokeAsync<T>(Func<T> workItem)
         {
             var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -1,7 +1,8 @@
 using Godot;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.BottomPanel;
+using SharpIDE.Godot.Features.Layout;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.Run;
 
@@ -75,6 +76,7 @@ public partial class RunMenuItem : HBoxContainer
     private StringName _buildAnimationName = "BuildingAnimation";
     private async void OnRunButtonPressed()
     {
+	    GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
         SetAttemptingRunState();
         await _runService.RunProject(Project).ConfigureAwait(false);
     }
@@ -86,6 +88,8 @@ public partial class RunMenuItem : HBoxContainer
             UseInMemorySharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
             DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
         };
+
+        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Debug);
         SetAttemptingRunState();
         await _runService.RunProject(Project, true, debuggerExecutableInfo).ConfigureAwait(false);
     }

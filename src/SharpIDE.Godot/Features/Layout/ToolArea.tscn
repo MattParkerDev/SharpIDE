@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8wqkwa7sjrid"]
+
+[ext_resource type="Script" uid="uid://diqwg1bxg3tlp" path="res://Features/Layout/ToolArea.cs" id="1_03jti"]
+
+[node name="ToolArea" type="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_03jti")

@@ -1,11 +1,10 @@
-﻿using Godot;
-using SharpIDE.Application.Features.Analysis;
+using Godot;
+
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Evaluation;
-using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.BottomPanel;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer;
 
@@ -17,7 +16,7 @@ file enum ProjectContextMenuOptions
     Rebuild = 3,
     Clean = 4,
     Restore = 5,
-    DotnetUserSecrets = 6,
+    DotnetUserSecrets = 6
 }
 
 file enum CreateNewSubmenuOptions
@@ -28,11 +27,13 @@ file enum CreateNewSubmenuOptions
 
 public partial class SolutionExplorerPanel
 {
+    [Inject]
+    private readonly BuildService _buildService = null!;
+    [Inject]
+    private readonly RunService _runService = null!;
+    [Inject]
+    private readonly DotnetUserSecretsService _dotnetUserSecretsService = null!;
     private Texture2D _runIcon = ResourceLoader.Load<Texture2D>("uid://bkty6563cthj8");
-    
-    [Inject] private readonly BuildService _buildService = null!;
-    [Inject] private readonly RunService _runService = null!;
-    [Inject] private readonly DotnetUserSecretsService _dotnetUserSecretsService = null!;
 
     private void OpenContextMenuProject(SharpIdeProjectModel project)
     {
@@ -44,7 +45,7 @@ public partial class SolutionExplorerPanel
         createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
         createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
         createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, project);
-        
+
         menu.AddIconItem(_runIcon, "Run", (int)ProjectContextMenuOptions.Run);
         menu.SetItemIconMaxWidth((int)ProjectContextMenuOptions.Run, 20);
         menu.AddSeparator();
@@ -62,9 +63,11 @@ public partial class SolutionExplorerPanel
             {
                 _ = Task.GodotRun(async () =>
                 {
+                    GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
                     await _runService.RunProject(project);
                 });
             }
+
             if (actionId is ProjectContextMenuOptions.Build)
             {
                 _ = Task.GodotRun(async () => await MsBuildProject(project, BuildType.Build));
@@ -90,13 +93,15 @@ public partial class SolutionExplorerPanel
                 });
             }
         };
-			
+
         var globalMousePosition = GetGlobalMousePosition();
         menu.Position = new Vector2I((int)globalMousePosition.X, (int)globalMousePosition.Y);
         menu.Popup();
     }
+
     private async Task MsBuildProject(SharpIdeProjectModel project, BuildType buildType)
     {
+        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
         await _buildService.MsBuildAsync(project.FilePath, buildType);
     }
 }
