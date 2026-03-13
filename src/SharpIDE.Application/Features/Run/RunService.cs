@@ -165,6 +165,13 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 			_logger.LogInformation("Process for project {ProjectName} has exited", project.Name);
 		}
+		catch
+		{
+			project.RunningCancellationTokenSource?.Dispose();
+			project.RunningCancellationTokenSource = null;
+			project.ProjectRunFailed.InvokeParallelFireAndForget();
+			throw;
+		}
 		finally
 		{
 			semaphoreSlim.Release();
