@@ -44,10 +44,14 @@ public partial class SolutionExplorerPanel
         createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
         createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
         createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, project);
-        
-        menu.AddIconItem(_runIcon, "Run", (int)ProjectContextMenuOptions.Run);
-        menu.SetItemIconMaxWidth((int)ProjectContextMenuOptions.Run, 20);
-        menu.AddSeparator();
+
+        if (project is { IsLoaded: true, IsRunnable: true })
+        {
+            menu.AddIconItem(_runIcon, "Run", (int)ProjectContextMenuOptions.Run);
+            menu.SetItemIconMaxWidth(menu.GetItemIndex((int)ProjectContextMenuOptions.Run), 20);
+            menu.AddSeparator();
+        }
+
         menu.AddItem("Build", (int)ProjectContextMenuOptions.Build);
         menu.AddItem("Rebuild", (int)ProjectContextMenuOptions.Rebuild);
         menu.AddItem("Clean", (int)ProjectContextMenuOptions.Clean);

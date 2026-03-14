@@ -4,6 +4,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\tools\GodotServiceDefaults\GodotServiceDefaults.csproj" PrivateAssets="all" />

@@ -492,12 +492,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetRazorDocumentSyntaxHighlighting)}");
 		await _solutionLoadedTcs.Task;
 		var timer = Stopwatch.StartNew();
-		var project = GetProjectForSharpIdeFile(fileModel);
 		if (fileModel.IsRazorFile is false)
 		{
 			return [];
 			//throw new InvalidOperationException("File is not a .razor file");
 		}
+		var project = GetProjectForSharpIdeFile(fileModel);
 		var razorDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
@@ -598,13 +598,13 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentSyntaxHighlighting)}");
 		await _solutionLoadedTcs.Task;
-		var project = GetProjectForSharpIdeFile(fileModel);
 		if (fileModel.IsCsharpFile is false)
 		{
 			//throw new InvalidOperationException("File is not a .cs");
 			return [];
 		}
 
+		var project = GetProjectForSharpIdeFile(fileModel);
 		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
 		Guard.Against.Null(document, nameof(document));
 
