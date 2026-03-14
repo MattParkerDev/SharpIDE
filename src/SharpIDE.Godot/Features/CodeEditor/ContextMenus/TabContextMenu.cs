@@ -43,17 +43,12 @@ public partial class CodeEditorPanel
             }
             else if (actionId is TabContextMenuOptions.CloseOtherTabs)
             {
-                var otherTabs = _tabContainer.GetChildren()
-                                             .Select((_, i) => (long)i)
-                                             .Except([tabIndex])
-                                             .ToList();
+                var otherTabs = _tabContainer.GetChildren().Select((_, i) => (long)i).Except([tabIndex]).ToList();
                 CloseTabs(otherTabs);
             }
             else if (actionId is TabContextMenuOptions.CloseAllTabs)
             {
-                var allTabs = _tabContainer.GetChildren()
-                                           .Select((_, i) => (long)i)
-                                           .ToList();
+                var allTabs = _tabContainer.GetChildren().Select((_, i) => (long)i).ToList();
                 CloseTabs(allTabs);
             }
             else if (actionId is TabContextMenuOptions.CopyFullPath)
