@@ -128,11 +128,11 @@ public partial class CodeEditorPanel : MarginContainer
 	{
 		var tab = _tabContainer.GetChild<Control>((int)tabIndex);
 
-		if (tabIndex == _tabContainer.CurrentTab)
+		if (tabIndex == _tabContainer.CurrentTab) // If we are closing the current tab, we need to record a navigation to the tab that will be selected
 		{
-			var siblingIndex = tabIndex is 0 ? 1 : tabIndex - 1;
+			var siblingIndex = tabIndex is 0 ? 1 : tabIndex - 1; // If we are closing the first (0) tab, get the second (1) tab, else get the previous tab
 			var siblingTab = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)siblingIndex)?.CodeEdit;
-			if (siblingTab is not null)
+			if (siblingTab is not null) // null when we are closing the only tab
 			{
 				var sharpIdeFile = siblingTab.SharpIdeFile;
 				var caretLinePosition = new SharpIdeFileLinePosition(siblingTab.GetCaretLine(), siblingTab.GetCaretColumn());
