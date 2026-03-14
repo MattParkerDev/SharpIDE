@@ -53,7 +53,7 @@ public class IdeFileOperationsService(SharpIdeSolutionModificationService sharpI
 
 	public async Task MoveDirectory(IFolderOrProject destinationParentNode, SharpIdeFolder folderToMove)
 	{
-		var newDirectoryPath = Path.Combine(destinationParentNode.ChildNodeBasePath, folderToMove.Name);
+		var newDirectoryPath = Path.Combine(destinationParentNode.ChildNodeBasePath, folderToMove.Name.Value);
 		Directory.Move(folderToMove.Path, newDirectoryPath);
 		await _sharpIdeSolutionModificationService.MoveDirectory(destinationParentNode, folderToMove);
 	}
@@ -98,7 +98,7 @@ public class IdeFileOperationsService(SharpIdeSolutionModificationService sharpI
 
 	public async Task<SharpIdeFile> MoveFile(IFolderOrProject destinationParentNode, SharpIdeFile fileToMove)
 	{
-		var newFilePath = Path.Combine(destinationParentNode.ChildNodeBasePath, fileToMove.Name);
+		var newFilePath = Path.Combine(destinationParentNode.ChildNodeBasePath, fileToMove.Name.Value);
 		if (File.Exists(newFilePath)) throw new InvalidOperationException($"File {newFilePath} already exists.");
 		File.Move(fileToMove.Path, newFilePath);
 		var sharpIdeFile = await _sharpIdeSolutionModificationService.MoveFile(destinationParentNode, fileToMove);

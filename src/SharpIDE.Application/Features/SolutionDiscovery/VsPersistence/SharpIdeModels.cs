@@ -25,13 +25,13 @@ public interface IFolderOrProject : IExpandableSharpIdeNode, IChildSharpIdeNode
 {
 	public ObservableList<SharpIdeFolder> Folders { get; init; }
 	public ObservableList<SharpIdeFile> Files { get; init; }
-	public string Name { get; set; }
+	public ReactiveProperty<string> Name { get; set; }
 	public string ChildNodeBasePath { get; }
 }
 public interface IFileOrFolder : IChildSharpIdeNode
 {
 	public string Path { get; set; }
-	public string Name { get; set; }
+	public ReactiveProperty<string> Name { get; set; }
 }
 public interface IChildSharpIdeNode
 {
@@ -100,7 +100,7 @@ public class SharpIdeSolutionFolder : ISharpIdeNode, IExpandableSharpIdeNode, IC
 
 public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChildSharpIdeNode, IFolderOrProject, ISolutionOrProject
 {
-	public required string Name { get; set; }
+	public required ReactiveProperty<string> Name { get; set; }
 	public required string FilePath { get; set; }
 	public required string DirectoryPath { get; set; }
 	public string ChildNodeBasePath => DirectoryPath;
@@ -117,7 +117,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent)
 	{
 		Parent = parent;
-		Name = projectModel.Model.ActualDisplayName;
+		Name = new ReactiveProperty<string>(projectModel.Model.ActualDisplayName);
 		FilePath = projectModel.FullFilePath;
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
 		Files = new ObservableList<SharpIdeFile>(TreeMapperV2.GetFiles(projectModel.FullFilePath, this, allFiles));

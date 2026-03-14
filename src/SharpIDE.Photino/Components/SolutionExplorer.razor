@@ -89,7 +89,7 @@
 	private RenderFragment GetProjectFragment(SharpIdeProjectModel project) =>
 		@<text>
 			 <div @onclick="@(async s => await OpenProjectContextMenu(s, project))" @oncontextmenu="@(async s => await OpenProjectContextMenu(s, project))" @oncontextmenu:preventDefault @oncontextmenu:stopPropagation>
-				 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Custom.FileFormats.FileCode" IconColor="Color.Success" Text="@project.Name" Value="project" @bind-Expanded="@project.Expanded">
+				 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Custom.FileFormats.FileCode" IconColor="Color.Success" Text="@project.Name.Value" Value="project" @bind-Expanded="@project.Expanded">
 					 @if (project.Expanded)
 					 {
 						 @foreach (var folder in project.Folders)
@@ -108,7 +108,7 @@
 
 	private RenderFragment GetFolderFragment(SharpIdeFolder folder) =>
 		@<text>
-			 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Default" @bind-Expanded="folder.Expanded" Text="@folder.Name" Value="@folder">
+			 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Material.Filled.Folder" IconColor="Color.Default" @bind-Expanded="folder.Expanded" Text="@folder.Name.Value" Value="@folder">
 				 @if (folder.Expanded)
 				 {
 					 @foreach (var subFolder in folder.Folders)
@@ -126,7 +126,7 @@
 
 	private RenderFragment GetFileFragment(SharpIdeFile file) =>
 		@<text>
-			 <MudTreeViewItem T="ISharpIdeNode" Icon="@Icons.Custom.FileFormats.FileCode" TextTypo="Typo.body2" Text="@file.Name" Value="@file"/>
+			 <MudTreeViewItem T="ISharpIdeNode" Icon="@Icons.Custom.FileFormats.FileCode" TextTypo="Typo.body2" Text="@file.Name.Value" Value="@file"/>
 		</text>;
 
 }

@@ -35,7 +35,7 @@ public partial class SearchResultComponent : MarginContainer
     {
         if (result is null) return;
         _matchingLineLabel.Text = result.LineText;
-        _fileNameLabel.Text = result.File.Name;
+        _fileNameLabel.Text = result.File.Name.Value;
         _lineNumberLabel.Text = result.Line.ToString();
     }
 }

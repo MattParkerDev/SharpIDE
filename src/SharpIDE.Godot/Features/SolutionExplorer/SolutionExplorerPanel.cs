@@ -241,7 +241,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	private TreeItem CreateProjectTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
 	{
 		var projectItem = tree.CreateItem(parent);
-		projectItem.SetText(0, projectModel.Name);
+		projectItem.SetText(0, projectModel.Name.Value);
 		var icon = projectModel.IsLoading ? LoadingProjectIcon : projectModel.IsInvalid ? UnloadedProjectIcon : CsprojIcon;
 		projectItem.SetIcon(0, icon);
 		if (projectModel.IsLoading is false && projectModel.IsInvalid) projectItem.SetSuffix(0, " ·  load failed");
@@ -296,11 +296,11 @@ public partial class SolutionExplorerPanel : MarginContainer
 	private TreeItem CreateFolderTreeItem(Tree tree, TreeItem parent, SharpIdeFolder sharpIdeFolder, int newStartingIndex = -1)
 	{
 		var folderItem = tree.CreateItem(parent, newStartingIndex);
-		folderItem.SetText(0, sharpIdeFolder.Name);
+		folderItem.SetText(0, sharpIdeFolder.Name.Value);
 		folderItem.SetIcon(0, FolderIcon);
 		folderItem.SetMetadata(0, new RefCountedContainer<SharpIdeFolder>(sharpIdeFolder));
 		
-		Observable.EveryValueChanged(sharpIdeFolder, folder => folder.Name)
+		Observable.EveryValueChanged(sharpIdeFolder, folder => folder.Name.Value)
 			.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (s, ct) =>
 			{
 				await this.InvokeAsync(() => folderItem.SetText(0, s));
@@ -346,13 +346,13 @@ public partial class SolutionExplorerPanel : MarginContainer
 			newStartingIndex += folderCount;
 		}
 		var fileItem = tree.CreateItem(parent, newStartingIndex);
-		fileItem.SetText(0, sharpIdeFile.Name);
+		fileItem.SetText(0, sharpIdeFile.Name.Value);
 		fileItem.SetIconsForFileExtension(sharpIdeFile);
 		if (GitColours.GetColorForGitFileStatus(sharpIdeFile.GitStatus) is { } notnullColor) fileItem.SetCustomColor(0, notnullColor);
 		else fileItem.ClearCustomColor(0);
 		fileItem.SetMetadata(0, new RefCountedContainer<SharpIdeFile>(sharpIdeFile));
 		
-		Observable.EveryValueChanged(sharpIdeFile, file => file.Name)
+		Observable.EveryValueChanged(sharpIdeFile, file => file.Name.Value)
 			.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (s, ct) =>
 			{
 				await this.InvokeAsync(() =>

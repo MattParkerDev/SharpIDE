@@ -72,12 +72,12 @@ public partial class NugetPanel : Control
 	{
 		await _sharpIdeSolutionAccessor.SolutionReadyTcs.Task;
 		_solution = _sharpIdeSolutionAccessor.SolutionModel;
-		_projects = [null!, .._solution!.AllProjects.OrderBy(s => s.Name)]; // So that index 0 is solution // Probably should use Item Metadata instead of this
+		_projects = [null!, .._solution!.AllProjects.OrderBy(s => s.Name.Value)]; // So that index 0 is solution // Probably should use Item Metadata instead of this
 		await this.InvokeAsync(() =>
 		{
 			foreach (var project in _projects.Skip(1))
 			{
-				_solutionOrProjectOptionButton.AddIconItem(_csprojIcon, project!.Name);
+				_solutionOrProjectOptionButton.AddIconItem(_csprojIcon, project!.Name.Value);
 			}
 			_solutionOrProjectOptionButton.ItemSelected += OnSolutionOrProjectSelected;
 		});
@@ -122,7 +122,7 @@ public partial class NugetPanel : Control
 		var text = slnOrProject switch
 		{
 			SharpIdeSolutionModel => "Solution",
-			SharpIdeProjectModel projectModel => projectModel.Name,
+			SharpIdeProjectModel projectModel => projectModel.Name.Value,
 			_ => throw new InvalidOperationException("Unknown solution or project type")
 		};
 		await this.InvokeAsync(() =>

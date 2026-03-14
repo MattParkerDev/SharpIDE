@@ -589,7 +589,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		];
 		var result = sharpIdeRazorSpans.OrderBy(s => s.Span.AbsoluteIndex).ToImmutableArray();
 		timer.Stop();
-		_logger.LogInformation("RoslynAnalysis: Razor syntax highlighting for {FileName} took {ElapsedMilliseconds}ms", fileModel.Name, timer.ElapsedMilliseconds);
+		_logger.LogInformation("RoslynAnalysis: Razor syntax highlighting for {FileName} took {ElapsedMilliseconds}ms", fileModel.Name.Value, timer.ElapsedMilliseconds);
 		return result;
 	}
 
@@ -1330,8 +1330,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		{
 			var newSolution = fileModel switch
 			{
-				{ IsCsharpFile: true } => _workspace.CurrentSolution.AddDocument(documentId, fileModel.Name, sourceText, filePath: fileModel.Path),
-				_ => _workspace.CurrentSolution.AddAdditionalDocument(documentId, fileModel.Name, sourceText, filePath: fileModel.Path),
+				{ IsCsharpFile: true } => _workspace.CurrentSolution.AddDocument(documentId, fileModel.Name.Value, sourceText, filePath: fileModel.Path),
+				_ => _workspace.CurrentSolution.AddAdditionalDocument(documentId, fileModel.Name.Value, sourceText, filePath: fileModel.Path),
 			};
 			return newSolution;
 		}, WorkspaceChangeKind.DocumentAdded, documentId: documentId);
@@ -1384,7 +1384,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentId = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(oldFilePath).Single();
 		_workspace.SetCurrentSolution(oldSolution =>
 		{
-			var newSolution = oldSolution.WithDocumentName(documentId, sharpIdeFile.Name);
+			var newSolution = oldSolution.WithDocumentName(documentId, sharpIdeFile.Name.Value);
 			return newSolution;
 		}, WorkspaceChangeKind.DocumentInfoChanged, documentId: documentId);
 	}

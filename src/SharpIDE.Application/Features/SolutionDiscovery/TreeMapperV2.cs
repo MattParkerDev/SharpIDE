@@ -75,12 +75,7 @@ public static class TreeMapperV2
 			return [];
 		}
 
-		var sharpIdeFiles = fileInfos.Select(f => new SharpIdeFile(f.FullName, f.Name, f.Extension, parent, allFiles)
-		{
-			Path = f.FullName,
-			Name = f.Name,
-			Parent = parent
-		}).ToList();
+		var sharpIdeFiles = fileInfos.Select(f => new SharpIdeFile(f.FullName, f.Name, f.Extension, parent, allFiles)).ToList();
 		sharpIdeFiles.Sort(SharpIdeFileComparer.Instance);
 		return sharpIdeFiles;
 	}

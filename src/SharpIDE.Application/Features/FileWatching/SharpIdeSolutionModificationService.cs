@@ -76,7 +76,7 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 	public async Task MoveDirectory(IFolderOrProject destinationParentNode, SharpIdeFolder folderToMove)
 	{
 		var oldFolderPath = folderToMove.Path;
-		var newFolderPath = Path.Combine(destinationParentNode.ChildNodeBasePath, folderToMove.Name);
+		var newFolderPath = Path.Combine(destinationParentNode.ChildNodeBasePath, folderToMove.Name.Value);
 
 		var parentFolderOrProject = (IFolderOrProject)folderToMove.Parent;
 		parentFolderOrProject.Folders.Remove(folderToMove);
@@ -94,14 +94,14 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 
 			foreach (var subfolder in current.Folders)
 			{
-				subfolder.Path = Path.Combine(current.Path, subfolder.Name);
+				subfolder.Path = Path.Combine(current.Path, subfolder.Name.Value);
 				stack.Push(subfolder);
 			}
 
 			foreach (var file in current.Files)
 			{
 				var oldPath = file.Path;
-				file.Path = Path.Combine(current.Path, file.Name);
+				file.Path = Path.Combine(current.Path, file.Name.Value);
 				await _fileChangedService.SharpIdeFileMoved(file, oldPath);
 			}
 		}
@@ -111,7 +111,7 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 	{
 		var oldFolderPath = folder.Path;
 
-		folder.Name = renamedFolderName;
+		folder.Name.Value = renamedFolderName;
 		folder.Path = Path.Combine(Path.GetDirectoryName(oldFolderPath)!, renamedFolderName);
 
 		var parentFolderOrProject = (IFolderOrProject)folder.Parent;
@@ -128,14 +128,14 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 
 			foreach (var subfolder in current.Folders)
 			{
-				subfolder.Path = Path.Combine(current.Path, subfolder.Name);
+				subfolder.Path = Path.Combine(current.Path, subfolder.Name.Value);
 				stack.Push(subfolder);
 			}
 
 			foreach (var file in current.Files)
 			{
 				var oldPath = file.Path;
-				file.Path = Path.Combine(current.Path, file.Name);
+				file.Path = Path.Combine(current.Path, file.Name.Value);
 				await _fileChangedService.SharpIdeFileMoved(file, oldPath);
 			}
 		}
@@ -211,7 +211,7 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 	public async Task<SharpIdeFile> MoveFile(IFolderOrProject destinationParentNode, SharpIdeFile fileToMove)
 	{
 		var oldPath = fileToMove.Path;
-		var newFilePath = Path.Combine(destinationParentNode.ChildNodeBasePath, fileToMove.Name);
+		var newFilePath = Path.Combine(destinationParentNode.ChildNodeBasePath, fileToMove.Name.Value);
 		var parentFolderOrProject = (IFolderOrProject)fileToMove.Parent;
 		parentFolderOrProject.Files.Remove(fileToMove);
 		var insertionIndex = GetInsertionPosition(destinationParentNode, fileToMove);
@@ -226,7 +226,7 @@ public class SharpIdeSolutionModificationService(FileChangedService fileChangedS
 	{
 		var oldPath = fileToRename.Path;
 		var newFilePath = Path.Combine(Path.GetDirectoryName(oldPath)!, renamedFileName);
-		fileToRename.Name = renamedFileName;
+		fileToRename.Name.Value = renamedFileName;
 		fileToRename.Path = newFilePath;
 		var parentFolderOrProject = (IFolderOrProject)fileToRename.Parent;
 		var currentPosition = parentFolderOrProject.Files.IndexOf(fileToRename);

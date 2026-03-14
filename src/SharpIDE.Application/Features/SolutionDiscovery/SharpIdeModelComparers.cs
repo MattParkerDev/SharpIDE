@@ -26,14 +26,14 @@ public class SharpIdeFolderComparer : IComparer<SharpIdeFolder>
 		if (y is null) return 1;
 
 		// Special folders priority: Properties > wwwroot > others
-		int xPriority = GetFolderPriority(x.Name);
-		int yPriority = GetFolderPriority(y.Name);
+		int xPriority = GetFolderPriority(x.Name.Value);
+		int yPriority = GetFolderPriority(y.Name.Value);
 
 		int priorityComparison = xPriority.CompareTo(yPriority);
 		if (priorityComparison != 0) return priorityComparison;
 
 		// Default alphabetical compare for same priority
-		return string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
+		return string.Compare(x.Name.Value, y.Name.Value, StringComparison.OrdinalIgnoreCase);
 	}
 
 	private static int GetFolderPriority(string? name)

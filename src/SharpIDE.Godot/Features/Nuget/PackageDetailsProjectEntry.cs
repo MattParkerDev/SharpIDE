@@ -32,7 +32,7 @@ public partial class PackageDetailsProjectEntry : MarginContainer
     public void SetValues()
     {
         if (ProjectModel == null) return;
-        _projectNameLabel.Text = ProjectModel.Name;
+        _projectNameLabel.Text = ProjectModel.Name.Value;
         if (ProjectPackageReference == null) return;
         var isTransitive = ProjectPackageReference.IsTransitive;
         var installedVersion = ProjectPackageReference.InstalledVersion;

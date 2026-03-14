@@ -188,7 +188,7 @@ public partial class CodeEditorPanel : MarginContainer
 			_tabContainer.AddChild(newTab);
 			var newTabIndex = _tabContainer.GetTabCount() - 1;
 			_tabContainer.SetIconsForFileExtension(file, newTabIndex);
-			_tabContainer.SetTabTitle(newTabIndex, file.Name);
+			_tabContainer.SetTabTitle(newTabIndex, file.Name.Value);
 			_tabContainer.SetTabTooltip(newTabIndex, file.Path);
 			_tabContainer.CurrentTab = newTabIndex;
 
@@ -208,7 +208,7 @@ public partial class CodeEditorPanel : MarginContainer
 			file.IsDirty.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (isDirty, ct) =>
 			{
 				//GD.Print($"File dirty state changed: {file.Path} is now {(isDirty ? "dirty" : "clean")}");
-				await UpdateTabFileName(newTab.GetIndex(), file.Name, isDirty);
+				await UpdateTabFileName(newTab.GetIndex(), file.Name.Value, isDirty);
 			}).AddTo(newTab); // needs to be on ui thread
 		});
 		

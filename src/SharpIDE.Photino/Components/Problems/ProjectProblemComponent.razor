@@ -8,7 +8,7 @@
 
 @if (_diagnostics.Length is not 0)
 {
-	<MudTreeViewItem T="string" TextTypo="Typo.body2" EndTextTypo="Typo.caption" Expanded="false" Icon="@Icons.Material.Filled.Code" IconColor="Color.Success" Value="@ProjectModel.Name" Text="@ProjectModel.Name" EndText="@($"{_diagnostics.Length} diagnostics")">
+	<MudTreeViewItem T="string" TextTypo="Typo.body2" EndTextTypo="Typo.caption" Expanded="false" Icon="@Icons.Material.Filled.Code" IconColor="Color.Success" Value="@ProjectModel.Name.Value" Text="@ProjectModel.Name.Value" EndText="@($"{_diagnostics.Length} diagnostics")">
 		@foreach (var diagnostic in _diagnostics)
 		{
 			<MudTreeViewItem T="string" TextTypo="Typo.body2" OnClick="@(async () => await OpenDocumentContainingDiagnostic(diagnostic.Diagnostic))" Icon="@Icons.Material.Filled.Warning" IconColor="@GetDiagnosticIconColour(diagnostic.Diagnostic)" Value="@diagnostic.ToString()">

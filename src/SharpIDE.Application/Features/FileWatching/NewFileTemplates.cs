@@ -25,7 +25,7 @@ public static class NewFileTemplates
 		IFolderOrProject? current = folder;
 		while (current is not null)
 		{
-			names.Add(current.Name);
+			names.Add(current.Name.Value);
 			current = current.Parent as IFolderOrProject;
 		}
 		names.Reverse();

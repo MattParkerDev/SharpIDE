@@ -34,16 +34,16 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 		var semaphoreSlim = _projectLocks.GetOrAdd(project, new SemaphoreSlim(1, 1));
 		var waitResult = await semaphoreSlim.WaitAsync(0).ConfigureAwait(false);
-		if (waitResult is false) throw new InvalidOperationException($"Project {project.Name} is already running.");
+		if (waitResult is false) throw new InvalidOperationException($"Project {project.Name.Value} is already running.");
 
 		try
 		{
-			if (project.RunningCancellationTokenSource is not null) throw new InvalidOperationException($"Project {project.Name} is already running with a cancellation token source.");
+			if (project.RunningCancellationTokenSource is not null) throw new InvalidOperationException($"Project {project.Name.Value} is already running with a cancellation token source.");
 
 			var buildResult = await _buildService.MsBuildAsync(project.FilePath);
 			if (buildResult is not SharpIdeBuildResult.Success)
 			{
-				_logger.LogInformation("Build failed for project {ProjectName}. Aborting run/debug.", project.Name);
+				_logger.LogInformation("Build failed for project {ProjectName}. Aborting run/debug.", project.Name.Value);
 				project.ProjectRunFailed.InvokeParallelFireAndForget();
 				return;
 			}
@@ -163,7 +163,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 			project.ProjectStoppedRunning.InvokeParallelFireAndForget();
 
-			_logger.LogInformation("Process for project {ProjectName} has exited", project.Name);
+			_logger.LogInformation("Process for project {ProjectName} has exited", project.Name.Value);
 		}
 		catch
 		{
@@ -181,8 +181,8 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 	public async Task CancelRunningProject(SharpIdeProjectModel project)
 	{
 		Guard.Against.Null(project, nameof(project));
-		if (project.Running is false) throw new InvalidOperationException($"Project {project.Name} is not running.");
-		if (project.RunningCancellationTokenSource is null) throw new InvalidOperationException($"Project {project.Name} does not have a running cancellation token source.");
+		if (project.Running is false) throw new InvalidOperationException($"Project {project.Name.Value} is not running.");
+		if (project.RunningCancellationTokenSource is null) throw new InvalidOperationException($"Project {project.Name.Value} does not have a running cancellation token source.");
 
 		await project.RunningCancellationTokenSource.CancelAsync().ConfigureAwait(false);
 	}

@@ -42,7 +42,7 @@ public partial class SearchAllFilesResultComponent : MarginContainer
         var (icon, overlayIcon) = FileIconHelper.GetIconForFileExtension(result.File.Extension);
         _textureRect.Texture = icon;
         _overlayTextureRect.Texture = overlayIcon;
-        _fileNameLabel.Text = result.File.Name;
+        _fileNameLabel.Text = result.File.Name.Value;
         _filePathLabel.Text = result.File.Path;
     }
 }

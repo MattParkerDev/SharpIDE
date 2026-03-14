@@ -44,7 +44,7 @@ public partial class SymbolUsageComponent : MarginContainer
         if (result is null) return;
         var mappedLineSpan = result.Value.Location.GetMappedLineSpan();
         
-        _fileNameLabel.Text = File?.Name ?? Path.GetFileName(mappedLineSpan.Path);
+        _fileNameLabel.Text = File?.Name.Value ?? Path.GetFileName(mappedLineSpan.Path);
         _lineNumberLabel.Text = (mappedLineSpan.StartLinePosition.Line + 1).ToString();
         _enclosingSymbolLabel.Text = EnclosingSymbol?.Name;
     }

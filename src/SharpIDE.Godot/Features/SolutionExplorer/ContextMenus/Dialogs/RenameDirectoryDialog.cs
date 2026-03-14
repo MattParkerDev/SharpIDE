@@ -20,7 +20,7 @@ public partial class RenameDirectoryDialog : ConfirmationDialog
     {
         _folderParentPath = Path.GetDirectoryName(Folder.Path)!;
         _nameLineEdit = GetNode<LineEdit>("%DirectoryNameLineEdit");
-        _nameLineEdit.Text = Folder.Name;
+        _nameLineEdit.Text = Folder.Name.Value;
         _nameLineEdit.GrabFocus();
         _nameLineEdit.SelectAll();
         _nameLineEdit.TextChanged += ValidateNewDirectoryName;

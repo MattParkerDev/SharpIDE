@@ -59,7 +59,7 @@ public partial class DebugPanel : Control
 		
 		var debugPanelTab = _debugPanelTabScene.Instantiate<DebugPanelTab>();
 		debugPanelTab.Project = projectModel;
-		_tabBar.AddTab(projectModel.Name);
+		_tabBar.AddTab(projectModel.Name.Value);
 		var tabIdx = _tabBar.GetTabCount() - 1;
 		debugPanelTab.TabBarTab = tabIdx;
 		_tabBar.SetTabIcon(debugPanelTab.TabBarTab, RunningIcon);
