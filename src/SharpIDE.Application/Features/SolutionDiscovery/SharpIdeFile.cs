@@ -11,7 +11,7 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 {
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public required string Path { get; set; }
-	public required string Name { get; set; }
+	public required ReactiveProperty<string> Name { get; set; }
 	public required string Extension { get; set; }
 	public bool IsRazorFile => Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase);
 	public bool IsCsprojFile => Path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase);
@@ -31,7 +31,7 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	internal SharpIdeFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, bool isMetadataAsSourceFile = false, string? pdbSourceFilePath = null)
 	{
 		Path = fullPath;
-		Name = name;
+		Name = new ReactiveProperty<string>(name);
 		Extension = extension;
 		Parent = parent;
 		IsDirty = new ReactiveProperty<bool>(false);

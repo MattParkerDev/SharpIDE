@@ -20,7 +20,7 @@
 		<ChildContent>
 			@foreach (var tab in OpenTabs)
 			{
-				<MudTabPanel Style="height: 100%" ID="@tab" Text="@tab.Name">
+				<MudTabPanel Style="height: 100%" ID="@tab" Text="@tab.Name.Value">
 					<RunOutputDisplay Project="@tab" OnProjectStarted="@SetActiveTab"/>
 				</MudTabPanel>
 			}

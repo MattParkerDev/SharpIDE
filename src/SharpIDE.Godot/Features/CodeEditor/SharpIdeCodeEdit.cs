@@ -111,7 +111,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnSolutionAltered)}");
 			if (_currentFile is null) return;
 			if (_fileDeleted) return;
-			GD.Print($"[{_currentFile.Name}] Solution altered, updating project diagnostics for file");
+			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
 			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext();
 			var hasFocus = this.InvokeAsync(HasFocus);
 			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile, newCt);

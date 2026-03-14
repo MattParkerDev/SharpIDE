@@ -62,7 +62,7 @@ public partial class ProblemsPanel : Control
         await this.InvokeAsync(() =>
         {
             var treeItem = tree.CreateItem(parent);
-            treeItem.SetText(0, e.NewItem.Value.Name);
+            treeItem.SetText(0, e.NewItem.Value.Name.Value);
             treeItem.SetIcon(0, CsprojIcon);
             treeItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(e.NewItem.Value));
             e.NewItem.View.Value = treeItem;

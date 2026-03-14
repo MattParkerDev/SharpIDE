@@ -74,7 +74,7 @@ public class SearchService(ILogger<SearchService> logger)
 		await Parallel.ForEachAsync(files, cancellationToken, async (file, ct) =>
 			{
 				if (cancellationToken.IsCancellationRequested) return;
-				if (file.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+				if (file.Name.Value.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
 				{
 					results.Add(new FindFilesSearchResult
 					{

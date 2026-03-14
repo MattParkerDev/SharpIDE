@@ -57,7 +57,7 @@ public partial class SolutionExplorerPanel
                 var confirmedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var confirmationDialog = new ConfirmationDialog();
                 confirmationDialog.Title = "Delete";
-                confirmationDialog.DialogText = $"Delete '{file.Name}' file?";
+                confirmationDialog.DialogText = $"Delete '{file.Name.Value}' file?";
                 confirmationDialog.Confirmed += () =>
                 {
                     confirmedTcs.SetResult(true);

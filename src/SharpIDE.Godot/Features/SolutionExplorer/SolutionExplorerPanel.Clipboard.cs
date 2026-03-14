@@ -84,11 +84,11 @@ public partial class SolutionExplorerPanel
                 {
                     if (fileOrFolderToPaste is SharpIdeFolder folderToPaste)
                     {
-                        await _ideFileOperationsService.CopyDirectory(destinationFolderOrProject, folderToPaste.Path, folderToPaste.Name);
+                        await _ideFileOperationsService.CopyDirectory(destinationFolderOrProject, folderToPaste.Path, folderToPaste.Name.Value);
                     }
                     else if (fileOrFolderToPaste is SharpIdeFile fileToPaste)
                     {
-                        await _ideFileOperationsService.CopyFile(destinationFolderOrProject, fileToPaste.Path, fileToPaste.Name);
+                        await _ideFileOperationsService.CopyFile(destinationFolderOrProject, fileToPaste.Path, fileToPaste.Name.Value);
                     }
                 }
             }

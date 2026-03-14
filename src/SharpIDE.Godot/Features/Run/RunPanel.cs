@@ -58,7 +58,7 @@ public partial class RunPanel : Control
 		
 		var runPanelTab = _runPanelTabScene.Instantiate<RunPanelTab>();
 		runPanelTab.Project = projectModel;
-		_tabBar.AddTab(projectModel.Name);
+		_tabBar.AddTab(projectModel.Name.Value);
 		var tabIdx = _tabBar.GetTabCount() - 1;
 		runPanelTab.TabBarTab = tabIdx;
 		_tabBar.SetTabIcon(runPanelTab.TabBarTab, RunningIcon);

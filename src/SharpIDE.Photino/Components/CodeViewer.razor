@@ -13,7 +13,7 @@
 </style>
 <MudStack Class="ma-0 pa-0" Spacing="0" Style="@(_internalSelectedFile is null ? "visibility: hidden; height: 100%" : "height: 100%")">
 		<MudText>
-			@_internalSelectedFile?.Name
+			@_internalSelectedFile?.Name.Value
 			@if (_unsavedEdits)
 			{
 				<span>*</span>

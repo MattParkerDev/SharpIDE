@@ -19,10 +19,10 @@ public partial class RenameFileDialog : ConfirmationDialog
     {
         _fileParentPath = Path.GetDirectoryName(File.Path)!;
         _nameLineEdit = GetNode<LineEdit>("%FileNameLineEdit");
-        _nameLineEdit.Text = File.Name;
+        _nameLineEdit.Text = File.Name.Value;
         _nameLineEdit.GrabFocus();
         // select the name without the extension
-        _nameLineEdit.Select(0, File.Name.LastIndexOf('.'));
+        _nameLineEdit.Select(0, File.Name.Value.LastIndexOf('.'));
         _nameLineEdit.TextChanged += ValidateNewFileName;
         Confirmed += OnConfirmed;
     }

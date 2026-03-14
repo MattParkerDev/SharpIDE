@@ -149,7 +149,7 @@ public partial class CodeEditorPanel : MarginContainer
 			_tabContainer.AddChild(newTab);
 			var newTabIndex = _tabContainer.GetTabCount() - 1;
 			_tabContainer.SetIconsForFileExtension(file, newTabIndex);
-			_tabContainer.SetTabTitle(newTabIndex, file.Name);
+			_tabContainer.SetTabTitle(newTabIndex, file.Name.Value);
 			_tabContainer.SetTabTooltip(newTabIndex, file.Path);
 			_tabContainer.CurrentTab = newTabIndex;
 			
@@ -159,7 +159,7 @@ public partial class CodeEditorPanel : MarginContainer
 				await this.InvokeAsync(() =>
 				{
 					var tabIndex = newTab.GetIndex();
-					var title = file.Name + (isDirty ? " (*)" : "");
+					var title = file.Name.Value + (isDirty ? " (*)" : "");
 					_tabContainer.SetTabTitle(tabIndex, title);
 				});
 			}).AddTo(newTab); // needs to be on ui thread

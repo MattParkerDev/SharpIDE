@@ -19,7 +19,7 @@ public partial class RunMenuItem : HBoxContainer
     public override void _Ready()
     {
         _label = GetNode<Label>("Label");
-        _label.Text = Project.Name;
+        _label.Text = Project.Name.Value;
         _runButton = GetNode<Button>("RunButton");
         _runButton.Pressed += OnRunButtonPressed;
         _stopButton = GetNode<Button>("StopButton");
