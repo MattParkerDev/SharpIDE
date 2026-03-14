@@ -200,10 +200,10 @@ public partial class CodeEditorPanel : MarginContainer
 				});
 			});
 			
-			file.FileRenamed.Subscribe(async () =>
+			file.Name.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (name, ct) =>
 			{
-				await UpdateTabFileName(newTab.GetIndex(), file.Name, file.IsDirty.CurrentValue);
-			});
+				await UpdateTabFileName(newTab.GetIndex(), name, file.IsDirty.Value);
+			}).AddTo(newTab); // needs to be on ui thread
 			
 			file.IsDirty.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (isDirty, ct) =>
 			{

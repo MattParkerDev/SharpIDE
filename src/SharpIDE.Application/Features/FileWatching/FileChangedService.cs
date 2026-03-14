@@ -37,7 +37,6 @@ public class FileChangedService
 
 	public async Task SharpIdeFileRenamed(SharpIdeFile file, string oldFilePath)
 	{
-		await file.FileRenamed.InvokeParallelAsync();
 		if (file.IsRoslynWorkspaceFile)
 		{
 			await HandleWorkspaceFileRenamed(file, oldFilePath);
