@@ -200,16 +200,16 @@ public partial class CodeEditorPanel : MarginContainer
 				});
 			});
 			
-			file.Name.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (name, ct) =>
-			{
-				await UpdateTabFileName(newTab.GetIndex(), name, file.IsDirty.Value);
-			}).AddTo(newTab); // needs to be on ui thread
-			
-			file.IsDirty.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (isDirty, ct) =>
-			{
-				//GD.Print($"File dirty state changed: {file.Path} is now {(isDirty ? "dirty" : "clean")}");
-				await UpdateTabFileName(newTab.GetIndex(), file.Name.Value, isDirty);
-			}).AddTo(newTab); // needs to be on ui thread
+			var nameChanged = file.Name.Skip(1).Select(name => (name, file.IsDirty.Value));
+			var dirtyChanged = file.IsDirty.Skip(1).Select(isDirty => (file.Name.Value, isDirty));
+
+			nameChanged.Merge(dirtyChanged).SubscribeOnThreadPool().ObserveOnThreadPool()
+				.SubscribeAwait(async (x, ct) =>
+				{
+					var (name, isDirty) = x;
+					await UpdateTabFileName(newTab.GetIndex(), name, isDirty);
+				})
+				.AddTo(newTab); // needs to be on ui thread
 		});
 		
 		await newTab.CodeEdit.SetSharpIdeFile(file, fileLinePosition);
