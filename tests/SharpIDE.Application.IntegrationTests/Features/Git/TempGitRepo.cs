@@ -37,7 +37,8 @@ internal sealed class TempGitRepo : IDisposable
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
         if (environment is not null)
         {

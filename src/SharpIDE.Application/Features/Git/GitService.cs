@@ -1983,7 +1983,8 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = stdinText is not null,
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
 
         startInfo.ArgumentList.Add("-C");
