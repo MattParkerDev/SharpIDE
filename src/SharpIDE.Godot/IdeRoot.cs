@@ -7,12 +7,12 @@ using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.NavigationHistory;
-using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.BottomPanel;
 using SharpIDE.Godot.Features.CodeEditor;
 using SharpIDE.Godot.Features.CustomControls;
+using SharpIDE.Godot.Features.LeftSideBar;
 using SharpIDE.Godot.Features.Run;
 using SharpIDE.Godot.Features.Search;
 using SharpIDE.Godot.Features.Search.SearchAllFiles;
@@ -32,6 +32,7 @@ public partial class IdeRoot : Control
 	private SearchWindow _searchWindow = null!;
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
+	private LeftDockManager _leftDockManager = null!;
 	private SolutionExplorerPanel _solutionExplorerPanel = null!;
 	private InvertedVSplitContainer _invertedVSplitContainer = null!;
 	private RunPanel _runPanel = null!;
@@ -78,7 +79,8 @@ public partial class IdeRoot : Control
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
-		_solutionExplorerPanel = GetNode<SolutionExplorerPanel>("%SolutionExplorerPanel");
+		_leftDockManager = GetNode<LeftDockManager>("%LeftDockManager");
+		_solutionExplorerPanel = _leftDockManager.SolutionExplorerPanel;
 		_runPanel = GetNode<RunPanel>("%RunPanel");
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
 		_bottomPanelManager = GetNode<BottomPanelManager>("%BottomPanel");
@@ -94,6 +96,7 @@ public partial class IdeRoot : Control
 		_buildService.BuildStarted.Subscribe(OnBuildStarted);
 		_buildService.BuildFinished.Subscribe(OnBuildFinished);
 		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
+		GodotGlobalEvents.Instance.LeftDockExternallySelected.InvokeParallelFireAndForget(LeftDockType.SolutionExplorer);
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
 	}

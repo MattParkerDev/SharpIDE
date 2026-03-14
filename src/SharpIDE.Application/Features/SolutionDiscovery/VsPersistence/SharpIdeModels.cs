@@ -112,6 +112,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
 	public ReactiveProperty<MsBuildProjectLoadState> MsBuildProjectLoadState { get; set; }
 	public required Task<Project> MsBuildEvaluationProjectTask { get; set; }
+	private Project? _msBuildEvaluationProject;
 
 	[SetsRequiredMembers]
 	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent)
@@ -129,7 +130,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 
 	public async Task<Project> LoadOrReloadProjectInMsBuild()
 	{
-		return await Task.Run(async () =>
+		var project = await Task.Run(async () =>
 		{
 			var result = await ProjectEvaluation.LoadOrReloadProject(FilePath);
 			MsBuildProjectLoadState.Value = result.LoadState;
@@ -141,16 +142,18 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 			}
 			return result.Project!;
 		});
+		_msBuildEvaluationProject = project;
+		return project;
 	}
 
-	public Project MsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully ? MsBuildEvaluationProjectTask.Result : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
+	public Project MsBuildEvaluationProject => _msBuildEvaluationProject ?? throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
 
 	public bool IsLoading => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loading;
 	public bool IsLoaded => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded;
 	public bool IsInvalid => MsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Invalid;
 	public bool IsRunnable => MsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
 	public bool IsBlazorProject => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
-	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");
+	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk?.StartsWith("Godot.NET.Sdk", StringComparison.Ordinal) is true;
 	public bool IsMtpTestProject => MsBuildEvaluationProject.GetPropertyValue("IsTestingPlatformApplication") is "true";
 	public string BlazorDevServerVersion => MsBuildEvaluationProject.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version");
 	public bool OpenInRunPanel { get; set; }

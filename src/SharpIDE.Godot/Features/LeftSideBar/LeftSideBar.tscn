@@ -1,12 +1,15 @@
 [gd_scene format=3 uid="uid://biyhfwx36ium8"]
 
 [ext_resource type="Script" uid="uid://bddno1bbvvp5q" path="res://Features/LeftSideBar/LeftSideBar.cs" id="1_rgaf0"]
+[ext_resource type="ButtonGroup" path="res://Features/LeftSideBar/LeftDockSidebarButtonGroup.tres" id="1_wgo0d"]
 [ext_resource type="ButtonGroup" uid="uid://c2nmo2x3va0gi" path="res://Features/LeftSideBar/LeftBottomSidebarButtonGroup.tres" id="2_1aad6"]
 [ext_resource type="Texture2D" uid="uid://ccj0dw81x3bkc" path="res://Features/LeftSideBar/Resources/SidebarFolder.svg" id="2_jg03n"]
+[ext_resource type="Texture2D" path="res://Features/LeftSideBar/Resources/Commit.svg" id="3_7ir2d"]
 [ext_resource type="Texture2D" uid="uid://uukf1nwjhthv" path="res://Features/LeftSideBar/Resources/SidebarProblem.svg" id="4_prju6"]
 [ext_resource type="Texture2D" uid="uid://cre7q0efp4vrq" path="res://Features/LeftSideBar/Resources/SidebarRun.svg" id="5_jg03n"]
 [ext_resource type="Texture2D" uid="uid://b0170ypw8uf3a" path="res://Features/LeftSideBar/Resources/Terminal.svg" id="6_ddh6f"]
 [ext_resource type="Texture2D" uid="uid://butisxqww0boc" path="res://Features/LeftSideBar/Resources/SidebarDebug.svg" id="6_jg03n"]
+[ext_resource type="Texture2D" path="res://Features/LeftSideBar/Resources/Git.svg" id="8_uv0pm"]
 [ext_resource type="Texture2D" uid="uid://dx8bt0adxpqgy" path="res://Features/LeftSideBar/Resources/Ide.svg" id="9_6ih3m"]
 [ext_resource type="Texture2D" uid="uid://b5ih61vdjv5e6" path="res://Features/LeftSideBar/Resources/Nuget.svg" id="11_csqeq"]
 [ext_resource type="Texture2D" uid="uid://dged1mm438qli" path="res://Features/LeftSideBar/Resources/SidebarTestExplorer.svg" id="12_rlff3"]
@@ -44,8 +47,23 @@ theme_type_variation = &"IdeSidebarButton"
 theme_override_font_sizes/font_size = 13
 toggle_mode = true
 button_pressed = true
+button_group = ExtResource("1_wgo0d")
 text = "Explorer"
 icon = ExtResource("2_jg03n")
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+
+[node name="CommitButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1839649301]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_type_variation = &"IdeSidebarButton"
+theme_override_font_sizes/font_size = 13
+toggle_mode = true
+button_group = ExtResource("1_wgo0d")
+text = "Commit"
+icon = ExtResource("3_7ir2d")
 icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
@@ -53,6 +71,20 @@ expand_icon = true
 [node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer" unique_id=987798304]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="GitButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=955500112]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_type_variation = &"IdeSidebarButton"
+theme_override_font_sizes/font_size = 13
+toggle_mode = true
+button_group = ExtResource("2_1aad6")
+text = "Git"
+icon = ExtResource("8_uv0pm")
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
 
 [node name="ProblemsButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=1477870962]
 unique_name_in_owner = true

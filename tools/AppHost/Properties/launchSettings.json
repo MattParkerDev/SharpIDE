@@ -9,9 +9,10 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "DOTNET_ENVIRONMENT": "Development",
+		"SHARPIDE_TELEMETRY_DEBUG": "true",
         "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21295",
         "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22130",
-		"GODOT": "C:/Users/Matthew/Documents/Godot/Path/godot.exe"
+		"GODOT": "/home/agraw/apps/dev/Godot/godot"
       }
     }
   }

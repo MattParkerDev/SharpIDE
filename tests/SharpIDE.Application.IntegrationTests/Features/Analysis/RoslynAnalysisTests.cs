@@ -12,6 +12,7 @@ namespace SharpIDE.Application.IntegrationTests.Features.Analysis;
 public class RoslynAnalysisTests
 {
 	private readonly ITestOutputHelper _testOutputHelper;
+	private static readonly string _solutionFilePath = Path.Combine(FindRepositoryRoot(), "SharpIDE.slnx");
 
 	public RoslynAnalysisTests(ITestOutputHelper testOutputHelper)
 	{
@@ -34,7 +35,7 @@ public class RoslynAnalysisTests
 
 	    var roslynAnalysis = new RoslynAnalysis(logger, buildService, analyzerFileWatcher);
 
-	    var solutionModel = await VsPersistenceMapper.GetSolutionModel(@"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx", TestContext.Current.CancellationToken);
+	    var solutionModel = await VsPersistenceMapper.GetSolutionModel(_solutionFilePath, TestContext.Current.CancellationToken);
 	    var sharpIdeApplicationProject = solutionModel.AllProjects.Single(p => p.Name.Value == "SharpIDE.Application");
 
 	    var timer = Stopwatch.StartNew();
@@ -52,4 +53,20 @@ public class RoslynAnalysisTests
 		    _testOutputHelper.WriteLine($"Diagnostics: {timer.ElapsedMilliseconds.ToString()}ms");
 	    }
     }
+
+	private static string FindRepositoryRoot()
+	{
+		var currentDirectory = new DirectoryInfo(AppContext.BaseDirectory);
+		while (currentDirectory is not null)
+		{
+			if (currentDirectory.EnumerateFileSystemInfos(".git").Any())
+			{
+				return currentDirectory.FullName;
+			}
+
+			currentDirectory = currentDirectory.Parent;
+		}
+
+		throw new InvalidOperationException($"Could not locate the repository root from '{AppContext.BaseDirectory}'.");
+	}
 }

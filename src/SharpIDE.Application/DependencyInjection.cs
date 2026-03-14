@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Debugging;
@@ -6,6 +6,7 @@ using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.Git;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Nuget;
 using SharpIDE.Application.Features.Run;
@@ -35,6 +36,8 @@ public static class DependencyInjection
 		services.AddScoped<IdeNavigationHistoryService>();
 		services.AddScoped<IdeOpenTabsFileManager>();
 		services.AddScoped<RoslynAnalysis>();
+		services.AddScoped<GitService>();
+		services.AddScoped<GitRepositoryMonitor>();
 		services.AddScoped<IdeFileOperationsService>();
 		services.AddScoped<SharpIdeSolutionModificationService>();
 		services.AddScoped<AnalyzerFileWatcher>();

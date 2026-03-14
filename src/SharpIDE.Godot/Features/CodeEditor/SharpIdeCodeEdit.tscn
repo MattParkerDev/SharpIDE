@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://blwx5v5ufga65" path="res://Features/CodeEditor/SharpIdeCodeEditContainer.cs" id="1_so235"]
 [ext_resource type="Script" uid="uid://du2lt7r1p1qfy" path="res://Features/CodeEditor/SharpIdeCodeEdit.cs" id="2_kp2fd"]
 [ext_resource type="PackedScene" uid="uid://b4m8xvyw3nq6t" path="res://Features/CodeEditor/FindReplaceBar.tscn" id="3_frbar"]
+[ext_resource type="Script" path="res://Features/CodeEditor/GitChangeScrollbarOverlay.cs" id="4_gitov"]
 
 [node name="SharpIdeCodeEditContainer" type="VBoxContainer" unique_id=921667605 node_paths=PackedStringArray("CodeEdit")]
 anchors_preset = 15
@@ -47,6 +48,13 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 mouse_filter = 2
+
+[node name="GitChangeScrollbarOverlay" type="Control" parent="." unique_id=1218910001]
+unique_name_in_owner = true
+offset_right = 12.0
+offset_bottom = 40.0
+mouse_filter = 1
+script = ExtResource("4_gitov")
 
 [node name="CompletionDescriptionWindow" type="Window" parent="SharpIdeCodeEdit" unique_id=1776589946]
 unique_name_in_owner = true

@@ -21,21 +21,34 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=2054551781]
+[node name="HeaderMargin" type="MarginContainer" parent="VBoxContainer" unique_id=2054551781]
 layout_mode = 2
 theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
+theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_bottom = 0
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer" unique_id=511833969]
+[node name="Label" type="Label" parent="VBoxContainer/HeaderMargin" unique_id=511833969]
 layout_mode = 2
 text = "Build"
 
-[node name="TerminalContainer" type="Control" parent="VBoxContainer" unique_id=1082876912]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2
-size_flags_vertical = 3
 
-[node name="SharpIdeTerminal" parent="VBoxContainer/TerminalContainer" unique_id=1439611787 instance=ExtResource("2_5bb6p")]
+[node name="BodyContainer" type="Control" parent="VBoxContainer" unique_id=1082876912]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+clip_contents = true
+
+[node name="TerminalContainer" type="Control" parent="VBoxContainer/BodyContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SharpIdeTerminal" parent="VBoxContainer/BodyContainer/TerminalContainer" unique_id=1439611787 instance=ExtResource("2_5bb6p")]
 unique_name_in_owner = true
 layout_mode = 1

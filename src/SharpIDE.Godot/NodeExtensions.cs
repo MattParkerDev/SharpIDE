@@ -152,6 +152,7 @@ public static class NodeExtensions
             get => TreeItemSharpIdeDiagnostic.TryGetValue(treeItem, out var s) ? s : null;
             set => TreeItemSharpIdeDiagnostic.AddOrUpdateOrRemove(treeItem, value);
         }
+
         public void MoveToIndexInParent(int currentIndex, int newIndex)
         {
             var parent = treeItem.GetParent()!;

@@ -2,12 +2,12 @@
 
 namespace SharpIDE.Godot.Features.Problems;
 
-public partial class RefCountedContainer<T>(T item) : RefCounted
+public partial class RefCountedContainer(object? item) : RefCounted
 {
-    public T Item { get; } = item;
+    public object? Item { get; } = item;
 }
 
-public partial class GodotObjectContainer<T>(T item) : GodotObject
+public partial class GodotObjectContainer(object? item) : GodotObject
 {
-    public T Item { get; } = item;
+    public object? Item { get; } = item;
 }

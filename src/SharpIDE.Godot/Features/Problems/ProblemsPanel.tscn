@@ -35,9 +35,9 @@ theme_override_constants/separation = 0
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=376476313]
 layout_mode = 2
 theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
+theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_bottom = 0
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer" unique_id=1681822274]
 layout_mode = 2

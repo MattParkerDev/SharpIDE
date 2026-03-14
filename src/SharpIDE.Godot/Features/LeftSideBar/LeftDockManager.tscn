@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/LeftSideBar/LeftDockManager.cs" id="1_mgr"]
+[ext_resource type="PackedScene" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="2_exp"]
+[ext_resource type="PackedScene" path="res://Features/Git/CommitPanel.tscn" id="3_git"]
+
+[node name="LeftDockManager" type="PanelContainer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mgr")
+
+[node name="SolutionExplorerPanel" parent="." instance=ExtResource("2_exp")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[node name="CommitPanel" parent="." instance=ExtResource("3_git")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1

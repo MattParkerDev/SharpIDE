@@ -608,13 +608,30 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
 		Guard.Against.Null(document, nameof(document));
 
-		var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
-		var root = await syntaxTree!.GetRootAsync(cancellationToken);
+		var sourceText = await document.GetTextAsync(cancellationToken);
+		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, new TextSpan(0, sourceText.Length), cancellationToken);
+		return classifiedSpans
+			.Select(s => new SharpIdeClassifiedSpan(sourceText.Lines.GetLinePositionSpan(s.TextSpan), s))
+			.ToImmutableArray();
+	}
 
-		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, root.FullSpan, cancellationToken);
-		//var classifiedSpans = await ClassifierHelper.GetClassifiedSpansAsync(document, root.FullSpan, ClassificationOptions.Default, true, cancellationToken);
-		var result = classifiedSpans.Select(s => new SharpIdeClassifiedSpan(syntaxTree.GetMappedLineSpan(s.TextSpan).Span, s)).ToImmutableArray();
-		return result;
+	public async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetDocumentSyntaxHighlightingForText(SharpIdeFile fileModel, string documentText, CancellationToken cancellationToken = default)
+	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentSyntaxHighlightingForText)}");
+		await _solutionLoadedTcs.Task;
+		if (fileModel.IsCsharpFile is false)
+		{
+			return [];
+		}
+
+		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
+		Guard.Against.Null(document, nameof(document));
+		var sourceText = SourceText.From(documentText, Encoding.UTF8);
+		document = document.WithText(sourceText);
+		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, new TextSpan(0, sourceText.Length), cancellationToken);
+		return classifiedSpans
+			.Select(s => new SharpIdeClassifiedSpan(sourceText.Lines.GetLinePositionSpan(s.TextSpan), s))
+			.ToImmutableArray();
 	}
 
 	// We store the document here, so that we have the correct version of the document when we compute completions
@@ -638,7 +655,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(file, cancellationToken);
 		var completionService = CompletionService.GetService(document);
-		var description = await completionService!.GetDescriptionAsync(document, completionItem, cancellationToken);
+		var description = await completionService!.GetDescriptionAsync(
+			document,
+			completionItem,
+			CompletionOptions.Default,
+			Microsoft.CodeAnalysis.LanguageService.SymbolDescriptionOptions.Default,
+			cancellationToken);
 		return description!;
 	}
 
@@ -801,7 +823,14 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.Lines.GetPosition(linePosition);
-		var completions = await completionService.GetCompletionsAsync(document, position, completionTrigger, cancellationToken: cancellationToken);
+		var completions = await completionService.GetCompletionsAsync(
+			document,
+			position,
+			CompletionOptions.Default,
+			document.Project.Solution.Options ?? OptionSet.Empty,
+			completionTrigger,
+			roles: null,
+			cancellationToken);
 		var triggerLinePosition = sourceText.GetLinePosition(completions.Span.Start);
 		return (completions, triggerLinePosition);
 	}
@@ -903,7 +932,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionApplyChanges)}");
 		await _solutionLoadedTcs.Task;
 		// TODO: Handle codeAction.NestedActions
-		var operations = await codeAction.GetOperationsAsync(cancellationToken);
+		var operations = await codeAction.GetOperationsAsync(
+			_workspace!.CurrentSolution,
+			new Progress<CodeAnalysisProgress>(_ => { }),
+			cancellationToken);
 		var originalSolution = _workspace!.CurrentSolution;
 		var updatedSolution = originalSolution;
 		foreach (var operation in operations)
@@ -1099,12 +1131,25 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan)> LookupSymbolInRazor(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
+		var project = TryGetProjectForSharpIdeFile(fileModel);
+		if (project is null)
+		{
+			return (null, null);
+		}
 
-		var additionalDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var additionalDocument = project.AdditionalDocuments.SingleOrDefault(s => s.FilePath == fileModel.Path) ??
+		                         TryGetAdditionalDocumentForSharpIdeFile(fileModel);
+		if (additionalDocument is null)
+		{
+			return (null, null);
+		}
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
+		if (documentSnapshot is null)
+		{
+			return (null, null);
+		}
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
 		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument();
@@ -1112,7 +1157,11 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
-		var razorAbsoluteIndex = razorText.Lines.GetPosition(linePosition);
+		if (!TryGetLookupPosition(razorText, linePosition, out var razorAbsoluteIndex))
+		{
+			return (null, null);
+		}
+
 		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorAbsoluteIndex);
 		if (mappedPosition is null) return (null, null);
 
@@ -1129,11 +1178,18 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan)> LookupSymbolInCs(SharpIdeFile fileModel, LinePosition linePosition)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
-		Guard.Against.Null(document, nameof(document));
+		var document = TryGetDocumentForSharpIdeFile(fileModel);
+		if (document is null)
+		{
+			return (null, null);
+		}
+
 		var sourceText = await document.GetTextAsync();
-		var position = sourceText.GetPosition(linePosition);
+		if (!TryGetLookupPosition(sourceText, linePosition, out var position))
+		{
+			return (null, null);
+		}
+
 		var semanticModel = await document.GetSemanticModelAsync();
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 		var syntaxRoot = await document.GetSyntaxRootAsync();
@@ -1142,11 +1198,18 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan, TokenSemanticInfo? semanticInfo)> LookupSymbolSemanticInfoInCs(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
-		Guard.Against.Null(document, nameof(document));
+		var document = TryGetDocumentForSharpIdeFile(fileModel);
+		if (document is null)
+		{
+			return (null, null, null);
+		}
+
 		var sourceText = await document.GetTextAsync(cancellationToken);
-		var position = sourceText.GetPosition(linePosition);
+		if (!TryGetLookupPosition(sourceText, linePosition, out var position))
+		{
+			return (null, null, null);
+		}
+
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 		var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken);
@@ -1157,12 +1220,25 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan, TokenSemanticInfo? semanticInfo)> LookupSymbolSemanticInfoInRazor(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
+		var project = TryGetProjectForSharpIdeFile(fileModel);
+		if (project is null)
+		{
+			return (null, null, null);
+		}
 
-		var additionalDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var additionalDocument = project.AdditionalDocuments.SingleOrDefault(s => s.FilePath == fileModel.Path) ??
+		                         TryGetAdditionalDocumentForSharpIdeFile(fileModel);
+		if (additionalDocument is null)
+		{
+			return (null, null, null);
+		}
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
+		if (documentSnapshot is null)
+		{
+			return (null, null, null);
+		}
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
 		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument();
@@ -1170,14 +1246,48 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
-		var razorAbsoluteIndex = razorText.Lines.GetPosition(linePosition);
+		if (!TryGetLookupPosition(razorText, linePosition, out var razorAbsoluteIndex))
+		{
+			return (null, null, null);
+		}
+
 		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorAbsoluteIndex);
+		if (mappedPosition is null)
+		{
+			return (null, null, null);
+		}
 
 		var semanticModel = await generatedDocument.GetSemanticModelAsync(cancellationToken);
-		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModel!, generatedDocSyntaxRoot!, mappedPosition!.Value);
+		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModel!, generatedDocSyntaxRoot!, mappedPosition.Value);
 
 		var semanticInfo = await SymbolFinder.GetSemanticInfoAtPositionAsync(semanticModel!, mappedPosition.Value, generatedDocument.Project.Solution.Services, cancellationToken).ConfigureAwait(false);
 		return (symbol, linePositionSpan, semanticInfo);
+	}
+
+	private static bool TryGetLookupPosition(SourceText sourceText, LinePosition requestedLinePosition, out int position)
+	{
+		position = -1;
+		if (sourceText.Length is 0 || sourceText.Lines.Count is 0)
+		{
+			return false;
+		}
+
+		if (requestedLinePosition.Line < 0 || requestedLinePosition.Character < 0)
+		{
+			return false;
+		}
+
+		var lineIndex = Math.Min(requestedLinePosition.Line, sourceText.Lines.Count - 1);
+		var line = sourceText.Lines[lineIndex];
+		if (line.Span.Length is 0)
+		{
+			position = line.Start;
+			return position >= 0 && position < sourceText.Length;
+		}
+
+		var characterIndex = Math.Min(requestedLinePosition.Character, line.Span.Length - 1);
+		position = line.Start + characterIndex;
+		return position >= 0 && position < sourceText.Length;
 	}
 
 	private (ISymbol? symbol, LinePositionSpan? linePositionSpan) GetSymbolAtPosition(SemanticModel semanticModel, SyntaxNode root, int position)
@@ -1404,19 +1514,81 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return sharpIdeProjectModel;
 	}
 
-	private static Project GetProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	private static Document? TryGetDocumentForSharpIdeFile(SharpIdeFile sharpIdeFile)
 	{
 		if (sharpIdeFile.IsMetadataAsSourceFile)
 		{
-			var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace() ?? throw new InvalidOperationException("Metadata as source workspace is not available");
-			var documentId = metadataAsSourceWorkspace.CurrentSolution.GetDocumentIdsWithFilePath(sharpIdeFile.Path).SingleOrDefault() ?? throw new InvalidOperationException($"Document with path '{sharpIdeFile.Path}' not found in metadata as source workspace");
-			var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId) ?? throw new InvalidOperationException($"Document with id '{documentId}' not found in metadata as source workspace");
-			var metadataAsSourceProject = document.Project;
-			return metadataAsSourceProject;
+			var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace();
+			if (metadataAsSourceWorkspace is null)
+			{
+				return null;
+			}
+
+			var metadataDocumentId = metadataAsSourceWorkspace.CurrentSolution.GetDocumentIdsWithFilePath(sharpIdeFile.Path).SingleOrDefault();
+			return metadataDocumentId is null
+				? null
+				: metadataAsSourceWorkspace.CurrentSolution.GetDocument(metadataDocumentId);
 		}
-		var sharpIdeProjectModel = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
-		var project = GetProjectForSharpIdeProjectModel(sharpIdeProjectModel);
-		return project;
+
+		var documentIds = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(sharpIdeFile.Path);
+		if (documentIds.IsEmpty)
+		{
+			return null;
+		}
+
+		if (documentIds.Length is 1)
+		{
+			return _workspace.CurrentSolution.GetDocument(documentIds[0]);
+		}
+
+		var nearestProjectNode = ((IChildSharpIdeNode)sharpIdeFile).GetNearestProjectNode();
+		var preferredDocumentId = nearestProjectNode is null
+			? documentIds[0]
+			: documentIds.SingleOrDefault(id =>
+			{
+				var document = _workspace.CurrentSolution.GetDocument(id);
+				return string.Equals(document?.Project.FilePath, nearestProjectNode.FilePath, StringComparison.Ordinal);
+			}) ?? documentIds[0];
+		return _workspace.CurrentSolution.GetDocument(preferredDocumentId);
+	}
+
+	private static TextDocument? TryGetAdditionalDocumentForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	{
+		var project = TryGetProjectForSharpIdeFile(sharpIdeFile);
+		if (project is not null)
+		{
+			return project.AdditionalDocuments.SingleOrDefault(document => document.FilePath == sharpIdeFile.Path);
+		}
+
+		return _workspace!.CurrentSolution.Projects
+			.SelectMany(static project => project.AdditionalDocuments)
+			.FirstOrDefault(document => document.FilePath == sharpIdeFile.Path);
+	}
+
+	private static Project GetProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	{
+		return TryGetProjectForSharpIdeFile(sharpIdeFile) ??
+		       throw new InvalidOperationException($"No project found in workspace for file '{sharpIdeFile.Path}'.");
+	}
+
+	private static Project? TryGetProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	{
+		if (sharpIdeFile.IsMetadataAsSourceFile)
+		{
+			var metadataDocument = TryGetDocumentForSharpIdeFile(sharpIdeFile);
+			return metadataDocument?.Project;
+		}
+
+		var document = TryGetDocumentForSharpIdeFile(sharpIdeFile);
+		if (document is not null)
+		{
+			return document.Project;
+		}
+
+		var sharpIdeProjectModel = ((IChildSharpIdeNode)sharpIdeFile).GetNearestProjectNode();
+		return sharpIdeProjectModel is null
+			? null
+			: GetProjectForSharpIdeProjectModel(sharpIdeProjectModel);
 	}
 
 	private static Project GetProjectForSharpIdeProjectModel(SharpIdeProjectModel projectModel)

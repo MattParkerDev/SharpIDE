@@ -162,14 +162,11 @@ public partial class SharpIdeCodeEdit
             }
         }
 
-        var scrollWidth = availableCompletions > MaxLines ? themeScrollWidth : 0;
-
-        // TODO: Fix
-        var codeCompletionBase = "";
-        
-        const int iconOffset = 25;
-		// Desired X position for the popup to start at
-		int desiredX = _completionTriggerPosition!.Value.X - iconOffset;
+	        var scrollWidth = availableCompletions > MaxLines ? themeScrollWidth : 0;
+	        
+	        const int iconOffset = 25;
+			// Desired X position for the popup to start at
+			int desiredX = _completionTriggerPosition!.Value.X - iconOffset;
 
 		// Calculate the maximum X allowed so the popup stays inside the parent
 		int maxX = (int)sharpIdeCodeEditSize.X - _codeCompletionRect.Size.X - scrollWidth;

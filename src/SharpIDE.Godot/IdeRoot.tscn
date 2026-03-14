@@ -10,7 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://hshkb0fxldrg" path="res://Resources/cancel-lighter.svg" id="5_ghsri"]
 [ext_resource type="PackedScene" uid="uid://c6xurjdabssao" path="res://Features/Settings/SettingsButton.tscn" id="5_pm5al"]
 [ext_resource type="Texture2D" uid="uid://ccj73acbnukyt" path="res://Resources/cancel-disabled.svg" id="5_qo7tr"]
-[ext_resource type="PackedScene" uid="uid://cy1bb32g7j7dr" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="5_s2dv6"]
+[ext_resource type="PackedScene" path="res://Features/LeftSideBar/LeftDockManager.tscn" id="5_s2dv6"]
 [ext_resource type="Texture2D" uid="uid://c0gl3rvabse1f" path="res://Resources/cancel-darker.svg" id="5_uvk4l"]
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
 [ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
@@ -23,6 +23,7 @@
 [ext_resource type="PackedScene" uid="uid://b8kytk23cfo4x" path="res://Features/Search/SearchAllFiles/SearchAllFilesWindow.tscn" id="15_gh8b1"]
 [ext_resource type="PackedScene" uid="uid://duyxg107nfh2f" path="res://Features/Nuget/NugetPanel.tscn" id="15_lv3f5"]
 [ext_resource type="PackedScene" uid="uid://hwdok1kch3b3" path="res://Features/TestExplorer/TestExplorerPanel.tscn" id="16_0sv7o"]
+[ext_resource type="PackedScene" path="res://Features/Git/GitPanel.tscn" id="17_gtrpn"]
 [ext_resource type="PackedScene" uid="uid://dr41a4isv0dd5" path="res://Features/BottomBar/BottomBar.tscn" id="18_gyy5s"]
 
 [sub_resource type="Theme" id="Theme_s2dv6"]
@@ -173,7 +174,7 @@ theme_override_icons/grabber = SubResource("PlaceholderTexture2D_7ptyn")
 split_offsets = PackedInt32Array(400)
 split_offset = 400
 
-[node name="SolutionExplorerPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" unique_id=833739052 instance=ExtResource("5_s2dv6")]
+[node name="LeftDockManager" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/HSplitContainer" unique_id=833739052 instance=ExtResource("5_s2dv6")]
 unique_name_in_owner = true
 layout_mode = 2
 
@@ -184,7 +185,13 @@ layout_mode = 2
 [node name="BottomPanel" type="Panel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer" unique_id=1573156698]
 unique_name_in_owner = true
 layout_mode = 2
+clip_contents = true
 script = ExtResource("7_i62lx")
+
+[node name="GitPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=805551400 instance=ExtResource("17_gtrpn")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
 
 [node name="ProblemsPanel" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer/BottomPanel" unique_id=357647494 instance=ExtResource("11_b7c1a")]
 unique_name_in_owner = true

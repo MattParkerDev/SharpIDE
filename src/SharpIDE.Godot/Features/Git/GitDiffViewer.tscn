@@ -1,0 +1,307 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/Git/GitDiffViewer.cs" id="1_difv"]
+[ext_resource type="Script" path="res://Features/Git/GitDiffActionGutter.cs" id="2_guttr"]
+[ext_resource type="FontVariation" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="2_font"]
+[ext_resource type="Texture2D" path="res://Resources/refresh.svg" id="3_rfsh"]
+[ext_resource type="Script" path="res://Features/Git/GitDiffConnectorOverlay.cs" id="5_conn"]
+[ext_resource type="Script" path="res://Features/CodeEditor/GitChangeScrollbarOverlay.cs" id="6_scrlm"]
+
+[node name="GitDiffViewer" type="MarginContainer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+script = ExtResource("1_difv")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="HeaderVBox" type="VBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ActionHeaderHBox" type="HBoxContainer" parent="VBoxContainer/HeaderVBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 26)
+theme_override_constants/separation = 3
+
+[node name="PreviousChangeButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+text = "^"
+tooltip_text = "Previous change"
+
+[node name="NextChangeButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+text = "v"
+tooltip_text = "Next change"
+
+[node name="EditSourceButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+text = "Edit"
+tooltip_text = "Open source file"
+
+[node name="HeaderSeparator1" type="VSeparator" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+layout_mode = 2
+
+[node name="PreviousDiffButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+text = "<"
+tooltip_text = "Previous diff"
+
+[node name="NextDiffButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+text = ">"
+tooltip_text = "Next diff"
+
+[node name="HeaderSpacer" type="Control" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SaveButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+flat = true
+text = "Save Current"
+
+[node name="SummaryLabel" type="Label" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+text = ""
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="EmptyLabel" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+text = "Nothing to preview."
+
+[node name="DiffViewportHost" type="Control" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 460)
+clip_contents = true
+
+[node name="ConnectorOverlay" type="Control" parent="VBoxContainer/DiffViewportHost"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+z_index = 3
+mouse_filter = 2
+script = ExtResource("5_conn")
+
+[node name="DiffEditorRow" type="HBoxContainer" parent="VBoxContainer/DiffViewportHost"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="BaseEditorPanel" type="PanelContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BaseEditorVBox" type="VBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="BaseEditorLabel" type="Label" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
+text = "Base"
+
+[node name="BaseEditorHost" type="MarginContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 1
+
+[node name="BaseEditorBody" type="HBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="BaseExternalScrollBar" type="VScrollBar" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost/BaseEditorBody"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(12, 0)
+size_flags_vertical = 3
+focus_mode = 0
+
+[node name="BaseScrollbarOverlay" type="Control" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost/BaseEditorBody/BaseExternalScrollBar"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("6_scrlm")
+
+[node name="BaseEditorContentHost" type="MarginContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost/BaseEditorBody"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ActionGutterPanel" type="PanelContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 0)
+mouse_filter = 2
+
+[node name="ActionGutterVBox" type="VBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/ActionGutterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="ActionGutterSpacer" type="Control" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/ActionGutterPanel/ActionGutterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ActionGutter" type="Control" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/ActionGutterPanel/ActionGutterVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(128, 420)
+script = ExtResource("2_guttr")
+
+[node name="CurrentEditorPanel" type="PanelContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="CurrentEditorVBox" type="VBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/CurrentEditorPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="CurrentEditorLabel" type="Label" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/CurrentEditorPanel/CurrentEditorVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
+text = "Current"
+
+[node name="CurrentEditorHost" type="MarginContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/CurrentEditorPanel/CurrentEditorVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 1
+theme_override_constants/margin_bottom = 1
+
+[node name="MergeSplit" type="HSplitContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 450
+
+[node name="LocalPanel" type="PanelContainer" parent="VBoxContainer/MergeSplit"]
+layout_mode = 2
+
+[node name="LocalVBox" type="VBoxContainer" parent="VBoxContainer/MergeSplit/LocalPanel"]
+layout_mode = 2
+
+[node name="LocalLabel" type="Label" parent="VBoxContainer/MergeSplit/LocalPanel/LocalVBox"]
+layout_mode = 2
+text = "Local"
+
+[node name="LocalCodeEdit" type="CodeEdit" parent="VBoxContainer/MergeSplit/LocalPanel/LocalVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+editable = false
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 15
+
+[node name="CenterRightSplit" type="HSplitContainer" parent="VBoxContainer/MergeSplit"]
+layout_mode = 2
+split_offset = 450
+
+[node name="CurrentPanel" type="PanelContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit"]
+layout_mode = 2
+
+[node name="CurrentVBox" type="VBoxContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit/CurrentPanel"]
+layout_mode = 2
+
+[node name="CurrentLabel" type="Label" parent="VBoxContainer/MergeSplit/CenterRightSplit/CurrentPanel/CurrentVBox"]
+layout_mode = 2
+text = "Current"
+
+[node name="CurrentCodeEdit" type="CodeEdit" parent="VBoxContainer/MergeSplit/CenterRightSplit/CurrentPanel/CurrentVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 15
+
+[node name="IncomingPanel" type="PanelContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit"]
+layout_mode = 2
+
+[node name="IncomingVBox" type="VBoxContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit/IncomingPanel"]
+layout_mode = 2
+
+[node name="IncomingLabel" type="Label" parent="VBoxContainer/MergeSplit/CenterRightSplit/IncomingPanel/IncomingVBox"]
+layout_mode = 2
+text = "Incoming"
+
+[node name="IncomingCodeEdit" type="CodeEdit" parent="VBoxContainer/MergeSplit/CenterRightSplit/IncomingPanel/IncomingVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+editable = false
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 15

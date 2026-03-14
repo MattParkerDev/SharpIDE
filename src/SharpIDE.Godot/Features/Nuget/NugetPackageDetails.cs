@@ -40,10 +40,10 @@ public partial class NugetPackageDetails : VBoxContainer
 
 	private void VersionSelected(long index)
 	{
-		var selectedVersion = _versionOptionButton.GetItemMetadata((int)index).As<RefCountedContainer<NuGetVersion>>();
+		var selectedVersion = _versionOptionButton.GetItemMetadata((int)index).GetMetadataItem<NuGetVersion>();
 		foreach (var child in _projectsVBoxContainer.GetChildren().OfType<PackageDetailsProjectEntry>())
 		{
-			child.VersionSelectedInDetails = selectedVersion?.Item;
+			child.VersionSelectedInDetails = selectedVersion;
 			child.DisplayRelevantButtons();
 		}
 	}
@@ -123,7 +123,7 @@ public partial class NugetPackageDetails : VBoxContainer
 			foreach (var (index, metadata) in results.Index())
 			{
 				_versionOptionButton.AddItem(metadata.Identity.Version.ToNormalizedString(), index);
-				_versionOptionButton.SetItemMetadata(index, new RefCountedContainer<NuGetVersion>(metadata.Identity.Version));
+				_versionOptionButton.SetItemMetadata(index, new RefCountedContainer(metadata.Identity.Version));
 				//_versionOptionButton.SetItemIcon(index, _warningIconTextureRect);
 			}
 			_versionOptionButton.Selected = 0;

@@ -1,0 +1,246 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Features/Git/GitPanel.cs" id="1_gtrpn"]
+[ext_resource type="Texture2D" path="res://Resources/refresh.svg" id="2_rfsh"]
+
+[node name="GitPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_gtrpn")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="HeaderMargin" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 0
+
+[node name="HeaderHBox" type="HBoxContainer" parent="VBoxContainer/HeaderMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TabsBar" type="TabBar" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+clip_tabs = true
+
+[node name="NewTabButton" type="Button" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+text = "+"
+tooltip_text = "Open the current view in a new tab"
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "No repository"
+
+[node name="RefreshButton" type="Button" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+flat = true
+theme_override_constants/icon_max_width = 15
+icon = ExtResource("2_rfsh")
+tooltip_text = "Refresh"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="BodyContainer" type="Control" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+clip_contents = true
+
+[node name="ContentRoot" type="HSplitContainer" parent="VBoxContainer/BodyContainer"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+clip_contents = true
+split_offset = 96
+
+[node name="RefsPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+size_flags_vertical = 3
+
+[node name="RefsVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="RefsLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel/RefsVBox"]
+layout_mode = 2
+text = "Refs"
+
+[node name="RefsTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel/RefsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(96, 0)
+
+[node name="HistoryPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 6.0
+size_flags_vertical = 3
+
+[node name="HistoryVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="SearchLineEdit" type="LineEdit" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel/HistoryVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Search commit message, hash or @path"
+
+[node name="HistoryTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel/HistoryVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(320, 0)
+
+[node name="RightSplit" type="VSplitContainer" parent="VBoxContainer/BodyContainer/ContentRoot"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+size_flags_vertical = 3
+clip_contents = true
+split_offset = 260
+
+[node name="FilesPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FilesVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="FilesLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel/FilesVBox"]
+layout_mode = 2
+text = "Changed Files"
+
+[node name="FilesTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel/FilesVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(220, 0)
+
+[node name="DetailsPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsMargin" type="MarginContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="DetailsVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="DetailsLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+layout_mode = 2
+text = "Commit Details"
+
+[node name="ShaLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[color=#93a0b5][b]Hash:[/b][/color]"
+
+[node name="AuthorLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[color=#93a0b5][b]Author:[/b][/color]"
+
+[node name="DateLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[color=#93a0b5][b]Date:[/b][/color]"
+
+[node name="FriendlyDateLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[color=#93a0b5][b]When:[/b][/color]"
+
+[node name="ParentsLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "[color=#93a0b5][b]Parents:[/b][/color]"
+
+[node name="MessageLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_active = true
+fit_content = false
+
+[node name="EmptyStateLabel" type="Label" parent="VBoxContainer/BodyContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+autowrap_mode = 3
+text = "No git repository was found for the current solution."
