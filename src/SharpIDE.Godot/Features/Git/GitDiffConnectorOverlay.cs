@@ -29,33 +29,36 @@ public partial class GitDiffConnectorOverlay : Control
 
     public void BindLayout(Control diffViewportHost, HBoxContainer diffEditorRow, Control actionGutter)
     {
+        var previousViewportHost = _diffViewportHost;
         if (!ReferenceEquals(_diffViewportHost, diffViewportHost))
         {
-            if (_diffViewportHost is not null)
+            if (previousViewportHost?.IsAlive() == true)
             {
-                _diffViewportHost.ItemRectChanged -= OnLayoutChanged;
+                previousViewportHost!.ItemRectChanged -= OnLayoutChanged;
             }
 
             _diffViewportHost = diffViewportHost;
             _diffViewportHost.ItemRectChanged += OnLayoutChanged;
         }
 
+        var previousEditorRow = _diffEditorRow;
         if (!ReferenceEquals(_diffEditorRow, diffEditorRow))
         {
-            if (_diffEditorRow is not null)
+            if (previousEditorRow?.IsAlive() == true)
             {
-                _diffEditorRow.ItemRectChanged -= OnLayoutChanged;
+                previousEditorRow!.ItemRectChanged -= OnLayoutChanged;
             }
 
             _diffEditorRow = diffEditorRow;
             _diffEditorRow.ItemRectChanged += OnLayoutChanged;
         }
 
+        var previousActionGutter = _actionGutter;
         if (!ReferenceEquals(_actionGutter, actionGutter))
         {
-            if (_actionGutter is not null)
+            if (previousActionGutter?.IsAlive() == true)
             {
-                _actionGutter.ItemRectChanged -= OnLayoutChanged;
+                previousActionGutter!.ItemRectChanged -= OnLayoutChanged;
             }
 
             _actionGutter = actionGutter;
@@ -67,22 +70,24 @@ public partial class GitDiffConnectorOverlay : Control
 
     public void BindEditors(SharpIdeCodeEdit baseEditor, SharpIdeCodeEdit currentEditor)
     {
+        var previousBaseEditor = _baseEditor;
         if (!ReferenceEquals(_baseEditor, baseEditor))
         {
-            if (_baseEditor is not null)
+            if (previousBaseEditor?.IsAlive() == true)
             {
-                _baseEditor.ItemRectChanged -= OnLayoutChanged;
+                previousBaseEditor!.ItemRectChanged -= OnLayoutChanged;
             }
 
             _baseEditor = baseEditor;
             _baseEditor.ItemRectChanged += OnLayoutChanged;
         }
 
+        var previousCurrentEditor = _currentEditor;
         if (!ReferenceEquals(_currentEditor, currentEditor))
         {
-            if (_currentEditor is not null)
+            if (previousCurrentEditor?.IsAlive() == true)
             {
-                _currentEditor.ItemRectChanged -= OnLayoutChanged;
+                previousCurrentEditor!.ItemRectChanged -= OnLayoutChanged;
             }
 
             _currentEditor = currentEditor;
@@ -90,6 +95,30 @@ public partial class GitDiffConnectorOverlay : Control
         }
 
         InvalidateLayout();
+    }
+
+    public void ClearBindings()
+    {
+        var baseEditor = _baseEditor;
+        if (baseEditor?.IsAlive() == true)
+        {
+            baseEditor!.ItemRectChanged -= OnLayoutChanged;
+        }
+
+        var currentEditor = _currentEditor;
+        if (currentEditor?.IsAlive() == true)
+        {
+            currentEditor!.ItemRectChanged -= OnLayoutChanged;
+        }
+
+        _baseEditor = null;
+        _currentEditor = null;
+        _diffView = null;
+        _rowStatesByRowId = null;
+        _hasLastSnapshot = false;
+        _stableFrames = 0;
+        SetProcess(false);
+        QueueRedraw();
     }
 
     public void Configure(GitDiffViewModel? diffView, IReadOnlyDictionary<string, GitDiffRowState>? rowStatesByRowId = null)
@@ -115,35 +144,40 @@ public partial class GitDiffConnectorOverlay : Control
 
     public override void _ExitTree()
     {
-        if (_diffViewportHost is not null)
+        var diffViewportHost = _diffViewportHost;
+        if (diffViewportHost?.IsAlive() == true)
         {
-            _diffViewportHost.ItemRectChanged -= OnLayoutChanged;
+            diffViewportHost!.ItemRectChanged -= OnLayoutChanged;
         }
 
-        if (_diffEditorRow is not null)
+        var diffEditorRow = _diffEditorRow;
+        if (diffEditorRow?.IsAlive() == true)
         {
-            _diffEditorRow.ItemRectChanged -= OnLayoutChanged;
+            diffEditorRow!.ItemRectChanged -= OnLayoutChanged;
         }
 
-        if (_actionGutter is not null)
+        var actionGutter = _actionGutter;
+        if (actionGutter?.IsAlive() == true)
         {
-            _actionGutter.ItemRectChanged -= OnLayoutChanged;
+            actionGutter!.ItemRectChanged -= OnLayoutChanged;
         }
 
-        if (_baseEditor is not null)
+        var baseEditor = _baseEditor;
+        if (baseEditor?.IsAlive() == true)
         {
-            _baseEditor.ItemRectChanged -= OnLayoutChanged;
+            baseEditor!.ItemRectChanged -= OnLayoutChanged;
         }
 
-        if (_currentEditor is not null)
+        var currentEditor = _currentEditor;
+        if (currentEditor?.IsAlive() == true)
         {
-            _currentEditor.ItemRectChanged -= OnLayoutChanged;
+            currentEditor!.ItemRectChanged -= OnLayoutChanged;
         }
     }
 
     public override void _Process(double delta)
     {
-        if (_diffView is null || _baseEditor is null || _currentEditor is null || _actionGutter is null)
+        if (_diffView is null || _baseEditor?.IsAlive() != true || _currentEditor?.IsAlive() != true || _actionGutter?.IsAlive() != true)
         {
             SetProcess(false);
             return;
@@ -171,7 +205,7 @@ public partial class GitDiffConnectorOverlay : Control
 
     public override void _Draw()
     {
-        if (_diffView is null || _baseEditor is null || _currentEditor is null || _actionGutter is null)
+        if (_diffView is null || _baseEditor?.IsAlive() != true || _currentEditor?.IsAlive() != true || _actionGutter?.IsAlive() != true)
         {
             return;
         }

@@ -61,6 +61,25 @@ public partial class GitDiffActionGutter : Control
         InvalidateLayout();
     }
 
+    public void ClearBindings()
+    {
+        _baseEditor = null;
+        _currentEditor = null;
+        _diffView = null;
+        _rowStatesByRowId = null;
+        _unstagedActions = null;
+        _stagedActions = null;
+        _lineMarkerHotspots.Clear();
+        _chunkActionHotspots.Clear();
+        _hunkAreaHotspots.Clear();
+        _hoveredLineActionId = null;
+        _hoveredChunkActionId = null;
+        _hoveredChunkId = null;
+        _hasLastPointerPosition = false;
+        SetProcess(false);
+        QueueRedraw();
+    }
+
     public void Configure(
         GitDiffViewModel diffView,
         IReadOnlyDictionary<string, GitDiffRowState>? rowStatesByRowId,
@@ -98,7 +117,7 @@ public partial class GitDiffActionGutter : Control
             return;
         }
 
-        SetProcess(Visible && _diffView is not null && _baseEditor is not null && _currentEditor is not null);
+        SetProcess(Visible && _diffView is not null && _baseEditor?.IsAlive() == true && _currentEditor?.IsAlive() == true);
         QueueRedraw();
     }
 
@@ -109,7 +128,7 @@ public partial class GitDiffActionGutter : Control
         _lineMarkerHotspots.Clear();
         _chunkActionHotspots.Clear();
         _hunkAreaHotspots.Clear();
-        if (_diffView is null || _baseEditor is null || _currentEditor is null)
+        if (_diffView is null || _baseEditor?.IsAlive() != true || _currentEditor?.IsAlive() != true)
         {
             return;
         }
@@ -151,7 +170,7 @@ public partial class GitDiffActionGutter : Control
 
     public override void _Process(double delta)
     {
-        if (_diffView is null || _baseEditor is null || _currentEditor is null)
+        if (_diffView is null || _baseEditor?.IsAlive() != true || _currentEditor?.IsAlive() != true)
         {
             SetProcess(false);
             return;
@@ -359,13 +378,14 @@ public partial class GitDiffActionGutter : Control
     private void DrawLineNumbers(GitDiffLayoutMetrics metrics, GitDiffEditorSide side, Rect2 columnBounds, bool alignToRight)
     {
         var editor = side is GitDiffEditorSide.Left ? _baseEditor : _currentEditor;
-        if (editor is null)
+        if (editor?.IsAlive() != true)
         {
             return;
         }
+        var activeEditor = editor!;
 
-        var font = editor.GetThemeFont(ThemeStringNames.Font);
-        var fontSize = editor.GetThemeFontSize(ThemeStringNames.FontSize);
+        var font = activeEditor.GetThemeFont(ThemeStringNames.Font);
+        var fontSize = activeEditor.GetThemeFontSize(ThemeStringNames.FontSize);
         var fontHeight = font.GetHeight(fontSize);
         var fontAscent = font.GetAscent(fontSize);
         foreach (var visibleLine in metrics.CollectVisibleEditorLines(side))
@@ -620,10 +640,11 @@ public partial class GitDiffActionGutter : Control
             : Mathf.Round(columnBounds.Position.X + ActionControlInnerPadding);
         var editor = side is GitDiffEditorSide.Left ? _baseEditor : _currentEditor;
         var top = y + Mathf.Max(0f, (rowHeight - size.Y) * 0.5f);
-        if (editor is not null)
+        if (editor?.IsAlive() == true)
         {
-            var font = editor.GetThemeFont(ThemeStringNames.Font);
-            var fontSize = editor.GetThemeFontSize(ThemeStringNames.FontSize);
+            var activeEditor = editor!;
+            var font = activeEditor.GetThemeFont(ThemeStringNames.Font);
+            var fontSize = activeEditor.GetThemeFontSize(ThemeStringNames.FontSize);
             var fontHeight = font.GetHeight(fontSize);
             var textTop = y + Math.Max(0f, (rowHeight - fontHeight) * 0.5f);
             top = textTop + Math.Max(0f, (fontHeight - size.Y) * 0.5f);
@@ -777,14 +798,15 @@ public partial class GitDiffActionGutter : Control
 
     private float GetRequiredNumberColumnWidth(SharpIdeCodeEdit? editor)
     {
-        if (editor is null)
+        if (editor?.IsAlive() != true)
         {
             return 24f;
         }
+        var activeEditor = editor!;
 
-        var font = editor.GetThemeFont(ThemeStringNames.Font);
-        var fontSize = editor.GetThemeFontSize(ThemeStringNames.FontSize);
-        var lineCount = Math.Max(1, editor.GetLineCount());
+        var font = activeEditor.GetThemeFont(ThemeStringNames.Font);
+        var fontSize = activeEditor.GetThemeFontSize(ThemeStringNames.FontSize);
+        var lineCount = Math.Max(1, activeEditor.GetLineCount());
         return MathF.Ceiling(font.GetStringSize(lineCount.ToString(), HorizontalAlignment.Left, -1, fontSize).X + NumberColumnPadding);
     }
 

@@ -128,6 +128,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnSolutionAltered)}");
 			if (_currentFile is null) return;
 			if (_fileDeleted) return;
+			if (!IsEditorAlive()) return;
 			if (HasRoslynProjectContext(_currentFile) is false) return;
 			var currentFile = _currentFile;
 			var fileContextVersion = ReadFileContextVersion();
@@ -137,29 +138,29 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(currentFile, newCt);
 			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(currentFile, newCt);
 			await Task.WhenAll(documentSyntaxHighlighting, razorSyntaxHighlighting).WaitAsync(newCt);
-			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion)) return;
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 			var documentDiagnosticsTask = _roslynAnalysis.GetDocumentDiagnostics(currentFile, newCt);
 			await this.InvokeAsync(async () =>
 			{
-				if (!IsCurrentFileContext(currentFile, fileContextVersion)) return;
+				if (!IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 				SetSyntaxHighlightingModel(await documentSyntaxHighlighting, await razorSyntaxHighlighting);
 			});
 			var documentDiagnostics = await documentDiagnosticsTask;
-			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion)) return;
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 			var documentAnalyzerDiagnosticsTask = _roslynAnalysis.GetDocumentAnalyzerDiagnostics(currentFile, newCt);
 			await this.InvokeAsync(() =>
 			{
-				if (!IsCurrentFileContext(currentFile, fileContextVersion)) return;
+				if (!IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 				SetDiagnostics(documentDiagnostics);
 			});
 			var documentAnalyzerDiagnostics = await documentAnalyzerDiagnosticsTask;
-			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion)) return;
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 			await this.InvokeAsync(() =>
 			{
-				if (!IsCurrentFileContext(currentFile, fileContextVersion)) return;
+				if (!IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 				SetAnalyzerDiagnostics(documentAnalyzerDiagnostics);
 			});
-			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion)) return;
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 			if (await hasFocus)
 			{
 				await _roslynAnalysis.UpdateProjectDiagnosticsForFile(currentFile, newCt);
@@ -1056,6 +1057,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool IsCurrentFileContext(SharpIdeFile file, long fileContextVersion)
 	{
 		return fileContextVersion == ReadFileContextVersion() && ReferenceEquals(_currentFile, file);
+	}
+
+	private bool IsEditorAlive()
+	{
+		return GodotObject.IsInstanceValid(this) && !IsQueuedForDeletion();
 	}
 	
 	private (int line, int col) GetCaretPosition(bool startAt1 = false)

@@ -36,7 +36,17 @@ public partial class GitChangeScrollbarOverlay : Control
 
     public void Bind(SharpIdeCodeEdit editor)
     {
-        Bind(editor.GetVScrollBar(), editor.GetLineCount, editor.NavigateToGitChange, MarkerHorizontalAlignment.Right);
+        Bind(
+            editor.GetVScrollBar(),
+            () => editor.IsAlive() ? editor.GetLineCount() : 0,
+            line =>
+            {
+                if (editor.IsAlive())
+                {
+                    editor.NavigateToGitChange(line);
+                }
+            },
+            MarkerHorizontalAlignment.Right);
     }
 
     public void Bind(VScrollBar scrollBar, Func<int> getLineCount, Action<int> navigateToLine, MarkerHorizontalAlignment horizontalAlignment)
@@ -160,7 +170,7 @@ public partial class GitChangeScrollbarOverlay : Control
     {
         if (_getLineCount is null || _markers.Count is 0) return;
 
-        var totalLines = Math.Max(_getLineCount(), 1);
+        var totalLines = Math.Max(GetSafeLineCount(), 1);
         foreach (var marker in _markers)
         {
             DrawRect(GetMarkerRect(marker, totalLines), GetMarkerColor(marker.Kind));
@@ -174,7 +184,7 @@ public partial class GitChangeScrollbarOverlay : Control
             return null;
         }
 
-        var totalLines = Math.Max(_getLineCount(), 1);
+        var totalLines = Math.Max(GetSafeLineCount(), 1);
         foreach (var marker in _markers)
         {
             if (GetMarkerRect(marker, totalLines).HasPoint(position))
@@ -237,19 +247,21 @@ public partial class GitChangeScrollbarOverlay : Control
 
     private void UnbindTrackedLayout()
     {
-        if (_scrollBarLayoutBound && _scrollBar is not null)
+        var scrollBar = _scrollBar;
+        if (_scrollBarLayoutBound && scrollBar?.IsAlive() == true)
         {
-            _scrollBar.ItemRectChanged -= OnTrackedLayoutChanged;
-            _scrollBar.Resized -= OnTrackedLayoutChanged;
-            _scrollBarLayoutBound = false;
+            scrollBar!.ItemRectChanged -= OnTrackedLayoutChanged;
+            scrollBar.Resized -= OnTrackedLayoutChanged;
         }
+        _scrollBarLayoutBound = false;
 
-        if (_layoutHostBound && _layoutHost is not null)
+        var layoutHost = _layoutHost;
+        if (_layoutHostBound && layoutHost?.IsAlive() == true)
         {
-            _layoutHost.ItemRectChanged -= OnTrackedLayoutChanged;
-            _layoutHost.Resized -= OnTrackedLayoutChanged;
-            _layoutHostBound = false;
+            layoutHost!.ItemRectChanged -= OnTrackedLayoutChanged;
+            layoutHost.Resized -= OnTrackedLayoutChanged;
         }
+        _layoutHostBound = false;
     }
 
     private void OnTrackedLayoutChanged()
@@ -286,6 +298,18 @@ public partial class GitChangeScrollbarOverlay : Control
         var progress = (_scrollBar.Value - _scrollBar.MinValue) / (upperBound - _scrollBar.MinValue);
         var y = Mathf.Clamp((float)progress, 0f, 1f) * travel;
         return new Rect2(new Vector2(0f, y), new Vector2(Size.X, thumbLength));
+    }
+
+    private int GetSafeLineCount()
+    {
+        try
+        {
+            return _getLineCount?.Invoke() ?? 0;
+        }
+        catch (ObjectDisposedException)
+        {
+            return 0;
+        }
     }
 
     private void SetScrollBarValueFromPointer(float pointerY, bool centerThumbOnPointer)

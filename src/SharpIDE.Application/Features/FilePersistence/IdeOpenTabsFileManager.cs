@@ -24,7 +24,7 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 			file,
 			_ => new OpenFileEntry
 			{
-				TextTask = new Lazy<Task<string>>(Task<string> () => File.ReadAllTextAsync(file.Path)),
+				TextTask = new Lazy<Task<string>>(() => ReadFileTextSafeAsync(file.Path)),
 				ReferenceCount = 1
 			},
 			(_, existing) =>
@@ -41,7 +41,7 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 		{
 			return new OpenFileEntry
 			{
-				TextTask = new Lazy<Task<string>>(Task<string> () => File.ReadAllTextAsync(f.Path)),
+				TextTask = new Lazy<Task<string>>(() => ReadFileTextSafeAsync(f.Path)),
 				ReferenceCount = 0
 			};
 		});
@@ -130,6 +130,30 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 		}
 
 		entry.ReferenceCount--;
+	}
+
+	private async Task<string> ReadFileTextSafeAsync(string path)
+	{
+		try
+		{
+			if (!File.Exists(path))
+			{
+				_logger.LogDebug("IdeOpenTabsFileManager: File not found while reading text, returning empty content for {FilePath}", path);
+				return string.Empty;
+			}
+
+			return await File.ReadAllTextAsync(path);
+		}
+		catch (FileNotFoundException)
+		{
+			_logger.LogDebug("IdeOpenTabsFileManager: File disappeared while reading text, returning empty content for {FilePath}", path);
+			return string.Empty;
+		}
+		catch (DirectoryNotFoundException)
+		{
+			_logger.LogDebug("IdeOpenTabsFileManager: Directory disappeared while reading text, returning empty content for {FilePath}", path);
+			return string.Empty;
+		}
 	}
 }
 

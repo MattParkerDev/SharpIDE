@@ -605,8 +605,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		}
 
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
-		Guard.Against.Null(document, nameof(document));
+		var document = TryGetDocumentForSharpIdeFile(fileModel);
+		if (document is null)
+		{
+			_logger.LogDebug("RoslynAnalysis: Skipping syntax highlighting because document is no longer in the workspace for {FilePath}", fileModel.Path);
+			return [];
+		}
 
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, new TextSpan(0, sourceText.Length), cancellationToken);

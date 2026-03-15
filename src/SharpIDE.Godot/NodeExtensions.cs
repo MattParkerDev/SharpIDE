@@ -281,6 +281,19 @@ public static class NodeExtensions
     }
 }
 
+public static class GodotObjectExtensions
+{
+    extension(GodotObject? obj)
+    {
+        public bool IsAlive()
+        {
+            return obj is not null &&
+                   GodotObject.IsInstanceValid(obj) &&
+                   !obj.IsQueuedForDeletion();
+        }
+    }
+}
+
 public static class GodotTask
 {
     extension<T>(Task<T> task)

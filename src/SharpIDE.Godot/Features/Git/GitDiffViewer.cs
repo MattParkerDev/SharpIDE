@@ -554,16 +554,20 @@ public partial class GitDiffViewer : MarginContainer
     {
         _diffViewportHost.Visible = false;
         _connectorOverlay.Configure(null);
-        if (_baseEditor is not null)
+        _connectorOverlay.ClearBindings();
+        _actionGutter.ClearBindings();
+        var baseEditor = _baseEditor;
+        if (baseEditor?.IsAlive() == true)
         {
-            _baseEditor.GuiInput -= OnBaseDiffEditorGuiInput;
+            baseEditor!.GuiInput -= OnBaseDiffEditorGuiInput;
         }
 
-        if (_currentDiffEditor is not null)
+        var currentDiffEditor = _currentDiffEditor;
+        if (currentDiffEditor?.IsAlive() == true)
         {
-            _currentDiffEditor.GuiInput -= OnCurrentDiffEditorGuiInput;
-            _currentDiffEditor.TextChanged -= OnCurrentDiffEditorTextChanged;
-            _currentDiffEditor.CaretChanged -= UpdateHeaderState;
+            currentDiffEditor!.GuiInput -= OnCurrentDiffEditorGuiInput;
+            currentDiffEditor.TextChanged -= OnCurrentDiffEditorTextChanged;
+            currentDiffEditor.CaretChanged -= UpdateHeaderState;
         }
 
         _baseScrollbarOverlay.ClearMarkers();
@@ -809,27 +813,29 @@ public partial class GitDiffViewer : MarginContainer
 
     private void UpdateLinkedScrollState()
     {
-        if (_baseEditor is null || _currentDiffEditor is null)
+        if (_baseEditor?.IsAlive() != true || _currentDiffEditor?.IsAlive() != true)
         {
             return;
         }
 
-        _session.LastSyncedLeftScroll = _baseEditor.GetVScroll();
-        _session.LastSyncedRightScroll = _currentDiffEditor.GetVScroll();
-        _session.LastSyncedLeftLine = _baseEditor.GetFirstVisibleLine() + 1;
-        _session.LastSyncedRightLine = _currentDiffEditor.GetFirstVisibleLine() + 1;
-        _session.VerticalScroll = _currentDiffEditor.GetVScroll();
-        _session.FirstVisibleRightLine = _currentDiffEditor.GetFirstVisibleLine() + 1;
+        var baseEditor = _baseEditor!;
+        var currentDiffEditor = _currentDiffEditor!;
+        _session.LastSyncedLeftScroll = baseEditor.GetVScroll();
+        _session.LastSyncedRightScroll = currentDiffEditor.GetVScroll();
+        _session.LastSyncedLeftLine = baseEditor.GetFirstVisibleLine() + 1;
+        _session.LastSyncedRightLine = currentDiffEditor.GetFirstVisibleLine() + 1;
+        _session.VerticalScroll = currentDiffEditor.GetVScroll();
+        _session.FirstVisibleRightLine = currentDiffEditor.GetFirstVisibleLine() + 1;
     }
 
     private void UpdateHorizontalScrollState()
     {
-        if (_currentDiffEditor is null)
+        if (_currentDiffEditor?.IsAlive() != true)
         {
             return;
         }
 
-        _session.HorizontalScroll = _currentDiffEditor.GetHScrollBar().Value;
+        _session.HorizontalScroll = _currentDiffEditor!.GetHScrollBar().Value;
     }
 
     private void RefreshDiffScrollChrome()
@@ -841,9 +847,10 @@ public partial class GitDiffViewer : MarginContainer
 
     private void SyncBaseExternalScrollBar()
     {
-        if (_baseEditor is null) return;
+        if (_baseEditor?.IsAlive() != true) return;
 
-        var internalScrollBar = _baseEditor.GetVScrollBar();
+        var baseEditor = _baseEditor!;
+        var internalScrollBar = baseEditor.GetVScrollBar();
         _syncingBaseExternalScroll = true;
         try
         {
@@ -852,7 +859,7 @@ public partial class GitDiffViewer : MarginContainer
             _baseExternalScrollBar.Page = internalScrollBar.Page;
             _baseExternalScrollBar.Step = Math.Max(1d, internalScrollBar.Step);
             _baseExternalScrollBar.Value = internalScrollBar.Value;
-            _baseExternalScrollBar.Visible = _baseEditor.GetLineCount() > _baseEditor.GetVisibleLineCount();
+            _baseExternalScrollBar.Visible = baseEditor.GetLineCount() > baseEditor.GetVisibleLineCount();
             _baseScrollbarOverlay.Visible = _baseExternalScrollBar.Visible;
             _baseScrollbarOverlay.RefreshLayout();
         }
@@ -1243,12 +1250,13 @@ public partial class GitDiffViewer : MarginContainer
 
     private void CaptureEditorViewportState()
     {
-        if (_currentDiffEditor is null) return;
-        _session.HorizontalScroll = _currentDiffEditor.GetHScrollBar().Value;
-        _session.VerticalScroll = _currentDiffEditor.GetVScroll();
-        _session.CaretLine = _currentDiffEditor.GetCaretLine();
-        _session.CaretColumn = _currentDiffEditor.GetCaretColumn();
-        _session.FirstVisibleRightLine = _currentDiffEditor.GetFirstVisibleLine() + 1;
+        if (_currentDiffEditor?.IsAlive() != true) return;
+        var currentDiffEditor = _currentDiffEditor!;
+        _session.HorizontalScroll = currentDiffEditor.GetHScrollBar().Value;
+        _session.VerticalScroll = currentDiffEditor.GetVScroll();
+        _session.CaretLine = currentDiffEditor.GetCaretLine();
+        _session.CaretColumn = currentDiffEditor.GetCaretColumn();
+        _session.FirstVisibleRightLine = currentDiffEditor.GetFirstVisibleLine() + 1;
         UpdateLinkedScrollState();
     }
 
