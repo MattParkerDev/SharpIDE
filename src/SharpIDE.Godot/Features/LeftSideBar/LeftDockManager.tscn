@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://t99bvugu26s7"]
 
-[ext_resource type="Script" path="res://Features/LeftSideBar/LeftDockManager.cs" id="1_mgr"]
-[ext_resource type="PackedScene" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="2_exp"]
-[ext_resource type="PackedScene" path="res://Features/Git/CommitPanel.tscn" id="3_git"]
+[ext_resource type="Script" uid="uid://w1lplpghm9t3" path="res://Features/LeftSideBar/LeftDockManager.cs" id="1_mgr"]
+[ext_resource type="PackedScene" uid="uid://cy1bb32g7j7dr" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="2_exp"]
+[ext_resource type="PackedScene" uid="uid://nf7felkn421q" path="res://Features/Git/CommitPanel.tscn" id="3_git"]
 
 [node name="LeftDockManager" type="PanelContainer"]
 layout_mode = 3

@@ -1,11 +1,11 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://5xjlumtkdzfo"]
 
-[ext_resource type="Script" path="res://Features/Git/GitDiffViewer.cs" id="1_difv"]
-[ext_resource type="Script" path="res://Features/Git/GitDiffActionGutter.cs" id="2_guttr"]
-[ext_resource type="FontVariation" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="2_font"]
-[ext_resource type="Texture2D" path="res://Resources/refresh.svg" id="3_rfsh"]
-[ext_resource type="Script" path="res://Features/Git/GitDiffConnectorOverlay.cs" id="5_conn"]
-[ext_resource type="Script" path="res://Features/CodeEditor/GitChangeScrollbarOverlay.cs" id="6_scrlm"]
+[ext_resource type="Script" uid="uid://nz1wsc11fm5v" path="res://Features/Git/GitDiffViewer.cs" id="1_difv"]
+[ext_resource type="Script" uid="uid://sff3kheoknoq" path="res://Features/Git/GitDiffActionGutter.cs" id="2_guttr"]
+[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="2_font"]
+[ext_resource type="Texture2D" uid="uid://cmwkpdv6pxaai" path="res://Resources/refresh.svg" id="3_rfsh"]
+[ext_resource type="Script" uid="uid://jjqpi6hzt6uo" path="res://Features/Git/GitDiffConnectorOverlay.cs" id="5_conn"]
+[ext_resource type="Script" uid="uid://7x2ptpbexyw0" path="res://Features/CodeEditor/GitChangeScrollbarOverlay.cs" id="6_scrlm"]
 
 [node name="GitDiffViewer" type="MarginContainer"]
 layout_mode = 3

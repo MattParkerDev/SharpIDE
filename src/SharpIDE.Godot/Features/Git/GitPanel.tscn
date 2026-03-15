@@ -1,7 +1,7 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://9i3ti7fzysoh"]
 
-[ext_resource type="Script" path="res://Features/Git/GitPanel.cs" id="1_gtrpn"]
-[ext_resource type="Texture2D" path="res://Resources/refresh.svg" id="2_rfsh"]
+[ext_resource type="Script" uid="uid://qacg6nvcgb44" path="res://Features/Git/GitPanel.cs" id="1_gtrpn"]
+[ext_resource type="Texture2D" uid="uid://cmwkpdv6pxaai" path="res://Resources/refresh.svg" id="2_rfsh"]
 
 [node name="GitPanel" type="Control"]
 layout_mode = 3
