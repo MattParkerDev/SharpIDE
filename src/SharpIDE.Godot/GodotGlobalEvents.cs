@@ -15,4 +15,8 @@ public class GodotGlobalEvents
     public EventWrapper<SharpIdeFile, SharpIdeFileLinePosition?, Task> FileSelected { get; } = new((_, _) => Task.CompletedTask);
     public EventWrapper<SharpIdeFile, SharpIdeFileLinePosition?, Task> FileExternallySelected { get; } = new((_, _) => Task.CompletedTask);
     public EventWrapper<LightOrDarkTheme, Task> TextEditorThemeChanged { get; } = new(_ => Task.CompletedTask);
+    public EventWrapper<string, Task> BackgroundImageChanged { get; } = new(_ => Task.CompletedTask);
+    public EventWrapper<double, Task> BackgroundTransparencyChanged { get; } = new(_ => Task.CompletedTask);
+    public EventWrapper<double, Task> CodeBackgroundTransparencyChanged { get; } = new(_ => Task.CompletedTask);
+    public EventWrapper<global::Godot.Color, Task> CurrentLineHighlightColorChanged { get; } = new(_ => Task.CompletedTask);
 }

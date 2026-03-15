@@ -21,9 +21,11 @@ public partial class CodeEditorPanel : MarginContainer
 	private PackedScene _sharpIdeCodeEditScene = GD.Load<PackedScene>("res://Features/CodeEditor/SharpIdeCodeEdit.tscn");
 	private TabContainer _tabContainer = null!;
 	private ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
+	private TextureRect? _backgroundTextureRect;
 	
 	[Inject] private readonly RunService _runService = null!;
 	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+	
 	public override void _Ready()
 	{
 		_tabContainer = GetNode<TabContainer>("TabContainer");
@@ -34,6 +36,9 @@ public partial class CodeEditorPanel : MarginContainer
 		tabBar.TabClosePressed += OnTabClosePressed;
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
+		GodotGlobalEvents.Instance.BackgroundImageChanged.Subscribe(OnBackgroundImageChanged);
+		GodotGlobalEvents.Instance.BackgroundTransparencyChanged.Subscribe(OnBackgroundTransparencyChanged);
+		InitializeBackgroundImage();
 	}
 
 	public override void _GuiInput(InputEvent @event)
@@ -244,6 +249,74 @@ public partial class CodeEditorPanel : MarginContainer
 			tabForStopInfo.SetLineAsExecuting(godotLine, false);
 			tabForStopInfo.SetLineColour(godotLine);
 		});
+	}
+
+	private void InitializeBackgroundImage()
+	{
+		var imagePath = Singletons.AppState.IdeSettings.BackgroundImagePath;
+		if (string.IsNullOrEmpty(imagePath)) return;
+
+		UpdateBackgroundImage(imagePath);
+	}
+
+	private Task OnBackgroundImageChanged(string imagePath)
+	{
+		UpdateBackgroundImage(imagePath);
+		return Task.CompletedTask;
+	}
+
+	private void UpdateBackgroundImage(string imagePath)
+	{
+		// Remove existing background if any
+		if (_backgroundTextureRect != null)
+		{
+			RemoveChild(_backgroundTextureRect);
+			_backgroundTextureRect.QueueFree();
+			_backgroundTextureRect = null;
+		}
+
+		if (string.IsNullOrEmpty(imagePath)) return;
+
+		// Load the texture
+		Texture2D? tex = null;
+		if (File.Exists(imagePath))
+		{
+			var image = Image.LoadFromFile(imagePath);
+			if (image != null)
+			{
+				tex = ImageTexture.CreateFromImage(image);
+			}
+		}
+
+		if (tex == null) return;
+
+		_backgroundTextureRect = new TextureRect
+		{
+			Texture = tex,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			MouseFilter = MouseFilterEnum.Ignore
+		};
+
+		AddChild(_backgroundTextureRect);
+		MoveChild(_backgroundTextureRect, 0); // Move behind TabContainer
+		
+		UpdateBackgroundTransparency(Singletons.AppState.IdeSettings.BackgroundImageTransparency);
+	}
+
+	private Task OnBackgroundTransparencyChanged(double transparency)
+	{
+		UpdateBackgroundTransparency(transparency);
+		return Task.CompletedTask;
+	}
+
+	private void UpdateBackgroundTransparency(double transparency)
+	{
+		if (_backgroundTextureRect == null) return;
+
+		var color = _backgroundTextureRect.Modulate;
+		color.A = 1 - (float)transparency;
+		_backgroundTextureRect.Modulate = color;
 	}
 }
 

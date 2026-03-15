@@ -368,8 +368,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-.vscode/launch.json
-.vscode/tasks.json
+**/.vscode/launch.json
+**/.vscode/tasks.json
 
 # Rider
 .idea/
