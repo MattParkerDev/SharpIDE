@@ -144,13 +144,12 @@ public static class ProjectEvaluation
 					PackageName = d.PackageName,
 					RequestedVersion = d.PackageDependency.VersionRange
 				}).ToList();
-				if (lockFileTargetLibrary.Version is not { } installedVersion) continue;
 
 				var existingPackage = allPackages.GetValueOrDefault(lockFileTargetLibrary.Name) ?? new InstalledPackage { Name = lockFileTargetLibrary.Name, ProjectPackageReferences = [] };
 				existingPackage.ProjectPackageReferences.Add(new ProjectPackageReference
 				{
 					Project = project,
-					InstalledVersion = installedVersion,
+					InstalledVersion = lockFileTargetLibrary.Version,
 					IsTopLevel = isTopLevel,
 					IsAutoReferenced = dependency?.AutoReferenced ?? false,
 					DependentPackages = mappedDependents

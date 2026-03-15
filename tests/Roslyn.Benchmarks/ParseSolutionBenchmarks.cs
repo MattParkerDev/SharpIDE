@@ -6,7 +6,7 @@ namespace Roslyn.Benchmarks;
 
 public class ParseSolutionBenchmarks
 {
-	private static readonly string s_solutionFilePath = Path.Combine(
+	private static readonly string _solutionFilePath = Path.Combine(
 		FindRepositoryRoot(),
 		"src",
 		"SharpIDE.Godot",
@@ -23,7 +23,7 @@ public class ParseSolutionBenchmarks
 	[Benchmark]
 	public async Task<Solution> ParseSolutionFileFromPath()
 	{
-		var solution = await _workspace.OpenSolutionAsync(s_solutionFilePath);
+		var solution = await _workspace.OpenSolutionAsync(_solutionFilePath);
 		return solution;
 	}
 
