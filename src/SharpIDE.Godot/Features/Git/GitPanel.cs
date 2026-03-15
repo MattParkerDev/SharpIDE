@@ -7,6 +7,23 @@ namespace SharpIDE.Godot.Features.Git;
 
 public partial class GitPanel : Control
 {
+    private enum RefContextAction
+    {
+        Checkout = 1,
+        NewBranchFrom = 2,
+        ShowDiffWithWorkingTree = 3, // TODO
+        ShowDiffCurrentBranchWithSelected = 4, //TODO
+        RebaseCurrentOntoSelected = 5,
+        MergeSelectedIntoCurrent = 6,
+        UpdateCurrentBranch = 7,
+        PushCurrentBranch = 8,
+        Rename = 9,
+        DeleteLocalBranch = 10,
+        PushTag = 11,
+        DeleteLocalTag = 12,
+        DeleteRemoteTag = 13
+    }
+
     private const float MinimumFilesHeight = 80f;
     private const float MinimumDetailsHeight = 72f;
     private const float HistoryCellHorizontalPadding = 6f;
@@ -53,9 +70,12 @@ public partial class GitPanel : Control
     private SharpIdeSolutionModel? _solution;
     private string _repoRootPath = string.Empty;
     private string _currentRefName = string.Empty;
+    private string _currentBranchRefName = string.Empty;
     private string? _selectedCommitSha;
     private bool _gitCliAvailable;
+    private bool _isDetachedHead;
     private bool _isLoadingHistory;
+    private bool _suppressRefSelection;
     private bool _hasMoreHistory;
     private bool _suppressSearchChanged;
     private bool _suppressTabChanged;
@@ -105,6 +125,7 @@ public partial class GitPanel : Control
         _newTabButton.Pressed += OpenCurrentViewInNewTab;
         _refsTree.ItemSelected += OnRefsTreeItemSelected;
         _refsTree.ItemActivated += OnRefsTreeItemActivated;
+        _refsTree.GuiInput += OnRefsTreeGuiInput;
         _searchLineEdit.TextChanged += OnSearchTextChanged;
         _historyTree.ItemSelected += OnHistoryTreeItemSelected;
         _filesTree.ItemActivated += OnFilesTreeItemActivated;
@@ -431,6 +452,7 @@ public partial class GitPanel : Control
         }
 
         _repoRootPath = snapshot.Repository.RepoRootPath;
+        _isDetachedHead = snapshot.Repository.IsDetachedHead;
         await this.InvokeAsync(() => _statusLabel.Text = snapshot.Repository.BranchDisplayName);
         _gitRepositoryMonitor.Start(snapshot.Repository.RepoRootPath, snapshot.Repository.GitDirectoryPath);
 
@@ -441,6 +463,7 @@ public partial class GitPanel : Control
         }
 
         var refs = await _gitService.GetRepositoryRefs(_solution.FilePath);
+        _currentBranchRefName = refs.FirstOrDefault(node => node.Kind == GitRefKind.Head)?.RefName ?? string.Empty;
         await this.InvokeAsync(() =>
         {
             _contentRoot.Visible = true;
@@ -460,6 +483,8 @@ public partial class GitPanel : Control
         _statusLabel.Text = "No repository";
         _historyRows.Clear();
         _currentRefName = string.Empty;
+        _currentBranchRefName = string.Empty;
+        _isDetachedHead = false;
         ClearDetails();
     }
 
@@ -502,8 +527,16 @@ public partial class GitPanel : Control
         if (target is null) return;
 
         ExpandParents(target);
-        _refsTree.SetSelected(target, 0);
-        target.Select(0);
+        _suppressRefSelection = true;
+        try
+        {
+            _refsTree.SetSelected(target, 0);
+            target.Select(0);
+        }
+        finally
+        {
+            _suppressRefSelection = false;
+        }
     }
 
     private static TreeItem? FindRefItemRecursive(TreeItem item, string refName)
@@ -532,25 +565,11 @@ public partial class GitPanel : Control
 
     private void OnRefsTreeItemSelected()
     {
+        if (_suppressRefSelection) return;
         var selected = _refsTree.GetSelected();
         var node = selected?.GetTypedMetadata<GitRefNode>(0);
         if (node is null || !node.IsSelectable || string.IsNullOrWhiteSpace(node.RefName)) return;
-        if (ActiveTab.IsMain)
-        {
-            OpenOrFocusScopedTab(node.RefName);
-            return;
-        }
-
-        if (string.Equals(_currentRefName, node.RefName, StringComparison.Ordinal)) return;
-
-        _currentRefName = node.RefName;
-        ActiveTab.RefName = node.RefName;
-        if (!ActiveTab.IsMain)
-        {
-            ActiveTab.Title = BuildTabTitle(node.RefName, _searchLineEdit.Text);
-            _tabsBar.SetTabTitle(ActiveTabIndex, ActiveTab.Title);
-        }
-        _ = Task.GodotRun(() => ReloadHistoryAsync(reset: true));
+        OpenOrFocusScopedTab(node.RefName);
     }
 
     private void OnRefsTreeItemActivated()
@@ -559,17 +578,232 @@ public partial class GitPanel : Control
         var node = selected?.GetTypedMetadata<GitRefNode>(0);
         if (node is null || !node.IsSelectable || string.IsNullOrWhiteSpace(node.RefName)) return;
 
-        SaveTabState(ActiveTabIndex);
-        _tabs.Add(new GitTreeTabState
+        OpenOrFocusScopedTab(node.RefName);
+    }
+
+    private void OnRefsTreeGuiInput(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } mouseEvent) return;
+
+        _suppressRefSelection = true;
+        var selected = SelectTreeItemAtPosition(_refsTree, mouseEvent.Position);
+        _suppressRefSelection = false;
+        var node = selected?.GetTypedMetadata<GitRefNode>(0);
+        if (node is null || !node.IsSelectable || string.IsNullOrWhiteSpace(node.RefName) || node.Kind is GitRefKind.Head)
         {
-            Title = BuildTabTitle(node.RefName, string.Empty),
-            RefName = node.RefName,
-            SearchText = string.Empty,
-            SelectedCommitSha = null,
-            IsMain = false
-        });
-        RebuildTabsBar();
-        _tabsBar.CurrentTab = _tabs.Count - 1;
+            return;
+        }
+
+        OpenRefContextMenu(node);
+        _refsTree.AcceptEvent();
+    }
+
+    private void OpenRefContextMenu(GitRefNode node)
+    {
+        var menu = new PopupMenu();
+        AddChild(menu);
+
+        switch (node.Kind)
+        {
+            case GitRefKind.LocalBranch:
+                PopulateLocalBranchContextMenu(menu, node);
+                break;
+            case GitRefKind.RemoteBranch:
+                PopulateRemoteBranchContextMenu(menu, node);
+                break;
+            case GitRefKind.Tag:
+                PopulateTagContextMenu(menu, node);
+                break;
+            default:
+                menu.QueueFree();
+                return;
+        }
+
+        menu.PopupHide += () => menu.QueueFree();
+        menu.IdPressed += id => _ = Task.GodotRun(() => HandleRefContextActionAsync(node, (RefContextAction)id));
+        PopupMenuAtMouse(menu);
+    }
+
+    private void PopulateLocalBranchContextMenu(PopupMenu menu, GitRefNode node)
+    {
+        var shortName = node.ShortName ?? GetShortRefName(node.RefName ?? node.DisplayName);
+        if (!node.IsCurrent)
+        {
+            menu.AddItem("Checkout", (int)RefContextAction.Checkout);
+        }
+        menu.AddItem($"New branch from '{shortName}'", (int)RefContextAction.NewBranchFrom);
+        
+        menu.AddSeparator();
+        menu.AddItem($"Show Diff '{shortName}' with working tree", (int)RefContextAction.ShowDiffWithWorkingTree);
+        if (!node.IsCurrent && !_isDetachedHead)
+        {
+            menu.AddItem($"Show Diff current branch with '{shortName}'", (int)RefContextAction.ShowDiffCurrentBranchWithSelected);
+        }
+
+        menu.AddSeparator();
+        if (!node.IsCurrent && !_isDetachedHead)
+        {
+            menu.AddItem($"Rebase current branch onto '{shortName}'", (int)RefContextAction.RebaseCurrentOntoSelected);
+            menu.AddItem($"Merge '{shortName}' into current branch", (int)RefContextAction.MergeSelectedIntoCurrent);
+        }
+
+        var addedRenameDeleteGroup = false;
+        if (string.IsNullOrWhiteSpace(node.UpstreamRefName))
+        {
+            menu.AddSeparator();
+            menu.AddItem("Rename", (int)RefContextAction.Rename);
+            addedRenameDeleteGroup = true;
+        }
+
+        if (!node.IsCurrent)
+        {
+            if (!addedRenameDeleteGroup)
+            {
+                menu.AddSeparator();
+            }
+
+            menu.AddItem("Delete", (int)RefContextAction.DeleteLocalBranch);
+        }
+
+        if (node.IsCurrent)
+        {
+            menu.AddSeparator();
+            menu.AddItem("Push", (int)RefContextAction.PushCurrentBranch);
+            menu.AddItem("Update", (int)RefContextAction.UpdateCurrentBranch);
+        }
+    }
+
+    private void PopulateRemoteBranchContextMenu(PopupMenu menu, GitRefNode node)
+    {
+        var shortName = node.ShortName ?? GetShortRefName(node.RefName ?? node.DisplayName);
+        menu.AddItem("Checkout", (int)RefContextAction.Checkout);
+        menu.AddItem($"New branch from '{shortName}'", (int)RefContextAction.NewBranchFrom);
+
+        menu.AddSeparator();
+        menu.AddItem($"Show Diff '{shortName}' with working tree", (int)RefContextAction.ShowDiffWithWorkingTree);
+        if (!_isDetachedHead)
+        {
+            menu.AddItem($"Show Diff current branch with '{shortName}'", (int)RefContextAction.ShowDiffCurrentBranchWithSelected);
+        }
+    }
+
+    private void PopulateTagContextMenu(PopupMenu menu, GitRefNode node)
+    {
+        var shortName = node.ShortName ?? GetShortRefName(node.RefName ?? node.DisplayName);
+        menu.AddItem("Checkout", (int)RefContextAction.Checkout);
+        menu.AddSeparator();
+        if (!_isDetachedHead)
+        {
+            menu.AddItem($"Compare current branch with tag '{shortName}'", (int)RefContextAction.ShowDiffCurrentBranchWithSelected);
+        }
+
+        menu.AddItem($"Compare tag '{shortName}' with working tree", (int)RefContextAction.ShowDiffWithWorkingTree);
+
+        menu.AddSeparator();
+        menu.AddItem("Push", (int)RefContextAction.PushTag);
+
+        menu.AddSeparator();
+        menu.AddItem("Delete locally", (int)RefContextAction.DeleteLocalTag);
+        if (node.ExistsOnPreferredRemote)
+        {
+            menu.AddItem("Delete remotely", (int)RefContextAction.DeleteRemoteTag);
+        }
+    }
+
+    private async Task HandleRefContextActionAsync(GitRefNode node, RefContextAction action)
+    {
+        if (string.IsNullOrWhiteSpace(node.RefName))
+        {
+            return;
+        }
+
+        switch (action)
+        {
+            case RefContextAction.Checkout:
+                await RunRefActionAsync(() => _gitService.CheckoutRef(_repoRootPath, node.RefName));
+                break;
+            case RefContextAction.NewBranchFrom:
+            {
+                var initialName = node.Kind is GitRefKind.RemoteBranch
+                    ? GetSuggestedBranchNameForRemote(node)
+                    : node.ShortName ?? GetShortRefName(node.RefName);
+                var branchName = await PromptForTextAsync("New Branch", "Branch name", initialName);
+                if (string.IsNullOrWhiteSpace(branchName)) return;
+                await RunRefActionAsync(() => _gitService.CreateBranchFromRef(_repoRootPath, node.RefName, branchName));
+                break;
+            }
+            case RefContextAction.ShowDiffWithWorkingTree:
+                // TODO
+                break;
+            case RefContextAction.ShowDiffCurrentBranchWithSelected:
+                //TODO
+                break;
+            case RefContextAction.RebaseCurrentOntoSelected:
+                if (await ConfirmAsync("Rebase Branch", $"Rebase current branch onto '{node.ShortName ?? GetShortRefName(node.RefName)}'?"))
+                {
+                    await RunRefActionAsync(() => _gitService.RebaseCurrentBranchOnto(_repoRootPath, node.RefName));
+                }
+                break;
+            case RefContextAction.MergeSelectedIntoCurrent:
+                if (await ConfirmAsync("Merge Branch", $"Merge '{node.ShortName ?? GetShortRefName(node.RefName)}' into the current branch?"))
+                {
+                    await RunRefActionAsync(() => _gitService.MergeRefIntoCurrent(_repoRootPath, node.RefName));
+                }
+                break;
+            case RefContextAction.UpdateCurrentBranch:
+                await RunRefActionAsync(() => _gitService.UpdateCurrentBranch(_repoRootPath));
+                break;
+            case RefContextAction.PushCurrentBranch:
+                await RunRefActionAsync(() => _gitService.PushCurrentBranch(_repoRootPath));
+                break;
+            case RefContextAction.Rename:
+            {
+                var newName = await PromptForTextAsync("Rename Branch", "Branch name", node.ShortName ?? GetShortRefName(node.RefName));
+                if (string.IsNullOrWhiteSpace(newName)) return;
+                await RunRefActionAsync(() => _gitService.RenameLocalBranch(_repoRootPath, node.RefName, newName));
+                break;
+            }
+            case RefContextAction.DeleteLocalBranch:
+                if (await ConfirmAsync("Delete Branch", $"Delete local branch '{node.ShortName ?? GetShortRefName(node.RefName)}'?"))
+                {
+                    await RunRefActionAsync(() => _gitService.DeleteLocalBranch(_repoRootPath, node.RefName));
+                }
+                break;
+            case RefContextAction.PushTag:
+                await RunRefActionAsync(() => _gitService.PushTag(_repoRootPath, node.RefName, node.PreferredRemoteName));
+                break;
+            case RefContextAction.DeleteLocalTag:
+                if (await ConfirmAsync("Delete Tag", $"Delete local tag '{node.ShortName ?? GetShortRefName(node.RefName)}'?"))
+                {
+                    await RunRefActionAsync(() => _gitService.DeleteLocalTag(_repoRootPath, node.RefName));
+                }
+                break;
+            case RefContextAction.DeleteRemoteTag:
+                if (await ConfirmAsync("Delete Remote Tag", $"Delete remote tag '{node.ShortName ?? GetShortRefName(node.RefName)}' from '{node.PreferredRemoteName}'?"))
+                {
+                    await RunRefActionAsync(() => _gitService.DeleteRemoteTag(_repoRootPath, node.RefName, node.PreferredRemoteName));
+                }
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action), action, null);
+        }
+    }
+
+    private async Task RunRefActionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorDialogAsync("Git Action Failed", ex.Message);
+        }
+        finally
+        {
+            _suppressRepositoryRefreshUntil = DateTimeOffset.UtcNow.AddMilliseconds(700);
+            await RefreshAsync();
+        }
     }
 
     private void OpenOrFocusScopedTab(string refName)
@@ -923,6 +1157,109 @@ public partial class GitPanel : Control
         var request = selected?.GetTypedMetadata<GitCommitFileDiffRequest>(0);
         if (request is null) return;
         GodotGlobalEvents.Instance.GitCommitDiffRequested.InvokeParallelFireAndForget(request);
+    }
+
+    private async Task<bool> ConfirmAsync(string title, string message)
+    {
+        var dialog = new ConfirmationDialog
+        {
+            Title = title,
+            DialogText = message
+        };
+        AddChild(dialog);
+
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        dialog.Confirmed += () => tcs.TrySetResult(true);
+        dialog.Canceled += () => tcs.TrySetResult(false);
+        dialog.CloseRequested += () => tcs.TrySetResult(false);
+        dialog.PopupCentered();
+
+        var result = await tcs.Task;
+        await this.InvokeDeferredAsync(() => dialog.QueueFree());
+        return result;
+    }
+
+    private async Task<string?> PromptForTextAsync(string title, string label, string initialText)
+    {
+        var dialog = new ConfirmationDialog
+        {
+            Title = title
+        };
+        var margin = new MarginContainer();
+        margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        margin.OffsetLeft = 8;
+        margin.OffsetTop = 8;
+        margin.OffsetRight = -8;
+        margin.OffsetBottom = -52;
+        var vbox = new VBoxContainer();
+        var labelControl = new Label { Text = label };
+        var lineEdit = new LineEdit { Text = initialText };
+        vbox.AddChild(labelControl);
+        vbox.AddChild(lineEdit);
+        margin.AddChild(vbox);
+        dialog.AddChild(margin);
+        AddChild(dialog);
+
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        dialog.Confirmed += () => tcs.TrySetResult(lineEdit.Text.Trim());
+        dialog.Canceled += () => tcs.TrySetResult(null);
+        dialog.CloseRequested += () => tcs.TrySetResult(null);
+        dialog.PopupCentered(new Vector2I(420, 0));
+        await this.InvokeAsync(() =>
+        {
+            lineEdit.GrabFocus();
+            lineEdit.SelectAll();
+        });
+
+        var result = await tcs.Task;
+        await this.InvokeDeferredAsync(() => dialog.QueueFree());
+        return result;
+    }
+
+    private async Task ShowErrorDialogAsync(string title, string message)
+    {
+        var dialog = new AcceptDialog
+        {
+            Title = title,
+            DialogText = message
+        };
+        AddChild(dialog);
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        dialog.Confirmed += () => tcs.TrySetResult();
+        dialog.CloseRequested += () => tcs.TrySetResult();
+        dialog.PopupCentered();
+        await tcs.Task;
+        await this.InvokeDeferredAsync(() => dialog.QueueFree());
+    }
+
+    private void PopupMenuAtMouse(PopupMenu menu)
+    {
+        var mousePosition = GetGlobalMousePosition();
+        menu.Position = new Vector2I((int)mousePosition.X, (int)mousePosition.Y);
+        menu.Popup();
+    }
+
+    private static TreeItem? SelectTreeItemAtPosition(Tree tree, Vector2 mousePosition)
+    {
+        var item = tree.GetItemAtPosition(mousePosition);
+        if (item is null) return null;
+
+        tree.SetSelected(item, 0);
+        return item;
+    }
+
+    private static string GetSuggestedBranchNameForRemote(GitRefNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.RefName))
+        {
+            return node.ShortName ?? string.Empty;
+        }
+
+        var friendlyName = GetShortRefName(node.RefName);
+        var separatorIndex = friendlyName.IndexOf('/');
+        return separatorIndex >= 0 && separatorIndex < friendlyName.Length - 1
+            ? friendlyName[(separatorIndex + 1)..]
+            : friendlyName;
     }
 
     private void OnHistoryScrolled()

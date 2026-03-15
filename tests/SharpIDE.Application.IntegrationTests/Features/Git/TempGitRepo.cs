@@ -31,7 +31,7 @@ internal sealed class TempGitRepo : IDisposable
         return absolutePath;
     }
 
-    public string Git(string arguments, IReadOnlyDictionary<string, string>? environment = null)
+    public string Git(string arguments, IReadOnlyDictionary<string, string>? environment = null, bool allowFailure = false)
     {
         var startInfo = new ProcessStartInfo("git", $"-C \"{RootPath}\" {arguments}")
         {
@@ -52,7 +52,7 @@ internal sealed class TempGitRepo : IDisposable
         var stdOut = process.StandardOutput.ReadToEnd();
         var stdErr = process.StandardError.ReadToEnd();
         process.WaitForExit();
-        if (process.ExitCode is not 0)
+        if (!allowFailure && process.ExitCode is not 0)
         {
             throw new InvalidOperationException($"git {arguments} failed:{Environment.NewLine}{stdErr}");
         }

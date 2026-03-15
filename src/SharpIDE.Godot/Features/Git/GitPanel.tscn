@@ -1,9 +1,9 @@
-[gd_scene format=3 uid="uid://9i3ti7fzysoh"]
+[gd_scene format=3 uid="uid://bai3ti7f0ysoh"]
 
 [ext_resource type="Script" uid="uid://qacg6nvcgb44" path="res://Features/Git/GitPanel.cs" id="1_gtrpn"]
 [ext_resource type="Texture2D" uid="uid://cmwkpdv6pxaai" path="res://Resources/refresh.svg" id="2_rfsh"]
 
-[node name="GitPanel" type="Control"]
+[node name="GitPanel" type="Control" unique_id=98814089]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -14,7 +14,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_gtrpn")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1637142594]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -23,143 +23,144 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="HeaderMargin" type="MarginContainer" parent="VBoxContainer"]
+[node name="HeaderMargin" type="MarginContainer" parent="VBoxContainer" unique_id=768169220]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 0
 
-[node name="HeaderHBox" type="HBoxContainer" parent="VBoxContainer/HeaderMargin"]
+[node name="HeaderHBox" type="HBoxContainer" parent="VBoxContainer/HeaderMargin" unique_id=1655147853]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="TabsBar" type="TabBar" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+[node name="TabsBar" type="TabBar" parent="VBoxContainer/HeaderMargin/HeaderHBox" unique_id=412677883]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-clip_tabs = true
 
-[node name="NewTabButton" type="Button" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+[node name="NewTabButton" type="Button" parent="VBoxContainer/HeaderMargin/HeaderHBox" unique_id=988094227]
 unique_name_in_owner = true
 layout_mode = 2
-flat = true
-text = "+"
 tooltip_text = "Open the current view in a new tab"
+text = "+"
+flat = true
 
-[node name="StatusLabel" type="Label" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+[node name="StatusLabel" type="Label" parent="VBoxContainer/HeaderMargin/HeaderHBox" unique_id=1810093363]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "No repository"
 
-[node name="RefreshButton" type="Button" parent="VBoxContainer/HeaderMargin/HeaderHBox"]
+[node name="RefreshButton" type="Button" parent="VBoxContainer/HeaderMargin/HeaderHBox" unique_id=1718595916]
 unique_name_in_owner = true
 layout_mode = 2
-flat = true
+tooltip_text = "Refresh"
 theme_override_constants/icon_max_width = 15
 icon = ExtResource("2_rfsh")
-tooltip_text = "Refresh"
+flat = true
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1269825712]
 layout_mode = 2
 
-[node name="BodyContainer" type="Control" parent="VBoxContainer"]
+[node name="BodyContainer" type="Control" parent="VBoxContainer" unique_id=824066575]
+clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-clip_contents = true
 
-[node name="ContentRoot" type="HSplitContainer" parent="VBoxContainer/BodyContainer"]
+[node name="ContentRoot" type="HSplitContainer" parent="VBoxContainer/BodyContainer" unique_id=1152813926]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-clip_contents = true
+split_offsets = PackedInt32Array(96, 0)
 split_offset = 96
 
-[node name="RefsPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot"]
+[node name="RefsPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot" unique_id=1326549745]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 2.0
 size_flags_vertical = 3
+size_flags_stretch_ratio = 2.0
 
-[node name="RefsVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel"]
+[node name="RefsVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel" unique_id=580492223]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="RefsLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel/RefsVBox"]
+[node name="RefsLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel/RefsVBox" unique_id=1635469191]
 layout_mode = 2
 text = "Refs"
 
-[node name="RefsTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel/RefsVBox"]
+[node name="RefsTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/RefsPanel/RefsVBox" unique_id=1324874209]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 0)
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(96, 0)
 
-[node name="HistoryPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot"]
+[node name="HistoryPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot" unique_id=1332142970]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 6.0
 size_flags_vertical = 3
+size_flags_stretch_ratio = 6.0
 
-[node name="HistoryVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel"]
+[node name="HistoryVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel" unique_id=847610439]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="SearchLineEdit" type="LineEdit" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel/HistoryVBox"]
+[node name="SearchLineEdit" type="LineEdit" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel/HistoryVBox" unique_id=88344893]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Search commit message, hash or @path"
 
-[node name="HistoryTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel/HistoryVBox"]
+[node name="HistoryTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/HistoryPanel/HistoryVBox" unique_id=239322611]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(320, 0)
 
-[node name="RightSplit" type="VSplitContainer" parent="VBoxContainer/BodyContainer/ContentRoot"]
+[node name="RightSplit" type="VSplitContainer" parent="VBoxContainer/BodyContainer/ContentRoot" unique_id=1727117537]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 2.0
 size_flags_vertical = 3
-clip_contents = true
+size_flags_stretch_ratio = 2.0
+split_offsets = PackedInt32Array(260)
 split_offset = 260
 
-[node name="FilesPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit"]
+[node name="FilesPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit" unique_id=264033502]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="FilesVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel"]
+[node name="FilesVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel" unique_id=6759315]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="FilesLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel/FilesVBox"]
+[node name="FilesLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel/FilesVBox" unique_id=1643934507]
 layout_mode = 2
 text = "Changed Files"
 
-[node name="FilesTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel/FilesVBox"]
+[node name="FilesTree" type="Tree" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/FilesPanel/FilesVBox" unique_id=137967868]
 unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
 custom_minimum_size = Vector2(220, 0)
-
-[node name="DetailsPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="DetailsMargin" type="MarginContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel"]
+[node name="DetailsPanel" type="PanelContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit" unique_id=1481295445]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsMargin" type="MarginContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel" unique_id=687965998]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -168,68 +169,63 @@ theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="DetailsVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin"]
+[node name="DetailsVBox" type="VBoxContainer" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin" unique_id=1173072712]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="DetailsLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+[node name="DetailsLabel" type="Label" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=795910532]
 layout_mode = 2
 text = "Commit Details"
 
-[node name="ShaLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+[node name="ShaLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=224577628]
 unique_name_in_owner = true
 layout_mode = 2
 bbcode_enabled = true
-fit_content = true
-scroll_active = false
 text = "[color=#93a0b5][b]Hash:[/b][/color]"
-
-[node name="AuthorLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
-unique_name_in_owner = true
-layout_mode = 2
-autowrap_mode = 3
-bbcode_enabled = true
 fit_content = true
 scroll_active = false
+
+[node name="AuthorLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=1509626403]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
 text = "[color=#93a0b5][b]Author:[/b][/color]"
-
-[node name="DateLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
-unique_name_in_owner = true
-layout_mode = 2
-autowrap_mode = 3
-bbcode_enabled = true
 fit_content = true
 scroll_active = false
+
+[node name="DateLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=1705526247]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
 text = "[color=#93a0b5][b]Date:[/b][/color]"
+fit_content = true
+scroll_active = false
 
-[node name="FriendlyDateLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+[node name="FriendlyDateLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=1121542765]
 unique_name_in_owner = true
 layout_mode = 2
 bbcode_enabled = true
-fit_content = true
-scroll_active = false
 text = "[color=#93a0b5][b]When:[/b][/color]"
-
-[node name="ParentsLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
-unique_name_in_owner = true
-layout_mode = 2
-autowrap_mode = 3
-bbcode_enabled = true
 fit_content = true
 scroll_active = false
-text = "[color=#93a0b5][b]Parents:[/b][/color]"
 
-[node name="MessageLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox"]
+[node name="ParentsLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=1800105082]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+text = "[color=#93a0b5][b]Parents:[/b][/color]"
+fit_content = true
+scroll_active = false
+
+[node name="MessageLabel" type="RichTextLabel" parent="VBoxContainer/BodyContainer/ContentRoot/RightSplit/DetailsPanel/DetailsMargin/DetailsVBox" unique_id=1494815498]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true
-scroll_active = true
-fit_content = false
 
-[node name="EmptyStateLabel" type="Label" parent="VBoxContainer/BodyContainer"]
+[node name="EmptyStateLabel" type="Label" parent="VBoxContainer/BodyContainer" unique_id=173278636]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -242,5 +238,5 @@ offset_right = -6.0
 offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 2
-autowrap_mode = 3
 text = "No git repository was found for the current solution."
+autowrap_mode = 3

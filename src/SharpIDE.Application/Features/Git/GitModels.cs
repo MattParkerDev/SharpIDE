@@ -72,6 +72,10 @@ public sealed class GitRefNode
 {
     public required string DisplayName { get; init; }
     public string? RefName { get; init; }
+    public string? ShortName { get; init; }
+    public string? UpstreamRefName { get; init; }
+    public string? PreferredRemoteName { get; init; }
+    public required bool ExistsOnPreferredRemote { get; init; }
     public required GitRefKind Kind { get; init; }
     public required bool IsSelectable { get; init; }
     public required bool IsCurrent { get; init; }

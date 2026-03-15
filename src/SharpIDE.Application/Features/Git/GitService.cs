@@ -320,6 +320,163 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         EnsureSuccess(result, "Push failed.");
     }
 
+    public async Task PushCurrentBranch(string repoRoot, CancellationToken cancellationToken = default)
+    {
+        await Push(repoRoot, cancellationToken);
+    }
+
+    public async Task CheckoutRef(string repoRoot, string refName, CancellationToken cancellationToken = default)
+    {
+        using var repo = OpenRepository(repoRoot);
+        if (IsRemoteBranchRef(refName))
+        {
+            var remoteFriendlyName = GetFriendlyRefName(refName);
+            var localBranchName = GetLocalBranchNameForRemoteRef(refName);
+            var localBranch = repo.Branches[localBranchName];
+            var result = localBranch is null
+                ? await ExecuteGitBufferedAsync(repoRoot, ["checkout", "--track", "-b", localBranchName, remoteFriendlyName], cancellationToken)
+                : await ExecuteGitBufferedAsync(repoRoot, ["checkout", localBranchName], cancellationToken);
+            EnsureSuccess(result, "Checkout failed.");
+            return;
+        }
+
+        var checkoutResult = await ExecuteGitBufferedAsync(repoRoot, ["checkout", GetFriendlyRefName(refName)], cancellationToken);
+        EnsureSuccess(checkoutResult, "Checkout failed.");
+    }
+
+    public async Task CreateBranchFromRef(string repoRoot, string sourceRefName, string newBranchName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(newBranchName))
+        {
+            throw new InvalidOperationException("Branch name cannot be empty.");
+        }
+
+        BufferedCommandResult result;
+        if (IsRemoteBranchRef(sourceRefName))
+        {
+            result = await ExecuteGitBufferedAsync(
+                repoRoot,
+                ["checkout", "--track", "-b", newBranchName.Trim(), GetFriendlyRefName(sourceRefName)],
+                cancellationToken);
+        }
+        else
+        {
+            result = await ExecuteGitBufferedAsync(
+                repoRoot,
+                ["checkout", "-b", newBranchName.Trim(), GetFriendlyRefName(sourceRefName)],
+                cancellationToken);
+        }
+
+        EnsureSuccess(result, "Failed to create branch.");
+    }
+
+    public async Task RenameLocalBranch(string repoRoot, string branchRefName, string newBranchName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(newBranchName))
+        {
+            throw new InvalidOperationException("Branch name cannot be empty.");
+        }
+
+        using var repo = OpenRepository(repoRoot);
+        var branch = ResolveBranch(repo, branchRefName)
+            ?? throw new InvalidOperationException($"Branch '{branchRefName}' was not found.");
+        if (branch.IsRemote)
+        {
+            throw new InvalidOperationException("Only local branches can be renamed.");
+        }
+
+        if (branch.TrackedBranch is not null)
+        {
+            throw new InvalidOperationException("Tracked branches cannot be renamed.");
+        }
+
+        var result = await ExecuteGitBufferedAsync(
+            repoRoot,
+            ["branch", "-m", branch.FriendlyName, newBranchName.Trim()],
+            cancellationToken);
+        EnsureSuccess(result, "Failed to rename branch.");
+    }
+
+    public async Task DeleteLocalBranch(string repoRoot, string branchRefName, CancellationToken cancellationToken = default)
+    {
+        using var repo = OpenRepository(repoRoot);
+        var branch = ResolveBranch(repo, branchRefName)
+            ?? throw new InvalidOperationException($"Branch '{branchRefName}' was not found.");
+        if (branch.IsRemote)
+        {
+            throw new InvalidOperationException("Only local branches can be deleted.");
+        }
+
+        var result = await ExecuteGitBufferedAsync(repoRoot, ["branch", "-d", branch.FriendlyName], cancellationToken);
+        EnsureSuccess(result, "Failed to delete branch.");
+    }
+
+    public async Task MergeRefIntoCurrent(string repoRoot, string refName, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteGitBufferedAsync(repoRoot, ["merge", GetFriendlyRefName(refName)], cancellationToken);
+        EnsureSuccess(result, "Merge failed.");
+    }
+
+    public async Task RebaseCurrentBranchOnto(string repoRoot, string refName, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteGitBufferedAsync(repoRoot, ["rebase", GetFriendlyRefName(refName)], cancellationToken);
+        EnsureSuccess(result, "Rebase failed.");
+    }
+
+    public async Task UpdateCurrentBranch(string repoRoot, CancellationToken cancellationToken = default)
+    {
+        using var repo = OpenRepository(repoRoot);
+        if (repo.Info.IsHeadDetached)
+        {
+            throw new InvalidOperationException("Cannot update while HEAD is detached.");
+        }
+
+        var fetchResult = await ExecuteGitBufferedAsync(repoRoot, ["fetch", "--all", "--prune"], cancellationToken);
+        EnsureSuccess(fetchResult, "Fetch failed.");
+
+        var pullResult = await ExecuteGitBufferedAsync(repoRoot, ["pull", "--ff-only"], cancellationToken);
+        EnsureSuccess(pullResult, "Pull failed.");
+    }
+
+    public async Task PushTag(string repoRoot, string tagRefName, string? remoteName = null, CancellationToken cancellationToken = default)
+    {
+        using var repo = OpenRepository(repoRoot);
+        var effectiveRemoteName = string.IsNullOrWhiteSpace(remoteName)
+            ? ResolvePreferredRemoteName(repo)
+            : remoteName;
+        if (string.IsNullOrWhiteSpace(effectiveRemoteName))
+        {
+            throw new InvalidOperationException("No git remote is configured.");
+        }
+
+        var result = await ExecuteGitBufferedAsync(repoRoot, ["push", effectiveRemoteName, GetFriendlyRefName(tagRefName)], cancellationToken);
+        EnsureSuccess(result, "Failed to push tag.");
+    }
+
+    public async Task DeleteLocalTag(string repoRoot, string tagRefName, CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteGitBufferedAsync(repoRoot, ["tag", "-d", GetFriendlyRefName(tagRefName)], cancellationToken);
+        EnsureSuccess(result, "Failed to delete local tag.");
+    }
+
+    public async Task DeleteRemoteTag(string repoRoot, string tagRefName, string? remoteName = null, CancellationToken cancellationToken = default)
+    {
+        using var repo = OpenRepository(repoRoot);
+        var effectiveRemoteName = string.IsNullOrWhiteSpace(remoteName)
+            ? ResolvePreferredRemoteName(repo)
+            : remoteName;
+        if (string.IsNullOrWhiteSpace(effectiveRemoteName))
+        {
+            throw new InvalidOperationException("No git remote is configured.");
+        }
+
+        var result = await ExecuteGitBufferedAsync(
+            repoRoot,
+            ["push", effectiveRemoteName, $":refs/tags/{GetFriendlyRefName(tagRefName)}"],
+            cancellationToken);
+        EnsureSuccess(result, "Failed to delete remote tag.");
+    }
+
     public Task Reset(string repoRoot, string commitSha, ResetMode mode, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
@@ -1017,11 +1174,16 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         using var repo = new Repository(gitPath);
         var currentRefName = repo.Head.CanonicalName;
         var mainRefName = ResolveMainRefName(repo);
+        var preferredRemoteName = ResolvePreferredRemoteName(repo);
 
         var headNode = new GitRefNode
         {
             DisplayName = "HEAD (Current Branch)",
             RefName = currentRefName,
+            ShortName = repo.Head.FriendlyName,
+            UpstreamRefName = repo.Head.TrackedBranch?.CanonicalName,
+            PreferredRemoteName = preferredRemoteName,
+            ExistsOnPreferredRemote = false,
             Kind = GitRefKind.Head,
             IsSelectable = true,
             IsCurrent = true,
@@ -1032,7 +1194,7 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         var localChildren = repo.Branches
             .Where(branch => !branch.IsRemote)
             .OrderBy(branch => branch.FriendlyName, StringComparer.OrdinalIgnoreCase)
-            .Select(branch => CreateBranchNode(branch, mainRefName, currentRefName))
+            .Select(branch => CreateBranchNode(branch, mainRefName, currentRefName, preferredRemoteName))
             .ToList();
 
         var remoteRoot = new Dictionary<string, RemoteTreeNode>(StringComparer.OrdinalIgnoreCase);
@@ -1059,7 +1221,7 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
 
         var remoteChildren = remoteRoot.Values
             .OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(node => node.ToGitRefNode(mainRefName, currentRefName))
+            .Select(node => node.ToGitRefNode(mainRefName, currentRefName, preferredRemoteName))
             .ToList();
 
         var tagChildren = repo.Tags
@@ -1068,6 +1230,10 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             {
                 DisplayName = tag.FriendlyName,
                 RefName = tag.CanonicalName,
+                ShortName = tag.FriendlyName,
+                UpstreamRefName = null,
+                PreferredRemoteName = preferredRemoteName,
+                ExistsOnPreferredRemote = TagExistsOnRemote(repo.Info.WorkingDirectory, preferredRemoteName, tag.FriendlyName),
                 Kind = GitRefKind.Tag,
                 IsSelectable = true,
                 IsCurrent = false,
@@ -1083,6 +1249,10 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             {
                 DisplayName = "Local",
                 RefName = null,
+                ShortName = null,
+                UpstreamRefName = null,
+                PreferredRemoteName = preferredRemoteName,
+                ExistsOnPreferredRemote = false,
                 Kind = GitRefKind.Category,
                 IsSelectable = false,
                 IsCurrent = false,
@@ -1093,6 +1263,10 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             {
                 DisplayName = "Remote",
                 RefName = null,
+                ShortName = null,
+                UpstreamRefName = null,
+                PreferredRemoteName = preferredRemoteName,
+                ExistsOnPreferredRemote = false,
                 Kind = GitRefKind.Category,
                 IsSelectable = false,
                 IsCurrent = false,
@@ -1103,6 +1277,10 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             {
                 DisplayName = "Tags",
                 RefName = null,
+                ShortName = null,
+                UpstreamRefName = null,
+                PreferredRemoteName = preferredRemoteName,
+                ExistsOnPreferredRemote = false,
                 Kind = GitRefKind.Category,
                 IsSelectable = false,
                 IsCurrent = false,
@@ -1601,7 +1779,7 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         return repo.Head.CanonicalName;
     }
 
-    private static GitRefNode CreateBranchNode(Branch branch, string mainRefName, string currentRefName)
+    private static GitRefNode CreateBranchNode(Branch branch, string mainRefName, string currentRefName, string? preferredRemoteName)
     {
         var markers = new List<string>();
         if (string.Equals(branch.CanonicalName, currentRefName, StringComparison.Ordinal))
@@ -1622,6 +1800,10 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         {
             DisplayName = displayName,
             RefName = branch.CanonicalName,
+            ShortName = branch.FriendlyName,
+            UpstreamRefName = branch.TrackedBranch?.CanonicalName,
+            PreferredRemoteName = preferredRemoteName,
+            ExistsOnPreferredRemote = false,
             Kind = branch.IsRemote ? GitRefKind.RemoteBranch : GitRefKind.LocalBranch,
             IsSelectable = true,
             IsCurrent = string.Equals(branch.CanonicalName, currentRefName, StringComparison.Ordinal),
@@ -2010,6 +2192,65 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
 
     private static string NormalizeNewLines(string text) => text.Replace("\r\n", "\n");
 
+    private static Branch? ResolveBranch(Repository repo, string branchRefName)
+    {
+        return repo.Branches.FirstOrDefault(branch =>
+            string.Equals(branch.CanonicalName, branchRefName, StringComparison.Ordinal) ||
+            string.Equals(branch.FriendlyName, branchRefName, StringComparison.Ordinal));
+    }
+
+    private static string GetFriendlyRefName(string refName)
+    {
+        if (refName.StartsWith("refs/heads/", StringComparison.Ordinal))
+        {
+            return refName["refs/heads/".Length..];
+        }
+
+        if (refName.StartsWith("refs/remotes/", StringComparison.Ordinal))
+        {
+            return refName["refs/remotes/".Length..];
+        }
+
+        if (refName.StartsWith("refs/tags/", StringComparison.Ordinal))
+        {
+            return refName["refs/tags/".Length..];
+        }
+
+        return refName;
+    }
+
+    private static bool IsRemoteBranchRef(string refName) => refName.StartsWith("refs/remotes/", StringComparison.Ordinal);
+
+    private static string GetLocalBranchNameForRemoteRef(string refName)
+    {
+        var friendlyName = GetFriendlyRefName(refName);
+        var slashIndex = friendlyName.IndexOf('/');
+        if (slashIndex < 0 || slashIndex == friendlyName.Length - 1)
+        {
+            throw new InvalidOperationException($"Remote ref '{refName}' does not have a local branch name.");
+        }
+
+        return friendlyName[(slashIndex + 1)..];
+    }
+
+    private static string? ResolvePreferredRemoteName(Repository repo)
+    {
+        return repo.Network.Remotes.Any(static remote => string.Equals(remote.Name, "origin", StringComparison.Ordinal))
+            ? "origin"
+            : repo.Network.Remotes.Select(static remote => remote.Name).FirstOrDefault();
+    }
+
+    private static bool TagExistsOnRemote(string repoRoot, string? remoteName, string tagName)
+    {
+        if (string.IsNullOrWhiteSpace(remoteName))
+        {
+            return false;
+        }
+
+        var result = ExecuteGitBuffered(repoRoot, ["ls-remote", "--tags", remoteName, $"refs/tags/{tagName}"]);
+        return result.ExitCode is 0 && string.IsNullOrWhiteSpace(result.StandardOutput) is false;
+    }
+
     private static void EnsureSuccess(GitCommandResult result, string fallbackMessage)
     {
         if (result.ExitCode is 0) return;
@@ -2100,20 +2341,24 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             return created;
         }
 
-        public GitRefNode ToGitRefNode(string mainRefName, string currentRefName)
+        public GitRefNode ToGitRefNode(string mainRefName, string currentRefName, string? preferredRemoteName)
         {
             var childNodes = new List<GitRefNode>();
             childNodes.AddRange(Children.Values
                 .OrderBy(child => child.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(child => child.ToGitRefNode(mainRefName, currentRefName)));
+                .Select(child => child.ToGitRefNode(mainRefName, currentRefName, preferredRemoteName)));
             childNodes.AddRange(Branches
                 .OrderBy(branch => branch.FriendlyName, StringComparer.OrdinalIgnoreCase)
-                .Select(branch => CreateBranchNode(branch, mainRefName, currentRefName)));
+                .Select(branch => CreateBranchNode(branch, mainRefName, currentRefName, preferredRemoteName)));
 
             return new GitRefNode
             {
                 DisplayName = Name,
                 RefName = Branch?.CanonicalName,
+                ShortName = Branch?.FriendlyName,
+                UpstreamRefName = Branch?.TrackedBranch?.CanonicalName,
+                PreferredRemoteName = preferredRemoteName,
+                ExistsOnPreferredRemote = false,
                 Kind = GitRefKind.Category,
                 IsSelectable = false,
                 IsCurrent = false,

@@ -123,6 +123,13 @@ public partial class CommitPanel : MarginContainer
         _changesTree.SelectMode = Tree.SelectModeEnum.Row;
         _changesTree.SetColumnExpand(0, false);
         _changesTree.SetColumnCustomMinimumWidth(0, 28);
+        _changesTree.SetColumnExpand(1, true);
+        _changesTree.SetColumnExpandRatio(1, 5);
+        _changesTree.SetColumnClipContent(1, true);
+        _changesTree.SetColumnExpand(2, true);
+        _changesTree.SetColumnExpandRatio(2, 2);
+        _changesTree.SetColumnCustomMinimumWidth(2, 40);
+        _changesTree.SetColumnClipContent(2, true);
         _changesTree.ColumnTitlesVisible = false;
 
         _stashesTree.HideRoot = true;
@@ -299,6 +306,9 @@ public partial class CommitPanel : MarginContainer
             ApplyCheckboxState(item, entry.StageDisplayState);
             item.SetText(1, $"{GetStatusPrefix(entry)}{entry.FileName}");
             item.SetText(2, entry.DirectoryDisplayPath);
+            item.SetTextAlignment(2, HorizontalAlignment.Right);
+            item.SetTextOverrunBehavior(1, TextServer.OverrunBehavior.TrimEllipsis);
+            item.SetTextOverrunBehavior(2, TextServer.OverrunBehavior.TrimEllipsis);
             item.SetTooltipText(1, entry.RepoRelativePath);
             item.SetTooltipText(2, entry.RepoRelativePath);
             ApplyEntryItemStyles(item, entry);
