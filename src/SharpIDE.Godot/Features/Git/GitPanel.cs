@@ -545,7 +545,7 @@ public partial class GitPanel : Control
     private void CreateRefItem(TreeItem parent, GitRefNode node)
     {
         var item = _refsTree.CreateItem(parent);
-        item.SetMetadata(0, new RefCountedContainer(node));
+        item.SetAssociatedValue(node);
         item.SetCellMode(0, TreeItem.TreeCellMode.Custom);
         item.SetCustomAsButton(0, true);
         item.SetCustomDrawCallback(0, _refDrawCallable);
@@ -585,7 +585,7 @@ public partial class GitPanel : Control
 
     private static TreeItem? FindRefItemRecursive(TreeItem item, string refName)
     {
-        if (item.GetTypedMetadata<GitRefNode>(0)?.RefName == refName)
+        if (item.GetAssociatedValue<GitRefNode>()?.RefName == refName)
         {
             return item;
         }
@@ -611,7 +611,7 @@ public partial class GitPanel : Control
     {
         if (_suppressRefSelection) return;
         var selected = _refsTree.GetSelected();
-        var node = selected?.GetTypedMetadata<GitRefNode>(0);
+        var node = selected?.GetAssociatedValue<GitRefNode>();
         if (node is null || !node.IsSelectable || string.IsNullOrWhiteSpace(node.RefName)) return;
         OpenOrFocusScopedTab(node.RefName);
     }
@@ -619,7 +619,7 @@ public partial class GitPanel : Control
     private void OnRefsTreeItemActivated()
     {
         var selected = _refsTree.GetSelected();
-        var node = selected?.GetTypedMetadata<GitRefNode>(0);
+        var node = selected?.GetAssociatedValue<GitRefNode>();
         if (node is null || !node.IsSelectable || string.IsNullOrWhiteSpace(node.RefName)) return;
 
         OpenOrFocusScopedTab(node.RefName);
@@ -632,7 +632,7 @@ public partial class GitPanel : Control
         _suppressRefSelection = true;
         var selected = SelectTreeItemAtPosition(_refsTree, mouseEvent.Position);
         _suppressRefSelection = false;
-        var node = selected?.GetTypedMetadata<GitRefNode>(0);
+        var node = selected?.GetAssociatedValue<GitRefNode>();
         if (node is null || !node.IsSelectable || string.IsNullOrWhiteSpace(node.RefName) || node.Kind is GitRefKind.Head)
         {
             return;
@@ -988,7 +988,7 @@ public partial class GitPanel : Control
         {
             var row = _historyRows[rowIndex];
             var item = _historyTree.CreateItem(root);
-            item.SetMetadata(0, new RefCountedContainer(row));
+            item.SetAssociatedValue(row);
             item.SetMetadata(1, rowIndex);
             item.SetCellMode(0, TreeItem.TreeCellMode.Custom);
             item.SetCellMode(1, TreeItem.TreeCellMode.Custom);
@@ -1013,7 +1013,7 @@ public partial class GitPanel : Control
         {
             for (var child = root.GetFirstChild(); child is not null; child = child.GetNext())
             {
-                var row = child.GetTypedMetadata<GitHistoryRow>(0);
+                var row = child.GetAssociatedValue<GitHistoryRow>();
                 if (row is null || !string.Equals(row.Sha, commitSha, StringComparison.Ordinal)) continue;
                 target = child;
                 break;
@@ -1024,7 +1024,7 @@ public partial class GitPanel : Control
         {
             for (var child = root.GetFirstChild(); child is not null; child = child.GetNext())
             {
-                var row = child.GetTypedMetadata<GitHistoryRow>(0);
+                var row = child.GetAssociatedValue<GitHistoryRow>();
                 if (row is null) continue;
                 target = child;
                 break;
@@ -1040,7 +1040,7 @@ public partial class GitPanel : Control
     private void OnHistoryTreeItemSelected()
     {
         var selected = _historyTree.GetSelected();
-        var row = selected?.GetTypedMetadata<GitHistoryRow>(0);
+        var row = selected?.GetAssociatedValue<GitHistoryRow>();
         if (row is null) return;
         var requestedCommitSha = row.Sha;
         var requestedRepoRootPath = _repoRootPath;
@@ -1076,7 +1076,7 @@ public partial class GitPanel : Control
         }
 
         var selected = SelectContextTreeItemAtPosition(_historyTree, mouseEvent.Position);
-        var row = selected?.GetTypedMetadata<GitHistoryRow>(0);
+        var row = selected?.GetAssociatedValue<GitHistoryRow>();
         if (row is null)
         {
             return;
@@ -1181,7 +1181,7 @@ public partial class GitPanel : Control
             item.SetText(1, file.StatusCode);
             item.SetTooltipText(0, file.DisplayPath);
             ApplyCommitChangeItemStyles(item, file);
-            item.SetMetadata(0, new RefCountedContainer(new GitCommitTreeFileNode
+            item.SetAssociatedValue(new GitCommitTreeFileNode
             {
                 File = file,
                 AbsolutePath = absolutePath,
@@ -1200,7 +1200,7 @@ public partial class GitPanel : Control
                     OldRepoRelativePath = file.OldRepoRelativePath,
                     StatusCode = file.StatusCode
                 }
-            }));
+            });
         }
     }
 
@@ -1297,7 +1297,7 @@ public partial class GitPanel : Control
     private void OnFilesTreeItemActivated()
     {
         var selected = _filesTree.GetSelected();
-        var fileNode = selected?.GetTypedMetadata<GitCommitTreeFileNode>(0);
+        var fileNode = selected?.GetAssociatedValue<GitCommitTreeFileNode>();
         if (fileNode is null) return;
         GodotGlobalEvents.Instance.GitCommitDiffRequested.InvokeParallelFireAndForget(fileNode.DiffRequest);
     }
@@ -1310,7 +1310,7 @@ public partial class GitPanel : Control
         }
 
         var selected = SelectContextTreeItemAtPosition(_filesTree, mouseEvent.Position);
-        var fileNode = selected?.GetTypedMetadata<GitCommitTreeFileNode>(0);
+        var fileNode = selected?.GetAssociatedValue<GitCommitTreeFileNode>();
         if (fileNode is null)
         {
             return;
@@ -1773,7 +1773,7 @@ public partial class GitPanel : Control
     private List<GitHistoryRow> GetSelectedHistoryRows()
     {
         return GetSelectedTreeItems(_historyTree)
-            .Select(item => item.GetTypedMetadata<GitHistoryRow>(0))
+            .Select(item => item.GetAssociatedValue<GitHistoryRow>())
             .OfType<GitHistoryRow>()
             .ToList();
     }
@@ -1781,7 +1781,7 @@ public partial class GitPanel : Control
     private List<GitCommitTreeFileNode> GetSelectedCommitFileNodes()
     {
         return GetSelectedTreeItems(_filesTree)
-            .Select(item => item.GetTypedMetadata<GitCommitTreeFileNode>(0))
+            .Select(item => item.GetAssociatedValue<GitCommitTreeFileNode>())
             .OfType<GitCommitTreeFileNode>()
             .ToList();
     }
@@ -1893,7 +1893,7 @@ public partial class GitPanel : Control
 
     private void RefCustomDraw(TreeItem treeItem, Rect2 rect)
     {
-        var node = treeItem.GetTypedMetadata<GitRefNode>(0);
+        var node = treeItem.GetAssociatedValue<GitRefNode>();
         if (node is null) return;
         var textColor = ResolveTextColor(_refsTree, treeItem);
         var font = _refsTree.GetThemeFont(ThemeStringNames.Font);
@@ -1906,7 +1906,7 @@ public partial class GitPanel : Control
 
     private void HistorySubjectCustomDraw(TreeItem treeItem, Rect2 rect)
     {
-        var row = treeItem.GetTypedMetadata<GitHistoryRow>(0);
+        var row = treeItem.GetAssociatedValue<GitHistoryRow>();
         if (row is null) return;
 
         var textColor = ResolveHistoryRowTextColor(treeItem, row);
@@ -1973,7 +1973,7 @@ public partial class GitPanel : Control
 
     private void HistoryAuthorCustomDraw(TreeItem treeItem, Rect2 rect)
     {
-        var row = treeItem.GetTypedMetadata<GitHistoryRow>(0);
+        var row = treeItem.GetAssociatedValue<GitHistoryRow>();
         if (row is null) return;
 
         var textColor = ResolveHistoryRowTextColor(treeItem, row);
@@ -1989,7 +1989,7 @@ public partial class GitPanel : Control
 
     private void HistoryTimestampCustomDraw(TreeItem treeItem, Rect2 rect)
     {
-        var row = treeItem.GetTypedMetadata<GitHistoryRow>(0);
+        var row = treeItem.GetAssociatedValue<GitHistoryRow>();
         if (row is null) return;
 
         var textColor = new Color(ResolveHistoryRowTextColor(treeItem, row), 0.78f);

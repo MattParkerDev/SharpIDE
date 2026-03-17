@@ -290,7 +290,7 @@ public partial class CommitPanel : MarginContainer
         if (entries.Count is 0) return;
 
         var groupItem = _changesTree.CreateItem(root);
-        groupItem.SetMetadata(0, new RefCountedContainer(group));
+        groupItem.SetAssociatedValue(group);
         groupItem.SetCellMode(0, TreeItem.TreeCellMode.Check);
         groupItem.SetEditable(0, true);
         ApplyCheckboxState(groupItem, GetAggregateStageDisplayState(entries));
@@ -300,7 +300,7 @@ public partial class CommitPanel : MarginContainer
         foreach (var entry in entries)
         {
             var item = _changesTree.CreateItem(groupItem);
-            item.SetMetadata(0, new RefCountedContainer(entry));
+            item.SetAssociatedValue(entry);
             item.SetCellMode(0, TreeItem.TreeCellMode.Check);
             item.SetEditable(0, true);
             ApplyCheckboxState(item, entry.StageDisplayState);
@@ -333,18 +333,18 @@ public partial class CommitPanel : MarginContainer
             foreach (var stash in _snapshot.Stashes)
             {
                 var stashItem = _stashesTree.CreateItem(root);
-                stashItem.SetMetadata(0, new RefCountedContainer(stash));
+                stashItem.SetAssociatedValue(stash);
                 stashItem.SetText(0, $"{stash.StashRef}  {stash.Message}");
                 stashItem.Collapsed = true;
 
                 foreach (var file in stash.Files)
                 {
                     var child = _stashesTree.CreateItem(stashItem);
-                    child.SetMetadata(0, new RefCountedContainer(new GitStashTreeFileNode
+                    child.SetAssociatedValue(new GitStashTreeFileNode
                     {
                         Entry = stash,
                         File = file
-                    }));
+                    });
                     child.SetText(0, $"{GetStatusPrefix(file.StatusCode)}{file.DisplayPath}");
                     child.SetTooltipText(0, file.RepoRelativePath);
                     ApplyStashFileItemStyles(child, file);
@@ -369,13 +369,13 @@ public partial class CommitPanel : MarginContainer
         {
             try
             {
-                if (editedItem.GetTypedMetadata<GitWorkingTreeEntry>(0) is { } entry)
+                if (editedItem.GetAssociatedValue<GitWorkingTreeEntry>() is { } entry)
                 {
                     await ToggleStageAsync([entry.AbsolutePath], editedItem.IsChecked(0));
                     return;
                 }
 
-                if (editedItem.TryGetTypedMetadata<GitWorkingTreeGroup>(0, out var group))
+                if (editedItem.TryGetAssociatedValue<GitWorkingTreeGroup>(out var group))
                 {
                     var paths = _snapshot.WorkingTreeEntries
                         .Where(entry => entry.Group == group)
@@ -402,7 +402,7 @@ public partial class CommitPanel : MarginContainer
         }
 
         var selected = _changesTree.GetSelected();
-        var entry = selected?.GetTypedMetadata<GitWorkingTreeEntry>(0);
+        var entry = selected?.GetAssociatedValue<GitWorkingTreeEntry>();
         if (entry is null) return;
 
         GodotGlobalEvents.Instance.GitFilePreviewRequested.InvokeParallelFireAndForget(entry.AbsolutePath);
@@ -411,7 +411,7 @@ public partial class CommitPanel : MarginContainer
     private void OnChangesTreeItemActivated()
     {
         var selected = _changesTree.GetSelected();
-        var entry = selected?.GetTypedMetadata<GitWorkingTreeEntry>(0);
+        var entry = selected?.GetAssociatedValue<GitWorkingTreeEntry>();
         if (entry is null) return;
 
         OpenSolutionFileOrReveal(entry.AbsolutePath);
@@ -430,7 +430,7 @@ public partial class CommitPanel : MarginContainer
         if (mouseEvent.ButtonIndex is not MouseButton.Right) return;
 
         var selected = SelectTreeItemAtPosition(_changesTree, mouseEvent.Position);
-        var entry = selected?.GetTypedMetadata<GitWorkingTreeEntry>(0);
+        var entry = selected?.GetAssociatedValue<GitWorkingTreeEntry>();
         if (entry is null) return;
 
         OpenChangedFileContextMenu(entry);
@@ -547,13 +547,13 @@ public partial class CommitPanel : MarginContainer
         var selected = _stashesTree.GetSelected();
         if (selected is null) return;
 
-        if (selected.GetTypedMetadata<GitStashTreeFileNode>(0) is { } fileNode)
+        if (selected.GetAssociatedValue<GitStashTreeFileNode>() is { } fileNode)
         {
             PreviewStashFile(fileNode.Entry, fileNode.File);
             return;
         }
 
-        if (selected.GetTypedMetadata<GitStashEntry>(0) is not null)
+        if (selected.GetAssociatedValue<GitStashEntry>() is not null)
         {
             selected.Collapsed = !selected.Collapsed;
         }
@@ -566,14 +566,14 @@ public partial class CommitPanel : MarginContainer
         var selected = SelectTreeItemAtPosition(_stashesTree, mouseEvent.Position);
         if (selected is null) return;
 
-        if (selected.GetTypedMetadata<GitStashTreeFileNode>(0) is { } fileNode)
+        if (selected.GetAssociatedValue<GitStashTreeFileNode>() is { } fileNode)
         {
             OpenStashFileContextMenu(fileNode);
             _stashesTree.AcceptEvent();
             return;
         }
 
-        if (selected.GetTypedMetadata<GitStashEntry>(0) is { } entry)
+        if (selected.GetAssociatedValue<GitStashEntry>() is { } entry)
         {
             OpenStashRootContextMenu(entry);
             _stashesTree.AcceptEvent();
@@ -963,7 +963,7 @@ public partial class CommitPanel : MarginContainer
 
             for (var groupItem = root.GetFirstChild(); groupItem is not null; groupItem = groupItem.GetNext())
             {
-                if (!groupItem.TryGetTypedMetadata<GitWorkingTreeGroup>(0, out var group)) continue;
+                if (!groupItem.TryGetAssociatedValue<GitWorkingTreeGroup>(out var group)) continue;
 
                 var groupEntries = _snapshot.WorkingTreeEntries
                     .Where(entry => entry.Group == group)
@@ -973,11 +973,11 @@ public partial class CommitPanel : MarginContainer
 
                 for (var item = groupItem.GetFirstChild(); item is not null; item = item.GetNext())
                 {
-                    var entry = item.GetTypedMetadata<GitWorkingTreeEntry>(0);
+                    var entry = item.GetAssociatedValue<GitWorkingTreeEntry>();
                     if (entry is null) continue;
                     if (!groupEntries.TryGetValue(entry.AbsolutePath, out var updatedEntry)) continue;
 
-                    item.SetMetadata(0, new RefCountedContainer(updatedEntry));
+                    item.SetAssociatedValue(updatedEntry);
                     ApplyCheckboxState(item, updatedEntry.StageDisplayState);
                     ApplyEntryItemStyles(item, updatedEntry);
                 }
