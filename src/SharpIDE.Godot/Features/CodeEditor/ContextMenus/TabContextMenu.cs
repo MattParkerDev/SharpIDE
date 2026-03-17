@@ -15,7 +15,7 @@ file enum TabContextMenuOptions
 
 public partial class CodeEditorPanel
 {
-    private readonly PackedScene _renameFileDialogScene = GD.Load<PackedScene>("uid://b775b5j4rkxxw");
+    private readonly PackedScene _renameFileDialogScene = ResourceLoader.Load<PackedScene>("uid://b775b5j4rkxxw");
 
     private void OpenContextMenuTab(long tabIndex)
     {
