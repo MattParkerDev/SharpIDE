@@ -1,5 +1,4 @@
 ﻿using Godot;
-
 using SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -34,21 +33,22 @@ public partial class CodeEditorPanel
         menu.PopupHide += () => menu.QueueFree();
         menu.IdPressed += id =>
         {
-            var file = _tabContainer.GetChild<SharpIdeCodeEditContainer>((int)tabIndex).CodeEdit.SharpIdeFile;
+            var sharpIdeCodeEditContainer = (SharpIdeCodeEditContainer)_tabContainer.GetTabControl((int)tabIndex);
+            var file = sharpIdeCodeEditContainer.CodeEdit.SharpIdeFile;
 
             var actionId = (TabContextMenuOptions)id;
             if (actionId is TabContextMenuOptions.Close)
             {
-                CloseTab(tabIndex);
+                CloseTabs([sharpIdeCodeEditContainer]);
             }
             else if (actionId is TabContextMenuOptions.CloseOtherTabs)
             {
-                var otherTabs = _tabContainer.GetChildren().Select((_, i) => (long)i).Except([tabIndex]).ToList();
+                var otherTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Except([sharpIdeCodeEditContainer]).ToList();
                 CloseTabs(otherTabs);
             }
             else if (actionId is TabContextMenuOptions.CloseAllTabs)
             {
-                var allTabs = _tabContainer.GetChildren().Select((_, i) => (long)i).ToList();
+                var allTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().ToList();
                 CloseTabs(allTabs);
             }
             else if (actionId is TabContextMenuOptions.CopyFullPath)

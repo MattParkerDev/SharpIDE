@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Ardalis.GuardClauses;
 using Godot;
 using R3;
@@ -116,7 +117,8 @@ public partial class CodeEditorPanel : MarginContainer
 
 	private void OnTabClosePressed(long tabIndex)
 	{
-		CloseTab(tabIndex);
+		var tab = (SharpIdeCodeEditContainer)_tabContainer.GetTabControl((int)tabIndex);
+		CloseTabs([tab]);
 	}
 
 	private void OnTabRmbClicked(long tabIndex)
@@ -124,48 +126,34 @@ public partial class CodeEditorPanel : MarginContainer
 		OpenContextMenuTab(tabIndex);
 	}
 
-	private void CloseTab(long tabIndex)
-	{
-		var tab = _tabContainer.GetChild<Control>((int)tabIndex);
+	private void CloseTabs(List<SharpIdeCodeEditContainer> tabsToClose)
+    {
+		var allTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().ToList();
+        var currentTab = (SharpIdeCodeEditContainer?)_tabContainer.GetCurrentTabControl();
+        var closingCurrentTab = currentTab is not null && tabsToClose.Contains(currentTab);
+        if (closingCurrentTab) RecordNavigationToNextSelectedTab(allTabs, tabsToClose, currentTab!);
+        
+        foreach (var tab in tabsToClose) _tabContainer.RemoveChildAndQueueFree(tab);
+    }
 
-		if (tabIndex == _tabContainer.CurrentTab) // If we are closing the current tab, we need to record a navigation to the tab that will be selected
-		{
-			var siblingIndex = tabIndex is 0 ? 1 : tabIndex - 1; // If we are closing the first (0) tab, get the second (1) tab, else get the previous tab
-			var siblingTab = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)siblingIndex)?.CodeEdit;
-			if (siblingTab is not null) // null when we are closing the only tab
-			{
-				var sharpIdeFile = siblingTab.SharpIdeFile;
-				var caretLinePosition = new SharpIdeFileLinePosition(siblingTab.GetCaretLine(), siblingTab.GetCaretColumn());
-				// This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
-				GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, caretLinePosition);
-			}
-		}
-
-		_tabContainer.RemoveChild(tab);
-		tab.QueueFree();
-	}
-
-	private void CloseTabs(IReadOnlyCollection<long> tabIndices)
-	{
-		if (tabIndices.Contains(_tabContainer.CurrentTab))
-		{
-			var otherTabs = tabIndices.Except([_tabContainer.CurrentTab]).ToList();
-			CloseTabs(otherTabs);
-			CloseTab(_tabContainer.CurrentTab);
-		}
-		else
-		{
-			var tabs = tabIndices.Select(tabIndex => _tabContainer.GetChildOrNull<Node>((int)tabIndex))
-			                     .Where(tab => tab is not null)
-			                     .ToList();
-
-			foreach (var tab in tabs)
-			{
-				_tabContainer.RemoveChild(tab);
-				tab.QueueFree();
-			}
-		}
-	}
+    private void RecordNavigationToNextSelectedTab(List<SharpIdeCodeEditContainer> allTabs, List<SharpIdeCodeEditContainer> tabsToClose, SharpIdeCodeEditContainer currentTabToBeClosed)
+    {
+        var remainingTabsIncludingCurrentTab = allTabs.Except(tabsToClose.Except([currentTabToBeClosed])).ToList();
+        Guard.Against.Zero(remainingTabsIncludingCurrentTab.Count);
+        if (remainingTabsIncludingCurrentTab.Count is 1) return; // once the current tab is removed, there will be no tabs remaining. No navigation to do.
+        if (remainingTabsIncludingCurrentTab.Count > 1)
+        {
+            var currentTabIndexInTempList = remainingTabsIncludingCurrentTab.IndexOf(currentTabToBeClosed);
+            if (currentTabIndexInTempList is -1) throw new UnreachableException("Current tab to be closed should be in the list of remaining tabs including current tab");
+            var tabToBeSelected = currentTabIndexInTempList is 0 ? remainingTabsIncludingCurrentTab[1] : remainingTabsIncludingCurrentTab[currentTabIndexInTempList - 1];
+            
+            var tabToBeSelectedCodeEdit = tabToBeSelected.CodeEdit;
+            var sharpIdeFile = tabToBeSelectedCodeEdit.SharpIdeFile;
+            var caretLinePosition = new SharpIdeFileLinePosition(tabToBeSelectedCodeEdit.GetCaretLine(), tabToBeSelectedCodeEdit.GetCaretColumn());
+            // This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
+            GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, caretLinePosition);
+        }
+    }
 
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
 	{
@@ -196,7 +184,7 @@ public partial class CodeEditorPanel : MarginContainer
 			{
 				await this.InvokeAsync(() =>
 				{
-					CloseTab(newTab.GetIndex());
+					CloseTabs([newTab]);
 				});
 			});
 			
