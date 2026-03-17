@@ -13,7 +13,49 @@ grow_vertical = 2
 script = ExtResource("1_h4rcc")
 RunningIcon = ExtResource("2_pub1e")
 
-[node name="Label" type="Label" parent="." unique_id=2079930672]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=84846930]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="HeaderMargin" type="MarginContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/HeaderMargin" unique_id=577345646]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="VBoxContainer/HeaderMargin/HBoxContainer" unique_id=395393186]
+layout_mode = 2
+text = "Debug"
+
+[node name="TabBar" type="TabBar" parent="VBoxContainer/HeaderMargin/HBoxContainer" unique_id=1243781113]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+current_tab = 0
+tab_close_display_policy = 2
+tab_count = 1
+tab_0/title = "WebApi"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="BodyContainer" type="Control" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+clip_contents = true
+
+[node name="Label" type="Label" parent="VBoxContainer/BodyContainer" unique_id=2079930672]
 visible = false
 layout_mode = 1
 anchors_preset = 8
@@ -29,40 +71,11 @@ grow_horizontal = 2
 grow_vertical = 2
 text = "Nothing to show"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=84846930]
+[node name="TabsPanel" type="MarginContainer" parent="VBoxContainer/BodyContainer" unique_id=2087272501]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 0
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=577345646]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HBoxContainer" unique_id=1373316498]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
-
-[node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/MarginContainer" unique_id=395393186]
-layout_mode = 2
-text = "Debug"
-
-[node name="TabBar" type="TabBar" parent="VBoxContainer/HBoxContainer" unique_id=1243781113]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-current_tab = 0
-tab_close_display_policy = 2
-tab_count = 1
-tab_0/title = "WebApi"
-
-[node name="TabsPanel" type="MarginContainer" parent="VBoxContainer" unique_id=2087272501]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3

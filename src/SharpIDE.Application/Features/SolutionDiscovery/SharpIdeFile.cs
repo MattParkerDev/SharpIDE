@@ -9,6 +9,12 @@ namespace SharpIDE.Application.Features.SolutionDiscovery;
 
 public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 {
+	private sealed class StandaloneFileParent : IExpandableSharpIdeNode
+	{
+		public static StandaloneFileParent Instance { get; } = new();
+		public bool Expanded { get; set; }
+	}
+
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public required string Path { get; set; }
 	public required ReactiveProperty<string> Name { get; set; }
@@ -26,6 +32,17 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	public required DateTimeOffset? LastIdeWriteTime { get; set; }
 	public EventWrapper<SharpIdeFileLinePosition?, Task> FileContentsChangedExternally { get; } = new((_) => Task.CompletedTask);
 	public EventWrapper<Task> FileDeleted { get; } = new(() => Task.CompletedTask);
+
+	public static SharpIdeFile CreateStandalone(string fullPath)
+	{
+		var normalizedPath = System.IO.Path.GetFullPath(fullPath);
+		return new SharpIdeFile(
+			normalizedPath,
+			System.IO.Path.GetFileName(normalizedPath),
+			System.IO.Path.GetExtension(normalizedPath),
+			StandaloneFileParent.Instance,
+			new ConcurrentBag<SharpIdeFile>());
+	}
 
 	[SetsRequiredMembers]
 	internal SharpIdeFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, bool isMetadataAsSourceFile = false, string? pdbSourceFilePath = null)

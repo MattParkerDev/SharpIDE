@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
@@ -10,19 +10,57 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 {
 	private readonly ILogger<IdeOpenTabsFileManager> _logger = logger;
 
-	private ConcurrentDictionary<SharpIdeFile, Lazy<Task<string>>> _openFiles = new();
+	private sealed class OpenFileEntry
+	{
+		public required Lazy<Task<string>> TextTask { get; set; }
+		public int ReferenceCount { get; set; }
+	}
+
+	private ConcurrentDictionary<SharpIdeFile, OpenFileEntry> _openFiles = new();
+
+	public void TrackOpenFile(SharpIdeFile file)
+	{
+		_openFiles.AddOrUpdate(
+			file,
+			_ => new OpenFileEntry
+			{
+				TextTask = new Lazy<Task<string>>(() => ReadFileTextSafeAsync(file.Path)),
+				ReferenceCount = 1
+			},
+			(_, existing) =>
+			{
+				existing.ReferenceCount++;
+				return existing;
+			});
+	}
 
 	/// Implicitly 'opens' a file if not already open, and returns the text.
 	public async Task<string> GetFileTextAsync(SharpIdeFile file)
 	{
-		var textTaskLazy = _openFiles.GetOrAdd(file, f =>
+		var entry = _openFiles.GetOrAdd(file, f =>
 		{
-			var lazy = new Lazy<Task<string>>(Task<string> () => File.ReadAllTextAsync(f.Path));
-			return lazy;
+			return new OpenFileEntry
+			{
+				TextTask = new Lazy<Task<string>>(() => ReadFileTextSafeAsync(f.Path)),
+				ReferenceCount = 0
+			};
 		});
-		var textTask = textTaskLazy.Value;
+		var textTask = entry.TextTask.Value;
 		var text = await textTask;
 		return text;
+	}
+
+	public async Task<string?> GetFileTextIfOpenAsync(string filePath)
+	{
+		var normalizedPath = Path.GetFullPath(filePath);
+		var openFile = _openFiles.Keys.FirstOrDefault(file =>
+			string.Equals(Path.GetFullPath(file.Path), normalizedPath, StringComparison.OrdinalIgnoreCase));
+		if (openFile is null)
+		{
+			return null;
+		}
+
+		return await GetFileTextAsync(openFile);
 	}
 
 	// Calling this assumes that the file is already open - may need to be revisited for code fixes and refactorings. I think all files involved in a multi-file fix/refactor shall just be saved to disk immediately.
@@ -30,16 +68,16 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 	{
 		if (!_openFiles.ContainsKey(file)) throw new InvalidOperationException("File is not open in memory.");
 
-		var newLazyTask = new Lazy<Task<string>>(() => Task.FromResult(newText));
-		_openFiles[file] = newLazyTask;
+		var entry = _openFiles[file];
+		entry.TextTask = new Lazy<Task<string>>(() => Task.FromResult(newText));
 	}
 
 	public async Task UpdateFileTextInMemoryIfOpen(SharpIdeFile file, string newText)
 	{
 		if (!_openFiles.ContainsKey(file)) return;
 
-		var newLazyTask = new Lazy<Task<string>>(() => Task.FromResult(newText));
-		_openFiles[file] = newLazyTask;
+		var entry = _openFiles[file];
+		entry.TextTask = new Lazy<Task<string>>(() => Task.FromResult(newText));
 	}
 
 	public async Task SaveFileAsync(SharpIdeFile file)
@@ -84,7 +122,38 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 
 	public void CloseFile(SharpIdeFile file)
 	{
-		_openFiles.TryRemove(file, out _);
+		if (!_openFiles.TryGetValue(file, out var entry)) return;
+		if (entry.ReferenceCount <= 1)
+		{
+			_openFiles.TryRemove(file, out _);
+			return;
+		}
+
+		entry.ReferenceCount--;
+	}
+
+	private async Task<string> ReadFileTextSafeAsync(string path)
+	{
+		try
+		{
+			if (!File.Exists(path))
+			{
+				_logger.LogDebug("IdeOpenTabsFileManager: File not found while reading text, returning empty content for {FilePath}", path);
+				return string.Empty;
+			}
+
+			return await File.ReadAllTextAsync(path);
+		}
+		catch (FileNotFoundException)
+		{
+			_logger.LogDebug("IdeOpenTabsFileManager: File disappeared while reading text, returning empty content for {FilePath}", path);
+			return string.Empty;
+		}
+		catch (DirectoryNotFoundException)
+		{
+			_logger.LogDebug("IdeOpenTabsFileManager: Directory disappeared while reading text, returning empty content for {FilePath}", path);
+			return string.Empty;
+		}
 	}
 }
 

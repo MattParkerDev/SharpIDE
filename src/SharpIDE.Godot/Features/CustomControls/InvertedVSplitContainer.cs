@@ -7,6 +7,7 @@ public partial class InvertedVSplitContainer : VSplitContainer
 {
     [Export]
     private int _invertedOffset = 200;
+    private int _minimumBottomHeight = 30;
     private bool _invertedCollapsed = false;
 
     private int _separationWhenUncollapsed;
@@ -17,16 +18,25 @@ public partial class InvertedVSplitContainer : VSplitContainer
         _invertedCollapsed = collapsed;
         if (collapsed)
         {
-            SplitOffset = (int)Size.Y + 100;
+            ApplySplitOffset((int)Size.Y + 100);
             DraggingEnabled = false;
             AddThemeConstantOverride(ThemeStringNames.Separation, 0);
         }
         else
         {
-            SplitOffset = (int)Size.Y - _invertedOffset;
+            ApplySplitOffset(ClampExpandedSplitOffset((int)Size.Y - _invertedOffset));
             DraggingEnabled = true;
             AddThemeConstantOverride(ThemeStringNames.Separation, _separationWhenUncollapsed);
         }
+    }
+
+    public void RefreshBottomHeightConstraint()
+    {
+        if (_invertedCollapsed) return;
+
+        var splitOffset = ClampExpandedSplitOffset(GetCurrentSplitOffset());
+        ApplySplitOffset(splitOffset);
+        _invertedOffset = (int)Size.Y - splitOffset;
     }
 
     public override void _Ready()
@@ -37,14 +47,57 @@ public partial class InvertedVSplitContainer : VSplitContainer
 
     private void OnDragged(long offset)
     {
-        _invertedOffset = (int)Size.Y - SplitOffset;
+        var clampedOffset = ClampExpandedSplitOffset((int)offset);
+        if (clampedOffset != offset)
+        {
+            ApplySplitOffset(clampedOffset);
+        }
+
+        _invertedOffset = (int)Size.Y - clampedOffset;
     }
     
     public override void _Notification(int what)
     {
         if (what == NotificationResized && _invertedCollapsed is false)
         {
-            SplitOffset = (int)Size.Y - _invertedOffset;
+            ApplySplitOffset(ClampExpandedSplitOffset((int)Size.Y - _invertedOffset));
         }
+    }
+
+    private int ClampExpandedSplitOffset(int requestedSplitOffset)
+    {
+        var maxSplitOffset = Math.Max(0, (int)Size.Y - GetMinimumExpandedBottomHeight());
+        return Math.Clamp(requestedSplitOffset, 0, maxSplitOffset);
+    }
+
+    private int GetMinimumExpandedBottomHeight()
+    {
+        var bottomChild = GetChildCount() > 1 ? GetChildOrNull<Control>(1) : null;
+        if (bottomChild is null)
+        {
+            return Math.Max(0, _minimumBottomHeight);
+        }
+
+        return Math.Max(_minimumBottomHeight, (int)Math.Ceiling(bottomChild.CustomMinimumSize.Y));
+    }
+    private void ApplySplitOffset(int splitOffset)
+    {
+        var offsets = SplitOffsets;
+        if (offsets.Length == 0)
+        {
+            offsets = [splitOffset];
+        }
+        else
+        {
+            offsets[0] = splitOffset;
+        }
+
+        SplitOffsets = offsets;
+    }
+
+    private int GetCurrentSplitOffset()
+    {
+        var offsets = SplitOffsets;
+        return offsets.Length > 0 ? offsets[0] : 0;
     }
 }

@@ -15,10 +15,12 @@ using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.Git;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.Git;
 using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -26,6 +28,13 @@ namespace SharpIDE.Godot.Features.CodeEditor;
 #pragma warning disable VSTHRD101
 public partial class SharpIdeCodeEdit : CodeEdit
 {
+	private static readonly Task<ImmutableArray<SharpIdeClassifiedSpan>> EmptyClassifiedSpansTask = Task.FromResult(ImmutableArray<SharpIdeClassifiedSpan>.Empty);
+	private static readonly Task<ImmutableArray<SharpIdeRazorClassifiedSpan>> EmptyRazorClassifiedSpansTask = Task.FromResult(ImmutableArray<SharpIdeRazorClassifiedSpan>.Empty);
+	private static readonly Task<ImmutableArray<SharpIdeDiagnostic>> EmptyDiagnosticsTask = Task.FromResult(ImmutableArray<SharpIdeDiagnostic>.Empty);
+	private const int BehindInlineCanvasItemDrawIndex = 0;
+	private const int AboveCanvasItemDrawIndex = 100;
+	private const float AboveTextInlineHighlightOpacityScale = 0.42f;
+
 	[Signal]
 	public delegate void CodeFixesRequestedEventHandler();
 	
@@ -35,11 +44,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	
 	private CustomHighlighter _syntaxHighlighter = new();
 	private PopupMenu _popupMenu = null!;
-	private CanvasItem _aboveCanvasItem = null!;
+	private Rid? _behindInlineCanvasItemRid = null!;
 	private Rid? _aboveCanvasItemRid = null!;
 	private Window _completionDescriptionWindow = null!;
 	private Window _methodSignatureHelpWindow = null!;
 	private RichTextLabel _completionDescriptionLabel = null!;
+	private GitChangeScrollbarOverlay _gitChangeScrollbarOverlay = null!;
 	private FindReplaceBar _findReplaceBar = null!;
 
 	private ImmutableArray<SharpIdeDiagnostic> _fileDiagnostics = [];
@@ -53,6 +63,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
+	private bool _ownsFileLifecycle = true;
+	private bool _isPreviewMode;
+	private readonly Dictionary<int, Color> _gitDiffLineBackgrounds = [];
+	private readonly Dictionary<int, IReadOnlyList<GitDiffInlineDecoration>> _gitDiffInlineHighlights = [];
+	private GitDiffTraceOperation? _pendingGitDiffTraceOperation;
+	private GitDiffTraceRedrawTarget _pendingGitDiffTraceTarget;
+	private long _fileContextVersion;
 	
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
     [Inject] private readonly RunService _runService = null!;
@@ -74,12 +91,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		UpdateEditorThemeForCurrentTheme();
 		SyntaxHighlighter = _syntaxHighlighter;
 		_popupMenu = GetNode<PopupMenu>("CodeFixesMenu");
-		_aboveCanvasItem = GetNode<CanvasItem>("%AboveCanvasItem");
-		_aboveCanvasItemRid = _aboveCanvasItem.GetCanvasItem();
+		_behindInlineCanvasItemRid = CreateOverlayCanvasItem(BehindInlineCanvasItemDrawIndex);
+		_aboveCanvasItemRid = CreateOverlayCanvasItem(AboveCanvasItemDrawIndex);
 		_completionDescriptionWindow = GetNode<Window>("%CompletionDescriptionWindow");
 		_methodSignatureHelpWindow = GetNode<Window>("%MethodSignatureHelpWindow");
 		_completionDescriptionLabel = _completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
-		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, GetCanvasItem());
+		_gitChangeScrollbarOverlay = GetNode<GitChangeScrollbarOverlay>("%GitChangeScrollbarOverlay");
+		_gitChangeScrollbarOverlay.Bind(this);
 		_findReplaceBar = GetNode<FindReplaceBar>("%FindReplaceBar");
 		_findReplaceBar.SetTextEdit(this);
 		_popupMenu.IdPressed += OnCodeFixSelected;
@@ -110,26 +128,42 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnSolutionAltered)}");
 			if (_currentFile is null) return;
 			if (_fileDeleted) return;
+			if (!IsEditorAlive()) return;
+			if (HasRoslynProjectContext(_currentFile) is false) return;
+			var currentFile = _currentFile;
+			var fileContextVersion = ReadFileContextVersion();
 			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
 			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext();
 			var hasFocus = this.InvokeAsync(HasFocus);
-			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile, newCt);
-			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile, newCt);
+			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(currentFile, newCt);
+			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(currentFile, newCt);
 			await Task.WhenAll(documentSyntaxHighlighting, razorSyntaxHighlighting).WaitAsync(newCt);
-			if (newCt.IsCancellationRequested) return;
-			var documentDiagnosticsTask = _roslynAnalysis.GetDocumentDiagnostics(_currentFile, newCt);
-			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await documentSyntaxHighlighting, await razorSyntaxHighlighting));
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
+			var documentDiagnosticsTask = _roslynAnalysis.GetDocumentDiagnostics(currentFile, newCt);
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
+				SetSyntaxHighlightingModel(await documentSyntaxHighlighting, await razorSyntaxHighlighting);
+			});
 			var documentDiagnostics = await documentDiagnosticsTask;
-			if (newCt.IsCancellationRequested) return;
-			var documentAnalyzerDiagnosticsTask = _roslynAnalysis.GetDocumentAnalyzerDiagnostics(_currentFile, newCt);
-			await this.InvokeAsync(() => SetDiagnostics(documentDiagnostics));
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
+			var documentAnalyzerDiagnosticsTask = _roslynAnalysis.GetDocumentAnalyzerDiagnostics(currentFile, newCt);
+			await this.InvokeAsync(() =>
+			{
+				if (!IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
+				SetDiagnostics(documentDiagnostics);
+			});
 			var documentAnalyzerDiagnostics = await documentAnalyzerDiagnosticsTask;
-			if (newCt.IsCancellationRequested) return;
-			await this.InvokeAsync(() => SetAnalyzerDiagnostics(documentAnalyzerDiagnostics));
-			if (newCt.IsCancellationRequested) return;
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
+			await this.InvokeAsync(() =>
+			{
+				if (!IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
+				SetAnalyzerDiagnostics(documentAnalyzerDiagnostics);
+			});
+			if (newCt.IsCancellationRequested || !IsCurrentFileContext(currentFile, fileContextVersion) || !IsEditorAlive()) return;
 			if (await hasFocus)
 			{
-				await _roslynAnalysis.UpdateProjectDiagnosticsForFile(_currentFile, newCt);
+				await _roslynAnalysis.UpdateProjectDiagnosticsForFile(currentFile, newCt);
 				if (newCt.IsCancellationRequested) return;
 			}
 		}
@@ -137,6 +171,36 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			// Ignore
 		}
+	}
+
+	private static bool HasRoslynProjectContext(SharpIdeFile file)
+	{
+		return file.IsMetadataAsSourceFile || ((IChildSharpIdeNode)file).GetNearestProjectNode() is not null;
+	}
+
+	private Task<ImmutableArray<SharpIdeClassifiedSpan>> GetDocumentSyntaxHighlightingSafe(SharpIdeFile file)
+	{
+		return HasRoslynProjectContext(file) ? _roslynAnalysis.GetDocumentSyntaxHighlighting(file) : EmptyClassifiedSpansTask;
+	}
+
+	private Task<ImmutableArray<SharpIdeClassifiedSpan>> GetDocumentSyntaxHighlightingSafe(SharpIdeFile file, string previewText)
+	{
+		return HasRoslynProjectContext(file) ? _roslynAnalysis.GetDocumentSyntaxHighlightingForText(file, previewText) : EmptyClassifiedSpansTask;
+	}
+
+	private Task<ImmutableArray<SharpIdeRazorClassifiedSpan>> GetRazorDocumentSyntaxHighlightingSafe(SharpIdeFile file)
+	{
+		return HasRoslynProjectContext(file) ? _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(file) : EmptyRazorClassifiedSpansTask;
+	}
+
+	private Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentDiagnosticsSafe(SharpIdeFile file)
+	{
+		return HasRoslynProjectContext(file) ? _roslynAnalysis.GetDocumentDiagnostics(file) : EmptyDiagnosticsTask;
+	}
+
+	private Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentAnalyzerDiagnosticsSafe(SharpIdeFile file)
+	{
+		return HasRoslynProjectContext(file) ? _roslynAnalysis.GetDocumentAnalyzerDiagnostics(file) : EmptyDiagnosticsTask;
 	}
 
 	public enum LineEditOrigin
@@ -182,22 +246,48 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _ExitTree()
 	{
-		_currentFile?.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
-		_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
+		if (_ownsFileLifecycle)
+		{
+			_currentFile?.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
+			_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
+		}
 		_projectDiagnosticsObserveDisposable?.Dispose();
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
-		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
+		FreeCanvasItemRid(ref _behindInlineCanvasItemRid);
+		FreeCanvasItemRid(ref _aboveCanvasItemRid);
+		if (_ownsFileLifecycle && _currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
+	}
+
+	private Rid CreateOverlayCanvasItem(int drawIndex)
+	{
+		var canvasItemRid = RenderingServer.Singleton.CanvasItemCreate();
+		RenderingServer.Singleton.CanvasItemSetParent(canvasItemRid, GetCanvasItem());
+		RenderingServer.Singleton.CanvasItemSetDrawIndex(canvasItemRid, drawIndex);
+		return canvasItemRid;
+	}
+
+	private static void FreeCanvasItemRid(ref Rid? canvasItemRid)
+	{
+		if (canvasItemRid is not { } rid)
+		{
+			return;
+		}
+
+		RenderingServer.Singleton.FreeRid(rid);
+		canvasItemRid = null;
 	}
 	
 	private void OnFocusEntered()
 	{
+		if (_isPreviewMode) return;
 		// The selected tab changed, report the caret position
 		_editorCaretPositionService.CaretPosition = GetCaretPosition(startAt1: true);
 	}
 
 	private async void OnBreakpointToggled(long line)
 	{
+		if (_isPreviewMode) return;
 		if (_fileChangingSuppressBreakpointToggleEvent) return;
 		var lineInt = (int)line;
 		var breakpointAdded = IsLineBreakpointed(lineInt);
@@ -239,6 +329,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	private void OnTextChanged()
 	{
+		if (_isPreviewMode) return;
 		_findReplaceBar.NeedsToCountResults = true;
 		var text = Text;
 		var pendingCompletionTrigger = _pendingCompletionTrigger;
@@ -298,6 +389,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			SetCaretLine(currentCaretPosition.line);
 			SetCaretColumn(currentCaretPosition.col);
 			SetVScroll(vScroll);
+			_gitChangeScrollbarOverlay.RefreshLayout();
 			EndComplexOperation();
 		});
 	}
@@ -320,48 +412,72 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}).CallDeferred();
 	}
 
+	public void NavigateToGitChange(int line)
+	{
+		var safeLine = Mathf.Clamp(line, 0, Math.Max(GetLineCount() - 1, 0));
+		SetCaretLine(safeLine);
+		SetCaretColumn(0);
+		CenterViewportToCaret();
+		GrabFocus();
+	}
+
 	// TODO: Ensure not running on UI thread
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition = null)
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // get off the UI thread
 		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetSharpIdeFile)}");
-		_currentFile = file;
-		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
-		_currentFile.FileContentsChangedExternally.Subscribe(OnFileChangedExternally);
-		_currentFile.FileDeleted.Subscribe(OnFileDeleted);
-		var project = ((IChildSharpIdeNode)_currentFile).GetNearestProjectNode();
-		if (project is not null)
+		var fileContextVersion = AdvanceFileContextVersion();
+		_isPreviewMode = false;
+		if (!_ownsFileLifecycle || !ReferenceEquals(_currentFile, file))
 		{
-			_projectDiagnosticsObserveDisposable = project.Diagnostics.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-				.SubscribeAwait(async (innerEvent, ct) =>
-				{
-					var projectDiagnosticsForFile = project.Diagnostics.Where(s => s.FilePath == _currentFile.Path).ToImmutableArray();
-					await this.InvokeAsync(() => SetProjectDiagnostics(projectDiagnosticsForFile));
-				});
+			_openTabsFileManager.TrackOpenFile(file);
 		}
-		
-		var syntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
-		var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
-		var diagnostics = _roslynAnalysis.GetDocumentDiagnostics(_currentFile);
-		var analyzerDiagnostics = _roslynAnalysis.GetDocumentAnalyzerDiagnostics(_currentFile);
+		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
+		PrepareFileContext(file, ownsFileLifecycle: true);
+		var syntaxHighlighting = GetDocumentSyntaxHighlightingSafe(_currentFile);
+		var razorSyntaxHighlighting = GetRazorDocumentSyntaxHighlightingSafe(_currentFile);
+		var diagnostics = GetDocumentDiagnosticsSafe(_currentFile);
+		var analyzerDiagnostics = GetDocumentAnalyzerDiagnosticsSafe(_currentFile);
 		await readFileTask;
 		var setTextTask = this.InvokeAsync(async () =>
 		{
+			if (!IsCurrentFileContext(file, fileContextVersion)) return;
 			_fileChangingSuppressBreakpointToggleEvent = true;
+			SetSyntaxHighlightingModel([], []);
+			SetDiagnostics([]);
+			SetAnalyzerDiagnostics([]);
+			SetProjectDiagnostics([]);
 			SetText(await readFileTask);
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
+			ClearGitDiffDecorations();
+			_gitChangeScrollbarOverlay.RefreshLayout();
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
 			if (file.IsMetadataAsSourceFile) Editable = false;
 		});
 		_ = Task.GodotRun(async () =>
 		{
 			await Task.WhenAll(syntaxHighlighting, razorSyntaxHighlighting, setTextTask); // Text must be set before setting syntax highlighting
-			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting));
+			if (!IsCurrentFileContext(file, fileContextVersion)) return;
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsCurrentFileContext(file, fileContextVersion)) return;
+				SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting);
+			});
 			await diagnostics;
-			await this.InvokeAsync(async () => SetDiagnostics(await diagnostics));
+			if (!IsCurrentFileContext(file, fileContextVersion)) return;
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsCurrentFileContext(file, fileContextVersion)) return;
+				SetDiagnostics(await diagnostics);
+			});
 			await analyzerDiagnostics;
-			await this.InvokeAsync(async () => SetAnalyzerDiagnostics(await analyzerDiagnostics));
+			if (!IsCurrentFileContext(file, fileContextVersion)) return;
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsCurrentFileContext(file, fileContextVersion)) return;
+				SetAnalyzerDiagnostics(await analyzerDiagnostics);
+			});
 		});
 	}
 
@@ -407,27 +523,162 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	}
 	public override void _Draw()
 	{
+		var traceOperation = _pendingGitDiffTraceOperation;
+		using var redrawActivity = traceOperation?.StartChild($"{nameof(SharpIdeCodeEdit)}.GitDiffRedraw");
+		redrawActivity?.SetTag("git.diff.redraw_target", _pendingGitDiffTraceTarget.ToString());
+		RenderingServer.Singleton.CanvasItemClear(_behindInlineCanvasItemRid!.Value);
 		RenderingServer.Singleton.CanvasItemClear(_aboveCanvasItemRid!.Value);
-		//UnderlineRange(_currentLine, _selectionStartCol, _selectionEndCol, new Color(1, 0, 0));
-		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
+		using (traceOperation?.StartChild($"{nameof(SharpIdeCodeEdit)}.{nameof(DrawGitDiffLineSeamFill)}"))
 		{
-			var line = sharpIdeDiagnostic.Span.Start.Line;
-			var startCol = sharpIdeDiagnostic.Span.Start.Character;
-			var endCol = sharpIdeDiagnostic.Span.End.Character;
-			var color = sharpIdeDiagnostic.Diagnostic.Severity switch
+			DrawGitDiffLineSeamFill();
+		}
+
+		using (traceOperation?.StartChild($"{nameof(SharpIdeCodeEdit)}.{nameof(DrawGitDiffInlineHighlights)}"))
+		{
+			DrawGitDiffInlineHighlights();
+		}
+
+		if (!_isPreviewMode)
+		{
+			foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 			{
-				DiagnosticSeverity.Error => new Color(1, 0, 0),
-				DiagnosticSeverity.Warning => new Color("ffb700"),
-				_ => new Color(0, 1, 0) // Info or other
-			};
-			UnderlineRange(line, startCol, endCol, color);
+				var line = sharpIdeDiagnostic.Span.Start.Line;
+				var startCol = sharpIdeDiagnostic.Span.Start.Character;
+				var endCol = sharpIdeDiagnostic.Span.End.Character;
+				var color = sharpIdeDiagnostic.Diagnostic.Severity switch
+				{
+					DiagnosticSeverity.Error => new Color(1, 0, 0),
+					DiagnosticSeverity.Warning => new Color("ffb700"),
+					_ => new Color(0, 1, 0)
+				};
+				UnderlineRange(line, startCol, endCol, color);
+			}
 		}
 		DrawCompletionsPopup();
+		if (traceOperation is not null)
+		{
+			_pendingGitDiffTraceOperation = null;
+			traceOperation.MarkRedrawCompleted(_pendingGitDiffTraceTarget);
+			_pendingGitDiffTraceTarget = GitDiffTraceRedrawTarget.None;
+		}
+	}
+
+	private void DrawGitDiffInlineHighlights()
+	{
+		foreach (var (rect, fillColor) in EnumerateVisibleGitDiffInlineHighlights())
+		{
+			RenderingServer.Singleton.CanvasItemAddRect(_behindInlineCanvasItemRid!.Value, rect, fillColor);
+		}
+	}
+
+	private void DrawGitDiffLineSeamFill()
+	{
+		foreach (var (line, fillColor) in _gitDiffLineBackgrounds)
+		{
+			if (!TryBuildVisibleLineSeamFillRect(line, out var rect))
+			{
+				continue;
+			}
+
+			RenderingServer.Singleton.CanvasItemAddRect(_behindInlineCanvasItemRid!.Value, rect, fillColor);
+		}
+	}
+
+	internal IEnumerable<(Rect2 Rect, Color FillColor)> EnumerateVisibleGitDiffInlineHighlights()
+	{
+		foreach (var (line, spans) in _gitDiffInlineHighlights)
+		{
+			if (line < 0 || line >= GetLineCount()) continue;
+			var lineLength = GetLine(line).Length;
+			foreach (var decoration in spans)
+			{
+				var span = decoration.Span;
+				if (span.Length <= 0) continue;
+				if (span.StartColumn < 0 || span.StartColumn >= lineLength) continue;
+				var endColumnExclusive = Math.Min(lineLength, span.StartColumn + span.Length);
+				if (endColumnExclusive <= span.StartColumn) continue;
+
+				if (!TryBuildVisibleInlineHighlightRect(line, span.StartColumn, endColumnExclusive, out var rect))
+				{
+					continue;
+				}
+
+				var fillColor = GitDiffPalette.GetInlineBackground(span.HighlightKind, decoration.IsStaged);
+				fillColor.A = Mathf.Clamp(fillColor.A * AboveTextInlineHighlightOpacityScale, 0.14f, 0.4f);
+				yield return (rect, fillColor);
+			}
+		}
+	}
+
+	internal bool TryBuildVisibleInlineHighlightRect(int line, int startColumn, int endColumnExclusive, out Rect2 rect)
+	{
+		rect = default;
+		Rect2? firstVisibleRect = null;
+		Rect2? lastVisibleRect = null;
+		for (var column = startColumn; column < endColumnExclusive; column++)
+		{
+			var charRect = GetRectAtCharacterIndex(line, column);
+			if (charRect.Position.X < 0f || charRect.Position.Y < 0f)
+			{
+				continue;
+			}
+
+			firstVisibleRect ??= charRect;
+			lastVisibleRect = charRect;
+		}
+
+		if (!firstVisibleRect.HasValue || !lastVisibleRect.HasValue)
+		{
+			return false;
+		}
+
+		var left = firstVisibleRect.Value.Position.X;
+		var right = lastVisibleRect.Value.End.X;
+		rect = new Rect2(
+			new Vector2(left, firstVisibleRect.Value.Position.Y),
+			new Vector2(Mathf.Max(1f, right - left), firstVisibleRect.Value.Size.Y));
+		return true;
+	}
+
+	private bool TryBuildVisibleLineSeamFillRect(int line, out Rect2 rect)
+	{
+		rect = default;
+		if (line < 0 || line >= GetLineCount())
+		{
+			return false;
+		}
+
+		var lineRect = GetRectAtLineColumn(line, 0);
+		var fillWidth = Mathf.Clamp(lineRect.Position.X, 0f, Size.X);
+		if (fillWidth <= 0f)
+		{
+			return false;
+		}
+
+		var top = Mathf.Clamp(lineRect.Position.Y, 0f, Size.Y);
+		var bottom = Mathf.Clamp(lineRect.End.Y, 0f, Size.Y);
+		if (bottom <= top)
+		{
+			return false;
+		}
+
+		rect = new Rect2(new Vector2(0f, top), new Vector2(fillWidth, bottom - top));
+		return true;
+	}
+
+	internal Rect2 GetRectAtCharacterIndex(int line, int characterIndex)
+	{
+		return GetRectAtLineColumn(line, characterIndex <= 0 ? 0 : characterIndex + 1);
 	}
 
 	// This only gets invoked if the Node is focused
 	public override void _GuiInput(InputEvent @event)
 	{
+		if (_isPreviewMode)
+		{
+			base._GuiInput(@event);
+			return;
+		}
 		if (@event is InputEventMouseMotion) return;
 
 		// Capture pre-edit caret state for line-modifying keystrokes, so that OnLinesEditedFrom
@@ -511,8 +762,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			var (col, line) = GetLineColumnAtPos((Vector2I)mouseEvent.Position);
 			var current = _navigationHistoryService.Current.Value;
-			if (current!.File != _currentFile) throw new InvalidOperationException("Current navigation history file does not match the focused code editor file.");
-			if (current.LinePosition.Line != line) // Only record a new navigation if the line has changed
+			if (current is null || current.File != _currentFile || current.LinePosition.Line != line) // Only record a new navigation if the line has changed, or this editor is becoming the active navigation target.
 			{
 				_navigationHistoryService.RecordNavigation(_currentFile, new SharpIdeFileLinePosition(line, col));
 			}
@@ -522,6 +772,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
 		CloseSymbolHoverWindow();
+		if (_isPreviewMode) return;
 		// Let each open tab respond to this event
 		if (@event.IsActionPressed(InputStringNames.SaveAllFiles))
 		{
@@ -566,15 +817,95 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private readonly Color _executingLineColor = new Color("665001");
 	public void SetLineColour(int line)
 	{
-		var breakpointed = IsLineBreakpointed(line);
-		var executing = IsLineExecuting(line);
+		var breakpointed = SupportsLineStatusQueries() && IsLineBreakpointed(line);
+		var executing = SupportsLineStatusQueries() && IsLineExecuting(line);
 		var lineColour = (breakpointed, executing) switch
 		{
 			(_, true) => _executingLineColor,
 			(true, false) => _breakpointLineColor,
-			(false, false) => Colors.Transparent
+			(false, false) => _gitDiffLineBackgrounds.GetValueOrDefault(line, Colors.Transparent)
 		};
 		SetLineBackgroundColor(line, lineColour);
+	}
+
+	public void SetGitDiffLineBackgrounds(IReadOnlyDictionary<int, Color> lineColors)
+	{
+		var affectedLines = _gitDiffLineBackgrounds.Keys.Concat(lineColors.Keys).Distinct().ToList();
+		_gitDiffLineBackgrounds.Clear();
+		foreach (var (line, color) in lineColors)
+		{
+			if (line < 0 || line >= GetLineCount()) continue;
+			_gitDiffLineBackgrounds[line] = color;
+		}
+
+		foreach (var line in affectedLines)
+		{
+			if (line < 0 || line >= GetLineCount()) continue;
+			SetLineColour(line);
+		}
+
+		QueueRedraw();
+	}
+
+	private bool SupportsLineStatusQueries()
+	{
+		return GetGutterCount() > 0;
+	}
+
+	public void ClearGitDiffLineBackgrounds()
+	{
+		if (_gitDiffLineBackgrounds.Count is 0) return;
+		var affectedLines = _gitDiffLineBackgrounds.Keys.ToList();
+		_gitDiffLineBackgrounds.Clear();
+		foreach (var line in affectedLines)
+		{
+			if (line < 0 || line >= GetLineCount()) continue;
+			SetLineColour(line);
+		}
+
+		QueueRedraw();
+	}
+
+	public void SetGitDiffInlineHighlights(IReadOnlyDictionary<int, IReadOnlyList<GitDiffInlineDecoration>> highlights)
+	{
+		_gitDiffInlineHighlights.Clear();
+		foreach (var (line, spans) in highlights)
+		{
+			if (line < 0 || line >= GetLineCount()) continue;
+			_gitDiffInlineHighlights[line] = spans;
+		}
+
+		QueueRedraw();
+	}
+
+	public void ClearGitDiffInlineHighlights()
+	{
+		if (_gitDiffInlineHighlights.Count is 0) return;
+		_gitDiffInlineHighlights.Clear();
+		QueueRedraw();
+	}
+
+	public void SetGitDiffScrollMarkers(IReadOnlyList<GitDiffScrollMarker> markers)
+	{
+		_gitChangeScrollbarOverlay.SetMarkers(markers);
+	}
+
+	internal void SetPendingGitDiffTraceOperation(GitDiffTraceOperation? traceOperation, GitDiffTraceRedrawTarget redrawTarget)
+	{
+		_pendingGitDiffTraceOperation = traceOperation;
+		_pendingGitDiffTraceTarget = redrawTarget;
+	}
+
+	public void ClearGitDiffScrollMarkers()
+	{
+		_gitChangeScrollbarOverlay.ClearMarkers();
+	}
+
+	private void ClearGitDiffDecorations()
+	{
+		ClearGitDiffLineBackgrounds();
+		ClearGitDiffInlineHighlights();
+		ClearGitDiffScrollMarkers();
 	}
 
 	[RequiresGodotUiThread]
@@ -635,6 +966,102 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
 			});
 		});
+	}
+
+	public async Task SetPreviewTextForFile(SharpIdeFile file, string text, bool editable, bool clearGitDiffDecorations = true)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetPreviewTextForFile)}");
+		var fileContextVersion = AdvanceFileContextVersion();
+		_isPreviewMode = true;
+		if (clearGitDiffDecorations)
+		{
+			await this.InvokeAsync(ClearGitDiffDecorations);
+		}
+		PrepareFileContext(file, ownsFileLifecycle: false, subscribeToProjectDiagnostics: false);
+		var syntaxHighlighting = GetDocumentSyntaxHighlightingSafe(_currentFile, text);
+		var razorSyntaxHighlighting = GetRazorDocumentSyntaxHighlightingSafe(_currentFile);
+		var setTextTask = this.InvokeAsync(() =>
+		{
+			if (!IsCurrentFileContext(file, fileContextVersion)) return;
+			_fileChangingSuppressBreakpointToggleEvent = true;
+			_settingWholeDocumentTextSuppressLineEditsEvent = true;
+			SetSyntaxHighlightingModel([], []);
+			SetDiagnostics([]);
+			SetAnalyzerDiagnostics([]);
+			SetProjectDiagnostics([]);
+			SetText(text);
+			_settingWholeDocumentTextSuppressLineEditsEvent = false;
+			_fileChangingSuppressBreakpointToggleEvent = false;
+			ClearUndoHistory();
+			Editable = editable;
+			_gitChangeScrollbarOverlay.RefreshLayout();
+		});
+		_ = Task.GodotRun(async () =>
+		{
+			await Task.WhenAll(syntaxHighlighting, razorSyntaxHighlighting, setTextTask);
+			if (!IsCurrentFileContext(file, fileContextVersion)) return;
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsCurrentFileContext(file, fileContextVersion)) return;
+				SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting);
+			});
+		});
+	}
+
+	private void PrepareFileContext(SharpIdeFile file, bool ownsFileLifecycle, bool subscribeToProjectDiagnostics = true)
+	{
+		_projectDiagnosticsObserveDisposable?.Dispose();
+		if (_ownsFileLifecycle && _currentFile is not null)
+		{
+			if (!ReferenceEquals(_currentFile, file))
+			{
+				_openTabsFileManager.CloseFile(_currentFile);
+			}
+			_currentFile.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
+			_currentFile.FileDeleted.Unsubscribe(OnFileDeleted);
+		}
+
+		_currentFile = file;
+		_ownsFileLifecycle = ownsFileLifecycle;
+		if (!subscribeToProjectDiagnostics)
+		{
+			_projectDiagnosticsForFile = [];
+		}
+		if (ownsFileLifecycle)
+		{
+			_currentFile.FileContentsChangedExternally.Subscribe(OnFileChangedExternally);
+			_currentFile.FileDeleted.Subscribe(OnFileDeleted);
+		}
+
+		if (!subscribeToProjectDiagnostics)
+		{
+			return;
+		}
+
+		var project = ((IChildSharpIdeNode)_currentFile).GetNearestProjectNode();
+		if (project is null) return;
+
+		_projectDiagnosticsObserveDisposable = project.Diagnostics.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (innerEvent, ct) =>
+			{
+				var projectDiagnosticsForFile = project.Diagnostics.Where(s => s.FilePath == _currentFile.Path).ToImmutableArray();
+				await this.InvokeAsync(() => SetProjectDiagnostics(projectDiagnosticsForFile));
+			});
+	}
+
+	private long AdvanceFileContextVersion() => Interlocked.Increment(ref _fileContextVersion);
+
+	private long ReadFileContextVersion() => Interlocked.Read(ref _fileContextVersion);
+
+	private bool IsCurrentFileContext(SharpIdeFile file, long fileContextVersion)
+	{
+		return fileContextVersion == ReadFileContextVersion() && ReferenceEquals(_currentFile, file);
+	}
+
+	private bool IsEditorAlive()
+	{
+		return GodotObject.IsInstanceValid(this) && !IsQueuedForDeletion();
 	}
 	
 	private (int line, int col) GetCaretPosition(bool startAt1 = false)

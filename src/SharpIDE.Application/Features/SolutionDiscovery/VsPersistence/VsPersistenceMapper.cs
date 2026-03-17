@@ -17,11 +17,11 @@ public static class VsPersistenceMapper
 		if (gitFolderPath is null) return solutionModel;
 		using var repo = new Repository(gitFolderPath);
 		var status = repo.RetrieveStatus(new StatusOptions());
+		var repoRoot = repo.Info.WorkingDirectory;
 
 		foreach (var entry in status.Where(s => s.State is not FileStatus.Ignored))
 		{
-			// Assumes solution file is at git repo root
-			var filePath = new FileInfo(Path.Combine(solutionModel.DirectoryPath, entry.FilePath)).FullName; // used to normalise path separators
+			var filePath = new FileInfo(Path.Combine(repoRoot, entry.FilePath)).FullName; // used to normalise path separators
 			var fileInSolution = solutionModel.AllFiles.GetValueOrDefault(filePath);
 			if (fileInSolution is null) continue;
 

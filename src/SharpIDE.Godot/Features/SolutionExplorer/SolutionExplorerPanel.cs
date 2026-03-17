@@ -48,6 +48,13 @@ public partial class SolutionExplorerPanel : MarginContainer
 		// Remove the tree from the scene tree for now, we will add it back when we bind to a solution
 		_panelContainer.RemoveChild(_tree);
 		GodotGlobalEvents.Instance.FileExternallySelected.Subscribe(OnFileExternallySelected);
+		GodotGlobalEvents.Instance.GitStatusesChanged.Subscribe(OnGitStatusesChanged);
+	}
+
+	public override void _ExitTree()
+	{
+		GodotGlobalEvents.Instance.FileExternallySelected.Unsubscribe(OnFileExternallySelected);
+		GodotGlobalEvents.Instance.GitStatusesChanged.Unsubscribe(OnGitStatusesChanged);
 	}
 
 	public override void _UnhandledKeyInput(InputEvent @event)
@@ -146,6 +153,38 @@ public partial class SolutionExplorerPanel : MarginContainer
 		}
 
 		return null;
+	}
+
+	private async Task OnGitStatusesChanged()
+	{
+		await this.InvokeAsync(() =>
+		{
+			if (IsInstanceValid(_tree) is false || _tree.GetRoot() is null) return;
+			RefreshGitStatusColoursRecursive(_tree.GetRoot());
+			_tree.QueueRedraw();
+		});
+	}
+
+	private void RefreshGitStatusColoursRecursive(TreeItem item)
+	{
+		if (item.SharpIdeNode is SharpIdeFile file)
+		{
+			if (GitColours.GetColorForGitFileStatus(file.GitStatus) is { } notNullColor)
+			{
+				item.SetCustomColor(0, notNullColor);
+			}
+			else
+			{
+				item.ClearCustomColor(0);
+			}
+		}
+
+		var child = item.GetFirstChild();
+		while (child is not null)
+		{
+			RefreshGitStatusColoursRecursive(child);
+			child = child.GetNext();
+		}
 	}
 
 	public async Task BindToSolution() => await BindToSolution(SolutionModel);

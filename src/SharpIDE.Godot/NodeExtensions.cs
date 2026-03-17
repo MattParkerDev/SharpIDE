@@ -140,6 +140,7 @@ public static class NodeExtensions
 
     private static readonly ConditionalWeakTable<TreeItem, ISharpIdeNode> TreeItemSharpIdeNode = [];
     private static readonly ConditionalWeakTable<TreeItem, SharpIdeDiagnostic> TreeItemSharpIdeDiagnostic = [];
+    private static readonly ConditionalWeakTable<TreeItem, Dictionary<Type,object?>> TreeItemAssociatedValueMap = [];
     extension(TreeItem treeItem)
     {
         public ISharpIdeNode? SharpIdeNode
@@ -152,6 +153,43 @@ public static class NodeExtensions
             get => TreeItemSharpIdeDiagnostic.TryGetValue(treeItem, out var s) ? s : null;
             set => TreeItemSharpIdeDiagnostic.AddOrUpdateOrRemove(treeItem, value);
         }
+
+        public T? GetAssociatedValue<T>()
+        {
+            return treeItem.TryGetAssociatedValue<T>(out var value) ? value : default;
+        }
+
+        public bool TryGetAssociatedValue<T>(out T? value)
+        {
+            if (TreeItemAssociatedValueMap.TryGetValue(treeItem, out var store)
+                && store.TryGetValue(typeof(T), out var boxed)
+                && boxed is T typedValue)
+            {
+                value = typedValue;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        public void SetAssociatedValue<T>(T? value)
+        {
+            var store = TreeItemAssociatedValueMap.GetOrCreateValue(treeItem);
+            if (value is null)
+            {
+                store.Remove(typeof(T));
+                if (store.Values.Count is 0)
+                {
+                    TreeItemAssociatedValueMap.Remove(treeItem);
+                }
+
+                return;
+            }
+
+            store[typeof(T)] = value;
+        }
+
         public void MoveToIndexInParent(int currentIndex, int newIndex)
         {
             var parent = treeItem.GetParent()!;
@@ -276,6 +314,19 @@ public static class NodeExtensions
                 }
             }).CallDeferred();
             return taskCompletionSource.Task;
+        }
+    }
+}
+
+public static class GodotObjectExtensions
+{
+    extension(GodotObject? obj)
+    {
+        public bool IsAlive()
+        {
+            return obj is not null &&
+                   GodotObject.IsInstanceValid(obj) &&
+                   !obj.IsQueuedForDeletion();
         }
     }
 }

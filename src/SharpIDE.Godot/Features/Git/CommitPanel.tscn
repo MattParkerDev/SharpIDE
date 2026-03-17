@@ -1,0 +1,159 @@
+[gd_scene format=3 uid="uid://nf7felkn421q"]
+
+[ext_resource type="Script" uid="uid://nyql6x07hhbi" path="res://Features/Git/CommitPanel.cs" id="1_gitp"]
+[ext_resource type="Texture2D" uid="uid://cmwkpdv6pxaai" path="res://Resources/refresh.svg" id="2_rfsh"]
+
+[node name="CommitPanel" type="MarginContainer" unique_id=675510421]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+script = ExtResource("1_gitp")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=166644167]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="HeaderHBox" type="HBoxContainer" parent="VBoxContainer" unique_id=411426674]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer/HeaderHBox" unique_id=587986829]
+layout_mode = 2
+text = "Commit"
+
+[node name="BranchLabel" type="Label" parent="VBoxContainer/HeaderHBox" unique_id=2061078161]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "No repository"
+
+[node name="Spacer" type="Control" parent="VBoxContainer/HeaderHBox" unique_id=1391684577]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StashButton" type="Button" parent="VBoxContainer/HeaderHBox" unique_id=319058455]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Stash selected"
+text = "Stash"
+flat = true
+
+[node name="RefreshButton" type="Button" parent="VBoxContainer/HeaderHBox" unique_id=1341031607]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Refresh"
+theme_override_constants/icon_max_width = 15
+icon = ExtResource("2_rfsh")
+flat = true
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1360985593]
+layout_mode = 2
+
+[node name="ContentVBox" type="VBoxContainer" parent="VBoxContainer" unique_id=1247355104]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MainSplit" type="VSplitContainer" parent="VBoxContainer/ContentVBox" unique_id=175881731]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(380)
+split_offset = 380
+
+[node name="TopSplit" type="VSplitContainer" parent="VBoxContainer/ContentVBox/MainSplit" unique_id=1965444465]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(300)
+split_offset = 300
+
+[node name="ChangesPanel" type="PanelContainer" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit" unique_id=1147139028]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ChangesVBox" type="VBoxContainer" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/ChangesPanel" unique_id=1316822165]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="ChangesLabel" type="Label" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/ChangesPanel/ChangesVBox" unique_id=1846613964]
+layout_mode = 2
+text = "Changes"
+
+[node name="ChangesTree" type="Tree" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/ChangesPanel/ChangesVBox" unique_id=1654109511]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CommitPanel" type="PanelContainer" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit" unique_id=1547718629]
+layout_mode = 2
+
+[node name="CommitVBox" type="VBoxContainer" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/CommitPanel" unique_id=2038655925]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="CommitMessageTextEdit" type="TextEdit" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/CommitPanel/CommitVBox" unique_id=1186315226]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Commit message"
+
+[node name="CommitActionsHBox" type="HBoxContainer" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/CommitPanel/CommitVBox" unique_id=1747094260]
+layout_mode = 2
+
+[node name="CommitActionsSpacer" type="Control" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/CommitPanel/CommitVBox/CommitActionsHBox" unique_id=1295373449]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CommitButton" type="Button" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/CommitPanel/CommitVBox/CommitActionsHBox" unique_id=964547847]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Commit"
+
+[node name="CommitAndPushButton" type="Button" parent="VBoxContainer/ContentVBox/MainSplit/TopSplit/CommitPanel/CommitVBox/CommitActionsHBox" unique_id=650427211]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.16862746, 0.6666667, 0.9098039, 1)
+theme_override_colors/font_focus_color = Color(0.16862746, 0.6666667, 0.9098039, 1)
+theme_override_colors/font_pressed_color = Color(0.16862746, 0.6666667, 0.9098039, 1)
+theme_override_colors/font_hover_color = Color(0.4392157, 0.8039216, 0.972549, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.4392157, 0.8039216, 0.972549, 1)
+text = "Commit and Push"
+
+[node name="StashesPanel" type="PanelContainer" parent="VBoxContainer/ContentVBox/MainSplit" unique_id=1089157661]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="StashesVBox" type="VBoxContainer" parent="VBoxContainer/ContentVBox/MainSplit/StashesPanel" unique_id=1467211269]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="StashesLabel" type="Label" parent="VBoxContainer/ContentVBox/MainSplit/StashesPanel/StashesVBox" unique_id=1634313598]
+layout_mode = 2
+text = "Stashes"
+
+[node name="StashesTree" type="Tree" parent="VBoxContainer/ContentVBox/MainSplit/StashesPanel/StashesVBox" unique_id=1412643238]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EmptyStateLabel" type="Label" parent="VBoxContainer" unique_id=1629251489]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+text = "No git repository was found for the current solution."
+autowrap_mode = 3

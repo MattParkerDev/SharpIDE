@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns="http://www.w3.org/2000/svg"
+   viewBox="0 0 24 24"
+   aria-hidden="true"
+   role="img">
+  <g
+     fill="none"
+     stroke="#bebebe"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke-width="2.2">
+    <path d="M4 12h4.6" />
+    <path d="M15.4 12H20" />
+    <circle cx="12" cy="12" r="3.4" />
+  </g>
+</svg>

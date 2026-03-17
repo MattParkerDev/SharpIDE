@@ -82,6 +82,11 @@ public partial class SharpIdeCodeEdit
 
     private void OnCodeEditScrolled(double delta)
     {
+        _gitChangeScrollbarOverlay?.RefreshLayout();
+        if (_gitDiffLineBackgrounds.Count > 0 || _gitDiffInlineHighlights.Count > 0)
+        {
+            QueueRedraw();
+        }
         if (_isMethodSignatureHelpPopupOpen)
         {
             var (caretLine, caretCol) = GetCaretPosition();

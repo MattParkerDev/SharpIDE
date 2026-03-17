@@ -1,0 +1,305 @@
+[gd_scene format=3 uid="uid://5xjlumtkd0fo"]
+
+[ext_resource type="Script" uid="uid://n01wsc11fm5v" path="res://Features/Git/GitDiffViewer.cs" id="1_difv"]
+[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="2_font"]
+[ext_resource type="Script" uid="uid://sff3kheoknoq" path="res://Features/Git/GitDiffActionGutter.cs" id="2_guttr"]
+[ext_resource type="Script" uid="uid://jjqpi6h0t6uo" path="res://Features/Git/GitDiffConnectorOverlay.cs" id="5_conn"]
+[ext_resource type="Script" uid="uid://7x2ptpbexyw0" path="res://Features/CodeEditor/GitChangeScrollbarOverlay.cs" id="6_scrlm"]
+
+[node name="GitDiffViewer" type="MarginContainer" unique_id=278865676]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+script = ExtResource("1_difv")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=906249013]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="HeaderVBox" type="VBoxContainer" parent="VBoxContainer" unique_id=2003674393]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ActionHeaderHBox" type="HBoxContainer" parent="VBoxContainer/HeaderVBox" unique_id=1611712260]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="PreviousChangeButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=886785521]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Previous change"
+text = "^"
+flat = true
+
+[node name="NextChangeButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=952236274]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Next change"
+text = "v"
+flat = true
+
+[node name="EditSourceButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=1509139361]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Open source file"
+text = "Edit"
+flat = true
+
+[node name="HeaderSeparator1" type="VSeparator" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=1429599175]
+layout_mode = 2
+
+[node name="PreviousDiffButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=336801773]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Previous diff"
+text = "<"
+flat = true
+
+[node name="NextDiffButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=431926696]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Next diff"
+text = ">"
+flat = true
+
+[node name="HeaderSpacer" type="Control" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=1114653531]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SaveButton" type="Button" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=946816714]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Save Current"
+flat = true
+
+[node name="SummaryLabel" type="Label" parent="VBoxContainer/HeaderVBox/ActionHeaderHBox" unique_id=1230575714]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 2
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer" unique_id=1633618765]
+layout_mode = 2
+
+[node name="EmptyLabel" type="Label" parent="VBoxContainer" unique_id=1767550954]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+text = "Nothing to preview."
+autowrap_mode = 3
+
+[node name="DiffViewportHost" type="Control" parent="VBoxContainer" unique_id=1526843857]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(0, 460)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ConnectorOverlay" type="Control" parent="VBoxContainer/DiffViewportHost" unique_id=178148452]
+unique_name_in_owner = true
+z_index = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_conn")
+
+[node name="DiffEditorRow" type="HBoxContainer" parent="VBoxContainer/DiffViewportHost" unique_id=1730774424]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="BaseEditorPanel" type="PanelContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow" unique_id=265973280]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BaseEditorVBox" type="VBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel" unique_id=1197032890]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="BaseEditorLabel" type="Label" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox" unique_id=1961882089]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+text = "Base"
+
+[node name="BaseEditorHost" type="MarginContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox" unique_id=1247300818]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 1
+
+[node name="BaseEditorBody" type="HBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost" unique_id=2058511761]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="BaseExternalScrollBar" type="VScrollBar" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost/BaseEditorBody" unique_id=64787084]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(12, 0)
+layout_mode = 2
+size_flags_vertical = 3
+focus_mode = 0
+
+[node name="BaseScrollbarOverlay" type="Control" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost/BaseEditorBody/BaseExternalScrollBar" unique_id=859475985]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("6_scrlm")
+
+[node name="BaseEditorContentHost" type="MarginContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/BaseEditorPanel/BaseEditorVBox/BaseEditorHost/BaseEditorBody" unique_id=195944168]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ActionGutterPanel" type="PanelContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow" unique_id=1514402519]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ActionGutterVBox" type="VBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/ActionGutterPanel" unique_id=1675013093]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="ActionGutterSpacer" type="Control" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/ActionGutterPanel/ActionGutterVBox" unique_id=1383346511]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ActionGutter" type="Control" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/ActionGutterPanel/ActionGutterVBox" unique_id=966023703]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 420)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_guttr")
+
+[node name="CurrentEditorPanel" type="PanelContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow" unique_id=1500696917]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="CurrentEditorVBox" type="VBoxContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/CurrentEditorPanel" unique_id=1707514690]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="CurrentEditorLabel" type="Label" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/CurrentEditorPanel/CurrentEditorVBox" unique_id=1351294149]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+text = "Current"
+
+[node name="CurrentEditorHost" type="MarginContainer" parent="VBoxContainer/DiffViewportHost/DiffEditorRow/CurrentEditorPanel/CurrentEditorVBox" unique_id=366299531]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 1
+theme_override_constants/margin_bottom = 1
+
+[node name="MergeSplit" type="HSplitContainer" parent="VBoxContainer" unique_id=282024123]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(450)
+split_offset = 450
+
+[node name="LocalPanel" type="PanelContainer" parent="VBoxContainer/MergeSplit" unique_id=785254814]
+layout_mode = 2
+
+[node name="LocalVBox" type="VBoxContainer" parent="VBoxContainer/MergeSplit/LocalPanel" unique_id=546928892]
+layout_mode = 2
+
+[node name="LocalLabel" type="Label" parent="VBoxContainer/MergeSplit/LocalPanel/LocalVBox" unique_id=1907463721]
+layout_mode = 2
+text = "Local"
+
+[node name="LocalCodeEdit" type="CodeEdit" parent="VBoxContainer/MergeSplit/LocalPanel/LocalVBox" unique_id=589409558]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 15
+editable = false
+
+[node name="CenterRightSplit" type="HSplitContainer" parent="VBoxContainer/MergeSplit" unique_id=785305316]
+layout_mode = 2
+split_offsets = PackedInt32Array(450)
+split_offset = 450
+
+[node name="CurrentPanel" type="PanelContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit" unique_id=1231825466]
+layout_mode = 2
+
+[node name="CurrentVBox" type="VBoxContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit/CurrentPanel" unique_id=215377062]
+layout_mode = 2
+
+[node name="CurrentLabel" type="Label" parent="VBoxContainer/MergeSplit/CenterRightSplit/CurrentPanel/CurrentVBox" unique_id=1767046801]
+layout_mode = 2
+text = "Current"
+
+[node name="CurrentCodeEdit" type="CodeEdit" parent="VBoxContainer/MergeSplit/CenterRightSplit/CurrentPanel/CurrentVBox" unique_id=2030229971]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 15
+
+[node name="IncomingPanel" type="PanelContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit" unique_id=970456678]
+layout_mode = 2
+
+[node name="IncomingVBox" type="VBoxContainer" parent="VBoxContainer/MergeSplit/CenterRightSplit/IncomingPanel" unique_id=731705847]
+layout_mode = 2
+
+[node name="IncomingLabel" type="Label" parent="VBoxContainer/MergeSplit/CenterRightSplit/IncomingPanel/IncomingVBox" unique_id=1677477014]
+layout_mode = 2
+text = "Incoming"
+
+[node name="IncomingCodeEdit" type="CodeEdit" parent="VBoxContainer/MergeSplit/CenterRightSplit/IncomingPanel/IncomingVBox" unique_id=718861312]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 15
+editable = false

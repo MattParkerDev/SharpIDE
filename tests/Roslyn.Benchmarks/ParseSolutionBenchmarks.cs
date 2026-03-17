@@ -6,7 +6,11 @@ namespace Roslyn.Benchmarks;
 
 public class ParseSolutionBenchmarks
 {
-	private const string _solutionFilePath = "C:/Users/Matthew/Documents/Git/StatusApp/StatusApp.sln";
+	private static readonly string _solutionFilePath = Path.Combine(
+		FindRepositoryRoot(),
+		"src",
+		"SharpIDE.Godot",
+		"SharpIDE.Godot.sln");
 	private MSBuildWorkspace _workspace = null!;
 
 	[IterationSetup]
@@ -27,5 +31,21 @@ public class ParseSolutionBenchmarks
 	public void IterationCleanup()
 	{
 		_workspace?.CloseSolution();
+	}
+
+	private static string FindRepositoryRoot()
+	{
+		var currentDirectory = new DirectoryInfo(AppContext.BaseDirectory);
+		while (currentDirectory is not null)
+		{
+			if (currentDirectory.EnumerateFileSystemInfos(".git").Any())
+			{
+				return currentDirectory.FullName;
+			}
+
+			currentDirectory = currentDirectory.Parent;
+		}
+
+		throw new InvalidOperationException($"Could not locate the repository root from '{AppContext.BaseDirectory}'.");
 	}
 }

@@ -6,9 +6,11 @@ using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Events;
+using SharpIDE.Application.Features.Git;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.Git;
 using SharpIDE.Godot.Features.IdeSettings;
 using SharpIDE.Godot.Features.SolutionExplorer;
 
@@ -20,6 +22,8 @@ public partial class CodeEditorPanel : MarginContainer
 	public Texture2D CsFileTexture { get; set; } = null!;
 	public SharpIdeSolutionModel Solution { get; set; } = null!;
 	private PackedScene _sharpIdeCodeEditScene = GD.Load<PackedScene>("res://Features/CodeEditor/SharpIdeCodeEdit.tscn");
+	private PackedScene _gitDiffViewerScene = GD.Load<PackedScene>("res://Features/Git/GitDiffViewer.tscn");
+	private Texture2D _gitPreviewIcon = GD.Load<Texture2D>("res://Resources/refresh.svg");
 	private TabContainer _tabContainer = null!;
 	private ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
 	
@@ -36,6 +40,10 @@ public partial class CodeEditorPanel : MarginContainer
 		tabBar.TabRmbClicked += OnTabRmbClicked;
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
+		GodotGlobalEvents.Instance.GitFilePreviewRequested.Subscribe(OnGitFilePreviewRequested);
+		GodotGlobalEvents.Instance.GitCommitDiffRequested.Subscribe(OnGitCommitDiffRequested);
+		GodotGlobalEvents.Instance.GitCommitWorkingTreeDiffRequested.Subscribe(OnGitCommitWorkingTreeDiffRequested);
+		GodotGlobalEvents.Instance.GitStashDiffRequested.Subscribe(OnGitStashDiffRequested);
 	}
 
 	public override void _GuiInput(InputEvent @event)
@@ -73,16 +81,30 @@ public partial class CodeEditorPanel : MarginContainer
 
 	public override void _ExitTree()
 	{
+		if (GodotGlobalEvents.Instance is not null)
+		{
+			GodotGlobalEvents.Instance.GitFilePreviewRequested.Unsubscribe(OnGitFilePreviewRequested);
+			GodotGlobalEvents.Instance.GitCommitDiffRequested.Unsubscribe(OnGitCommitDiffRequested);
+			GodotGlobalEvents.Instance.GitCommitWorkingTreeDiffRequested.Unsubscribe(OnGitCommitWorkingTreeDiffRequested);
+			GodotGlobalEvents.Instance.GitStashDiffRequested.Unsubscribe(OnGitStashDiffRequested);
+		}
+
+		if (_tabContainer is null || Solution is null || Singletons.AppState is null) return;
+
 		var selectedTabIndex = _tabContainer.CurrentTab;
-		var thisSolution = Singletons.AppState.RecentSlns.Single(s => s.FilePath == Solution.FilePath);
-		thisSolution.IdeSolutionState.OpenTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>()
-			.Select(s => s.CodeEdit)
-			.Select((t, index) => new OpenTab
+		var selectedTab = selectedTabIndex >= 0 && selectedTabIndex < _tabContainer.GetChildCount()
+			? _tabContainer.GetChild(selectedTabIndex)
+			: null;
+		var thisSolution = Singletons.AppState.RecentSlns.SingleOrDefault(s => s.FilePath == Solution.FilePath);
+		if (thisSolution is null) return;
+		thisSolution.IdeSolutionState.OpenTabs = _tabContainer.GetChildren()
+			.OfType<SharpIdeCodeEditContainer>()
+			.Select(container => new OpenTab
 			{
-				FilePath = t.SharpIdeFile.Path,
-				CaretLine = t.GetCaretLine(),
-				CaretColumn = t.GetCaretColumn(),
-				IsSelected = index == selectedTabIndex
+				FilePath = container.CodeEdit.SharpIdeFile.Path,
+				CaretLine = container.CodeEdit.GetCaretLine(),
+				CaretColumn = container.CodeEdit.GetCaretColumn(),
+				IsSelected = ReferenceEquals(container, selectedTab)
 			})
 			.ToList();
 	}
@@ -109,7 +131,8 @@ public partial class CodeEditorPanel : MarginContainer
 
 	private void OnTabClicked(long tab)
 	{
-		var sharpIdeCodeEdit = _tabContainer.GetChild<SharpIdeCodeEditContainer>((int)tab).CodeEdit;
+		var sharpIdeCodeEdit = _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>((int)tab)?.CodeEdit;
+		if (sharpIdeCodeEdit is null) return;
 		var sharpIdeFile = sharpIdeCodeEdit.SharpIdeFile;
 		var caretLinePosition = new SharpIdeFileLinePosition(sharpIdeCodeEdit.GetCaretLine(), sharpIdeCodeEdit.GetCaretColumn());
 		GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, caretLinePosition);
@@ -153,6 +176,26 @@ public partial class CodeEditorPanel : MarginContainer
 			// This isn't actually necessary - closing a tab automatically selects the previous tab, however we need to do it to select the file in sln explorer, record navigation event etc
 			GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, caretLinePosition);
 		}
+	}
+
+	private async Task OnGitFilePreviewRequested(string absolutePath)
+	{
+		await SetGitPreviewFile(absolutePath);
+	}
+
+	private async Task OnGitCommitDiffRequested(GitCommitFileDiffRequest request)
+	{
+		await SetGitCommitDiff(request);
+	}
+
+	private async Task OnGitCommitWorkingTreeDiffRequested(GitCommitWorkingTreeDiffRequest request)
+	{
+		await SetGitCommitWorkingTreeDiff(request);
+	}
+
+	private async Task OnGitStashDiffRequested(GitStashFileDiffRequest request)
+	{
+		await SetGitStashDiff(request);
 	}
 
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
@@ -210,6 +253,137 @@ public partial class CodeEditorPanel : MarginContainer
 			var title = name + (isDirty ? " (*)" : "");
 			_tabContainer.SetTabTitle(tabIndex, title);
 		});
+	}
+
+	public async Task SetGitPreviewFile(string absolutePath)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		var normalizedPath = Path.GetFullPath(absolutePath);
+		var existingTab = await this.InvokeAsync(() => FindGitDiffViewerTab(normalizedPath, StringComparison.OrdinalIgnoreCase));
+		if (existingTab is not null)
+		{
+			var existingTabIndex = existingTab.GetIndex();
+			await this.InvokeAsync(() => _tabContainer.CurrentTab = existingTabIndex);
+			await existingTab.LoadFromPath(normalizedPath);
+			return;
+		}
+
+		var newTab = _gitDiffViewerScene.Instantiate<GitDiffViewer>();
+		await this.InvokeAsync(() =>
+		{
+			_tabContainer.AddChild(newTab);
+			var newTabIndex = _tabContainer.GetTabCount() - 1;
+			_tabContainer.SetTabIcon(newTabIndex, _gitPreviewIcon);
+			_tabContainer.SetTabTitle(newTabIndex, $"Diff: {Path.GetFileName(normalizedPath)}");
+			_tabContainer.SetTabTooltip(newTabIndex, normalizedPath);
+			_tabContainer.CurrentTab = newTabIndex;
+		});
+
+		await newTab.LoadFromPath(normalizedPath);
+	}
+
+	public async Task SetGitCommitDiff(GitCommitFileDiffRequest request)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		var previewKey = $"{request.CommitSha}:{request.RepoRelativePath}";
+		var existingTab = await this.InvokeAsync(() => FindGitDiffViewerTab(previewKey, StringComparison.Ordinal));
+		if (existingTab is not null)
+		{
+			var existingTabIndex = existingTab.GetIndex();
+			await this.InvokeAsync(() => _tabContainer.CurrentTab = existingTabIndex);
+			await existingTab.LoadHistoricalDiff(request);
+			return;
+		}
+
+		var newTab = _gitDiffViewerScene.Instantiate<GitDiffViewer>();
+		await this.InvokeAsync(() =>
+		{
+			_tabContainer.AddChild(newTab);
+			var newTabIndex = _tabContainer.GetTabCount() - 1;
+			_tabContainer.SetTabIcon(newTabIndex, _gitPreviewIcon);
+			_tabContainer.SetTabTitle(newTabIndex, $"Diff: {Path.GetFileName(request.RepoRelativePath)}");
+			_tabContainer.SetTabTooltip(newTabIndex, previewKey);
+			_tabContainer.CurrentTab = newTabIndex;
+		});
+
+		await newTab.LoadHistoricalDiff(request);
+	}
+
+	public async Task SetGitCommitWorkingTreeDiff(GitCommitWorkingTreeDiffRequest request)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		var previewKey = $"worktree:{request.CommitSha}:{request.RepoRelativePath}";
+		var existingTab = await this.InvokeAsync(() => FindGitDiffViewerTab(previewKey, StringComparison.Ordinal));
+		if (existingTab is not null)
+		{
+			var existingTabIndex = existingTab.GetIndex();
+			await this.InvokeAsync(() => _tabContainer.CurrentTab = existingTabIndex);
+			await existingTab.LoadHistoricalDiff(request);
+			return;
+		}
+
+		var newTab = _gitDiffViewerScene.Instantiate<GitDiffViewer>();
+		await this.InvokeAsync(() =>
+		{
+			_tabContainer.AddChild(newTab);
+			var newTabIndex = _tabContainer.GetTabCount() - 1;
+			_tabContainer.SetTabIcon(newTabIndex, _gitPreviewIcon);
+			_tabContainer.SetTabTitle(newTabIndex, $"Diff: {Path.GetFileName(request.RepoRelativePath)}");
+			_tabContainer.SetTabTooltip(newTabIndex, previewKey);
+			_tabContainer.CurrentTab = newTabIndex;
+		});
+
+		await newTab.LoadHistoricalDiff(request);
+	}
+
+	public async Task SetGitStashDiff(GitStashFileDiffRequest request)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		var previewKey = $"{request.StashRef}:{request.RepoRelativePath}";
+		var existingTab = await this.InvokeAsync(() => FindGitDiffViewerTab(previewKey, StringComparison.Ordinal));
+		if (existingTab is not null)
+		{
+			var existingTabIndex = existingTab.GetIndex();
+			await this.InvokeAsync(() => _tabContainer.CurrentTab = existingTabIndex);
+			await existingTab.LoadHistoricalDiff(request);
+			return;
+		}
+
+		var newTab = _gitDiffViewerScene.Instantiate<GitDiffViewer>();
+		await this.InvokeAsync(() =>
+		{
+			_tabContainer.AddChild(newTab);
+			var newTabIndex = _tabContainer.GetTabCount() - 1;
+			_tabContainer.SetTabIcon(newTabIndex, _gitPreviewIcon);
+			_tabContainer.SetTabTitle(newTabIndex, $"Diff: {Path.GetFileName(request.RepoRelativePath)}");
+			_tabContainer.SetTabTooltip(newTabIndex, previewKey);
+			_tabContainer.CurrentTab = newTabIndex;
+		});
+
+		await newTab.LoadHistoricalDiff(request);
+	}
+
+	private GitDiffViewer? FindGitDiffViewerTab(string previewKey, StringComparison comparison)
+	{
+		foreach (var viewer in _tabContainer.GetChildren().OfType<GitDiffViewer>())
+		{
+			if (string.Equals(viewer.PreviewKey, previewKey, comparison))
+			{
+				return viewer;
+			}
+
+			var tabIndex = viewer.GetIndex();
+			if (tabIndex >= 0 && tabIndex < _tabContainer.GetTabCount())
+			{
+				var tooltip = _tabContainer.GetTabTooltip(tabIndex);
+				if (string.Equals(tooltip, previewKey, comparison))
+				{
+					return viewer;
+				}
+			}
+		}
+
+		return null;
 	}
 	
 	private static readonly Color ExecutingLineColor = new Color("665001");
