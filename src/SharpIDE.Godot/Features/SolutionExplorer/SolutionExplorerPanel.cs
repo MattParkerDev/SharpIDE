@@ -85,16 +85,16 @@ public partial class SolutionExplorerPanel : MarginContainer
 		
 		var mouseButtonMask = (MouseButtonMask)mouseButtonIndex;
 
-		var genericMetadata = selected.GetMetadata(0).As<RefCounted?>();
-		switch (mouseButtonMask, genericMetadata)
+		var sharpIdeNode = selected.SharpIdeNode;
+		switch (mouseButtonMask, sharpIdeNode)
 		{
-			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeFile> fileContainer): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(fileContainer.Item, null); break;
-			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeFile> fileContainer): OpenContextMenuFile(fileContainer.Item); break;
-			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeProjectModel> { Item.IsInvalid: true }): GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Problems); break;
-			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeProjectModel> projectContainer): OpenContextMenuProject(projectContainer.Item); break;
-			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeFolder>): break;
-			case (MouseButtonMask.Right, RefCountedContainer<SharpIdeFolder> folderContainer): OpenContextMenuFolder(folderContainer.Item, selected); break;
-			case (MouseButtonMask.Left, RefCountedContainer<SharpIdeSolutionFolder>): break;
+			case (MouseButtonMask.Left, SharpIdeFile file): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(file, null); break;
+			case (MouseButtonMask.Right, SharpIdeFile file): OpenContextMenuFile(file); break;
+			case (MouseButtonMask.Left, SharpIdeProjectModel { IsInvalid: true }): GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Problems); break;
+			case (MouseButtonMask.Right, SharpIdeProjectModel project): OpenContextMenuProject(project); break;
+			case (MouseButtonMask.Left, SharpIdeFolder): break;
+			case (MouseButtonMask.Right, SharpIdeFolder folder): OpenContextMenuFolder(folder, selected); break;
+			case (MouseButtonMask.Left, SharpIdeSolutionFolder): break;
 			default: break;
 		}
 	}
@@ -112,8 +112,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 		var selectedItem = _tree.GetSelected();
 		if (selectedItem is not null)
 		{
-			var selectedFile = selectedItem.GetTypedMetadata<RefCountedContainer<SharpIdeFile>?>(0)?.Item;
-			if (selectedFile == file)
+			var selectedSharpIdeNode = selectedItem.SharpIdeNode;
+			if (selectedSharpIdeNode == file)
 				return;
 		}
 		var item = FindItemRecursive(_tree.GetRoot(), file);
@@ -132,7 +132,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	
 	private static TreeItem? FindItemRecursive(TreeItem item, SharpIdeFile file)
 	{
-		if (item.GetTypedMetadata<RefCountedContainer<SharpIdeFile>?>(0)?.Item == file)
+		if (item.SharpIdeNode == file)
 			return item;
 
 		var child = item.GetFirstChild();
@@ -201,7 +201,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	    var folderItem = tree.CreateItem(parent);
         folderItem.SetText(0, slnFolder.Name);
         folderItem.SetIcon(0, SlnFolderIcon);
-        folderItem.SetMetadata(0, new RefCountedContainer<SharpIdeSolutionFolder>(slnFolder));
+        folderItem.SharpIdeNode = slnFolder;
 
         // Observe folder sub-collections
         var subFoldersView = slnFolder.Folders.CreateView(y => new TreeItemContainer());
@@ -245,7 +245,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		var icon = projectModel.IsLoading ? LoadingProjectIcon : projectModel.IsInvalid ? UnloadedProjectIcon : CsprojIcon;
 		projectItem.SetIcon(0, icon);
 		if (projectModel.IsLoading is false && projectModel.IsInvalid) projectItem.SetSuffix(0, " ·  load failed");
-		projectItem.SetMetadata(0, new RefCountedContainer<SharpIdeProjectModel>(projectModel));
+		projectItem.SharpIdeNode = projectModel;
 		
 		projectModel.MsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadState, ct) =>
 		{
@@ -298,7 +298,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		var folderItem = tree.CreateItem(parent, newStartingIndex);
 		folderItem.SetText(0, sharpIdeFolder.Name.Value);
 		folderItem.SetIcon(0, FolderIcon);
-		folderItem.SetMetadata(0, new RefCountedContainer<SharpIdeFolder>(sharpIdeFolder));
+		folderItem.SharpIdeNode = sharpIdeFolder;
 		
 		Observable.EveryValueChanged(sharpIdeFolder, folder => folder.Name.Value)
 			.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (s, ct) =>
@@ -350,7 +350,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		fileItem.SetIconsForFileExtension(sharpIdeFile);
 		if (GitColours.GetColorForGitFileStatus(sharpIdeFile.GitStatus) is { } notnullColor) fileItem.SetCustomColor(0, notnullColor);
 		else fileItem.ClearCustomColor(0);
-		fileItem.SetMetadata(0, new RefCountedContainer<SharpIdeFile>(sharpIdeFile));
+		fileItem.SharpIdeNode = sharpIdeFile;
 		
 		Observable.EveryValueChanged(sharpIdeFile, file => file.Name.Value)
 			.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (s, ct) =>

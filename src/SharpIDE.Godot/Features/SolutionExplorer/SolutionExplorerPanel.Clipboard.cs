@@ -16,11 +16,11 @@ public partial class SolutionExplorerPanel
         _itemsOnClipboard = (selectedItems
             .Select(item =>
             {
-                var metadata = item.GetMetadata(0).As<RefCounted?>();
-                IFileOrFolder? result = metadata switch
+                var sharpIdeNode = item.SharpIdeNode;
+                IFileOrFolder? result = sharpIdeNode switch
                 {
-                    RefCountedContainer<SharpIdeFile> file => file.Item,
-                    RefCountedContainer<SharpIdeFolder> folder => folder.Item,
+                    SharpIdeFile file => file,
+                    SharpIdeFolder folder => folder,
                     _ => null
                 };
                 return result;
@@ -65,11 +65,11 @@ public partial class SolutionExplorerPanel
     {
         var selected = _tree.GetSelected();
         if (selected is null || _itemsOnClipboard is null) return;
-        var genericMetadata = selected.GetMetadata(0).As<RefCounted?>();
-        IFolderOrProject? destinationFolderOrProject = genericMetadata switch
+        var sharpIdeNode = selected.SharpIdeNode;
+        IFolderOrProject? destinationFolderOrProject = sharpIdeNode switch
         {
-            RefCountedContainer<SharpIdeFolder> f => f.Item,
-            RefCountedContainer<SharpIdeProjectModel> p => p.Item,
+            SharpIdeFolder f => f,
+            SharpIdeProjectModel p => p,
             _ => null
         };
         if (destinationFolderOrProject is null) return;

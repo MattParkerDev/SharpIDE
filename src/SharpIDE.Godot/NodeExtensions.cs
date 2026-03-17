@@ -1,8 +1,6 @@
-﻿using System.Collections.Specialized;
+﻿using System.Runtime.CompilerServices;
 using Godot;
-using ObservableCollections;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
-using SharpIDE.Godot.Features.Problems;
 
 namespace SharpIDE.Godot;
 
@@ -124,17 +122,23 @@ public static class NodeExtensions
         }
     }
 
+    private static readonly ConditionalWeakTable<TreeItem, ISharpIdeNode> TreeItemSharpIdeNode = [];
     extension(TreeItem treeItem)
     {
-        public T? GetTypedMetadata<T>(int column) where T : RefCounted?
+        public ISharpIdeNode? SharpIdeNode
         {
-            var metadata = treeItem.GetMetadata(column);
-            var refCountedMetadata = metadata.As<RefCounted?>();
-            if (refCountedMetadata is T correctTypeContainer)
+            get => TreeItemSharpIdeNode.TryGetValue(treeItem, out var s) ? s : null;
+            set
             {
-                return correctTypeContainer;
+                if (value is null)
+                {
+                    TreeItemSharpIdeNode.Remove(treeItem);
+                }
+                else
+                {
+                    TreeItemSharpIdeNode.AddOrUpdate(treeItem, value);
+                }
             }
-            return null;
         }
         public void MoveToIndexInParent(int currentIndex, int newIndex)
         {
