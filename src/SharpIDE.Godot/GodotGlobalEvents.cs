@@ -20,6 +20,7 @@ public class GodotGlobalEvents
     public EventWrapper<SharpIdeFile, SharpIdeFileLinePosition?, Task> FileExternallySelected { get; } = new((_, _) => Task.CompletedTask);
     public EventWrapper<string, Task> GitFilePreviewRequested { get; } = new(_ => Task.CompletedTask);
     public EventWrapper<GitCommitFileDiffRequest, Task> GitCommitDiffRequested { get; } = new(_ => Task.CompletedTask);
+    public EventWrapper<GitCommitWorkingTreeDiffRequest, Task> GitCommitWorkingTreeDiffRequested { get; } = new(_ => Task.CompletedTask);
     public EventWrapper<GitStashFileDiffRequest, Task> GitStashDiffRequested { get; } = new(_ => Task.CompletedTask);
     public EventWrapper<Task> GitStatusesChanged { get; } = new(() => Task.CompletedTask);
     public EventWrapper<LightOrDarkTheme, Task> TextEditorThemeChanged { get; } = new(_ => Task.CompletedTask);

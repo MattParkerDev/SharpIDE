@@ -63,6 +63,7 @@ public partial class GitDiffViewer : MarginContainer
     private IReadOnlyList<string> _adjacentDiffPaths = [];
     private int _currentDiffPathIndex = -1;
     private GitCommitFileDiffRequest? _historicalCommitDiffRequest;
+    private GitCommitWorkingTreeDiffRequest? _historicalCommitWorkingTreeDiffRequest;
     private GitStashFileDiffRequest? _historicalStashDiffRequest;
 
     [Inject] private readonly GitService _gitService = null!;
@@ -134,6 +135,7 @@ public partial class GitDiffViewer : MarginContainer
     {
         _isHistoricalReadOnly = false;
         _historicalCommitDiffRequest = null;
+        _historicalCommitWorkingTreeDiffRequest = null;
         _historicalStashDiffRequest = null;
         var scrollToFirstChange = false;
         if (!string.Equals(SourcePath, absolutePath, StringComparison.Ordinal))
@@ -155,9 +157,26 @@ public partial class GitDiffViewer : MarginContainer
     {
         _isHistoricalReadOnly = true;
         _historicalCommitDiffRequest = request;
+        _historicalCommitWorkingTreeDiffRequest = null;
         _historicalStashDiffRequest = null;
         SourcePath = Path.Combine(request.RepoRootPath, request.RepoRelativePath.Replace('/', Path.DirectorySeparatorChar));
         PreviewKey = $"{request.CommitSha}:{request.RepoRelativePath}";
+        _listenForRepositoryChanges = false;
+        _session.HorizontalScroll = 0;
+        _session.VerticalScroll = 0;
+        _session.CaretLine = 0;
+        _session.CaretColumn = 0;
+        await RefreshAsync(scrollToFirstChange: true);
+    }
+
+    public async Task LoadHistoricalDiff(GitCommitWorkingTreeDiffRequest request)
+    {
+        _isHistoricalReadOnly = true;
+        _historicalCommitDiffRequest = null;
+        _historicalCommitWorkingTreeDiffRequest = request;
+        _historicalStashDiffRequest = null;
+        SourcePath = Path.Combine(request.RepoRootPath, request.RepoRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        PreviewKey = $"worktree:{request.CommitSha}:{request.RepoRelativePath}";
         _listenForRepositoryChanges = false;
         _session.HorizontalScroll = 0;
         _session.VerticalScroll = 0;
@@ -170,6 +189,7 @@ public partial class GitDiffViewer : MarginContainer
     {
         _isHistoricalReadOnly = true;
         _historicalCommitDiffRequest = null;
+        _historicalCommitWorkingTreeDiffRequest = null;
         _historicalStashDiffRequest = request;
         SourcePath = Path.Combine(request.RepoRootPath, request.RepoRelativePath.Replace('/', Path.DirectorySeparatorChar));
         PreviewKey = $"{request.StashRef}:{request.RepoRelativePath}";
@@ -249,6 +269,10 @@ public partial class GitDiffViewer : MarginContainer
                 if (_historicalCommitDiffRequest is not null)
                 {
                     diffView = await _gitService.GetCommitFileDiffView(_historicalCommitDiffRequest);
+                }
+                else if (_historicalCommitWorkingTreeDiffRequest is not null)
+                {
+                    diffView = await _gitService.GetCommitFileWorkingTreeDiffView(_historicalCommitWorkingTreeDiffRequest);
                 }
                 else if (_historicalStashDiffRequest is not null)
                 {

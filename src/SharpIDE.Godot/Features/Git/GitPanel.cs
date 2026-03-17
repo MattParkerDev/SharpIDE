@@ -1,7 +1,9 @@
 using Godot;
 using SharpIDE.Application.Features.Git;
+using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.Problems;
+using ResetMode = LibGit2Sharp.ResetMode;
 
 namespace SharpIDE.Godot.Features.Git;
 
@@ -22,6 +24,46 @@ public partial class GitPanel : Control
         PushTag = 11,
         DeleteLocalTag = 12,
         DeleteRemoteTag = 13
+    }
+
+    private enum HistoryContextAction
+    {
+        CopyRevisionNumber = 1,
+        CreatePatch = 2,
+        CherryPick = 3,
+        CheckoutRevision = 4,
+        CompareWithWorkingTree = 5,
+        ResetCurrentBranchToHere = 6,
+        RevertCommit = 7,
+        UndoCommit = 8,
+        EditCommitMessage = 9,
+        NewBranchFromHere = 10,
+        NewTag = 11
+    }
+
+    private enum HistoryResetContextAction
+    {
+        Soft = 1,
+        Mixed = 2,
+        Hard = 3
+    }
+
+    private enum FilesContextAction
+    {
+        ShowDiff = 1,
+        CompareWithWorkingTree = 2,
+        EditSource = 3,
+        RevertSelectedChanges = 4,
+        CherryPickSelectedChanges = 5,
+        CreatePatch = 6
+    }
+
+    private sealed class GitCommitTreeFileNode
+    {
+        public required GitCommitChangedFile File { get; init; }
+        public required GitCommitFileDiffRequest DiffRequest { get; init; }
+        public required GitCommitWorkingTreeDiffRequest WorkingTreeDiffRequest { get; init; }
+        public required string AbsolutePath { get; init; }
     }
 
     private const float MinimumFilesHeight = 80f;
@@ -128,7 +170,9 @@ public partial class GitPanel : Control
         _refsTree.GuiInput += OnRefsTreeGuiInput;
         _searchLineEdit.TextChanged += OnSearchTextChanged;
         _historyTree.ItemSelected += OnHistoryTreeItemSelected;
+        _historyTree.GuiInput += OnHistoryTreeGuiInput;
         _filesTree.ItemActivated += OnFilesTreeItemActivated;
+        _filesTree.GuiInput += OnFilesTreeGuiInput;
 
         _gitRepositoryMonitor.RepositoryChanged.Subscribe(OnRepositoryChanged);
         SetProcess(true);
@@ -160,7 +204,7 @@ public partial class GitPanel : Control
 
         _historyTree.HideRoot = true;
         _historyTree.Columns = 3;
-        _historyTree.SelectMode = Tree.SelectModeEnum.Row;
+        _historyTree.SelectMode = Tree.SelectModeEnum.Multi;
         _historyTree.ColumnTitlesVisible = false;
         _historyTree.SetColumnExpand(0, true);
         _historyTree.SetColumnExpand(1, false);
@@ -170,7 +214,7 @@ public partial class GitPanel : Control
 
         _filesTree.HideRoot = true;
         _filesTree.Columns = 2;
-        _filesTree.SelectMode = Tree.SelectModeEnum.Row;
+        _filesTree.SelectMode = Tree.SelectModeEnum.Multi;
         _filesTree.ColumnTitlesVisible = false;
         _filesTree.SetColumnExpand(0, true);
         _filesTree.SetColumnExpand(1, false);
@@ -640,11 +684,18 @@ public partial class GitPanel : Control
             menu.AddItem($"Show Diff current branch with '{shortName}'", (int)RefContextAction.ShowDiffCurrentBranchWithSelected);
         }
 
-        menu.AddSeparator();
         if (!node.IsCurrent && !_isDetachedHead)
         {
+            menu.AddSeparator();
             menu.AddItem($"Rebase current branch onto '{shortName}'", (int)RefContextAction.RebaseCurrentOntoSelected);
             menu.AddItem($"Merge '{shortName}' into current branch", (int)RefContextAction.MergeSelectedIntoCurrent);
+        }
+
+        if (node.IsCurrent)
+        {
+            menu.AddSeparator();
+            menu.AddItem("Update", (int)RefContextAction.UpdateCurrentBranch);
+            menu.AddItem("Push", (int)RefContextAction.PushCurrentBranch);
         }
 
         var addedRenameDeleteGroup = false;
@@ -663,13 +714,6 @@ public partial class GitPanel : Control
             }
 
             menu.AddItem("Delete", (int)RefContextAction.DeleteLocalBranch);
-        }
-
-        if (node.IsCurrent)
-        {
-            menu.AddSeparator();
-            menu.AddItem("Push", (int)RefContextAction.PushCurrentBranch);
-            menu.AddItem("Update", (int)RefContextAction.UpdateCurrentBranch);
         }
     }
 
@@ -1024,6 +1068,91 @@ public partial class GitPanel : Control
         });
     }
 
+    private void OnHistoryTreeGuiInput(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } mouseEvent)
+        {
+            return;
+        }
+
+        var selected = SelectContextTreeItemAtPosition(_historyTree, mouseEvent.Position);
+        var row = selected?.GetTypedMetadata<GitHistoryRow>(0);
+        if (row is null)
+        {
+            return;
+        }
+
+        _historyTree.AcceptEvent();
+        _ = Task.GodotRun(OpenHistoryContextMenuAsync);
+    }
+
+    private async Task OpenHistoryContextMenuAsync()
+    {
+        var selectedRows = GetSelectedHistoryRows();
+        if (selectedRows.Count is 0)
+        {
+            return;
+        }
+
+        GitCommitCapabilities? capabilities = null;
+        if (selectedRows.Count is 1)
+        {
+            capabilities = await _gitService.GetCommitCapabilities(_repoRootPath, selectedRows[0].Sha);
+        }
+
+        await this.InvokeAsync(() => OpenHistoryContextMenu(selectedRows, capabilities));
+    }
+
+    private void OpenHistoryContextMenu(IReadOnlyList<GitHistoryRow> selectedRows, GitCommitCapabilities? capabilities)
+    {
+        if (selectedRows.Count is 0)
+        {
+            return;
+        }
+
+        var isSingle = selectedRows.Count is 1;
+        var singleRow = selectedRows[0];
+        var menu = new PopupMenu();
+        AddChild(menu);
+
+        menu.AddItem("Copy Revision Number", (int)HistoryContextAction.CopyRevisionNumber);
+        menu.AddItem("Create Patch...", (int)HistoryContextAction.CreatePatch);
+        menu.AddItem("Cherry-Pick", (int)HistoryContextAction.CherryPick);
+        menu.AddSeparator();
+        menu.AddItem("Checkout Revision", (int)HistoryContextAction.CheckoutRevision);
+        menu.SetItemDisabled(menu.ItemCount - 1, !isSingle);
+        menu.AddItem("Compare with Working Tree", (int)HistoryContextAction.CompareWithWorkingTree);
+        menu.SetItemDisabled(menu.ItemCount - 1, true); // TODO: requires a dedicated compare surface.
+        menu.AddSeparator();
+
+        var resetSubmenu = new PopupMenu();
+        menu.AddSubmenuNodeItem("Reset Current Branch to Here", resetSubmenu, (int)HistoryContextAction.ResetCurrentBranchToHere);
+        var canReset = isSingle;
+        menu.SetItemDisabled(menu.ItemCount - 1, !canReset);
+        resetSubmenu.AddItem("Soft", (int)HistoryResetContextAction.Soft);
+        resetSubmenu.SetItemDisabled(resetSubmenu.ItemCount - 1, !canReset);
+        resetSubmenu.AddItem("Mixed", (int)HistoryResetContextAction.Mixed);
+        resetSubmenu.SetItemDisabled(resetSubmenu.ItemCount - 1, !canReset);
+        resetSubmenu.AddItem("Hard", (int)HistoryResetContextAction.Hard);
+        resetSubmenu.SetItemDisabled(resetSubmenu.ItemCount - 1, !canReset);
+
+        menu.AddItem("Revert Commit", (int)HistoryContextAction.RevertCommit);
+        menu.AddItem("Undo Commit", (int)HistoryContextAction.UndoCommit);
+        menu.SetItemDisabled(menu.ItemCount - 1, !(isSingle && capabilities?.CanUndoCommit == true));
+        menu.AddItem("Edit Commit Message", (int)HistoryContextAction.EditCommitMessage);
+        menu.SetItemDisabled(menu.ItemCount - 1, !(isSingle && capabilities?.CanEditMessage == true));
+        menu.AddSeparator();
+        menu.AddItem("New Branch from Here...", (int)HistoryContextAction.NewBranchFromHere);
+        menu.SetItemDisabled(menu.ItemCount - 1, !isSingle);
+        menu.AddItem("New Tag", (int)HistoryContextAction.NewTag);
+        menu.SetItemDisabled(menu.ItemCount - 1, !isSingle);
+
+        menu.PopupHide += () => menu.QueueFree();
+        menu.IdPressed += id => _ = Task.GodotRun(() => HandleHistoryContextActionAsync(selectedRows, capabilities, (HistoryContextAction)id));
+        resetSubmenu.IdPressed += id => _ = Task.GodotRun(() => HandleHistoryResetContextActionAsync(singleRow, (HistoryResetContextAction)id));
+        PopupMenuAtMouse(menu);
+    }
+
     private void PopulateFilesTree(string commitSha, IReadOnlyList<GitCommitChangedFile> files)
     {
         _filesTree.Clear();
@@ -1047,16 +1176,30 @@ public partial class GitPanel : Control
                 ?? string.Empty;
             var parent = EnsureDirectory(directoryMap, root, directory);
             var item = _filesTree.CreateItem(parent);
+            var absolutePath = Path.Combine(_repoRootPath, file.RepoRelativePath.Replace('/', Path.DirectorySeparatorChar));
             item.SetText(0, Path.GetFileName(file.RepoRelativePath));
             item.SetText(1, file.StatusCode);
             item.SetTooltipText(0, file.DisplayPath);
             ApplyCommitChangeItemStyles(item, file);
-            item.SetMetadata(0, new RefCountedContainer(new GitCommitFileDiffRequest
+            item.SetMetadata(0, new RefCountedContainer(new GitCommitTreeFileNode
             {
-                RepoRootPath = _repoRootPath,
-                CommitSha = commitSha,
-                RepoRelativePath = file.RepoRelativePath,
-                OldRepoRelativePath = file.OldRepoRelativePath
+                File = file,
+                AbsolutePath = absolutePath,
+                DiffRequest = new GitCommitFileDiffRequest
+                {
+                    RepoRootPath = _repoRootPath,
+                    CommitSha = commitSha,
+                    RepoRelativePath = file.RepoRelativePath,
+                    OldRepoRelativePath = file.OldRepoRelativePath
+                },
+                WorkingTreeDiffRequest = new GitCommitWorkingTreeDiffRequest
+                {
+                    RepoRootPath = _repoRootPath,
+                    CommitSha = commitSha,
+                    RepoRelativePath = file.RepoRelativePath,
+                    OldRepoRelativePath = file.OldRepoRelativePath,
+                    StatusCode = file.StatusCode
+                }
             }));
         }
     }
@@ -1154,9 +1297,284 @@ public partial class GitPanel : Control
     private void OnFilesTreeItemActivated()
     {
         var selected = _filesTree.GetSelected();
-        var request = selected?.GetTypedMetadata<GitCommitFileDiffRequest>(0);
-        if (request is null) return;
-        GodotGlobalEvents.Instance.GitCommitDiffRequested.InvokeParallelFireAndForget(request);
+        var fileNode = selected?.GetTypedMetadata<GitCommitTreeFileNode>(0);
+        if (fileNode is null) return;
+        GodotGlobalEvents.Instance.GitCommitDiffRequested.InvokeParallelFireAndForget(fileNode.DiffRequest);
+    }
+
+    private void OnFilesTreeGuiInput(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right } mouseEvent)
+        {
+            return;
+        }
+
+        var selected = SelectContextTreeItemAtPosition(_filesTree, mouseEvent.Position);
+        var fileNode = selected?.GetTypedMetadata<GitCommitTreeFileNode>(0);
+        if (fileNode is null)
+        {
+            return;
+        }
+
+        OpenFilesContextMenu(GetSelectedCommitFileNodes());
+        _filesTree.AcceptEvent();
+    }
+
+    private void OpenFilesContextMenu(IReadOnlyList<GitCommitTreeFileNode> selectedFiles)
+    {
+        if (selectedFiles.Count is 0)
+        {
+            return;
+        }
+
+        var menu = new PopupMenu();
+        AddChild(menu);
+        menu.AddItem("Show Diff", (int)FilesContextAction.ShowDiff);
+        menu.AddItem("Compare with Working Tree", (int)FilesContextAction.CompareWithWorkingTree);
+        menu.AddItem("Edit Source", (int)FilesContextAction.EditSource);
+        menu.SetItemDisabled(menu.ItemCount - 1, !selectedFiles.Any(file => File.Exists(file.AbsolutePath)));
+        menu.AddSeparator();
+        menu.AddItem("Revert Selected Changes", (int)FilesContextAction.RevertSelectedChanges);
+        menu.AddItem("Cherry-Pick Selected Changes", (int)FilesContextAction.CherryPickSelectedChanges);
+        menu.AddItem("Create Patch...", (int)FilesContextAction.CreatePatch);
+        menu.PopupHide += () => menu.QueueFree();
+        menu.IdPressed += id => _ = Task.GodotRun(() => HandleFilesContextActionAsync(selectedFiles, (FilesContextAction)id));
+        PopupMenuAtMouse(menu);
+    }
+
+    private async Task HandleHistoryContextActionAsync(
+        IReadOnlyList<GitHistoryRow> selectedRows,
+        GitCommitCapabilities? capabilities,
+        HistoryContextAction action)
+    {
+        if (selectedRows.Count is 0)
+        {
+            return;
+        }
+
+        var singleRow = selectedRows[0];
+        switch (action)
+        {
+            case HistoryContextAction.CopyRevisionNumber:
+                DisplayServer.ClipboardSet(string.Join('\n', selectedRows.Select(row => row.Sha)));
+                break;
+            case HistoryContextAction.CreatePatch:
+            {
+                var patchText = await _gitService.BuildCommitPatchText(_repoRootPath, selectedRows.Reverse().Select(row => row.Sha).ToList());
+                var suggestedFileName = selectedRows.Count is 1
+                    ? $"{singleRow.ShortSha}.patch"
+                    : $"{selectedRows[^1].ShortSha}-{selectedRows[0].ShortSha}.patch";
+                var savePath = await PromptForSavePathAsync("Create Patch", suggestedFileName);
+                if (string.IsNullOrWhiteSpace(savePath))
+                {
+                    return;
+                }
+
+                await File.WriteAllTextAsync(savePath, patchText);
+                break;
+            }
+            case HistoryContextAction.CherryPick:
+                if (!await ConfirmAsync("Cherry-Pick Commit", BuildCommitSelectionMessage("Cherry-pick", selectedRows)))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(async () =>
+                {
+                    foreach (var row in selectedRows.Reverse())
+                    {
+                        await _gitService.CherryPickCommit(_repoRootPath, row.Sha);
+                    }
+                });
+                break;
+            case HistoryContextAction.CheckoutRevision:
+                if (selectedRows.Count is not 1)
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.CheckoutCommit(_repoRootPath, singleRow.Sha));
+                break;
+            case HistoryContextAction.CompareWithWorkingTree:
+                break;
+            case HistoryContextAction.ResetCurrentBranchToHere:
+                break;
+            case HistoryContextAction.RevertCommit:
+                if (!await ConfirmAsync("Revert Commit", BuildCommitSelectionMessage("Revert", selectedRows)))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(async () =>
+                {
+                    foreach (var row in selectedRows)
+                    {
+                        await _gitService.RevertCommit(_repoRootPath, row.Sha);
+                    }
+                });
+                break;
+            case HistoryContextAction.UndoCommit:
+                if (selectedRows.Count is not 1 || capabilities?.CanUndoCommit != true)
+                {
+                    return;
+                }
+
+                if (!await ConfirmAsync("Undo Commit", $"Undo latest commit '{singleRow.Subject}' and keep its changes staged?"))
+                {
+                    return;
+                }
+
+                var details = await _gitService.GetCommitDetails(_repoRootPath, singleRow.Sha);
+                if (details.ParentShas.Count is 0)
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.Reset(_repoRootPath, details.ParentShas[0], ResetMode.Soft));
+                break;
+            case HistoryContextAction.EditCommitMessage:
+                if (selectedRows.Count is not 1 || capabilities?.CanEditMessage != true)
+                {
+                    return;
+                }
+
+                var commitDetails = await _gitService.GetCommitDetails(_repoRootPath, singleRow.Sha);
+                var newMessage = await PromptForCommitMessageAsync("Edit Commit Message", commitDetails.FullMessage);
+                if (string.IsNullOrWhiteSpace(newMessage))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.EditCommitMessage(_repoRootPath, singleRow.Sha, newMessage));
+                break;
+            case HistoryContextAction.NewBranchFromHere:
+            {
+                if (selectedRows.Count is not 1)
+                {
+                    return;
+                }
+
+                var branchName = await PromptForTextAsync("New Branch", "Branch name", $"branch-from-{singleRow.ShortSha}");
+                if (string.IsNullOrWhiteSpace(branchName))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.CreateBranchFromCommit(_repoRootPath, singleRow.Sha, branchName));
+                break;
+            }
+            case HistoryContextAction.NewTag:
+            {
+                if (selectedRows.Count is not 1)
+                {
+                    return;
+                }
+
+                var tagName = await PromptForTextAsync("New Tag", "Tag name", singleRow.ShortSha);
+                if (string.IsNullOrWhiteSpace(tagName))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.CreateTagAtCommit(_repoRootPath, singleRow.Sha, tagName));
+                break;
+            }
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action), action, null);
+        }
+    }
+
+    private async Task HandleHistoryResetContextActionAsync(GitHistoryRow row, HistoryResetContextAction action)
+    {
+        var mode = action switch
+        {
+            HistoryResetContextAction.Soft => ResetMode.Soft,
+            HistoryResetContextAction.Mixed => ResetMode.Mixed,
+            HistoryResetContextAction.Hard => ResetMode.Hard,
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+        };
+        var confirmationMessage = mode is ResetMode.Hard
+            ? $"Hard reset the current branch to '{row.ShortSha}'? This will discard working tree and index changes."
+            : $"Reset the current branch to '{row.ShortSha}' using {mode.ToString().ToLowerInvariant()} mode?";
+        if (!await ConfirmAsync("Reset Branch", confirmationMessage))
+        {
+            return;
+        }
+
+        await RunPanelGitActionAsync(() => _gitService.Reset(_repoRootPath, row.Sha, mode));
+    }
+
+    private async Task HandleFilesContextActionAsync(IReadOnlyList<GitCommitTreeFileNode> selectedFiles, FilesContextAction action)
+    {
+        if (selectedFiles.Count is 0)
+        {
+            return;
+        }
+
+        var commitSha = selectedFiles[0].DiffRequest.CommitSha;
+        var selectedPaths = selectedFiles.Select(file => file.File.RepoRelativePath).ToList();
+        switch (action)
+        {
+            case FilesContextAction.ShowDiff:
+                foreach (var file in selectedFiles)
+                {
+                    GodotGlobalEvents.Instance.GitCommitDiffRequested.InvokeParallelFireAndForget(file.DiffRequest);
+                }
+                break;
+            case FilesContextAction.CompareWithWorkingTree:
+                foreach (var file in selectedFiles)
+                {
+                    GodotGlobalEvents.Instance.GitCommitWorkingTreeDiffRequested.InvokeParallelFireAndForget(file.WorkingTreeDiffRequest);
+                }
+                break;
+            case FilesContextAction.EditSource:
+                foreach (var file in selectedFiles.Where(file => File.Exists(file.AbsolutePath)))
+                {
+                    OpenSourceFile(file.AbsolutePath);
+                }
+                break;
+            case FilesContextAction.RevertSelectedChanges:
+                if (!await ConfirmAsync("Revert Selected Changes", BuildFileSelectionMessage("Revert", selectedFiles)))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.ApplyCommitFiles(
+                    _repoRootPath,
+                    commitSha,
+                    selectedPaths,
+                    GitHistoricalFileApplyMode.Revert));
+                break;
+            case FilesContextAction.CherryPickSelectedChanges:
+                if (!await ConfirmAsync("Cherry-Pick Selected Changes", BuildFileSelectionMessage("Cherry-pick", selectedFiles)))
+                {
+                    return;
+                }
+
+                await RunPanelGitActionAsync(() => _gitService.ApplyCommitFiles(
+                    _repoRootPath,
+                    commitSha,
+                    selectedPaths,
+                    GitHistoricalFileApplyMode.CherryPick));
+                break;
+            case FilesContextAction.CreatePatch:
+            {
+                var patchText = await _gitService.BuildCommitFilesPatchText(_repoRootPath, commitSha, selectedPaths);
+                var suggestedFileName = selectedFiles.Count is 1
+                    ? $"{selectedFiles[0].File.RepoRelativePath.Replace('/', '_')}.patch"
+                    : $"{selectedFiles[0].DiffRequest.CommitSha[..Math.Min(8, selectedFiles[0].DiffRequest.CommitSha.Length)]}-files.patch";
+                var savePath = await PromptForSavePathAsync("Create Patch", suggestedFileName);
+                if (string.IsNullOrWhiteSpace(savePath))
+                {
+                    return;
+                }
+
+                await File.WriteAllTextAsync(savePath, patchText);
+                break;
+            }
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action), action, null);
+        }
     }
 
     private async Task<bool> ConfirmAsync(string title, string message)
@@ -1166,13 +1584,15 @@ public partial class GitPanel : Control
             Title = title,
             DialogText = message
         };
-        AddChild(dialog);
-
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        dialog.Confirmed += () => tcs.TrySetResult(true);
-        dialog.Canceled += () => tcs.TrySetResult(false);
-        dialog.CloseRequested += () => tcs.TrySetResult(false);
-        dialog.PopupCentered();
+        await this.InvokeAsync(() =>
+        {
+            AddChild(dialog);
+            dialog.Confirmed += () => tcs.TrySetResult(true);
+            dialog.Canceled += () => tcs.TrySetResult(false);
+            dialog.CloseRequested += () => tcs.TrySetResult(false);
+            dialog.PopupCentered();
+        });
 
         var result = await tcs.Task;
         await this.InvokeDeferredAsync(() => dialog.QueueFree());
@@ -1194,21 +1614,85 @@ public partial class GitPanel : Control
         var vbox = new VBoxContainer();
         var labelControl = new Label { Text = label };
         var lineEdit = new LineEdit { Text = initialText };
-        vbox.AddChild(labelControl);
-        vbox.AddChild(lineEdit);
-        margin.AddChild(vbox);
-        dialog.AddChild(margin);
-        AddChild(dialog);
-
         var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        dialog.Confirmed += () => tcs.TrySetResult(lineEdit.Text.Trim());
-        dialog.Canceled += () => tcs.TrySetResult(null);
-        dialog.CloseRequested += () => tcs.TrySetResult(null);
-        dialog.PopupCentered(new Vector2I(420, 0));
         await this.InvokeAsync(() =>
         {
+            vbox.AddChild(labelControl);
+            vbox.AddChild(lineEdit);
+            margin.AddChild(vbox);
+            dialog.AddChild(margin);
+            AddChild(dialog);
+            dialog.Confirmed += () => tcs.TrySetResult(lineEdit.Text.Trim());
+            dialog.Canceled += () => tcs.TrySetResult(null);
+            dialog.CloseRequested += () => tcs.TrySetResult(null);
+            dialog.PopupCentered(new Vector2I(420, 0));
             lineEdit.GrabFocus();
             lineEdit.SelectAll();
+        });
+
+        var result = await tcs.Task;
+        await this.InvokeDeferredAsync(() => dialog.QueueFree());
+        return result;
+    }
+
+    private async Task<string?> PromptForCommitMessageAsync(string title, string initialText)
+    {
+        var dialog = new ConfirmationDialog
+        {
+            Title = title
+        };
+        var margin = new MarginContainer();
+        margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        margin.OffsetLeft = 8;
+        margin.OffsetTop = 8;
+        margin.OffsetRight = -8;
+        margin.OffsetBottom = -52;
+        var vbox = new VBoxContainer();
+        var label = new Label { Text = "Commit message" };
+        var textEdit = new TextEdit
+        {
+            Text = initialText,
+            CustomMinimumSize = new Vector2(480, 160),
+            SizeFlagsVertical = SizeFlags.ExpandFill
+        };
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await this.InvokeAsync(() =>
+        {
+            vbox.AddChild(label);
+            vbox.AddChild(textEdit);
+            margin.AddChild(vbox);
+            dialog.AddChild(margin);
+            AddChild(dialog);
+            dialog.Confirmed += () => tcs.TrySetResult(textEdit.Text.Trim());
+            dialog.Canceled += () => tcs.TrySetResult(null);
+            dialog.CloseRequested += () => tcs.TrySetResult(null);
+            dialog.PopupCentered(new Vector2I(520, 260));
+            textEdit.GrabFocus();
+        });
+
+        var result = await tcs.Task;
+        await this.InvokeDeferredAsync(() => dialog.QueueFree());
+        return result;
+    }
+
+    private async Task<string?> PromptForSavePathAsync(string title, string suggestedFileName)
+    {
+        var dialog = new FileDialog
+        {
+            Title = title,
+            FileMode = FileDialog.FileModeEnum.SaveFile,
+            Access = FileDialog.AccessEnum.Filesystem,
+            CurrentFile = suggestedFileName,
+            Filters = ["*.patch ; Patch Files"]
+        };
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await this.InvokeAsync(() =>
+        {
+            AddChild(dialog);
+            dialog.FileSelected += path => tcs.TrySetResult(path);
+            dialog.Canceled += () => tcs.TrySetResult(null);
+            dialog.CloseRequested += () => tcs.TrySetResult(null);
+            dialog.PopupCentered(new Vector2I(720, 520));
         });
 
         var result = await tcs.Task;
@@ -1223,13 +1707,33 @@ public partial class GitPanel : Control
             Title = title,
             DialogText = message
         };
-        AddChild(dialog);
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        dialog.Confirmed += () => tcs.TrySetResult();
-        dialog.CloseRequested += () => tcs.TrySetResult();
-        dialog.PopupCentered();
+        await this.InvokeAsync(() =>
+        {
+            AddChild(dialog);
+            dialog.Confirmed += () => tcs.TrySetResult();
+            dialog.CloseRequested += () => tcs.TrySetResult();
+            dialog.PopupCentered();
+        });
         await tcs.Task;
         await this.InvokeDeferredAsync(() => dialog.QueueFree());
+    }
+
+    private async Task RunPanelGitActionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorDialogAsync("Git Action Failed", ex.Message);
+        }
+        finally
+        {
+            _suppressRepositoryRefreshUntil = DateTimeOffset.UtcNow.AddMilliseconds(700);
+            await RefreshAsync();
+        }
     }
 
     private void PopupMenuAtMouse(PopupMenu menu)
@@ -1246,6 +1750,107 @@ public partial class GitPanel : Control
 
         tree.SetSelected(item, 0);
         return item;
+    }
+
+    private static TreeItem? SelectContextTreeItemAtPosition(Tree tree, Vector2 mousePosition)
+    {
+        var item = tree.GetItemAtPosition(mousePosition);
+        if (item is null)
+        {
+            return null;
+        }
+
+        if (!item.IsSelected(0))
+        {
+            tree.DeselectAll();
+            tree.SetSelected(item, 0);
+            item.Select(0);
+        }
+
+        return item;
+    }
+
+    private List<GitHistoryRow> GetSelectedHistoryRows()
+    {
+        return GetSelectedTreeItems(_historyTree)
+            .Select(item => item.GetTypedMetadata<GitHistoryRow>(0))
+            .OfType<GitHistoryRow>()
+            .ToList();
+    }
+
+    private List<GitCommitTreeFileNode> GetSelectedCommitFileNodes()
+    {
+        return GetSelectedTreeItems(_filesTree)
+            .Select(item => item.GetTypedMetadata<GitCommitTreeFileNode>(0))
+            .OfType<GitCommitTreeFileNode>()
+            .ToList();
+    }
+
+    private static List<TreeItem> GetSelectedTreeItems(Tree tree)
+    {
+        var items = new List<TreeItem>();
+        var current = tree.GetNextSelected(null);
+        while (current is not null)
+        {
+            items.Add(current);
+            current = tree.GetNextSelected(current);
+        }
+
+        return items;
+    }
+
+    private static string BuildCommitSelectionMessage(string verb, IReadOnlyList<GitHistoryRow> rows)
+    {
+        return rows.Count is 1
+            ? $"{verb} commit '{rows[0].Subject}'?"
+            : $"{verb} {rows.Count} selected commits?";
+    }
+
+    private static string BuildFileSelectionMessage(string verb, IReadOnlyList<GitCommitTreeFileNode> files)
+    {
+        return files.Count is 1
+            ? $"{verb} changes from '{files[0].File.DisplayPath}'?"
+            : $"{verb} changes for {files.Count} selected files?";
+    }
+
+    private bool TryResolveSolutionFile(string absolutePath, out SharpIdeFile file)
+    {
+        file = null!;
+        if (_solution is null)
+        {
+            return false;
+        }
+
+        if (_solution.AllFiles.GetValueOrDefault(absolutePath) is { } exactFile)
+        {
+            file = exactFile;
+            return true;
+        }
+
+        var normalizedPath = Path.GetFullPath(absolutePath);
+        var matchedFile = _solution.AllFiles.Values.FirstOrDefault(candidate =>
+            string.Equals(Path.GetFullPath(candidate.Path), normalizedPath, StringComparison.OrdinalIgnoreCase));
+        if (matchedFile is null)
+        {
+            return false;
+        }
+
+        file = matchedFile;
+        return true;
+    }
+
+    private void OpenSourceFile(string absolutePath)
+    {
+        if (TryResolveSolutionFile(absolutePath, out var file))
+        {
+            GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(file, null);
+            return;
+        }
+
+        if (File.Exists(absolutePath))
+        {
+            GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(SharpIdeFile.CreateStandalone(absolutePath), null);
+        }
     }
 
     private static string GetSuggestedBranchNameForRemote(GitRefNode node)

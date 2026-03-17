@@ -176,12 +176,29 @@ public sealed class GitCommitDetails
     public required IReadOnlyList<string> ParentShas { get; init; }
 }
 
+public sealed class GitCommitCapabilities
+{
+    public required string CommitSha { get; init; }
+    public required bool IsHeadCommit { get; init; }
+    public required bool HasParent { get; init; }
+    public required bool IsReachableFromHead { get; init; }
+    public required bool IsPushedToUpstream { get; init; }
+    public required bool CanUndoCommit { get; init; }
+    public required bool CanEditMessage { get; init; }
+}
+
 public sealed class GitCommitChangedFile
 {
     public required string RepoRelativePath { get; init; }
     public string? OldRepoRelativePath { get; init; }
     public required string StatusCode { get; init; }
     public required string DisplayPath { get; init; }
+}
+
+public enum GitHistoricalFileApplyMode
+{
+    CherryPick,
+    Revert
 }
 
 public sealed class GitStashEntry
@@ -212,6 +229,15 @@ public sealed class GitCommitFileDiffRequest
     public required string CommitSha { get; init; }
     public required string RepoRelativePath { get; init; }
     public string? OldRepoRelativePath { get; init; }
+}
+
+public sealed class GitCommitWorkingTreeDiffRequest
+{
+    public required string RepoRootPath { get; init; }
+    public required string CommitSha { get; init; }
+    public required string RepoRelativePath { get; init; }
+    public string? OldRepoRelativePath { get; init; }
+    public string? StatusCode { get; init; }
 }
 
 public sealed class GitStashFileDiffRequest

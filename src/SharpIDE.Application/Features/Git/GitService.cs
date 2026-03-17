@@ -1,9 +1,10 @@
 using CliWrap;
 using CliWrap.Buffered;
 using LibGit2Sharp;
-using SharpIDE.Application;
 using SharpIDE.Application.Features.FilePersistence;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SharpIDE.Application.Features.Git;
 
@@ -11,7 +12,6 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
 {
     private const string GitEmptyTreeSha = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
     private readonly GitSelectivePatchBuilder _patchBuilder = new();
-    private readonly IdeOpenTabsFileManager _openTabsFileManager = openTabsFileManager;
     private readonly record struct GitCommandResult(int ExitCode, string StandardOutput, string StandardError);
 
     public Task<GitSnapshot> GetSnapshot(string solutionFilePathOrDirectory, int commitCount = 50, CancellationToken cancellationToken = default)
@@ -170,6 +170,90 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         return files;
     }
 
+    public Task<GitCommitCapabilities> GetCommitCapabilities(string repoRoot, string commitSha, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            using var repo = OpenRepository(repoRoot);
+            var commit = repo.Lookup<Commit>(commitSha) ?? throw new InvalidOperationException($"Commit '{commitSha}' was not found.");
+            var headTip = repo.Head.Tip;
+            var isReachableFromHead = headTip is not null && IsCommitReachableFrom(repo.Info.WorkingDirectory, commitSha, headTip.Sha);
+            var upstreamTip = repo.Head.TrackedBranch?.Tip;
+            var isPushedToUpstream = upstreamTip is not null && IsCommitReachableFrom(repo.Info.WorkingDirectory, commitSha, upstreamTip.Sha);
+            var isHeadCommit = string.Equals(headTip?.Sha, commitSha, StringComparison.Ordinal);
+            var hasParent = commit.Parents.Any();
+            return new GitCommitCapabilities
+            {
+                CommitSha = commitSha,
+                IsHeadCommit = isHeadCommit,
+                HasParent = hasParent,
+                IsReachableFromHead = isReachableFromHead,
+                IsPushedToUpstream = isPushedToUpstream,
+                CanUndoCommit = isHeadCommit && hasParent,
+                CanEditMessage = isReachableFromHead && !isPushedToUpstream
+            };
+        }, cancellationToken);
+    }
+
+    public async Task<string> BuildCommitPatchText(string repoRoot, IReadOnlyList<string> commitShas, CancellationToken cancellationToken = default)
+    {
+        if (commitShas.Count is 0)
+        {
+            throw new InvalidOperationException("At least one commit must be selected.");
+        }
+
+        var builder = new StringBuilder();
+        foreach (var commitSha in commitShas.Where(static sha => !string.IsNullOrWhiteSpace(sha)).Distinct(StringComparer.Ordinal))
+        {
+            var result = await ExecuteGitBufferedAsync(
+                repoRoot,
+                ["format-patch", "--stdout", "--full-index", "--binary", "--no-stat", "-1", commitSha],
+                cancellationToken);
+            EnsureSuccess(result, $"Failed to create patch for commit '{commitSha}'.");
+            AppendPatch(builder, result.StandardOutput);
+        }
+
+        return builder.ToString();
+    }
+
+    public async Task<string> BuildCommitFilesPatchText(
+        string repoRoot,
+        string commitSha,
+        IReadOnlyList<string> repoRelativePaths,
+        CancellationToken cancellationToken = default)
+    {
+        using var repo = OpenRepository(repoRoot);
+        var commit = repo.Lookup<Commit>(commitSha) ?? throw new InvalidOperationException($"Commit '{commitSha}' was not found.");
+        var effectivePaths = repoRelativePaths
+            .Where(static path => !string.IsNullOrWhiteSpace(path))
+            .Select(NormalizeRepositoryRelativePath)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (effectivePaths.Count is 0)
+        {
+            throw new InvalidOperationException("At least one file must be selected.");
+        }
+
+        var parentSha = commit.Parents.FirstOrDefault()?.Sha ?? GitEmptyTreeSha;
+        var args = new List<string>
+        {
+            "diff",
+            "--no-color",
+            "--no-ext-diff",
+            "--full-index",
+            "--binary",
+            "--find-renames",
+            parentSha,
+            commitSha,
+            "--"
+        };
+        args.AddRange(effectivePaths);
+
+        var result = await ExecuteGitBufferedAsync(repoRoot, args, cancellationToken);
+        EnsureSuccess(result, "Failed to create file patch.");
+        return result.StandardOutput;
+    }
+
     public async Task<GitDiffViewModel> GetCommitFileDiffView(GitCommitFileDiffRequest request, CancellationToken cancellationToken = default)
     {
         var details = await GetCommitDetails(request.RepoRootPath, request.CommitSha, cancellationToken);
@@ -214,6 +298,35 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             GitDiffMode.Historical,
             parentSha is null ? "Empty" : (request.OldRepoRelativePath ?? request.RepoRelativePath),
             $"{request.CommitSha[..Math.Min(8, request.CommitSha.Length)]}:{request.RepoRelativePath}",
+            baseText,
+            currentText,
+            canEditCurrent: false);
+    }
+
+    public async Task<GitDiffViewModel> GetCommitFileWorkingTreeDiffView(GitCommitWorkingTreeDiffRequest request, CancellationToken cancellationToken = default)
+    {
+        var absolutePath = Path.Combine(request.RepoRootPath, request.RepoRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        var baseLabel = request.StatusCode?.StartsWith("D", StringComparison.Ordinal) == true
+            ? $"Deleted in {request.CommitSha[..Math.Min(8, request.CommitSha.Length)]}"
+            : $"{request.CommitSha[..Math.Min(8, request.CommitSha.Length)]}:{request.RepoRelativePath}";
+        var currentLabel = File.Exists(absolutePath) ? "Working tree" : "Missing from working tree";
+        var baseText = request.StatusCode?.StartsWith("D", StringComparison.Ordinal) == true
+            ? string.Empty
+            : await GetRevisionFileText(
+                request.RepoRootPath,
+                request.RepoRelativePath,
+                $"{request.CommitSha}:{request.RepoRelativePath}",
+                cancellationToken);
+        var currentText = File.Exists(absolutePath)
+            ? await ReadWorkingTextAsync(absolutePath, cancellationToken)
+            : string.Empty;
+
+        return _patchBuilder.BuildCanonicalViewModel(
+            request.RepoRelativePath,
+            absolutePath,
+            GitDiffMode.Historical,
+            baseLabel,
+            currentLabel,
             baseText,
             currentText,
             canEditCurrent: false);
@@ -370,6 +483,20 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         EnsureSuccess(result, "Failed to create branch.");
     }
 
+    public async Task CreateBranchFromCommit(string repoRoot, string commitSha, string newBranchName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(newBranchName))
+        {
+            throw new InvalidOperationException("Branch name cannot be empty.");
+        }
+
+        var result = await ExecuteGitBufferedAsync(
+            repoRoot,
+            ["checkout", "-b", newBranchName.Trim(), commitSha],
+            cancellationToken);
+        EnsureSuccess(result, "Failed to create branch.");
+    }
+
     public async Task RenameLocalBranch(string repoRoot, string branchRefName, string newBranchName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(newBranchName))
@@ -477,6 +604,17 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         EnsureSuccess(result, "Failed to delete remote tag.");
     }
 
+    public async Task CreateTagAtCommit(string repoRoot, string commitSha, string tagName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(tagName))
+        {
+            throw new InvalidOperationException("Tag name cannot be empty.");
+        }
+
+        var result = await ExecuteGitBufferedAsync(repoRoot, ["tag", tagName.Trim(), commitSha], cancellationToken);
+        EnsureSuccess(result, "Failed to create tag.");
+    }
+
     public Task Reset(string repoRoot, string commitSha, ResetMode mode, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
@@ -535,6 +673,76 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
                 throw new InvalidOperationException($"Cherry-pick failed with status '{result.Status}'.");
             }
         }, cancellationToken);
+    }
+
+    public async Task ApplyCommitFiles(
+        string repoRoot,
+        string commitSha,
+        IReadOnlyList<string> repoRelativePaths,
+        GitHistoricalFileApplyMode mode,
+        CancellationToken cancellationToken = default)
+    {
+        var patchText = await BuildCommitFilesPatchText(repoRoot, commitSha, repoRelativePaths, cancellationToken);
+        if (string.IsNullOrWhiteSpace(patchText))
+        {
+            throw new InvalidOperationException("The selected files do not contain any changes to apply.");
+        }
+
+        var args = new List<string>
+        {
+            "apply",
+            "--3way",
+            "--allow-binary-replacement",
+            "--whitespace=nowarn"
+        };
+        if (mode is GitHistoricalFileApplyMode.Revert)
+        {
+            args.Add("-R");
+        }
+
+        args.Add("-");
+        var result = await ExecuteGitBufferedAsync(repoRoot, args, cancellationToken, patchText);
+        EnsureSuccess(result, $"Failed to {mode.ToString().ToLowerInvariant()} selected changes.");
+    }
+
+    public async Task EditCommitMessage(string repoRoot, string commitSha, string newMessage, CancellationToken cancellationToken = default)
+    {
+        var trimmedMessage = newMessage.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedMessage))
+        {
+            throw new InvalidOperationException("Commit message cannot be empty.");
+        }
+
+        using var repo = OpenRepository(repoRoot);
+        var commit = repo.Lookup<Commit>(commitSha) ?? throw new InvalidOperationException($"Commit '{commitSha}' was not found.");
+        if (HasRepositoryChanges(repo))
+        {
+            throw new InvalidOperationException("Commit message editing requires a clean working tree.");
+        }
+
+        var capabilities = await GetCommitCapabilities(repoRoot, commitSha, cancellationToken);
+        if (!capabilities.CanEditMessage)
+        {
+            throw new InvalidOperationException("Only commits on the current HEAD ancestry that are not pushed can be edited.");
+        }
+
+        if (capabilities.IsHeadCommit)
+        {
+            var amendResult = await ExecuteGitBufferedAsync(repoRoot, ["commit", "--amend", "-m", trimmedMessage], cancellationToken);
+            EnsureSuccess(amendResult, "Failed to edit commit message.");
+            return;
+        }
+
+        try
+        {
+            await RewriteCommitMessageAsync(repoRoot, commitSha, trimmedMessage, cancellationToken);
+        }
+        catch
+        {
+            var abortResult = await ExecuteGitBufferedAsync(repoRoot, ["rebase", "--abort"], cancellationToken);
+            _ = abortResult;
+            throw;
+        }
     }
 
     public async Task SelectiveStash(string repoRoot, IEnumerable<string> paths, string message, bool includeUntracked, CancellationToken cancellationToken = default)
@@ -1838,7 +2046,7 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
 
     private async Task<string> ReadWorkingTextAsync(string absolutePath, CancellationToken cancellationToken)
     {
-        var openText = await _openTabsFileManager.GetFileTextIfOpenAsync(absolutePath);
+        var openText = await openTabsFileManager.GetFileTextIfOpenAsync(absolutePath);
         if (openText is not null)
         {
             return NormalizeNewLines(openText);
@@ -2136,7 +2344,185 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         }
     }
 
-    private static async Task<BufferedCommandResult> ExecuteGitBufferedAsync(string repoRoot, IEnumerable<string> args, CancellationToken cancellationToken, string? stdinText = null)
+    private static void AppendPatch(StringBuilder builder, string patchText)
+    {
+        if (string.IsNullOrWhiteSpace(patchText))
+        {
+            return;
+        }
+
+        var normalized = NormalizeNewLines(patchText);
+        builder.Append(normalized);
+        if (!normalized.EndsWith('\n'))
+        {
+            builder.AppendLine();
+        }
+    }
+
+    private static bool IsCommitReachableFrom(string repoRoot, string commitSha, string referenceSha)
+    {
+        var result = ExecuteGitBuffered(repoRoot, ["merge-base", "--is-ancestor", commitSha, referenceSha], environment: null);
+        return result.ExitCode is 0;
+    }
+
+    private static bool HasRepositoryChanges(Repository repo)
+    {
+        return repo.RetrieveStatus(new StatusOptions
+        {
+            IncludeIgnored = false,
+            IncludeUnaltered = false,
+            IncludeUntracked = true,
+            RecurseUntrackedDirs = true,
+            ExcludeSubmodules = true,
+            DetectRenamesInIndex = true,
+            DetectRenamesInWorkDir = true
+        }).Any(static entry => entry.State is not FileStatus.Unaltered and not FileStatus.Ignored);
+    }
+
+    public static Task RewriteCommitMessageAsync(string repositoryPath, string commitSha, string newMessage, CancellationToken cancellationToken)
+    {
+        var discoveredRepositoryPath = Repository.Discover(repositoryPath);
+        if (discoveredRepositoryPath is null)
+        {
+            throw new InvalidOperationException(
+                $"No Git repository found from '{repositoryPath}'.");
+        }
+
+        using var repo = new Repository(discoveredRepositoryPath);
+
+        if (repo.Head.Tip is null)
+        {
+            throw new InvalidOperationException("The repository has no commits.");
+        }
+
+        if (repo.RetrieveStatus().IsDirty)
+        {
+            throw new InvalidOperationException(
+                "The working tree must be clean before rewriting history.");
+        }
+
+        var targetCommit = ResolveCommit(repo, commitSha);
+        var chain = GetLinearChainFromTargetToHead(repo.Head.Tip, targetCommit);
+
+        Commit? rewrittenParent = null;
+        Commit? rewrittenTip = null;
+
+        foreach (var originalCommit in chain)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var parents = rewrittenParent is null
+                ? originalCommit.Parents
+                : new[] { rewrittenParent };
+
+            var message = originalCommit.Id == targetCommit.Id
+                ? newMessage
+                : originalCommit.Message;
+
+            var rewrittenCommit = repo.ObjectDatabase.CreateCommit(
+                author: originalCommit.Author,
+                committer: BuildCommitterSignature(
+                    repo,
+                    DateTimeOffset.Now),
+                message: message,
+                tree: originalCommit.Tree,
+                parents: parents,
+                prettifyMessage: false);
+
+            rewrittenParent = rewrittenCommit;
+            rewrittenTip = rewrittenCommit;
+        }
+
+        if (rewrittenTip is null)
+        {
+            throw new InvalidOperationException("Nothing was rewritten.");
+        }
+
+        repo.Refs.UpdateTarget(repo.Head.Reference, rewrittenTip.Id);
+
+        return Task.CompletedTask;
+    }
+
+    private static Commit ResolveCommit(Repository repo, string commitSha)
+    {
+        var resolved = repo.Lookup<Commit>(commitSha);
+        if (resolved is not null)
+        {
+            return resolved;
+        }
+
+        var matches = repo.Commits
+            .Where(commit => commit.Id.Sha.StartsWith(
+                commitSha,
+                StringComparison.OrdinalIgnoreCase))
+            .Take(2)
+            .ToList();
+
+        return matches.Count switch
+        {
+            0 => throw new InvalidOperationException(
+                $"Commit '{commitSha}' was not found."),
+            > 1 => throw new InvalidOperationException(
+                $"Commit prefix '{commitSha}' is ambiguous."),
+            _ => matches[0]
+        };
+    }
+
+    private static IReadOnlyList<Commit> GetLinearChainFromTargetToHead(Commit head, Commit target)
+    {
+        var chain = new List<Commit>();
+        Commit? current = head;
+
+        while (current is not null)
+        {
+            var parents = current.Parents.ToList();
+
+            if (parents.Count > 1)
+            {
+                throw new NotSupportedException(
+                    "This implementation only supports linear history. " +
+                    "Merge commits in the rewrite range are not supported.");
+            }
+
+            chain.Add(current);
+
+            if (current.Id == target.Id)
+            {
+	            chain.Reverse();
+	            return chain;
+            }
+
+            current = parents.Count == 0 ? null : parents[0];
+        }
+
+        throw new InvalidOperationException(
+	        "The target commit is not an ancestor of HEAD on the " +
+	        "current branch.");
+    }
+
+    private static Signature BuildCommitterSignature(
+	    Repository repo,
+	    DateTimeOffset when)
+    {
+	    var name = repo.Config.Get<string>("user.name")?.Value;
+	    var email = repo.Config.Get<string>("user.email")?.Value;
+
+	    if (string.IsNullOrWhiteSpace(name) ||
+	        string.IsNullOrWhiteSpace(email))
+	    {
+		    throw new InvalidOperationException(
+			    "Git user.name and user.email must be configured.");
+	    }
+
+	    return new Signature(name, email, when);
+    }
+
+    private static async Task<BufferedCommandResult> ExecuteGitBufferedAsync(
+        string repoRoot,
+        IEnumerable<string> args,
+        CancellationToken cancellationToken,
+        string? stdinText = null,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         var command = Cli.Wrap("git")
             .WithArguments(argumentBuilder =>
@@ -2150,6 +2536,11 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             })
             .WithValidation(CommandResultValidation.None);
 
+        if (environment is not null)
+        {
+            command = command.WithEnvironmentVariables(environment);
+        }
+
         if (stdinText is not null)
         {
             command = command.WithStandardInputPipe(PipeSource.FromString(stdinText));
@@ -2158,7 +2549,11 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
         return await command.ExecuteBufferedAsync(cancellationToken);
     }
 
-    private static GitCommandResult ExecuteGitBuffered(string repoRoot, IEnumerable<string> args, string? stdinText = null)
+    private static GitCommandResult ExecuteGitBuffered(
+        string repoRoot,
+        IEnumerable<string> args,
+        string? stdinText = null,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         var startInfo = new ProcessStartInfo("git")
         {
@@ -2168,6 +2563,14 @@ public class GitService(IdeOpenTabsFileManager openTabsFileManager)
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                startInfo.Environment[key] = value;
+            }
+        }
 
         startInfo.ArgumentList.Add("-C");
         startInfo.ArgumentList.Add(repoRoot);
