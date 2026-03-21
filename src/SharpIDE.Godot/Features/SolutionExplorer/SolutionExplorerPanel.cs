@@ -1,5 +1,9 @@
 using System.Collections.Specialized;
 using Ardalis.GuardClauses;
+
+using ClrDebug;
+using ClrDebug.TTD;
+
 using Godot;
 using ObservableCollections;
 using R3;
@@ -31,20 +35,27 @@ public partial class SolutionExplorerPanel : MarginContainer
 	public Texture2D UnloadedProjectIcon { get; set; } = null!;
 	[Export]
 	public Texture2D SlnIcon { get; set; } = null!;
+	[Export]
+	public StyleBoxFlat SearchMatchHighlight { get; set; } = null!;
 	
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 	private PanelContainer _panelContainer = null!;
 	private Tree _tree = null!;
 	private TreeItem _rootItem = null!;
+	private LineEdit _searchInput = null!;
+	
+	private readonly Dictionary<TreeItem, bool> _treeItemCollapsedStates = [];
 
 	private enum ClipboardOperation { Cut, Copy }
 
 	private (List<IFileOrFolder>, ClipboardOperation)? _itemsOnClipboard;
 	public override void _Ready()
 	{
-		_panelContainer = GetNode<PanelContainer>("PanelContainer");
+		_panelContainer = GetNode<PanelContainer>("%TreeContainer");
 		_tree = GetNode<Tree>("%Tree");
 		_tree.ItemMouseSelected += TreeOnItemMouseSelected;
+		_searchInput = GetNode<LineEdit>("%SearchInput");
+		_searchInput.TextChanged += OnSearchInputChanged;
 		// Remove the tree from the scene tree for now, we will add it back when we bind to a solution
 		_panelContainer.RemoveChild(_tree);
 		GodotGlobalEvents.Instance.FileExternallySelected.Subscribe(OnFileExternallySelected);
@@ -74,6 +85,109 @@ public partial class SolutionExplorerPanel : MarginContainer
 		else if (@event is InputEventKey { Pressed: true, Keycode: Key.Escape })
 		{
 			ClearSlnExplorerClipboard();
+			HideSearch();
+		}
+		else if (@event.IsActionPressed(InputStringNames.FindInSolutionExplorer, exactMatch: true))
+		{
+			if (!IsSearchActive())
+				ShowSearch();
+			else
+				HideSearch();
+			
+			AcceptEvent();
+		}
+	}
+
+	private void OnSearchInputChanged(string newText)
+	{
+		if (!IsSearchActive() || string.IsNullOrWhiteSpace(newText))
+		{
+			RestoreTreeItemCollapsedStates(_rootItem);
+			ShowTree(_rootItem);
+		}
+		else
+		{
+			FilterTree(_rootItem, newText);
+		}
+		
+		_tree.QueueRedraw();
+	}
+
+	private static void ShowTree(TreeItem item)
+	{
+		item.Visible = true;
+		
+		foreach (var child in item.GetChildren())
+		{
+			ShowTree(child);
+		}
+	}
+
+	private static void FilterTree(TreeItem item, string searchText)
+	{
+		var itemText = item.GetText(0);
+		if (itemText.Contains(searchText, StringComparison.CurrentCultureIgnoreCase))
+		{
+			// Set ancestors visible to ensure the matching item will be visible in the tree.
+			for (var ancestor = item.GetParent(); ancestor is not null; ancestor = ancestor.GetParent())
+			{
+				ancestor.Visible = true;
+			}
+			
+			item.Visible = true;
+			item.UncollapseTree();
+		}
+		else
+		{
+			item.Visible = false;
+		}
+
+		foreach (var child in item.GetChildren())
+		{
+			FilterTree(child, searchText);
+		}
+	}
+
+	private bool IsSearchActive() => _searchInput.IsVisible();
+
+	private void ShowSearch()
+	{
+		if (IsSearchActive()) return;
+		
+		SaveTreeItemCollapsedStates(_rootItem);
+		_searchInput.GrabFocus();
+		_searchInput.Show();
+		if (!string.IsNullOrWhiteSpace(_searchInput.Text))
+			FilterTree(_rootItem, _searchInput.Text);
+	}
+
+	private void HideSearch()
+	{
+		if (!IsSearchActive()) return;
+		
+		RestoreTreeItemCollapsedStates(_rootItem);
+		_searchInput.Hide();
+		ShowTree(_rootItem);
+	}
+
+	private void SaveTreeItemCollapsedStates(TreeItem item)
+	{
+		_treeItemCollapsedStates[item] = item.Collapsed;
+
+		foreach (var child in item.GetChildren())
+		{
+			SaveTreeItemCollapsedStates(child);
+		}
+	}
+
+	private void RestoreTreeItemCollapsedStates(TreeItem item)
+	{
+		if (!item.IsSelected(0) && _treeItemCollapsedStates.TryGetValue(item, out var collapsed))
+			item.Collapsed = collapsed;
+
+		foreach (var child in item.GetChildren())
+		{
+			RestoreTreeItemCollapsedStates(child);
 		}
 	}
 
@@ -160,7 +274,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		_tree.Clear();
 
 	    // Root
-	    var rootItem = _tree.CreateItem();
+	    var rootItem = CreateTreeItem();
 	    rootItem.SetText(0, solution.Name);
 	    rootItem.SetIcon(0, SlnIcon);
 	    _rootItem = rootItem;
@@ -195,10 +309,39 @@ public partial class SolutionExplorerPanel : MarginContainer
 	    });
 	}
 
+	private TreeItem CreateTreeItem(TreeItem? parent = null, int index = -1)
+	{
+		var item = _tree.CreateItem(parent, index);
+		item.SetCellMode(0, TreeItem.TreeCellMode.Custom);
+		item.SetCustomDrawCallback(0, Callable.From<TreeItem, Rect2>(TreeItemCustomDraw));
+		return item;
+	}
+	
+	private void TreeItemCustomDraw(TreeItem item, Rect2 rect)
+	{
+		if (!_searchInput.IsVisible() || string.IsNullOrWhiteSpace(_searchInput.Text)) return;
+		
+		var text = item.GetText(0);
+		var matchIndex = text.FindN(_searchInput.Text);
+
+		if (matchIndex < 0) return;
+
+		var icon = item.GetIcon(0);
+		var font = _tree.GetThemeFont(ThemeStringNames.Font);
+		var fontSize = _tree.GetThemeFontSize(ThemeStringNames.FontSize);
+		var separation = _tree.GetThemeConstant(ThemeStringNames.HSeparation);
+		var textMatchX = separation + font.GetStringSize(text.Left(matchIndex), HorizontalAlignment.Left, width: -1f, fontSize).X;
+		var highlightPosition = new Vector2(rect.Position.X + textMatchX + (icon?.GetWidth() ?? 0), rect.Position.Y);
+		var highlightSize = new Vector2(font.GetStringSize(_searchInput.Text, HorizontalAlignment.Left, width: -1f, fontSize).X, rect.Size.Y);
+		
+		var highlightRect = new Rect2(highlightPosition, highlightSize);
+		_tree.DrawStyleBox(SearchMatchHighlight, highlightRect);
+	}
+
 	[RequiresGodotUiThread]
 	private TreeItem CreateSlnFolderTreeItem(Tree tree, TreeItem parent, SharpIdeSolutionFolder slnFolder)
 	{
-	    var folderItem = tree.CreateItem(parent);
+	    var folderItem = CreateTreeItem(parent);
         folderItem.SetText(0, slnFolder.Name);
         folderItem.SetIcon(0, SlnFolderIcon);
         folderItem.SharpIdeNode = slnFolder;
@@ -240,7 +383,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	[RequiresGodotUiThread]
 	private TreeItem CreateProjectTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel projectModel)
 	{
-		var projectItem = tree.CreateItem(parent);
+		var projectItem = CreateTreeItem(parent);
 		projectItem.SetText(0, projectModel.Name.Value);
 		var icon = projectModel.IsLoading ? LoadingProjectIcon : projectModel.IsInvalid ? UnloadedProjectIcon : CsprojIcon;
 		projectItem.SetIcon(0, icon);
@@ -295,7 +438,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	[RequiresGodotUiThread]
 	private TreeItem CreateFolderTreeItem(Tree tree, TreeItem parent, SharpIdeFolder sharpIdeFolder, int newStartingIndex = -1)
 	{
-		var folderItem = tree.CreateItem(parent, newStartingIndex);
+		var folderItem = CreateTreeItem(parent, newStartingIndex);
 		folderItem.SetText(0, sharpIdeFolder.Name.Value);
 		folderItem.SetIcon(0, FolderIcon);
 		folderItem.SharpIdeNode = sharpIdeFolder;
@@ -345,7 +488,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 			var folderCount = sharpIdeParent.Folders.Count;
 			newStartingIndex += folderCount;
 		}
-		var fileItem = tree.CreateItem(parent, newStartingIndex);
+		var fileItem = CreateTreeItem(parent, newStartingIndex);
 		fileItem.SetText(0, sharpIdeFile.Name.Value);
 		fileItem.SetIconsForFileExtension(sharpIdeFile);
 		if (GitColours.GetColorForGitFileStatus(sharpIdeFile.GitStatus) is { } notnullColor) fileItem.SetCustomColor(0, notnullColor);
