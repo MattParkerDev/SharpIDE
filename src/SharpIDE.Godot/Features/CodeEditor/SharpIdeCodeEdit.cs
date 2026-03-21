@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
+
 using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -19,6 +21,8 @@ using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.Common;
+
 using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -89,11 +93,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		CaretChanged += OnCaretChanged;
 		TextChanged += OnTextChanged;
 		FocusEntered += OnFocusEntered;
+		FocusExited += OnFocusExited;
 		SymbolHovered += OnSymbolHovered;
 		SymbolValidate += OnSymbolValidate;
 		SymbolLookup += OnSymbolLookup;
 		LinesEditedFrom += OnLinesEditedFrom;
-		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Subscribe(UpdateEditorThemeAsync);
 		//AddGitGutter();
 		var hScrollBar = GetHScrollBar();
@@ -110,6 +114,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnSolutionAltered)}");
 			if (_currentFile is null) return;
 			if (_fileDeleted) return;
+			using var __ = ActivityTimer.Start($"[{nameof(OnSolutionAltered)}] for '{_currentFile.Name}'");
 			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
 			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext();
 			var hasFocus = this.InvokeAsync(HasFocus);
@@ -185,7 +190,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_currentFile?.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
 		_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
 		_projectDiagnosticsObserveDisposable?.Dispose();
-		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
@@ -194,6 +198,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		// The selected tab changed, report the caret position
 		_editorCaretPositionService.CaretPosition = GetCaretPosition(startAt1: true);
+		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
+	}
+	
+	private void OnFocusExited()
+	{
+		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 	}
 
 	private async void OnBreakpointToggled(long line)
