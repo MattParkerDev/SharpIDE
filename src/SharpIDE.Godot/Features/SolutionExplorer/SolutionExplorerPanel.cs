@@ -143,7 +143,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		
 		_treeItemCollapsedStates.Clear();
 		SaveTreeItemCollapsedStates(_rootItem);
-		_searchInput.GrabFocus();
+		_searchInput.GrabFocus(hideFocus: true);
 		_searchInput.Show();
 		if (!string.IsNullOrWhiteSpace(_searchInput.Text))
 			FilterTree(_rootItem, _searchInput.Text);
