@@ -97,7 +97,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (!IsSearchActive() || string.IsNullOrWhiteSpace(newText))
 		{
 			RestoreTreeItemCollapsedStates(_rootItem);
-			ShowTree(_rootItem);
+			ShowEntireTree(_rootItem);
 			ScrollToSelectedTreeItem();
 		}
 		else
@@ -108,13 +108,12 @@ public partial class SolutionExplorerPanel : MarginContainer
 		_tree.QueueRedraw();
 	}
 
-	private static void ShowTree(TreeItem item)
+	private static void ShowEntireTree(TreeItem item)
 	{
 		item.Visible = true;
-		
 		foreach (var child in item.GetChildren())
 		{
-			ShowTree(child);
+			ShowEntireTree(child);
 		}
 	}
 
@@ -156,7 +155,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		
 		_searchInput.Hide();
 		RestoreTreeItemCollapsedStates(_rootItem);
-		ShowTree(_rootItem);
+		ShowEntireTree(_rootItem);
 		ScrollToSelectedTreeItem();
 	}
 
@@ -172,7 +171,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	private void RestoreTreeItemCollapsedStates(TreeItem item)
 	{
-		// If the item is selected during the search then we want to keep it uncollapsed, otherwise we restore it to the state before the search.
+		// If an item was selected during the search then we want to keep it uncollapsed, otherwise we restore it to the state before the search.
 		item.Collapsed = !HasSelectedChild(item) && _treeItemCollapsedStates.TryGetValue(item, out var collapsed) && collapsed;
 
 		foreach (var child in item.GetChildren())
