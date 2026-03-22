@@ -155,52 +155,74 @@ public partial class CodeEditorPanel : MarginContainer
 		}
 	}
 
+	public async Task AddSharpIdeFiles(IReadOnlyList<SharpIdeFile> files)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		var newTabs = files.Select(file =>
+		                   {
+			                   var newTab = _sharpIdeCodeEditScene.Instantiate<SharpIdeCodeEditContainer>();
+			                   newTab.CodeEdit.Solution = Solution;
+
+			                   return (Tab: newTab, File: file);
+		                   }).ToList();
+		
+		await this.InvokeAsync(() =>
+		{
+			foreach (var newTab in newTabs)
+			{
+				_tabContainer.AddChild(newTab.Tab);
+				var newTabIndex = _tabContainer.GetTabCount() - 1;
+				_tabContainer.SetIconsForFileExtension(newTab.File, newTabIndex);
+				_tabContainer.SetTabTitle(newTabIndex, newTab.File.Name.Value);
+				_tabContainer.SetTabTooltip(newTabIndex, newTab.File.Path);
+
+				newTab.File.FileDeleted.Subscribe(async () => { await this.InvokeAsync(() => { CloseTabs([newTab.Tab]); }); });
+
+				var nameChanged = newTab.File.Name.Skip(1).Select(name => (name, newTab.File.IsDirty.Value));
+				var dirtyChanged = newTab.File.IsDirty.Skip(1).Select(isDirty => (newTab.File.Name.Value, isDirty));
+
+				nameChanged.Merge(dirtyChanged)
+				           .SubscribeOnThreadPool()
+				           .ObserveOnThreadPool()
+				           .SubscribeAwait(async (x, ct) =>
+				           {
+					           var (name, isDirty) = x;
+					           await UpdateTabFileName(newTab.Tab.GetIndex(), name, isDirty);
+				           })
+				           .AddTo(newTab.Tab); // needs to be on ui thread
+			}
+		});
+
+		foreach (var newTab in newTabs)
+		{
+			await newTab.Tab.CodeEdit.SetSharpIdeFile(newTab.File, fileLinePosition: null);
+		}
+	}
+
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var existingTab = await this.InvokeAsync(() => _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().FirstOrDefault(t => t.CodeEdit.SharpIdeFile == file));
 		if (existingTab is not null)
 		{
-			var existingTabIndex = existingTab.GetIndex();
-			await this.InvokeAsync(() =>
-			{
-				_tabContainer.CurrentTab = existingTabIndex;
-				if (fileLinePosition is not null) existingTab.CodeEdit.SetFileLinePosition(fileLinePosition.Value);
-			});
+			await SetCurrentSharpIdeFile(file, fileLinePosition);
 			return;
 		}
-		var newTab = _sharpIdeCodeEditScene.Instantiate<SharpIdeCodeEditContainer>();
-		newTab.CodeEdit.Solution = Solution;
+
+		await AddSharpIdeFiles([file]);
+		await SetCurrentSharpIdeFile(file, fileLinePosition);
+	}
+
+	private async Task SetCurrentSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
+	{
 		await this.InvokeAsync(() =>
 		{
-			_tabContainer.AddChild(newTab);
-			var newTabIndex = _tabContainer.GetTabCount() - 1;
-			_tabContainer.SetIconsForFileExtension(file, newTabIndex);
-			_tabContainer.SetTabTitle(newTabIndex, file.Name.Value);
-			_tabContainer.SetTabTooltip(newTabIndex, file.Path);
-			_tabContainer.CurrentTab = newTabIndex;
-
-			file.FileDeleted.Subscribe(async () =>
-			{
-				await this.InvokeAsync(() =>
-				{
-					CloseTabs([newTab]);
-				});
-			});
+			var tab = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().FirstOrDefault(t => t.CodeEdit.SharpIdeFile == file);
+			if (tab is null) return;
 			
-			var nameChanged = file.Name.Skip(1).Select(name => (name, file.IsDirty.Value));
-			var dirtyChanged = file.IsDirty.Skip(1).Select(isDirty => (file.Name.Value, isDirty));
-
-			nameChanged.Merge(dirtyChanged).SubscribeOnThreadPool().ObserveOnThreadPool()
-				.SubscribeAwait(async (x, ct) =>
-				{
-					var (name, isDirty) = x;
-					await UpdateTabFileName(newTab.GetIndex(), name, isDirty);
-				})
-				.AddTo(newTab); // needs to be on ui thread
+			_tabContainer.CurrentTab = tab.GetIndex();
+			if (fileLinePosition.HasValue) tab.CodeEdit.SetFileLinePosition(fileLinePosition.Value);
 		});
-		
-		await newTab.CodeEdit.SetSharpIdeFile(file, fileLinePosition);
 	}
 
 	private async Task UpdateTabFileName(int tabIndex, string name, bool isDirty)
