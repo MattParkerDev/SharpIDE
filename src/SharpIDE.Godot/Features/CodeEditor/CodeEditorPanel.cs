@@ -164,7 +164,8 @@ public partial class CodeEditorPanel : MarginContainer
 			                   newTab.CodeEdit.Solution = Solution;
 
 			                   return (Tab: newTab, File: file);
-		                   }).ToList();
+		                   })
+		                   .ToList();
 		
 		await this.InvokeAsync(() =>
 		{
