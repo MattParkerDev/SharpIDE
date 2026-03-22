@@ -98,6 +98,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		{
 			RestoreTreeItemCollapsedStates(_rootItem);
 			ShowTree(_rootItem);
+			ScrollToSelectedTreeItem();
 		}
 		else
 		{
@@ -117,29 +118,22 @@ public partial class SolutionExplorerPanel : MarginContainer
 		}
 	}
 
-	private static void FilterTree(TreeItem item, string searchText)
+	private static bool FilterTree(TreeItem item, string searchText)
 	{
 		var itemText = item.GetText(0);
-		if (itemText.Contains(searchText, StringComparison.CurrentCultureIgnoreCase))
-		{
-			// Set ancestors visible to ensure the matching item will be visible in the tree.
-			for (var ancestor = item.GetParent(); ancestor is not null; ancestor = ancestor.GetParent())
-			{
-				ancestor.Visible = true;
-			}
-			
-			item.Visible = true;
-			item.UncollapseTree();
-		}
-		else
-		{
-			item.Visible = false;
-		}
+		var isMatch = itemText.Contains(searchText, StringComparison.OrdinalIgnoreCase);
 
+		var hasMatchingChild = false;
 		foreach (var child in item.GetChildren())
 		{
-			FilterTree(child, searchText);
+			if (FilterTree(child, searchText))
+				hasMatchingChild = true;
 		}
+
+		item.Visible = isMatch || hasMatchingChild;
+		item.Collapsed = !hasMatchingChild;
+
+		return isMatch || hasMatchingChild;
 	}
 
 	private bool IsSearchActive() => _searchInput.IsVisible();
@@ -148,6 +142,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		if (IsSearchActive()) return;
 		
+		_treeItemCollapsedStates.Clear();
 		SaveTreeItemCollapsedStates(_rootItem);
 		_searchInput.GrabFocus();
 		_searchInput.Show();
@@ -159,9 +154,10 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		if (!IsSearchActive()) return;
 		
-		RestoreTreeItemCollapsedStates(_rootItem);
 		_searchInput.Hide();
+		RestoreTreeItemCollapsedStates(_rootItem);
 		ShowTree(_rootItem);
+		ScrollToSelectedTreeItem();
 	}
 
 	private void SaveTreeItemCollapsedStates(TreeItem item)
@@ -176,13 +172,22 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	private void RestoreTreeItemCollapsedStates(TreeItem item)
 	{
-		if (!item.IsSelected(0) && _treeItemCollapsedStates.TryGetValue(item, out var collapsed))
-			item.Collapsed = collapsed;
+		// If the item is selected during the search then we want to keep it uncollapsed, otherwise we restore it to the state before the search.
+		item.Collapsed = !HasSelectedChild(item) && _treeItemCollapsedStates.TryGetValue(item, out var collapsed) && collapsed;
 
 		foreach (var child in item.GetChildren())
 		{
 			RestoreTreeItemCollapsedStates(child);
 		}
+	}
+
+	private static bool HasSelectedChild(TreeItem item) => item.GetChildren().Any(child => child.IsSelected(0) || HasSelectedChild(child));
+
+	private void ScrollToSelectedTreeItem()
+	{
+		if (_tree.GetSelected() is not { } selected) return;
+		
+		_tree.ScrollToItem(selected, centerOnItem: true);
 	}
 
 	private void TreeOnItemMouseSelected(Vector2 mousePosition, long mouseButtonIndex)
@@ -322,7 +327,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	
 	private void TreeItemCustomDraw(TreeItem item, Rect2 rect)
 	{
-		if (!_searchInput.IsVisible() || string.IsNullOrWhiteSpace(_searchInput.Text)) return;
+		if (!IsSearchActive() || string.IsNullOrWhiteSpace(_searchInput.Text)) return;
 		
 		var text = item.GetText(0);
 		var matchIndex = text.FindN(_searchInput.Text);
