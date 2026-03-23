@@ -21,6 +21,8 @@ public partial class CodeEditorPanel : MarginContainer
 	public SharpIdeSolutionModel Solution { get; set; } = null!;
 	private PackedScene _sharpIdeCodeEditScene = GD.Load<PackedScene>("res://Features/CodeEditor/SharpIdeCodeEdit.tscn");
 	private TabContainer _tabContainer = null!;
+	private TextureProgressBar _loadingSpinner = null!;
+	private Tween? _loadingSpinnerTween;
 	private ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
 	
 	[Inject] private readonly RunService _runService = null!;
@@ -34,6 +36,7 @@ public partial class CodeEditorPanel : MarginContainer
 		tabBar.TabCloseDisplayPolicy = TabBar.CloseButtonDisplayPolicy.ShowAlways;
 		tabBar.TabClosePressed += OnTabClosePressed;
 		tabBar.TabRmbClicked += OnTabRmbClicked;
+		_loadingSpinner = GetNode<TextureProgressBar>("%LoadingSpinner");
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
 	}
@@ -155,9 +158,32 @@ public partial class CodeEditorPanel : MarginContainer
 		}
 	}
 
+	private void ShowLoadingSpinner()
+	{
+		if (_loadingSpinner.Visible) return;
+		
+		_loadingSpinnerTween = GetTree().CreateTween().SetLoops();
+		_loadingSpinnerTween.TweenProperty(_loadingSpinner, "radial_initial_angle", 360.0, 1.0).AsRelative();
+		_loadingSpinner.Show();
+	}
+
+	private void HideLoadingSpinner()
+	{
+		if (!_loadingSpinner.Visible) return;
+		
+		_loadingSpinnerTween?.Kill();
+		_loadingSpinner.Hide();
+	}
+
 	public async Task AddSharpIdeFiles(IReadOnlyList<SharpIdeFile> files)
 	{
+		if (files.Count <= 0) return;
+		
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+
+		if (_tabContainer.GetTabCount() <= 0) 
+			await this.InvokeAsync(ShowLoadingSpinner);
+
 		var newTabs = files.Select(file =>
 		                   {
 			                   var newTab = _sharpIdeCodeEditScene.Instantiate<SharpIdeCodeEditContainer>();
@@ -168,7 +194,9 @@ public partial class CodeEditorPanel : MarginContainer
 		                   .ToList();
 		
 		await this.InvokeAsync(() =>
-		{
+		{			
+			HideLoadingSpinner();
+			
 			foreach (var newTab in newTabs)
 			{
 				_tabContainer.AddChild(newTab.Tab);
