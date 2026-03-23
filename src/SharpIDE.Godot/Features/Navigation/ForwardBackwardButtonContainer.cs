@@ -24,7 +24,7 @@ public partial class ForwardBackwardButtonContainer : HBoxContainer
                 _backwardButton.Disabled = !_navigationHistoryService.CanGoBack;
                 _forwardButton.Disabled = !_navigationHistoryService.CanGoForward;
             });
-        }).AddTo(this);
+        }, configureAwait: false).AddTo(this);
     }
     
     private void OnBackwardButtonPressed()

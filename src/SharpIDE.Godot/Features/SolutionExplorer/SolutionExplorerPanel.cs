@@ -174,7 +174,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 			    NotifyCollectionChangedAction.Add => this.InvokeAsync(() => e.NewItem.View.Value = CreateProjectTreeItem(_tree, _rootItem, e.NewItem.Value)),
 	            NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
 	            _ => Task.CompletedTask
-	        })).AddToDeferred(this);
+	        }), configureAwait: false).AddToDeferred(this);
 
 	    // Observe Solution Folders
 	    var foldersView = solution.SlnFolders.CreateView(y => new TreeItemContainer());
@@ -185,7 +185,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	            NotifyCollectionChangedAction.Add => this.InvokeAsync(() => e.NewItem.View.Value = CreateSlnFolderTreeItem(_tree, _rootItem, e.NewItem.Value)),
 	            NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
 	            _ => Task.CompletedTask
-	        })).AddToDeferred(this);
+	        }), configureAwait: false).AddToDeferred(this);
 	    
 	    rootItem.SetCollapsedRecursive(true);
 	    rootItem.Collapsed = false;
@@ -213,7 +213,7 @@ public partial class SolutionExplorerPanel : MarginContainer
                 NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSlnFolderTreeItem(_tree, folderItem, innerEvent.NewItem.Value)),
                 NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
                 _ => Task.CompletedTask
-            })).AddToDeferred(this);
+            }), configureAwait: false).AddToDeferred(this);
 
         var projectsView = slnFolder.Projects.CreateView(y => new TreeItemContainer());
         projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value));
@@ -223,7 +223,7 @@ public partial class SolutionExplorerPanel : MarginContainer
                 NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateProjectTreeItem(_tree, folderItem, innerEvent.NewItem.Value)),
                 NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
                 _ => Task.CompletedTask
-            })).AddToDeferred(this);
+            }), configureAwait: false).AddToDeferred(this);
 
         var filesView = slnFolder.Files.CreateView(y => new TreeItemContainer());
         filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateFileTreeItem(_tree, folderItem, s.Value));
@@ -233,7 +233,7 @@ public partial class SolutionExplorerPanel : MarginContainer
                 NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateFileTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
                 NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
                 _ => Task.CompletedTask
-            })).AddToDeferred(this);
+            }), configureAwait: false).AddToDeferred(this);
         return folderItem;
 	}
 
@@ -263,7 +263,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				projectItem.SetIcon(0, newIcon);
 				projectItem.SetSuffix(0, suffix);
 			});
-		}).AddToDeferred(this);
+		}, configureAwait: false).AddToDeferred(this);
 
 		// Observe project folders
 		var foldersView = projectModel.Folders.CreateView(y => new TreeItemContainer());
@@ -276,7 +276,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Move => MoveTreeItem(_tree, innerEvent.NewItem.View, innerEvent.NewItem.Value, innerEvent.OldStartingIndex, innerEvent.NewStartingIndex),
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
-			})).AddToDeferred(this);
+			}), configureAwait: false).AddToDeferred(this);
 		
 		// Observe project files
 		var filesView = projectModel.Files.CreateView(y => new TreeItemContainer());
@@ -288,7 +288,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Move => MoveTreeItem(_tree, innerEvent.NewItem.View, innerEvent.NewItem.Value, innerEvent.OldStartingIndex, innerEvent.NewStartingIndex),
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
-			})).AddToDeferred(this);
+			}), configureAwait: false).AddToDeferred(this);
 		return projectItem;
 	}
 
@@ -304,7 +304,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 			.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (s, ct) =>
 			{
 				await this.InvokeAsync(() => folderItem.SetText(0, s));
-			}).AddToDeferred(this);
+			}, configureAwait: false).AddToDeferred(this);
 		
 		// Observe subfolders
 		var subFoldersView = sharpIdeFolder.Folders.CreateView(y => new TreeItemContainer());
@@ -317,7 +317,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Move => MoveTreeItem(_tree, innerEvent.NewItem.View, innerEvent.NewItem.Value, innerEvent.OldStartingIndex, innerEvent.NewStartingIndex),
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
-			})).AddToDeferred(this);
+			}), configureAwait: false).AddToDeferred(this);
 
 		// Observe files
 		var filesView = sharpIdeFolder.Files.CreateView(y => new TreeItemContainer());
@@ -329,7 +329,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 				NotifyCollectionChangedAction.Move => MoveTreeItem(_tree, innerEvent.NewItem.View, innerEvent.NewItem.Value, innerEvent.OldStartingIndex, innerEvent.NewStartingIndex),
 				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
 				_ => Task.CompletedTask
-			})).AddToDeferred(this);
+			}), configureAwait: false).AddToDeferred(this);
 		return folderItem;
 	}
 
@@ -360,7 +360,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 					fileItem.SetText(0, s);
 					fileItem.SetIconsForFileExtension(sharpIdeFile);
 				});
-			}).AddToDeferred(this);
+			}, configureAwait: false).AddToDeferred(this);
 		
 		return fileItem;
 	}

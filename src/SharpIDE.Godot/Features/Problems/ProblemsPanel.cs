@@ -54,7 +54,7 @@ public partial class ProblemsPanel : Control
                 NotifyCollectionChangedAction.Add => CreateProjectTreeItem(_tree, _rootItem, e),
                 NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
                 _ => Task.CompletedTask
-            })).AddTo(this);
+            }), configureAwait: false).AddTo(this);
     }
 
     private async Task CreateProjectTreeItem(Tree tree, TreeItem parent, ViewChangedEvent<SharpIdeProjectModel, TreeItemContainer> e)
@@ -67,7 +67,7 @@ public partial class ProblemsPanel : Control
             e.NewItem.View.Value = treeItem;
             
             Observable.EveryValueChanged(e.NewItem.Value, s => s.Diagnostics.Count).SubscribeOnThreadPool().ObserveOnThreadPool()
-                .SubscribeAwait(async (s, ct) => await this.InvokeAsync(() => treeItem.Visible = s is not 0)).AddTo(this);
+                .SubscribeAwait(async (s, ct) => await this.InvokeAsync(() => treeItem.Visible = s is not 0), configureAwait: false).AddTo(this);
             
             var projectDiagnosticsView = e.NewItem.Value.Diagnostics.CreateView(y => new TreeItemContainer());
             projectDiagnosticsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
@@ -76,7 +76,7 @@ public partial class ProblemsPanel : Control
                     NotifyCollectionChangedAction.Add => CreateDiagnosticTreeItem(_tree, treeItem, innerEvent),
                     NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
                     _ => Task.CompletedTask
-                })).AddTo(this);
+                }), configureAwait: false).AddTo(this);
         });
     }
 

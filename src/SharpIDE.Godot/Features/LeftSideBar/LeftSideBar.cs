@@ -25,14 +25,25 @@ public partial class LeftSideBar : Panel
         _ideDiagnosticsButton = GetNode<Button>("%IdeDiagnosticsButton");
         _nugetButton = GetNode<Button>("%NugetButton");
         _testExplorerButton = GetNode<Button>("%TestExplorerButton");
+        var buttonGroup = _testExplorerButton.ButtonGroup;
+        buttonGroup.Pressed += clickedButton =>
+        {
+            var pressedButton = buttonGroup.GetPressedButton();
+            BottomPanelType? pressedPanelType = pressedButton switch
+            {
+                _ when pressedButton == null => null,
+                _ when pressedButton == _runButton => BottomPanelType.Run,
+                _ when pressedButton == _debugButton => BottomPanelType.Debug,
+                _ when pressedButton == _buildButton => BottomPanelType.Build,
+                _ when pressedButton == _problemsButton => BottomPanelType.Problems,
+                _ when pressedButton == _ideDiagnosticsButton => BottomPanelType.IdeDiagnostics,
+                _ when pressedButton == _nugetButton => BottomPanelType.Nuget,
+                _ when pressedButton == _testExplorerButton => BottomPanelType.TestExplorer,
+                _ => throw new InvalidOperationException("Unknown button pressed")
+            };
+            GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(pressedPanelType);
+        };
         
-        _problemsButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.Problems : null);
-        _runButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.Run : null);
-        _buildButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.Build : null);
-        _debugButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.Debug : null);
-        _ideDiagnosticsButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.IdeDiagnostics : null);
-        _nugetButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.Nuget : null);
-        _testExplorerButton.Toggled += toggledOn => GodotGlobalEvents.Instance.BottomPanelTabSelected.InvokeParallelFireAndForget(toggledOn ? BottomPanelType.TestExplorer : null);
         GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.Subscribe(OnBottomPanelTabExternallySelected);
     }
 

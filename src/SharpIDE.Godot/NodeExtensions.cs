@@ -186,8 +186,9 @@ public static class NodeExtensions
             node.RemoveChild(child);
             child.QueueFree();
         }
-        public Task<T> InvokeAsync<T>(Func<T> workItem)
+        public Task<T> InvokeAsync<T>(Func<T> workItem, [CallerMemberName] string? callerName = null)
         {
+            GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             Dispatcher.SynchronizationContext.Post(_ =>
             {
@@ -203,8 +204,9 @@ public static class NodeExtensions
             }, null);
             return taskCompletionSource.Task;
         }
-        public Task InvokeAsync(Action workItem)
+        public Task InvokeAsync(Action workItem, [CallerMemberName] string? callerName = null)
         {
+            GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             //WorkerThreadPool.AddTask();
             Dispatcher.SynchronizationContext.Post(_ =>
@@ -222,14 +224,15 @@ public static class NodeExtensions
             return taskCompletionSource.Task;
         }
         
-        public Task InvokeAsync(Func<Task> workItem)
+        public Task InvokeAsync(Func<Task> workItem, [CallerMemberName] string? callerName = null)
         {
+            GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             Dispatcher.SynchronizationContext.Post(async void (_) =>
             {
                 try
                 {
-                    await workItem();
+                    await workItem().ConfigureAwait(false);
                     taskCompletionSource.SetResult();
                 }
                 catch (Exception ex)
@@ -240,8 +243,9 @@ public static class NodeExtensions
             return taskCompletionSource.Task;
         }
         
-        public Task InvokeDeferredAsync(Action workItem)
+        public Task InvokeDeferredAsync(Action workItem, [CallerMemberName] string? callerName = null)
         {
+            GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             //WorkerThreadPool.AddTask();
             Callable.From(() =>
@@ -259,15 +263,16 @@ public static class NodeExtensions
             return taskCompletionSource.Task;
         }
         
-        public Task InvokeDeferredAsync(Func<Task> workItem)
+        public Task InvokeDeferredAsync(Func<Task> workItem, [CallerMemberName] string? callerName = null)
         {
+            GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             //WorkerThreadPool.AddTask();
             Callable.From(async void () =>
             {
                 try
                 {
-                    await workItem();
+                    await workItem().ConfigureAwait(false);
                     taskCompletionSource.SetResult();
                 }
                 catch (Exception ex)
@@ -278,15 +283,21 @@ public static class NodeExtensions
             return taskCompletionSource.Task;
         }
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void GuardAgainstUiThreadCallingInvokeAsync(string? callerName = null)
+    {
+#if DEBUG
+        if (SynchronizationContext.Current == Dispatcher.SynchronizationContext)
+        {
+            GD.PrintErr($"{callerName} - InvokeAsync should not be called from the Godot UI thread. If you're still/already on the UI thread, just call the godot api you want to use directly.");
+        }
+#endif
+    }
 }
 
 public static class GodotTask
 {
-    extension<T>(Task<T> task)
-    {
-        public Task AsTask() => task;
-    }
-
     extension(Task task)
     {
         public static async Task GodotRun(Action action)

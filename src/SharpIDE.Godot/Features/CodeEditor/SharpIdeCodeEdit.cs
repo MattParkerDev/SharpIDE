@@ -337,7 +337,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				{
 					var projectDiagnosticsForFile = project.Diagnostics.Where(s => s.FilePath == _currentFile.Path).ToImmutableArray();
 					await this.InvokeAsync(() => SetProjectDiagnostics(projectDiagnosticsForFile));
-				});
+				}, configureAwait: false);
 		}
 		
 		var syntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);

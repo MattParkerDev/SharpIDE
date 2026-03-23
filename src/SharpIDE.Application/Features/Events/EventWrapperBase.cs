@@ -12,6 +12,7 @@ public abstract class EventWrapperBase<TDelegate>(TDelegate @event) where TDeleg
 	{
 		try
 		{
+			await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 			await action().ConfigureAwait(false);
 		}
 		catch (Exception ex)

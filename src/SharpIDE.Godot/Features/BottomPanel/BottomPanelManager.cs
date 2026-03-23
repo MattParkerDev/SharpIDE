@@ -61,14 +61,8 @@ public partial class BottomPanelManager : Panel
     {
         await this.InvokeAsync(() =>
         {
-            if (type == null)
-            {
-                GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.InvokeParallelFireAndForget(false);
-            }
-            else
-            {
-                GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.InvokeParallelFireAndForget(true);
-            }
+            var visible = type is not null;
+            GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.InvokeParallelFireAndForget(visible);
             foreach (var kvp in _panelTypeMap)
             {
                 kvp.Value.Visible = kvp.Key == type;

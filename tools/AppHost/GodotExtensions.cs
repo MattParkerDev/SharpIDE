@@ -24,7 +24,6 @@ public static class GodotExtensions
     {
         name ??= Path.GetFileNameWithoutExtension(projectPath);
         var projectDirectory = Path.GetDirectoryName(projectPath) ?? ".";
-        var godotPath = GetGodotExecutablePath();
 
         // Build the arguments list
         var arguments = new List<string>
@@ -40,10 +39,9 @@ public static class GodotExtensions
         // Create a standard ExecutableResource (since custom ones don't seem to work well)
         var godotResource = builder.AddExecutable(
             name: name,
-            command: godotPath,
+            command: "godot",
             workingDirectory: projectDirectory,
             args: arguments.ToArray());
-            //.WithEnvironment("OTEL_EXPORTER_OTLP_ENDPOINT", Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? throw new InvalidOperationException("OTEL_EXPORTER_OTLP_ENDPOINT environment variable is not set"));
 
         // Add a lifecycle hook to handle building before startup
         builder.Services.AddSingleton<IDistributedApplicationEventingSubscriber>(sp =>
@@ -53,35 +51,6 @@ public static class GodotExtensions
                 sp.GetRequiredService<ILogger<GodotBuildEventSubscriber>>()));
 
         return godotResource;
-    }
-
-    /// <summary>
-    /// Gets the Godot executable path based on the current platform.
-    /// </summary>
-    private static string GetGodotExecutablePath()
-    {
-        // First check for GODOT environment variable
-        var godotPath = Environment.GetEnvironmentVariable("GODOT");
-        if (!string.IsNullOrWhiteSpace(godotPath))
-        {
-            return godotPath;
-        }
-
-        // Fallback to platform-specific defaults
-        if (OperatingSystem.IsMacOS())
-        {
-            return "godot";
-        }
-        else if (OperatingSystem.IsWindows())
-        {
-            return "godot.exe";
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            return "godot";
-        }
-
-        throw new PlatformNotSupportedException("Current platform is not supported for Godot execution.");
     }
 
     private class GodotBuildEventSubscriber : IDistributedApplicationEventingSubscriber

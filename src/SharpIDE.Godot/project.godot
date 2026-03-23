@@ -18,6 +18,10 @@ boot_splash/stretch_mode=0
 boot_splash/image="uid://c58xmy2syss8s"
 config/icon="uid://tpjfx7mo6cwj"
 
+[audio]
+
+driver/driver="Dummy"
+
 [autoload]
 
 DiAutoload="*res://DiAutoload.cs"

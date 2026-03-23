@@ -80,12 +80,12 @@ public partial class IdeWindow : Control
             var windowSize = GetWindow().GetSize();
             popupWindow.Size = windowSize with { X = windowSize.X / 2, Y = windowSize.Y / 2 };
             popupWindow.Title = "Open Solution";
-            popupWindow.AddChild(_slnPicker);
-            popupWindow.Popup();
             popupWindow.CloseRequested += () =>
             {
                 popupWindow.Hide();
             };
+            popupWindow.AddChild(_slnPicker);
+            popupWindow.Popup();
         }
         _ = Task.GodotRun(async () =>
         {
