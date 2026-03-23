@@ -196,7 +196,7 @@ public partial class CodeEditorPanel : MarginContainer
 				{
 					var (name, isDirty) = x;
 					await UpdateTabFileName(newTab.GetIndex(), name, isDirty);
-				})
+				}, configureAwait: false)
 				.AddTo(newTab); // needs to be on ui thread
 		});
 		
