@@ -176,7 +176,8 @@ public partial class IdeRoot : Control
 				.Where(s => s.Item1 is not null)
 				.OfType<(SharpIdeFile file, SharpIdeFileLinePosition linePosition, bool isSelected)>()
 				.ToList();
-			await this.InvokeDeferredAsync(async () =>
+
+			_ = Task.GodotRun(async () =>
 			{
 				// Preserves order of tabs
 				await _codeEditorPanel.AddSharpIdeFiles(filesToOpen.Select(file => file.file).ToList());

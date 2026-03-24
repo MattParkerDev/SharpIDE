@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Godot;
 using Microsoft.Extensions.Hosting;
 using SharpIDE.Application.Features.Build;
@@ -29,6 +30,7 @@ public partial class IdeWindow : Control
         SetMaxFpsForMonitor();
         // Godot doesn't have an easy equivalent of launchsettings.json, and we also want this to be set for published builds
         Environment.SetEnvironmentVariable("MSBUILD_PARSE_SLN_WITH_SOLUTIONPERSISTENCE", "1");
+        GD.Print($"SharpIDE running on '{RuntimeInformation.FrameworkDescription}' Runtime");
         SharpIdeMsbuildLocator.Register();
         GodotOtelExtensions.AddServiceDefaults();
         Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();

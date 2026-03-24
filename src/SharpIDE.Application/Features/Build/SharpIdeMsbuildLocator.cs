@@ -15,6 +15,7 @@ public static class SharpIdeMsbuildLocator
 		var instance = MSBuildLocator.QueryVisualStudioInstances().MaxBy(s => s.Version);
 		if (instance is null) throw new InvalidOperationException("No MSBuild instances found");
 		MSBuildLocator.RegisterInstance(instance);
+		Console.WriteLine($"SharpIdeMsbuildLocator found and registered '{instance.MSBuildPath}'");
 	}
 
 	// https://github.com/microsoft/MSBuildLocator/issues/361

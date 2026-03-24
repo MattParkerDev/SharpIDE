@@ -190,18 +190,19 @@ public static class NodeExtensions
         {
             GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Dispatcher.SynchronizationContext.Post(_ =>
+            Dispatcher.SynchronizationContext.Post(static state =>
             {
+                var (workItem, tcs) = ((Func<T>, TaskCompletionSource<T>))state!;
                 try
                 {
                     var result = workItem();
-                    taskCompletionSource.SetResult(result);
+                    tcs.SetResult(result);
                 }
                 catch (Exception ex)
                 {
-                    taskCompletionSource.SetException(ex);
+                    tcs.SetException(ex);
                 }
-            }, null);
+            }, (workItem, taskCompletionSource));
             return taskCompletionSource.Task;
         }
         public Task InvokeAsync(Action workItem, [CallerMemberName] string? callerName = null)
@@ -209,18 +210,19 @@ public static class NodeExtensions
             GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             //WorkerThreadPool.AddTask();
-            Dispatcher.SynchronizationContext.Post(_ =>
+            Dispatcher.SynchronizationContext.Post(static state =>
             {
+                var (workItem, tcs) = ((Action, TaskCompletionSource))state!;
                 try
                 {
                     workItem();
-                    taskCompletionSource.SetResult();
+                    tcs.SetResult();
                 }
                 catch (Exception ex)
                 {
-                    taskCompletionSource.SetException(ex);
+                    tcs.SetException(ex);
                 }
-            }, null);
+            }, (workItem, taskCompletionSource));
             return taskCompletionSource.Task;
         }
         
@@ -228,18 +230,19 @@ public static class NodeExtensions
         {
             GuardAgainstUiThreadCallingInvokeAsync(callerName);
             var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            Dispatcher.SynchronizationContext.Post(async void (_) =>
+            Dispatcher.SynchronizationContext.Post(static async void (state) =>
             {
+                var (workItem, tcs) = ((Func<Task>, TaskCompletionSource))state!;
                 try
                 {
                     await workItem().ConfigureAwait(false);
-                    taskCompletionSource.SetResult();
+                    tcs.SetResult();
                 }
                 catch (Exception ex)
                 {
-                    taskCompletionSource.SetException(ex);
+                    tcs.SetException(ex);
                 }
-            }, null);
+            }, (workItem, taskCompletionSource));
             return taskCompletionSource.Task;
         }
         

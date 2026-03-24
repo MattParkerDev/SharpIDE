@@ -31,4 +31,8 @@
   <ItemGroup>
     <None Include="version.txt" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Properties\launchSettings.json" />
+  </ItemGroup>
 </Project>
