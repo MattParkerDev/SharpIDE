@@ -188,7 +188,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 	public override void _Input(InputEvent @event)
 	{
-		if (@event is InputEventKey { Pressed: true } key && key.IsAction(InputStringNames.Cancel, true))
+		if (Visible && @event is InputEventKey { Pressed: true } key && key.IsAction(InputStringNames.Cancel, true))
 		{
 			var focusOwner = GetViewport().GuiGetFocusOwner();
 			if (_textEditor is not null && (_textEditor.HasFocus() || (focusOwner is not null && IsAncestorOf(focusOwner))))
