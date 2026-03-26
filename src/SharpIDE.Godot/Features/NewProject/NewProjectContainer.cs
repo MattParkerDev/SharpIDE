@@ -14,7 +14,7 @@ public partial class NewProjectContainer : VBoxContainer
 
     private async Task AsyncReady()
     {
-        var templates = await _dotnetTemplateService.GetTemplates();
+        var categorisedTemplates = await _dotnetTemplateService.GetCategorisedTemplates();
         
     }
 }
