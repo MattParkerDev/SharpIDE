@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://vkqiqm661f"]
+
+[ext_resource type="Script" uid="uid://bhcg7mchtdyvj" path="res://Features/NewProject/NewProjectContainer.cs" id="1_4okmj"]
+
+[node name="NewProjectContainer" type="VBoxContainer" unique_id=521232853]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_4okmj")
+
+[node name="HSplitContainer" type="HSplitContainer" parent="." unique_id=1853239867]
+layout_mode = 2
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(250)
+drag_area_highlight_in_editor = true
+split_offset = 250
+
+[node name="MarginContainer" type="MarginContainer" parent="HSplitContainer" unique_id=320802118]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/MarginContainer" unique_id=170613660]
+layout_mode = 2
+
+[node name="LineEdit" type="LineEdit" parent="HSplitContainer/MarginContainer/VBoxContainer" unique_id=1315544045]
+layout_mode = 2
+placeholder_text = "Search"
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="HSplitContainer" unique_id=2129465516]
+layout_mode = 2
