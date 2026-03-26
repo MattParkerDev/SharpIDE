@@ -2,6 +2,7 @@
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Debugging;
+using SharpIDE.Application.Features.DotnetNew;
 using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.FilePersistence;
@@ -40,6 +41,7 @@ public static class DependencyInjection
 		services.AddScoped<AnalyzerFileWatcher>();
 		services.AddScoped<EditorCaretPositionService>();
 		services.AddScoped<SharpIdeMetadataAsSourceService>();
+		services.AddScoped<DotnetTemplateService>();
 		services.AddLogging();
 		return services;
 	}

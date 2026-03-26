@@ -36,6 +36,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Razor.Utilities.Shared" Version="10.0.0-preview.26120.116" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Features" Version="5.5.0-2.26120.116" />
     <PackageVersion Include="IgnoresAccessChecksToGenerator" Version="0.8.0" />
+    <PackageVersion Include="Microsoft.TemplateEngine.IDE" Version="10.0.103" />
+    <PackageVersion Include="Microsoft.TemplateSearch.Common" Version="10.0.103" />
     <PackageVersion Include="Microsoft.VisualStudioCode.RazorExtension" Version="10.0.0-preview.26120.116" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Razor.Compiler" Version="10.0.0-preview.26120.116" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Remote.Razor" Version="10.0.0-preview.26120.116" />

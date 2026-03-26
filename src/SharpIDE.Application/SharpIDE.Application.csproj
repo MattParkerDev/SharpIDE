@@ -20,6 +20,7 @@
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Razor.SemanticTokens" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Workspaces" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+    <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.TemplateEngine.Orchestrator.RunnableProjects" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Features" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.CSharp.Features" />
@@ -43,6 +44,8 @@
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.TemplateEngine.IDE" />
+    <PackageReference Include="Microsoft.TemplateSearch.Common" />
     <PackageReference Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
     <!-- If any Microsoft.Build.*.dll (Excluding Locator) ends up in the output, it will be prioritised for loading by MSBuild Nodes  -->
     <PackageReference Include="Ardalis.GuardClauses" />
