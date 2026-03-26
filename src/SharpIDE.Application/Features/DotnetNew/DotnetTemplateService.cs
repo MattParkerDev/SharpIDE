@@ -11,11 +11,13 @@ public class DotnetTemplateService(ILoggerFactory loggerFactory)
 {
 	private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
-	public async Task GetTemplates(CancellationToken cancellationToken = default)
+	public async Task<IReadOnlyList<ITemplateInfo>> GetTemplates(CancellationToken cancellationToken = default)
 	{
 		var templateEngineHost = CliTemplateEngineHost.CreateHost(false, false, null, null, false, LogLevel.Information, _loggerFactory);
 		var bootstrapper = new Bootstrapper(templateEngineHost, false);
 		var templates = await bootstrapper.GetTemplatesAsync(cancellationToken);
+
+		return templates;
 
 		// Console.WriteLine($"Found {templates.Count} templates");
 		// foreach (var template in templates)
