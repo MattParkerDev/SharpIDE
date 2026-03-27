@@ -51,6 +51,7 @@ public partial class IdeRoot : Control
     [Inject] private readonly SharpIdeSolutionModificationService _sharpIdeSolutionModificationService = null!;
     [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+    [Inject] private readonly VsPersistenceSolutionService _vsPersistenceSolutionService = null!;
     [Inject] private readonly ILogger<IdeRoot> _logger = null!;
 
 	public override void _EnterTree()
@@ -151,11 +152,11 @@ public partial class IdeRoot : Control
 		_ = Task.GodotRun(async () =>
 		{
 			GD.Print($"Selected: {path}");
-			var timer = Stopwatch.StartNew();
-			var solutionModel = await VsPersistenceSolutionService.GetSolutionModel(path); // TODO: Probably refactor into a DI Service
-			timer.Stop();
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
+			var timer = Stopwatch.StartNew();
+			var solutionModel = await _vsPersistenceSolutionService.GetSolutionModel(path);
+			timer.Stop();
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
 			_sharpIdeSolutionAccessor.SolutionModel = solutionModel;
 			_sharpIdeSolutionAccessor.SolutionReadyTcs.SetResult();

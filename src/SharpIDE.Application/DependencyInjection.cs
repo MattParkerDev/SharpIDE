@@ -11,6 +11,7 @@ using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Nuget;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.Search;
+using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Application.Features.Testing;
 
 namespace SharpIDE.Application;
@@ -42,6 +43,7 @@ public static class DependencyInjection
 		services.AddScoped<EditorCaretPositionService>();
 		services.AddScoped<SharpIdeMetadataAsSourceService>();
 		services.AddScoped<DotnetTemplateService>();
+		services.AddScoped<VsPersistenceSolutionService>();
 		services.AddLogging();
 		return services;
 	}

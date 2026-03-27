@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.TemplateEngine.Abstractions;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Application.Features.DotnetNew;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
@@ -31,10 +33,11 @@ public class RoslynAnalysisTests
 	    var logger = services.GetRequiredService<ILogger<RoslynAnalysis>>();
 	    var buildService = services.GetRequiredService<BuildService>();
 	    var analyzerFileWatcher = services.GetRequiredService<AnalyzerFileWatcher>();
+	    var vsPersistenceSolutionService = services.GetRequiredService<VsPersistenceSolutionService>();
 
 	    var roslynAnalysis = new RoslynAnalysis(logger, buildService, analyzerFileWatcher);
 
-	    var solutionModel = await VsPersistenceMapper.GetSolutionModel(@"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx", TestContext.Current.CancellationToken);
+	    var solutionModel = await vsPersistenceSolutionService.GetSolutionModel(@"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx", TestContext.Current.CancellationToken);
 	    var sharpIdeApplicationProject = solutionModel.AllProjects.Single(p => p.Name.Value == "SharpIDE.Application");
 
 	    var timer = Stopwatch.StartNew();
