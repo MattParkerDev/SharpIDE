@@ -26,6 +26,7 @@ public partial class NewProjectContainer : VBoxContainer
         _customTemplatesVBoxContainer = GetNode<VBoxContainer>("%CustomTemplatesVBoxContainer");
         _templateComponent = GetNode<TemplateComponent>("%TemplateComponent");
         _templateComponent.DefaultNewProjectParentPath = DefaultNewProjectParentPath;
+        _templateComponent.Visible = false; // Hide until the categories are loaded, to select an entry
         _categoryButtonGroup.Pressed += baseButton =>
         {
             var button = (Button)baseButton;
@@ -53,7 +54,13 @@ public partial class NewProjectContainer : VBoxContainer
                     };
                     _microsoftTemplatesVBoxContainer.AddChild(categoryButton);
                 }
-            
+            }
+
+            var firstCategoryButton = _microsoftTemplatesVBoxContainer.GetChildOrNull<Button?>(0);
+            if (firstCategoryButton is not null)
+            {
+                firstCategoryButton.SetPressed(true);
+                _templateComponent.Visible = true;
             }
         });
     }
