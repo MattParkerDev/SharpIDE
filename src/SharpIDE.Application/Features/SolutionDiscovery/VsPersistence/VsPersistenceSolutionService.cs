@@ -7,20 +7,20 @@ namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 public class VsPersistenceSolutionService
 {
-	public async Task<SharpIdeSolutionModel> GetSolutionModel(string solutionFilePath, CancellationToken cancellationToken = default)
+	private SolutionModel? _vsSolution;
+	public async Task<SharpIdeSolutionModel> LoadSolution(string solutionFilePath, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity();
 
-		SolutionModel vsSolution;
 		using (SharpIdeOtel.Source.StartActivity("VsPersistence.OpenSolution"))
 		{
 			var serializer = SolutionSerializers.GetSerializerByMoniker(solutionFilePath);
 			Guard.Against.Null(serializer);
-			vsSolution = await serializer.OpenAsync(solutionFilePath, cancellationToken);
+			_vsSolution = await serializer.OpenAsync(solutionFilePath, cancellationToken);
 		}
 
 		// This intermediate model is pretty much useless, but I have left it around as we grab the project nodes with it, which we might use later.
-		var intermediateModel = await IntermediateMapper.GetIntermediateModel(solutionFilePath, vsSolution, cancellationToken);
+		var intermediateModel = await IntermediateMapper.GetIntermediateModel(solutionFilePath, _vsSolution, cancellationToken);
 
 		var solutionModel = new SharpIdeSolutionModel(solutionFilePath, intermediateModel);
 

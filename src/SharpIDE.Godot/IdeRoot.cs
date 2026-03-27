@@ -155,7 +155,7 @@ public partial class IdeRoot : Control
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
 			var timer = Stopwatch.StartNew();
-			var solutionModel = await _vsPersistenceSolutionService.GetSolutionModel(path);
+			var solutionModel = await _vsPersistenceSolutionService.LoadSolution(path);
 			timer.Stop();
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
 			_sharpIdeSolutionAccessor.SolutionModel = solutionModel;
