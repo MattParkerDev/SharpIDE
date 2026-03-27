@@ -20,6 +20,7 @@ public partial class TemplateComponent : VBoxContainer
     private Button _cancelButton = null!;
 
     private Dictionary<string, List<ITemplateInfo>> _templatesForCurrentCategory = null!;
+    private ITemplateInfo _selectedTemplate = null!;
 
     public override void _Ready()
     {
@@ -46,24 +47,31 @@ public partial class TemplateComponent : VBoxContainer
     {
         _templatesForCurrentCategory = templatesForCategory;
         var defaultTemplate = _templatesForCurrentCategory.First().Value.First();
-        _projectNameLineEdit.Text = defaultTemplate.DefaultName;
-        _templateTypeLabel.Text = defaultTemplate.Name;
+        SetSelectedTemplate(defaultTemplate);
+    }
+
+    private void SetSelectedTemplate(ITemplateInfo selectedTemplate)
+    {
+        _selectedTemplate = selectedTemplate;
+        _projectNameLineEdit.Text = selectedTemplate.DefaultName;
+        _templateTypeLabel.Text = selectedTemplate.Name;
         _templatesItemList.Clear();
-        foreach (var template in templatesForCategory)
+        
+        foreach (var template in _templatesForCurrentCategory)
         {
             _templatesItemList.AddItem(template.Value.First().Name);
         }
 
         List<string> skippedParameterNames = ["TargetFrameworkOverride", "Framework", "langVersion", "skipRestore"]; 
-        foreach (var parameter in defaultTemplate.ParameterDefinitions.Where(s => s.Precedence.PrecedenceDefinition is not PrecedenceDefinition.Implicit && skippedParameterNames.Contains(s.Name) is false))
+        foreach (var parameter in selectedTemplate.ParameterDefinitions.Where(s => s.Precedence.PrecedenceDefinition is not PrecedenceDefinition.Implicit && skippedParameterNames.Contains(s.Name) is false))
         {
             ;
         }
         
-        _templateShortNameLabel.Text = string.Join("; ", defaultTemplate.ShortNameList);
-        _templateIdentityLabel.Text = defaultTemplate.Identity;
-        _templateGroupIdentityLabel.Text = defaultTemplate.GroupIdentity;
-        _templateAuthorLabel.Text = defaultTemplate.Author;
-        _templateClassificationsLabel.Text = string.Join("; ", defaultTemplate.Classifications);
+        _templateShortNameLabel.Text = string.Join("; ", selectedTemplate.ShortNameList);
+        _templateIdentityLabel.Text = selectedTemplate.Identity;
+        _templateGroupIdentityLabel.Text = selectedTemplate.GroupIdentity;
+        _templateAuthorLabel.Text = selectedTemplate.Author;
+        _templateClassificationsLabel.Text = string.Join("; ", selectedTemplate.Classifications);
     }
 }
