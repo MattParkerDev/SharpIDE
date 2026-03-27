@@ -46,6 +46,22 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="HBoxContainer7" type="HBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=727545348]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/HBoxContainer7" unique_id=1821284741]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+theme_override_font_sizes/font_size = 14
+text = "This project will be created in "
+
+[node name="ProjectDirectoryAndProjectNameLabel" type="Label" parent="ScrollContainer/VBoxContainer/HBoxContainer7" unique_id=1515593911]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+theme_override_font_sizes/font_size = 14
+text = "./dir/ProjectName"
+
 [node name="HBoxContainer3" type="HBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=910945131]
 layout_mode = 2
 

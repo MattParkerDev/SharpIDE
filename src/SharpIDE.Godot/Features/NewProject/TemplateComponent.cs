@@ -11,6 +11,7 @@ public partial class TemplateComponent : VBoxContainer
     private LineEdit _projectNameLineEdit = null!;
     private LineEdit _projectDirectoryLineEdit = null!;
     private Label _templateTypeLabel = null!;
+    private Label _projectDirectoryAndProjectNameLabel = null!;
     private ItemList _templatesItemList = null!;
 
     private Label _templateShortNameLabel = null!;
@@ -31,6 +32,7 @@ public partial class TemplateComponent : VBoxContainer
     {
         _projectNameLineEdit = GetNode<LineEdit>("%ProjectNameLineEdit");
         _projectDirectoryLineEdit = GetNode<LineEdit>("%ProjectDirectoryLineEdit");
+        _projectDirectoryAndProjectNameLabel = GetNode<Label>("%ProjectDirectoryAndProjectNameLabel");
         _templateTypeLabel = GetNode<Label>("%TemplateTypeLabel");
         _templatesItemList = GetNode<ItemList>("%TemplatesItemList");
         
@@ -68,8 +70,11 @@ public partial class TemplateComponent : VBoxContainer
     private void SetSelectedTemplate(ITemplateInfo selectedTemplate)
     {
         _selectedTemplate = selectedTemplate;
-        _projectNameLineEdit.Text = selectedTemplate.DefaultName;
+        var defaultProjectName = selectedTemplate.DefaultName;
+        defaultProjectName ??= "Project1";
+        _projectNameLineEdit.Text = defaultProjectName;
         _projectDirectoryLineEdit.Text = DefaultNewProjectParentPath;
+        _projectDirectoryAndProjectNameLabel.Text = Path.Combine(DefaultNewProjectParentPath, defaultProjectName);
         _templateTypeLabel.Text = selectedTemplate.Name;
         _templatesItemList.Clear();
         
