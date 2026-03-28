@@ -48,6 +48,12 @@ public partial class SharpIdeCodeEdit
             _syntaxHighlighter.UpdateThemeColorCache(lightOrDarkTheme);
         }
 
+        if (_usingGrammarHighlighter)
+        {
+            RecolorizeWithGrammar(Text);
+            return;
+        }
+
         SyntaxHighlighter = null;
         SyntaxHighlighter = _syntaxHighlighter; // Reassign to trigger redraw
     }

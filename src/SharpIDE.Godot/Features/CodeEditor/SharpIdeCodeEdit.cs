@@ -15,6 +15,8 @@ using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.LanguageExtensions;
+using SharpIDE.Godot.Features.CodeEditor.TextMate;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -34,6 +36,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private SharpIdeFile _currentFile = null!;
 	
 	private CustomHighlighter _syntaxHighlighter = new();
+	private GrammarSyntaxHighlighter? _grammarSyntaxHighlighter;
+	private bool _usingGrammarHighlighter;
 	private PopupMenu _popupMenu = null!;
 	private CanvasItem _aboveCanvasItem = null!;
 	private Rid? _aboveCanvasItemRid = null!;
@@ -63,6 +67,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
     [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+    [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
 
 	public SharpIdeCodeEdit()
 	{
@@ -241,6 +246,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		_findReplaceBar.NeedsToCountResults = true;
 		var text = Text;
+
+		if (_usingGrammarHighlighter)
+		{
+			// Re-tokenize on next frame so Text is fully updated
+			Callable.From(() => RecolorizeWithGrammar(Text)).CallDeferred();
+		}
+
 		var pendingCompletionTrigger = _pendingCompletionTrigger;
 		_pendingCompletionTrigger = null;
 		var cursorPosition = GetCaretPosition();
@@ -325,6 +337,17 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // get off the UI thread
 		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetSharpIdeFile)}");
+
+		// Detect TextMate grammar for this file's extension (before Roslyn, so grammar is ready by the time text is set)
+		var fileExtension = Path.GetExtension(file.Path);
+		var grammarContribution = _languageExtensionRegistry.GetGrammar(fileExtension);
+		_usingGrammarHighlighter = grammarContribution != null;
+		if (grammarContribution != null)
+		{
+			var newHighlighter = new GrammarSyntaxHighlighter();
+			newHighlighter.LoadGrammar(grammarContribution);
+			_grammarSyntaxHighlighter = newHighlighter;
+		}
 		_currentFile = file;
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
 		_currentFile.FileContentsChangedExternally.Subscribe(OnFileChangedExternally);
@@ -601,11 +624,41 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[RequiresGodotUiThread]
 	private void SetSyntaxHighlightingModel(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
 	{
+		// Progressive enhancement: if grammar highlighting is active and Roslyn returned data, switch to Roslyn
+		if (_usingGrammarHighlighter && classifiedSpans.IsEmpty && razorClassifiedSpans.IsEmpty)
+		{
+			RecolorizeWithGrammar(Text);
+			return;
+		}
+
+		if (_usingGrammarHighlighter && !classifiedSpans.IsEmpty)
+		{
+			// Roslyn semantic tokens available — upgrade from grammar to Roslyn highlighting
+			_usingGrammarHighlighter = false;
+		}
+
 		_syntaxHighlighter.SetHighlightingData(classifiedSpans, razorClassifiedSpans);
 		//_syntaxHighlighter.ClearHighlightingCache();
 		_syntaxHighlighter.UpdateCache(); // I don't think this does anything, it will call _UpdateCache which we have not implemented
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _syntaxHighlighter; // Reassign to trigger redraw
+	}
+
+	[RequiresGodotUiThread]
+	internal void RecolorizeWithGrammar(string text)
+	{
+		if (_grammarSyntaxHighlighter == null || !_grammarSyntaxHighlighter.IsGrammarLoaded) return;
+		_grammarSyntaxHighlighter.Colorize(text, LoadCurrentTextMateTheme(), _syntaxHighlighter.ColourSetForTheme);
+		SyntaxHighlighter = null;
+		SyntaxHighlighter = _grammarSyntaxHighlighter;
+	}
+
+	private TextMateTheme? LoadCurrentTextMateTheme()
+	{
+		var customPath = Singletons.AppState.IdeSettings.CustomThemePath;
+		if (string.IsNullOrEmpty(customPath) || !File.Exists(customPath)) return null;
+		try { return TextMateThemeParser.ParseFromFile(customPath); }
+		catch { return null; }
 	}
 
 	private void OnCodeFixesRequested()

@@ -1,4 +1,5 @@
 using Godot;
+using SharpIDE.Godot.Features.ExtensionManager;
 using SharpIDE.Godot.Features.IdeSettings;
 
 namespace SharpIDE.Godot.Features.Settings;
@@ -11,6 +12,7 @@ public partial class SettingsWindow : Window
     private OptionButton _themeOptionButton = null!;
     private LineEdit _customThemePathLineEdit = null!;
     private FileDialog _customThemeFileDialog = null!;
+    private ExtensionManagerWindow? _extensionManagerWindow;
 
     public override void _Ready()
     {
@@ -87,6 +89,14 @@ public partial class SettingsWindow : Window
         // Add custom theme controls to the main VBox
         settingsVBox.AddChild(customThemeContainer);
 
+        // Language Extensions section
+        settingsVBox.AddChild(new HSeparator());
+        var extLabel = new Label { Text = "Language Extensions" };
+        settingsVBox.AddChild(extLabel);
+        var manageButton = new Button { Text = "Manage Extensions…" };
+        manageButton.Pressed += OnManageExtensionsPressed;
+        settingsVBox.AddChild(manageButton);
+
         // Create file dialog
         _customThemeFileDialog = new FileDialog
         {
@@ -95,6 +105,16 @@ public partial class SettingsWindow : Window
         };
         _customThemeFileDialog.FileSelected += OnCustomThemeFileSelected;
         AddChild(_customThemeFileDialog);
+    }
+
+    private void OnManageExtensionsPressed()
+    {
+        if (_extensionManagerWindow == null)
+        {
+            _extensionManagerWindow = new ExtensionManagerWindow();
+            AddChild(_extensionManagerWindow); // DI injection fires here via NodeAdded event
+        }
+        _extensionManagerWindow.PopupCentered(new Vector2I(540, 380));
     }
 
     private void OnBrowseCustomThemeClicked()
