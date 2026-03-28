@@ -16,6 +16,7 @@ public class IdeSettings
     public bool DebuggerUseSharpDbg { get; set; } = true;
     public float UiScale { get; set; } = 1.0f;
     public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
+    public string? CustomThemePath { get; set; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
