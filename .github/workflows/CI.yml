@@ -1,16 +1,27 @@
-name: Create GitHub Release
+name: Build & Create GitHub Release
 on:
   push:
-    branches:
-      - main
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write # Required to create releases
 
 jobs:
-  execute-parallel-pipeline:
+  build-check:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore
+
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [build-check]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
