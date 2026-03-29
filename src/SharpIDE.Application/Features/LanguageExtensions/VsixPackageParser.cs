@@ -94,6 +94,37 @@ public static partial class VsixPackageParser
                 .ToList();
         }
 
+        // Sort so the grammar whose base name matches a pkgdef-discovered extension comes
+        // first — making it the "primary" grammar (e.g. t4.tmLanguage before csharp.tmLanguage).
+        if (grammarAssetPaths.Count > 1 && fileExtensions.Count > 0)
+        {
+            var extNames = fileExtensions
+                .Select(e => e.TrimStart('.'))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            grammarAssetPaths = grammarAssetPaths
+                .OrderByDescending(p => extNames.Contains(
+                    Path.GetFileNameWithoutExtension(p).Split('.')[0]))
+                .ToList();
+        }
+
+        // Read fileTypes from the primary grammar to fill extensions omitted from pkgdef.
+        // T4Language comments out .tt in ShellFileAssociations because VS owns it natively,
+        // but the grammar plist still lists it in its fileTypes array.
+        if (grammarAssetPaths.Count > 0)
+        {
+            var primaryEntry = zip.GetEntry(grammarAssetPaths[0]);
+            if (primaryEntry != null)
+            {
+                using var grammarStream = primaryEntry.Open();
+                foreach (var ft in ReadFileTypesFromGrammar(grammarStream, grammarAssetPaths[0]))
+                {
+                    var dotExt = ft.StartsWith('.') ? ft.ToLowerInvariant() : "." + ft.ToLowerInvariant();
+                    if (!fileExtensions.Contains(dotExt, StringComparer.OrdinalIgnoreCase))
+                        fileExtensions.Add(dotExt);
+                }
+            }
+        }
+
         // Build grammar contributions: one per grammar asset path
         // LanguageId derived from grammar filename (e.g. "fsharp.tmLanguage.json" → "fsharp")
         var grammars = grammarAssetPaths
@@ -215,6 +246,45 @@ public static partial class VsixPackageParser
             TransportType = transport,
             WorkingDirectory = workingDir
         };
+    }
+
+    /// <summary>
+    /// Reads the fileTypes array from a TextMate grammar file (plist XML or JSON).
+    /// Returns bare extension strings without dots, e.g. "tt", "t4", "ttinclude".
+    /// </summary>
+    private static IEnumerable<string> ReadFileTypesFromGrammar(Stream stream, string path)
+    {
+        IEnumerable<string> result;
+        try
+        {
+            if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                using var doc = JsonDocument.Parse(stream);
+                if (!doc.RootElement.TryGetProperty("fileTypes", out var ft) ||
+                    ft.ValueKind != JsonValueKind.Array)
+                    yield break;
+                result = ft.EnumerateArray()
+                    .Select(e => e.GetString())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s!);
+            }
+            else // plist XML (.tmLanguage / .tmGrammar)
+            {
+                var xml = XDocument.Load(stream);
+                var fileTypesKey = xml.Descendants("key")
+                    .FirstOrDefault(k => k.Value == "fileTypes");
+                if (fileTypesKey?.NextNode is not XElement { Name.LocalName: "array" } array)
+                    yield break;
+                result = array.Elements("string").Select(e => e.Value);
+            }
+        }
+        catch
+        {
+            yield break; // malformed grammar — skip silently
+        }
+
+        foreach (var ft in result)
+            yield return ft;
     }
 
     private static bool IsGrammarFile(string filename) =>

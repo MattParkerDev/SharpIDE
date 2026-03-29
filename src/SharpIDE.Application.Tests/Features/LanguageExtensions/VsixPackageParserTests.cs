@@ -105,14 +105,14 @@ public class VsixPackageParserTests
     }
 
     [Fact]
-    public void Parse_DoesNotIncludeDotTtExtension()
+    public void Parse_FindsDotTtExtension()
     {
         var result = VsixPackageParser.Parse(VsixPath);
         var allExtensions = result.Languages.SelectMany(l => l.FileExtensions).ToList();
 
-        allExtensions.Should().NotContain(".tt",
-            "the .tt entry is commented out in Grammars.pkgdef with a leading ';' — " +
-            "VS owns .tt natively so the extension intentionally omits it");
+        allExtensions.Should().Contain(".tt",
+            "t4.tmLanguage's fileTypes plist array includes 'tt' — this fills the gap " +
+            "left by the commented-out ;[$RootKey$\\ShellFileAssociations\\.tt] in Grammars.pkgdef");
     }
 
     // ── No LSP server (T4Language is grammar-only) ───────────────────────────

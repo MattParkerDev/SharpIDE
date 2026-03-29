@@ -64,6 +64,14 @@ public class IdeFileOperationsService(SharpIdeSolutionModificationService sharpI
 		await _sharpIdeSolutionModificationService.RemoveFile(file);
 	}
 
+	public async Task<SharpIdeFile> CreateGenericFile(IFolderOrProject parentNode, string fileName)
+	{
+		var newFilePath = Path.Combine(GetFileParentNodePath(parentNode), fileName);
+		if (File.Exists(newFilePath)) throw new InvalidOperationException($"File {newFilePath} already exists.");
+		await File.WriteAllTextAsync(newFilePath, string.Empty);
+		return await _sharpIdeSolutionModificationService.CreateFile(parentNode, newFilePath, fileName, string.Empty);
+	}
+
 	public async Task<SharpIdeFile> CreateCsFile(IFolderOrProject parentNode, string newFileName, string typeKeyword)
 	{
 		var newFilePath = Path.Combine(GetFileParentNodePath(parentNode), newFileName);

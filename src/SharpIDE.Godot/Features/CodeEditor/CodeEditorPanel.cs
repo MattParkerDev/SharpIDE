@@ -6,6 +6,7 @@ using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Events;
+using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
@@ -25,6 +26,7 @@ public partial class CodeEditorPanel : MarginContainer
 	
 	[Inject] private readonly RunService _runService = null!;
 	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
 	public override void _Ready()
 	{
 		_tabContainer = GetNode<TabContainer>("TabContainer");
@@ -118,7 +120,19 @@ public partial class CodeEditorPanel : MarginContainer
 	private void OnTabClosePressed(long tabIndex)
 	{
 		var tab = (SharpIdeCodeEditContainer)_tabContainer.GetTabControl((int)tabIndex);
-		CloseTabs([tab]);
+		var file = tab.CodeEdit.SharpIdeFile;
+		if (file.IsDirty.Value)
+		{
+			_ = Task.GodotRun(async () =>
+			{
+				await _openTabsFileManager.SaveFileAsync(file);
+				await this.InvokeAsync(() => CloseTabs([tab]));
+			});
+		}
+		else
+		{
+			CloseTabs([tab]);
+		}
 	}
 
 	private void OnTabRmbClicked(long tabIndex)
