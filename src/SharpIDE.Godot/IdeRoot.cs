@@ -8,6 +8,7 @@ using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
+using SharpIDE.Application.Features.LanguageExtensions;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.BottomPanel;
@@ -53,6 +54,7 @@ public partial class IdeRoot : Control
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly VsPersistenceSolutionService _vsPersistenceSolutionService = null!;
     [Inject] private readonly ILogger<IdeRoot> _logger = null!;
+    [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
 
 	public override void _EnterTree()
 	{
@@ -84,6 +86,7 @@ public partial class IdeRoot : Control
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
 		_bottomPanelManager = GetNode<BottomPanelManager>("%BottomPanel");
 		
+		LoadLanguageExtensionRegistry();
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
@@ -215,6 +218,21 @@ public partial class IdeRoot : Control
 		});
 	}
 	
+	private void LoadLanguageExtensionRegistry()
+	{
+		try
+		{
+			var extensions = LanguageExtensionPersistence.Load();
+			foreach (var ext in extensions)
+				_languageExtensionRegistry.Register(ext);
+			_logger.LogInformation("Loaded {Count} language extension(s) from registry", extensions.Count);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "Failed to load language extension registry");
+		}
+	}
+
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
 		if (@event.IsActionPressed(InputStringNames.FindInFiles))

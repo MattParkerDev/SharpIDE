@@ -1,5 +1,6 @@
 ﻿using Godot;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.LanguageExtensions;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
@@ -23,6 +24,7 @@ file enum CreateNewSubmenuOptions
 public partial class SolutionExplorerPanel
 {
     [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
+    [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
     
     private readonly PackedScene _newDirectoryDialogScene = GD.Load<PackedScene>("uid://bgi4u18y8pt4x");
     private readonly PackedScene _newCsharpFileDialogScene = GD.Load<PackedScene>("uid://chnb7gmcdg0ww");
@@ -36,7 +38,15 @@ public partial class SolutionExplorerPanel
         menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)FolderContextMenuOptions.CreateNew);
         createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
         createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
-        createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, folder);
+
+        var extensionItems = BuildExtensionMenuItems(createNewSubmenu);
+        createNewSubmenu.IdPressed += id =>
+        {
+            if (extensionItems.TryGetValue((int)id, out var ext))
+                ShowNewExtensionFileDialog(folder, ext);
+            else
+                OnCreateNewSubmenuPressed(id, folder);
+        };
         
         menu.AddItem("Reveal in File Explorer", (int)FolderContextMenuOptions.RevealInFileExplorer);
         menu.AddItem("Delete", (int)FolderContextMenuOptions.Delete);
@@ -105,5 +115,62 @@ public partial class SolutionExplorerPanel
             AddChild(newCsharpFileDialog);
             newCsharpFileDialog.PopupCentered();
         }
+    }
+
+    // Returns a dict of (menuItemId → fileExtension) for all installed language extension types.
+    // Items are added directly to the provided submenu starting at id 100.
+    private Dictionary<int, string> BuildExtensionMenuItems(PopupMenu submenu)
+    {
+        var items = new Dictionary<int, string>();
+        var nextId = 100;
+        var seenExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var ext in _languageExtensionRegistry.GetAllExtensions())
+        {
+            foreach (var lang in ext.Languages)
+            {
+                foreach (var fileExt in lang.FileExtensions)
+                {
+                    if (!seenExtensions.Add(fileExt)) continue;
+                    var label = $"{fileExt.TrimStart('.').ToUpperInvariant()} File";
+                    submenu.AddItem(label, nextId);
+                    items[nextId] = fileExt;
+                    nextId++;
+                }
+            }
+        }
+
+        return items;
+    }
+
+    private void ShowNewExtensionFileDialog(IFolderOrProject parent, string extension)
+    {
+        var extUpper = extension.TrimStart('.').ToUpperInvariant();
+        var dialog = new ConfirmationDialog
+        {
+            Title = $"New {extUpper} File",
+            MinSize = new Vector2I(340, 0)
+        };
+        var lineEdit = new LineEdit
+        {
+            Text = $"Template{extension}",
+            CustomMinimumSize = new Vector2(300, 0),
+            SelectAllOnFocus = true
+        };
+        dialog.AddChild(lineEdit);
+        dialog.Confirmed += () =>
+        {
+            var fileName = lineEdit.Text.Trim();
+            if (string.IsNullOrWhiteSpace(fileName)) return;
+            if (!fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                fileName += extension;
+            _ = Task.GodotRun(async () =>
+            {
+                var file = await _ideFileOperationsService.CreateGenericFile(parent, fileName);
+                GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(file, null);
+            });
+        };
+        AddChild(dialog);
+        dialog.PopupCentered();
     }
 }

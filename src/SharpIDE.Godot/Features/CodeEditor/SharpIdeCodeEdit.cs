@@ -15,6 +15,8 @@ using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.LanguageExtensions;
+using SharpIDE.Godot.Features.CodeEditor.TextMate;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -34,6 +36,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private SharpIdeFile _currentFile = null!;
 	
 	private CustomHighlighter _syntaxHighlighter = new();
+	private GrammarSyntaxHighlighter? _grammarSyntaxHighlighter;
+	private GrammarContribution? _activeGrammarContribution;
+	private readonly Dictionary<string, TextMateTheme?> _themeCacheByPath = new(StringComparer.OrdinalIgnoreCase);
+	private bool _usingGrammarHighlighter;
 	private PopupMenu _popupMenu = null!;
 	private CanvasItem _aboveCanvasItem = null!;
 	private Rid? _aboveCanvasItemRid = null!;
@@ -63,6 +69,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
     [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+    [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
 
 	public SharpIdeCodeEdit()
 	{
@@ -112,6 +119,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (_fileDeleted) return;
 			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
 			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext();
+
+			// Files highlighted by a TextMate grammar (registered via language extensions) do not
+			// participate in the Roslyn pipeline. Re-apply the grammar highlighter and skip Roslyn.
+			if (_usingGrammarHighlighter)
+			{
+				await this.InvokeAsync(() => RecolorizeWithGrammar(Text));
+				return;
+			}
+
 			var hasFocus = this.InvokeAsync(HasFocus);
 			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile, newCt);
 			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile, newCt);
@@ -241,6 +257,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		_findReplaceBar.NeedsToCountResults = true;
 		var text = Text;
+
+		if (_usingGrammarHighlighter)
+		{
+			// Re-tokenize on next frame so Text is fully updated
+			Callable.From(() => RecolorizeWithGrammar(Text)).CallDeferred();
+		}
+
 		var pendingCompletionTrigger = _pendingCompletionTrigger;
 		_pendingCompletionTrigger = null;
 		var cursorPosition = GetCaretPosition();
@@ -325,6 +348,20 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // get off the UI thread
 		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetSharpIdeFile)}");
+
+		// Detect TextMate grammar for this file's extension (before Roslyn, so grammar is ready by the time text is set)
+		var fileExtension = Path.GetExtension(file.Path);
+		var grammarContribution = _languageExtensionRegistry.GetGrammar(fileExtension);
+		_usingGrammarHighlighter = grammarContribution != null;
+		_activeGrammarContribution = grammarContribution;
+		HighlightLog($"SetSharpIdeFile ext='{fileExtension}' grammar={(grammarContribution == null ? "null" : $"LanguageId={grammarContribution.LanguageId} path={grammarContribution.GrammarFilePath}")}");
+		if (grammarContribution != null)
+		{
+			var newHighlighter = new GrammarSyntaxHighlighter();
+			newHighlighter.LoadGrammar(grammarContribution);
+			_grammarSyntaxHighlighter = newHighlighter;
+			HighlightLog($"  grammar IsLoaded={newHighlighter.IsGrammarLoaded}");
+		}
 		_currentFile = file;
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
 		_currentFile.FileContentsChangedExternally.Subscribe(OnFileChangedExternally);
@@ -348,20 +385,36 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var setTextTask = this.InvokeAsync(async () =>
 		{
 			_fileChangingSuppressBreakpointToggleEvent = true;
-			SetText(await readFileTask);
+			var text = await readFileTask;
+			SetText(text);
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
 			if (file.IsMetadataAsSourceFile) Editable = false;
+			// Apply grammar highlighting immediately so it appears before the Roslyn pipeline completes.
+			// For files Roslyn supports, Roslyn will later upgrade the highlighting.
+			if (_usingGrammarHighlighter) RecolorizeWithGrammar(text);
 		});
 		_ = Task.GodotRun(async () =>
 		{
 			await Task.WhenAll(syntaxHighlighting, razorSyntaxHighlighting, setTextTask); // Text must be set before setting syntax highlighting
-			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting));
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsInstanceValid(this)) return;
+				SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting);
+			});
 			await diagnostics;
-			await this.InvokeAsync(async () => SetDiagnostics(await diagnostics));
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsInstanceValid(this)) return;
+				SetDiagnostics(await diagnostics);
+			});
 			await analyzerDiagnostics;
-			await this.InvokeAsync(async () => SetAnalyzerDiagnostics(await analyzerDiagnostics));
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsInstanceValid(this)) return;
+				SetAnalyzerDiagnostics(await analyzerDiagnostics);
+			});
 		});
 	}
 
@@ -601,11 +654,102 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[RequiresGodotUiThread]
 	private void SetSyntaxHighlightingModel(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
 	{
+		HighlightLog($"SetSyntaxHighlightingModel usingGrammar={_usingGrammarHighlighter} csSpans={classifiedSpans.Length} razorSpans={razorClassifiedSpans.Length}");
+		// TextMate grammar is the baseline for language-extension-registered file types.
+		// If Roslyn has no data (file type not supported), keep grammar highlighting.
+		if (_usingGrammarHighlighter && classifiedSpans.IsEmpty && razorClassifiedSpans.IsEmpty)
+		{
+			HighlightLog("  → RecolorizeWithGrammar (Roslyn returned empty)");
+			RecolorizeWithGrammar(Text);
+			return;
+		}
+
+		if (_usingGrammarHighlighter && !classifiedSpans.IsEmpty)
+		{
+			HighlightLog("  → upgrading from grammar to Roslyn");
+			// Roslyn semantic tokens available — upgrade from grammar to Roslyn highlighting
+			_usingGrammarHighlighter = false;
+		}
+
 		_syntaxHighlighter.SetHighlightingData(classifiedSpans, razorClassifiedSpans);
 		//_syntaxHighlighter.ClearHighlightingCache();
 		_syntaxHighlighter.UpdateCache(); // I don't think this does anything, it will call _UpdateCache which we have not implemented
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _syntaxHighlighter; // Reassign to trigger redraw
+	}
+
+	[RequiresGodotUiThread]
+	internal void RecolorizeWithGrammar(string text)
+	{
+		HighlightLog($"RecolorizeWithGrammar highlighter={_grammarSyntaxHighlighter != null} isLoaded={_grammarSyntaxHighlighter?.IsGrammarLoaded} colourSet={_syntaxHighlighter.ColourSetForTheme != null}");
+		if (_grammarSyntaxHighlighter == null || !_grammarSyntaxHighlighter.IsGrammarLoaded) return;
+		_grammarSyntaxHighlighter.Colorize(text, LoadCurrentTextMateTheme(), _syntaxHighlighter.ColourSetForTheme);
+		SyntaxHighlighter = null;
+		SyntaxHighlighter = _grammarSyntaxHighlighter;
+		HighlightLog($"  → SyntaxHighlighter set to grammar highlighter");
+	}
+
+	private static void HighlightLog(string message)
+	{
+		try { File.AppendAllText("/tmp/sharpide_highlight.log", $"[{DateTime.Now:HH:mm:ss.fff}] {message}\n"); }
+		catch { }
+	}
+
+	private TextMateTheme? LoadCurrentTextMateTheme()
+	{
+		var customPath = Singletons.AppState.IdeSettings.CustomThemePath;
+		if (!string.IsNullOrEmpty(customPath) && File.Exists(customPath))
+			return LoadThemeWithCache(customPath);
+
+		// Fall back to an extension-bundled .tmTheme when available (e.g. T4Language/Syntaxes/t4.tmTheme).
+		// This keeps extension-specific scopes colorful even when no custom global theme is configured.
+		var grammarPath = _activeGrammarContribution?.GrammarFilePath;
+		if (string.IsNullOrWhiteSpace(grammarPath) || !File.Exists(grammarPath))
+			return null;
+
+		var grammarDirectory = Path.GetDirectoryName(grammarPath);
+		if (string.IsNullOrWhiteSpace(grammarDirectory) || !Directory.Exists(grammarDirectory))
+			return null;
+
+		var languageId = _activeGrammarContribution?.LanguageId;
+		var preferredThemeName = !string.IsNullOrWhiteSpace(languageId)
+			? $"{languageId}.tmTheme"
+			: null;
+
+		var candidates = Directory.EnumerateFiles(grammarDirectory, "*.tmTheme", SearchOption.TopDirectoryOnly).ToList();
+		if (candidates.Count == 0) return null;
+
+		if (!string.IsNullOrWhiteSpace(preferredThemeName))
+		{
+			var preferred = candidates.FirstOrDefault(p =>
+				string.Equals(Path.GetFileName(p), preferredThemeName, StringComparison.OrdinalIgnoreCase));
+			if (!string.IsNullOrWhiteSpace(preferred))
+				return LoadThemeWithCache(preferred);
+		}
+
+		// Deterministic fallback to first file alphabetically.
+		var first = candidates.OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+		return string.IsNullOrWhiteSpace(first) ? null : LoadThemeWithCache(first);
+	}
+
+	private TextMateTheme? LoadThemeWithCache(string path)
+	{
+		if (_themeCacheByPath.TryGetValue(path, out var cachedTheme))
+			return cachedTheme;
+
+		try
+		{
+			var parsed = TextMateThemeParser.ParseFromFile(path);
+			_themeCacheByPath[path] = parsed;
+			HighlightLog($"Loaded TextMate theme '{path}'");
+			return parsed;
+		}
+		catch (Exception ex)
+		{
+			_themeCacheByPath[path] = null;
+			HighlightLog($"Failed to load TextMate theme '{path}': {ex.GetType().Name}: {ex.Message}");
+			return null;
+		}
 	}
 
 	private void OnCodeFixesRequested()
