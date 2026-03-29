@@ -37,6 +37,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	
 	private CustomHighlighter _syntaxHighlighter = new();
 	private GrammarSyntaxHighlighter? _grammarSyntaxHighlighter;
+	private GrammarContribution? _activeGrammarContribution;
+	private readonly Dictionary<string, TextMateTheme?> _themeCacheByPath = new(StringComparer.OrdinalIgnoreCase);
 	private bool _usingGrammarHighlighter;
 	private PopupMenu _popupMenu = null!;
 	private CanvasItem _aboveCanvasItem = null!;
@@ -351,6 +353,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var fileExtension = Path.GetExtension(file.Path);
 		var grammarContribution = _languageExtensionRegistry.GetGrammar(fileExtension);
 		_usingGrammarHighlighter = grammarContribution != null;
+		_activeGrammarContribution = grammarContribution;
 		HighlightLog($"SetSharpIdeFile ext='{fileExtension}' grammar={(grammarContribution == null ? "null" : $"LanguageId={grammarContribution.LanguageId} path={grammarContribution.GrammarFilePath}")}");
 		if (grammarContribution != null)
 		{
@@ -695,9 +698,58 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private TextMateTheme? LoadCurrentTextMateTheme()
 	{
 		var customPath = Singletons.AppState.IdeSettings.CustomThemePath;
-		if (string.IsNullOrEmpty(customPath) || !File.Exists(customPath)) return null;
-		try { return TextMateThemeParser.ParseFromFile(customPath); }
-		catch { return null; }
+		if (!string.IsNullOrEmpty(customPath) && File.Exists(customPath))
+			return LoadThemeWithCache(customPath);
+
+		// Fall back to an extension-bundled .tmTheme when available (e.g. T4Language/Syntaxes/t4.tmTheme).
+		// This keeps extension-specific scopes colorful even when no custom global theme is configured.
+		var grammarPath = _activeGrammarContribution?.GrammarFilePath;
+		if (string.IsNullOrWhiteSpace(grammarPath) || !File.Exists(grammarPath))
+			return null;
+
+		var grammarDirectory = Path.GetDirectoryName(grammarPath);
+		if (string.IsNullOrWhiteSpace(grammarDirectory) || !Directory.Exists(grammarDirectory))
+			return null;
+
+		var languageId = _activeGrammarContribution?.LanguageId;
+		var preferredThemeName = !string.IsNullOrWhiteSpace(languageId)
+			? $"{languageId}.tmTheme"
+			: null;
+
+		var candidates = Directory.EnumerateFiles(grammarDirectory, "*.tmTheme", SearchOption.TopDirectoryOnly).ToList();
+		if (candidates.Count == 0) return null;
+
+		if (!string.IsNullOrWhiteSpace(preferredThemeName))
+		{
+			var preferred = candidates.FirstOrDefault(p =>
+				string.Equals(Path.GetFileName(p), preferredThemeName, StringComparison.OrdinalIgnoreCase));
+			if (!string.IsNullOrWhiteSpace(preferred))
+				return LoadThemeWithCache(preferred);
+		}
+
+		// Deterministic fallback to first file alphabetically.
+		var first = candidates.OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+		return string.IsNullOrWhiteSpace(first) ? null : LoadThemeWithCache(first);
+	}
+
+	private TextMateTheme? LoadThemeWithCache(string path)
+	{
+		if (_themeCacheByPath.TryGetValue(path, out var cachedTheme))
+			return cachedTheme;
+
+		try
+		{
+			var parsed = TextMateThemeParser.ParseFromFile(path);
+			_themeCacheByPath[path] = parsed;
+			HighlightLog($"Loaded TextMate theme '{path}'");
+			return parsed;
+		}
+		catch (Exception ex)
+		{
+			_themeCacheByPath[path] = null;
+			HighlightLog($"Failed to load TextMate theme '{path}': {ex.GetType().Name}: {ex.Message}");
+			return null;
+		}
 	}
 
 	private void OnCodeFixesRequested()

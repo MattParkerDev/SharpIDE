@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Godot;
 using Godot.Collections;
@@ -27,8 +28,12 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
 {
     private static readonly StringName ColorStringName = "color";
     private readonly Dictionary _emptyDict = new();
+    private static readonly Regex T4TemplateLanguageRegex =
+        new(@"<#@\s*template\b[^#>]*\blanguage\s*=\s*""([^""]+)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private IGrammar? _grammar;
+    private IGrammar? _embeddedCodeGrammar;
+    private bool _isT4Grammar;
     private TextMateTheme? _textMateTheme;
     private EditorThemeColorSet _fallbackColorSet = EditorThemeColours.Dark;
 
@@ -47,6 +52,9 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
         HLog($"LoadGrammar path='{grammarContribution.GrammarFilePath}' scopeHint='{grammarContribution.ScopeName}' fileExists={File.Exists(grammarContribution.GrammarFilePath)}");
         try
         {
+            _embeddedCodeGrammar = null;
+            _isT4Grammar = false;
+
             var options = new SingleFileRegistryOptions(grammarContribution.GrammarFilePath, grammarContribution.ScopeName);
             HLog($"  resolvedScope='{options.ResolvedScopeName}'");
             var registry = new Registry(options);
@@ -60,6 +68,12 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
             else
             {
                 HLog($"  OK: grammar loaded");
+                _isT4Grammar = string.Equals(options.ResolvedScopeName, "text.tt", StringComparison.OrdinalIgnoreCase);
+                if (_isT4Grammar)
+                {
+                    _embeddedCodeGrammar = registry.LoadGrammar("source.cs");
+                    HLog($"  T4 embedded source.cs loaded={_embeddedCodeGrammar != null}");
+                }
             }
         }
         catch (Exception ex)
@@ -85,7 +99,9 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
 
         var lines = fullText.Split('\n');
         IStateStack? stateStack = null;
+        IStateStack? embeddedStateStack = null;
         var totalColoredLines = 0;
+        var t4CSharpTemplate = _isT4Grammar && _embeddedCodeGrammar != null && IsT4TemplateLanguageCSharp(fullText);
 
         for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
         {
@@ -100,11 +116,29 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
                 stateStack = result.RuleStack;
 
                 var lineDict = new System.Collections.Generic.Dictionary<int, Color>();
+                var hasNonTemplateScope = false;
                 foreach (var token in result.Tokens)
                 {
+                    if (!hasNonTemplateScope && token.Scopes.Any(s => !string.Equals(s, "text.tt", StringComparison.OrdinalIgnoreCase)))
+                        hasNonTemplateScope = true;
+
                     var color = ResolveTokenColor(token.Scopes);
                     if (color.HasValue)
                         lineDict[token.StartIndex] = color.Value;
+                }
+
+                if (t4CSharpTemplate &&
+                    !hasNonTemplateScope &&
+                    IsT4TemplateBodyLineCandidate(lineText))
+                {
+                    var embedded = _embeddedCodeGrammar!.TokenizeLine(lineText, embeddedStateStack, TimeSpan.MaxValue);
+                    embeddedStateStack = embedded.RuleStack;
+                    foreach (var token in embedded.Tokens)
+                    {
+                        var color = ResolveTokenColor(token.Scopes);
+                        if (color.HasValue)
+                            lineDict[token.StartIndex] = color.Value;
+                    }
                 }
 
                 if (lineDict.Count > 0)
@@ -120,6 +154,24 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
             }
         }
         HLog($"  Colorize done: {totalColoredLines}/{lines.Length} lines have color data");
+    }
+
+    private static bool IsT4TemplateLanguageCSharp(string fullText)
+    {
+        var match = T4TemplateLanguageRegex.Match(fullText);
+        if (!match.Success) return true; // T4 defaults to C# in most templates
+        return string.Equals(match.Groups[1].Value.Trim(), "C#", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(match.Groups[1].Value.Trim(), "CSharp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsT4TemplateBodyLineCandidate(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return false;
+        var trimmed = line.Trim();
+        if (trimmed.StartsWith("<#@", StringComparison.Ordinal)) return false;
+        if (trimmed.Contains("<#", StringComparison.Ordinal) || trimmed.Contains("#>", StringComparison.Ordinal))
+            return false;
+        return true;
     }
 
     private static void HLog(string msg)
@@ -186,6 +238,7 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
             if (scope.StartsWith("keyword.operator", StringComparison.Ordinal))      return cs.White;
             if (scope.StartsWith("keyword", StringComparison.Ordinal))               return cs.KeywordBlue;
             if (scope.StartsWith("storage", StringComparison.Ordinal))               return cs.KeywordBlue;
+            if (scope.StartsWith("entity.other.attribute-name", StringComparison.Ordinal)) return cs.InterfaceGreen;
             if (scope.StartsWith("entity.name.type.interface", StringComparison.Ordinal)) return cs.InterfaceGreen;
             if (scope.StartsWith("entity.name.type", StringComparison.Ordinal))      return cs.ClassGreen;
             if (scope.StartsWith("entity.name.function", StringComparison.Ordinal))  return cs.Yellow;
@@ -200,8 +253,14 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
             if (scope.StartsWith("markup.heading", StringComparison.Ordinal))        return cs.KeywordBlue;
             if (scope.StartsWith("markup.bold", StringComparison.Ordinal))           return cs.Yellow;
             if (scope.StartsWith("markup.italic", StringComparison.Ordinal))         return cs.Orange;
+            if (scope.StartsWith("punctuation.section.embedded", StringComparison.Ordinal)) return cs.HtmlDelimiterGray;
+            if (scope.StartsWith("punctuation.separator.key-value", StringComparison.Ordinal)) return cs.White;
             if (scope.StartsWith("punctuation.definition.tag", StringComparison.Ordinal)) return cs.HtmlDelimiterGray;
+            if (scope.StartsWith("punctuation.definition.string", StringComparison.Ordinal)) return cs.LightOrangeBrown;
             if (scope.StartsWith("meta.tag", StringComparison.Ordinal))              return cs.KeywordBlue;
+            // T4 template output text (outside <# ... #> blocks). Keep it distinct from normal editor text
+            // so users can see the template/code boundary clearly.
+            if (scope.StartsWith("text.tt", StringComparison.Ordinal))               return cs.Gray;
             return null;
         }
     }
@@ -255,20 +314,87 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
                 // TextMateSharp's GrammarReader only supports JSON-format grammars.
                 // XML PList (.tmLanguage/.tmGrammar without .json) must be converted first.
                 var isXmlPlist = !filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
-                if (isXmlPlist)
-                {
-                    var json = ConvertPlistXmlToJson(filePath);
-                    using var jsonReader = new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)));
-                    return GrammarReader.ReadGrammarSync(jsonReader);
-                }
+                var json = isXmlPlist
+                    ? ConvertPlistXmlToJson(filePath)
+                    : File.ReadAllText(filePath, System.Text.Encoding.UTF8);
 
-                using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8);
+                // VS's T4 editor behavior highlights top-level template body as C#.
+                // The upstream tmLanguage scopes only directive and <# ... #> blocks, so we append
+                // a source.cs fallback include for text.tt grammars to match user expectations.
+                var augmented = MaybeAugmentT4Grammar(json, out var changed);
+                if (changed)
+                    HLog("  augmented text.tt grammar with root include: source.cs");
+                json = augmented;
+
+                using var reader = new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)));
                 return GrammarReader.ReadGrammarSync(reader);
             }
             catch (Exception ex)
             {
                 GD.PrintErr($"[SingleFileRegistryOptions] Failed to read grammar '{filePath}': {ex.Message}");
                 return null!;
+            }
+        }
+
+        private static string MaybeAugmentT4Grammar(string grammarJson, out bool changed)
+        {
+            changed = false;
+            try
+            {
+                using var doc = JsonDocument.Parse(grammarJson);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("scopeName", out var scopeEl))
+                    return grammarJson;
+                var scopeName = scopeEl.GetString();
+                if (!string.Equals(scopeName, "text.tt", StringComparison.OrdinalIgnoreCase))
+                    return grammarJson;
+
+                using var output = new MemoryStream();
+                using var writer = new Utf8JsonWriter(output, new JsonWriterOptions { Indented = false });
+
+                writer.WriteStartObject();
+                foreach (var property in root.EnumerateObject())
+                {
+                    if (!property.NameEquals("patterns"))
+                    {
+                        property.WriteTo(writer);
+                        continue;
+                    }
+
+                    writer.WritePropertyName("patterns");
+                    writer.WriteStartArray();
+
+                    var hasRootSourceCsInclude = false;
+                    foreach (var pattern in property.Value.EnumerateArray())
+                    {
+                        if (pattern.ValueKind == JsonValueKind.Object &&
+                            pattern.TryGetProperty("include", out var includeEl) &&
+                            string.Equals(includeEl.GetString(), "source.cs", StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasRootSourceCsInclude = true;
+                        }
+
+                        pattern.WriteTo(writer);
+                    }
+
+                    if (!hasRootSourceCsInclude)
+                    {
+                        writer.WriteStartObject();
+                        writer.WriteString("include", "source.cs");
+                        writer.WriteEndObject();
+                        changed = true;
+                    }
+
+                    writer.WriteEndArray();
+                }
+                writer.WriteEndObject();
+                writer.Flush();
+
+                return System.Text.Encoding.UTF8.GetString(output.ToArray());
+            }
+            catch
+            {
+                return grammarJson;
             }
         }
 
