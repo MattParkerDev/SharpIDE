@@ -147,10 +147,11 @@ public partial class ExtensionManagerWindow : Window
         if (index >= extensions.Count) return;
 
         var extensionId = extensions[index].Id;
+        var displayName = extensions[index].DisplayName;
         try
         {
             _extensionInstaller.Uninstall(extensionId);
-            _statusLabel.Text = $"Uninstalled '{extensions[index].DisplayName}'.";
+            _statusLabel.Text = $"Uninstalled '{displayName}'.";
             PopulateList();
         }
         catch (Exception ex)

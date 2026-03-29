@@ -117,6 +117,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (_fileDeleted) return;
 			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
 			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext();
+
+			// Files highlighted by a TextMate grammar (registered via language extensions) do not
+			// participate in the Roslyn pipeline. Re-apply the grammar highlighter and skip Roslyn.
+			if (_usingGrammarHighlighter)
+			{
+				await this.InvokeAsync(() => RecolorizeWithGrammar(Text));
+				return;
+			}
+
 			var hasFocus = this.InvokeAsync(HasFocus);
 			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile, newCt);
 			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile, newCt);
@@ -342,11 +351,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var fileExtension = Path.GetExtension(file.Path);
 		var grammarContribution = _languageExtensionRegistry.GetGrammar(fileExtension);
 		_usingGrammarHighlighter = grammarContribution != null;
+		HighlightLog($"SetSharpIdeFile ext='{fileExtension}' grammar={(grammarContribution == null ? "null" : $"LanguageId={grammarContribution.LanguageId} path={grammarContribution.GrammarFilePath}")}");
 		if (grammarContribution != null)
 		{
 			var newHighlighter = new GrammarSyntaxHighlighter();
 			newHighlighter.LoadGrammar(grammarContribution);
 			_grammarSyntaxHighlighter = newHighlighter;
+			HighlightLog($"  grammar IsLoaded={newHighlighter.IsGrammarLoaded}");
 		}
 		_currentFile = file;
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
@@ -371,20 +382,36 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var setTextTask = this.InvokeAsync(async () =>
 		{
 			_fileChangingSuppressBreakpointToggleEvent = true;
-			SetText(await readFileTask);
+			var text = await readFileTask;
+			SetText(text);
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
 			if (file.IsMetadataAsSourceFile) Editable = false;
+			// Apply grammar highlighting immediately so it appears before the Roslyn pipeline completes.
+			// For files Roslyn supports, Roslyn will later upgrade the highlighting.
+			if (_usingGrammarHighlighter) RecolorizeWithGrammar(text);
 		});
 		_ = Task.GodotRun(async () =>
 		{
 			await Task.WhenAll(syntaxHighlighting, razorSyntaxHighlighting, setTextTask); // Text must be set before setting syntax highlighting
-			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting));
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsInstanceValid(this)) return;
+				SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting);
+			});
 			await diagnostics;
-			await this.InvokeAsync(async () => SetDiagnostics(await diagnostics));
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsInstanceValid(this)) return;
+				SetDiagnostics(await diagnostics);
+			});
 			await analyzerDiagnostics;
-			await this.InvokeAsync(async () => SetAnalyzerDiagnostics(await analyzerDiagnostics));
+			await this.InvokeAsync(async () =>
+			{
+				if (!IsInstanceValid(this)) return;
+				SetAnalyzerDiagnostics(await analyzerDiagnostics);
+			});
 		});
 	}
 
@@ -624,15 +651,19 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[RequiresGodotUiThread]
 	private void SetSyntaxHighlightingModel(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
 	{
-		// Progressive enhancement: if grammar highlighting is active and Roslyn returned data, switch to Roslyn
+		HighlightLog($"SetSyntaxHighlightingModel usingGrammar={_usingGrammarHighlighter} csSpans={classifiedSpans.Length} razorSpans={razorClassifiedSpans.Length}");
+		// TextMate grammar is the baseline for language-extension-registered file types.
+		// If Roslyn has no data (file type not supported), keep grammar highlighting.
 		if (_usingGrammarHighlighter && classifiedSpans.IsEmpty && razorClassifiedSpans.IsEmpty)
 		{
+			HighlightLog("  → RecolorizeWithGrammar (Roslyn returned empty)");
 			RecolorizeWithGrammar(Text);
 			return;
 		}
 
 		if (_usingGrammarHighlighter && !classifiedSpans.IsEmpty)
 		{
+			HighlightLog("  → upgrading from grammar to Roslyn");
 			// Roslyn semantic tokens available — upgrade from grammar to Roslyn highlighting
 			_usingGrammarHighlighter = false;
 		}
@@ -647,10 +678,18 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[RequiresGodotUiThread]
 	internal void RecolorizeWithGrammar(string text)
 	{
+		HighlightLog($"RecolorizeWithGrammar highlighter={_grammarSyntaxHighlighter != null} isLoaded={_grammarSyntaxHighlighter?.IsGrammarLoaded} colourSet={_syntaxHighlighter.ColourSetForTheme != null}");
 		if (_grammarSyntaxHighlighter == null || !_grammarSyntaxHighlighter.IsGrammarLoaded) return;
 		_grammarSyntaxHighlighter.Colorize(text, LoadCurrentTextMateTheme(), _syntaxHighlighter.ColourSetForTheme);
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _grammarSyntaxHighlighter;
+		HighlightLog($"  → SyntaxHighlighter set to grammar highlighter");
+	}
+
+	private static void HighlightLog(string message)
+	{
+		try { File.AppendAllText("/tmp/sharpide_highlight.log", $"[{DateTime.Now:HH:mm:ss.fff}] {message}\n"); }
+		catch { }
 	}
 
 	private TextMateTheme? LoadCurrentTextMateTheme()

@@ -44,17 +44,27 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
     /// </summary>
     public void LoadGrammar(GrammarContribution grammarContribution)
     {
+        HLog($"LoadGrammar path='{grammarContribution.GrammarFilePath}' scopeHint='{grammarContribution.ScopeName}' fileExists={File.Exists(grammarContribution.GrammarFilePath)}");
         try
         {
             var options = new SingleFileRegistryOptions(grammarContribution.GrammarFilePath, grammarContribution.ScopeName);
+            HLog($"  resolvedScope='{options.ResolvedScopeName}'");
             var registry = new Registry(options);
             _grammar = registry.LoadGrammar(options.ResolvedScopeName);
 
             if (_grammar == null)
+            {
+                HLog($"  ERROR: Grammar loaded as null for scope '{options.ResolvedScopeName}'");
                 GD.PrintErr($"[GrammarSyntaxHighlighter] Grammar loaded as null for scope '{options.ResolvedScopeName}'");
+            }
+            else
+            {
+                HLog($"  OK: grammar loaded");
+            }
         }
         catch (Exception ex)
         {
+            HLog($"  EXCEPTION: {ex.GetType().Name}: {ex.Message}");
             GD.PrintErr($"[GrammarSyntaxHighlighter] Failed to load grammar from '{grammarContribution.GrammarFilePath}': {ex.Message}");
             _grammar = null;
         }
@@ -70,10 +80,12 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
         _fallbackColorSet = fallback;
         _lineHighlights.Clear();
 
-        if (_grammar == null) return;
+        if (_grammar == null) { HLog("Colorize: grammar is null, skipping"); return; }
+        HLog($"Colorize: tokenizing {fullText.Split('\n').Length} lines, fallback={(fallback == null ? "null" : "ok")} theme={(theme == null ? "none" : "set")}");
 
         var lines = fullText.Split('\n');
         IStateStack? stateStack = null;
+        var totalColoredLines = 0;
 
         for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
         {
@@ -96,13 +108,24 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
                 }
 
                 if (lineDict.Count > 0)
+                {
                     _lineHighlights[lineIdx] = lineDict;
+                    totalColoredLines++;
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                HLog($"  tokenize exception line {lineIdx}: {ex.GetType().Name}: {ex.Message}");
                 // Leave line un-colored on tokenization failure; keep stateStack as-is
             }
         }
+        HLog($"  Colorize done: {totalColoredLines}/{lines.Length} lines have color data");
+    }
+
+    private static void HLog(string msg)
+    {
+        try { File.AppendAllText("/tmp/sharpide_highlight.log", $"[{DateTime.Now:HH:mm:ss.fff}] [Grammar] {msg}\n"); }
+        catch { }
     }
 
     public override Dictionary _GetLineSyntaxHighlighting(int line)
@@ -204,26 +227,155 @@ public partial class GrammarSyntaxHighlighter : SyntaxHighlighter
 
         public IRawGrammar GetGrammar(string scopeName)
         {
-            if (!string.Equals(scopeName, ResolvedScopeName, StringComparison.OrdinalIgnoreCase))
-                return null!;
+            // Primary grammar
+            if (string.Equals(scopeName, ResolvedScopeName, StringComparison.OrdinalIgnoreCase))
+                return ReadGrammarFile(_grammarFilePath);
 
+            // Look for a sibling grammar in the same directory that declares this scope name.
+            // This resolves embedded grammars such as source.cs inside T4 templates, where
+            // the extension ships csharp.tmLanguage alongside t4.tmLanguage in Syntaxes/.
+            var directory = Path.GetDirectoryName(_grammarFilePath);
+            if (directory != null)
+            {
+                foreach (var candidate in Directory.EnumerateFiles(directory).Where(IsTmGrammarFile))
+                {
+                    var candidateScope = ReadScopeNameFromFile(candidate);
+                    if (string.Equals(candidateScope, scopeName, StringComparison.OrdinalIgnoreCase))
+                        return ReadGrammarFile(candidate);
+                }
+            }
+
+            return null!;
+        }
+
+        private static IRawGrammar ReadGrammarFile(string filePath)
+        {
             try
             {
-                using var reader = new StreamReader(_grammarFilePath, System.Text.Encoding.UTF8);
+                // TextMateSharp's GrammarReader only supports JSON-format grammars.
+                // XML PList (.tmLanguage/.tmGrammar without .json) must be converted first.
+                var isXmlPlist = !filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+                if (isXmlPlist)
+                {
+                    var json = ConvertPlistXmlToJson(filePath);
+                    using var jsonReader = new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)));
+                    return GrammarReader.ReadGrammarSync(jsonReader);
+                }
+
+                using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8);
                 return GrammarReader.ReadGrammarSync(reader);
             }
             catch (Exception ex)
             {
-                GD.PrintErr($"[SingleFileRegistryOptions] Failed to read grammar '{_grammarFilePath}': {ex.Message}");
+                GD.PrintErr($"[SingleFileRegistryOptions] Failed to read grammar '{filePath}': {ex.Message}");
                 return null!;
             }
         }
 
+        /// <summary>
+        /// Converts a TextMate XML PList grammar file to JSON string that TextMateSharp can parse.
+        /// PList types map to JSON: dict→object, array→array, string→string, integer→number,
+        /// real→number, true→true, false→false.
+        /// </summary>
+        private static string ConvertPlistXmlToJson(string filePath)
+        {
+            var doc = XDocument.Load(filePath);
+            // Root is <plist><dict>...</dict></plist>
+            var root = doc.Descendants("dict").FirstOrDefault()
+                ?? throw new InvalidOperationException("No root <dict> found in PList grammar");
+
+            var sb = new System.Text.StringBuilder();
+            WritePlistNode(root, sb);
+            return sb.ToString();
+        }
+
+        private static void WritePlistNode(XElement element, System.Text.StringBuilder sb)
+        {
+            switch (element.Name.LocalName)
+            {
+                case "dict":
+                    sb.Append('{');
+                    var dictChildren = element.Elements().ToList();
+                    var first = true;
+                    for (int i = 0; i + 1 < dictChildren.Count; i += 2)
+                    {
+                        var keyEl = dictChildren[i];
+                        var valEl = dictChildren[i + 1];
+                        if (keyEl.Name.LocalName != "key") continue;
+                        if (!first) sb.Append(',');
+                        first = false;
+                        sb.Append(System.Text.Json.JsonSerializer.Serialize(keyEl.Value));
+                        sb.Append(':');
+                        WritePlistNode(valEl, sb);
+                    }
+                    sb.Append('}');
+                    break;
+
+                case "array":
+                    sb.Append('[');
+                    var arrFirst = true;
+                    foreach (var child in element.Elements())
+                    {
+                        if (!arrFirst) sb.Append(',');
+                        arrFirst = false;
+                        WritePlistNode(child, sb);
+                    }
+                    sb.Append(']');
+                    break;
+
+                case "string":
+                    sb.Append(System.Text.Json.JsonSerializer.Serialize(element.Value));
+                    break;
+
+                case "integer":
+                    sb.Append(long.TryParse(element.Value, out var lval) ? lval.ToString() : "0");
+                    break;
+
+                case "real":
+                    sb.Append(double.TryParse(element.Value, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var dval)
+                        ? dval.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0");
+                    break;
+
+                case "true":
+                    sb.Append("true");
+                    break;
+
+                case "false":
+                    sb.Append("false");
+                    break;
+
+                default:
+                    sb.Append("null");
+                    break;
+            }
+        }
+
+        private static bool IsTmGrammarFile(string path) =>
+            path.EndsWith(".tmLanguage", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".tmGrammar", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".tmLanguage.json", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".tmGrammar.json", StringComparison.OrdinalIgnoreCase);
+
         public ICollection<string> GetInjections(string scopeName) => null!;
 
-        public IRawTheme GetTheme(string scopeName) => null!;
+        public IRawTheme GetTheme(string scopeName) => EmptyRawTheme.Instance;
 
-        public IRawTheme GetDefaultTheme() => null!;
+        public IRawTheme GetDefaultTheme() => EmptyRawTheme.Instance;
+
+        /// <summary>
+        /// Minimal IRawTheme that satisfies TextMateSharp's Registry constructor.
+        /// We do our own color resolution so we don't need theme-based coloring from TextMateSharp.
+        /// </summary>
+        private sealed class EmptyRawTheme : IRawTheme
+        {
+            public static readonly EmptyRawTheme Instance = new();
+            public string GetName() => string.Empty;
+            public ICollection<IRawThemeSetting> GetSettings() => [];
+            public ICollection<IRawThemeSetting> GetTokenColors() => [];
+            public ICollection<KeyValuePair<string, object>> GetGuiColors() => [];
+            public string? GetInclude() => null;
+        }
 
         // ---------------------------------------------------------------
         // Scope name extraction from grammar file
