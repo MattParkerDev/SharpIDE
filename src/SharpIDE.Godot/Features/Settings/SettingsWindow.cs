@@ -33,8 +33,8 @@ public partial class SettingsWindow : Window
 
     private void AddCustomThemeControls()
     {
-        // Find the main settings VBox (parent of the first visible control)
-        var settingsVBox = _uiScaleSpinBox.GetParent<VBoxContainer>();
+        // UiScaleSpinBox → HBoxContainer → VBoxContainer (section) → VBoxContainer2 (main)
+        var settingsVBox = _uiScaleSpinBox.GetParent()?.GetParent()?.GetParent<VBoxContainer>();
         if (settingsVBox == null)
             return;
 

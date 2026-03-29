@@ -80,6 +80,20 @@ public static partial class VsixPackageParser
             grammarDirectory = Path.GetDirectoryName(grammarAssetPaths[0])?.Replace('\\', '/');
         }
 
+        // Extensions like T4Language declare grammars via pkgdef TextMate\Repositories
+        // rather than as explicit manifest Asset elements. In that case scan the grammar
+        // directory inside the ZIP to find the actual .tmLanguage / .tmGrammar files.
+        if (grammarAssetPaths.Count == 0 && grammarDirectory != null)
+        {
+            var prefix = grammarDirectory.TrimEnd('/') + "/";
+            grammarAssetPaths = zip.Entries
+                .Where(e => !e.FullName.EndsWith('/') &&
+                            e.FullName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                            IsGrammarFile(e.Name))
+                .Select(e => e.FullName)
+                .ToList();
+        }
+
         // Build grammar contributions: one per grammar asset path
         // LanguageId derived from grammar filename (e.g. "fsharp.tmLanguage.json" → "fsharp")
         var grammars = grammarAssetPaths
@@ -126,17 +140,19 @@ public static partial class VsixPackageParser
 
     /// <summary>
     /// Parses file extension registrations from .pkgdef content.
-    /// Looks for: [$RootKey$\Languages\File Extensions\.axaml]
-    /// Returns extensions like ".axaml".
+    /// Handles two pkgdef conventions (stripping ';' comment lines first):
+    ///   [$RootKey$\Languages\File Extensions\.axaml]  — VS language service style
+    ///   [$RootKey$\ShellFileAssociations\.t4]          — T4Language / icon-association style
     /// </summary>
     private static IEnumerable<string> ParseFileExtensionsFromPkgdef(string content)
     {
-        // Match [$RootKey$\Languages\File Extensions\.<ext>]
-        var matches = FileExtensionKeyRegex().Matches(content);
-        foreach (Match m in matches)
-        {
-            yield return m.Groups[1].Value.ToLowerInvariant(); // e.g. ".axaml"
-        }
+        var uncommented = CommentLineRegex().Replace(content, "");
+
+        foreach (Match m in FileExtensionKeyRegex().Matches(uncommented))
+            yield return m.Groups[1].Value.ToLowerInvariant();
+
+        foreach (Match m in ShellFileAssociationsRegex().Matches(uncommented))
+            yield return m.Groups[1].Value.ToLowerInvariant();
     }
 
     /// <summary>
@@ -201,8 +217,20 @@ public static partial class VsixPackageParser
         };
     }
 
+    private static bool IsGrammarFile(string filename) =>
+        filename.EndsWith(".tmLanguage", StringComparison.OrdinalIgnoreCase) ||
+        filename.EndsWith(".tmLanguage.json", StringComparison.OrdinalIgnoreCase) ||
+        filename.EndsWith(".tmGrammar", StringComparison.OrdinalIgnoreCase) ||
+        filename.EndsWith(".tmGrammar.json", StringComparison.OrdinalIgnoreCase);
+
+    [GeneratedRegex(@"^;.*$", RegexOptions.Multiline)]
+    private static partial Regex CommentLineRegex();
+
     [GeneratedRegex(@"\[\$RootKey\$\\Languages\\File Extensions\\(\.[a-zA-Z0-9_]+)\]", RegexOptions.IgnoreCase)]
     private static partial Regex FileExtensionKeyRegex();
+
+    [GeneratedRegex(@"\[\$RootKey\$\\ShellFileAssociations\\(\.[a-zA-Z0-9_]+)\]", RegexOptions.IgnoreCase)]
+    private static partial Regex ShellFileAssociationsRegex();
 
     [GeneratedRegex(@"\[\$RootKey\$\\TextMate\\Repositories\][^\[]*""[^""]*""\s*=\s*""([^""]+)""", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TextMateRepositoryRegex();
