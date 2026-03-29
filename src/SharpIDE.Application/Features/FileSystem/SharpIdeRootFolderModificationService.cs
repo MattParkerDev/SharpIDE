@@ -94,6 +94,8 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 			{
 				var oldPath = file.Path;
 				file.Path = Path.Combine(current.Path, file.Name.Value);
+				if (RootFolder.AllFiles.TryRemove(oldPath, out _) is false) _logger.LogWarning("File {filePath} not found in AllFiles when moving file", oldPath);
+				if (RootFolder.AllFiles.TryAdd(file.Path, file) is false) _logger.LogWarning("File {filePath} already exists in AllFiles when moving file", file.Path);
 				await _fileChangedService.SharpIdeFileMoved(file, oldPath);
 			}
 		}
@@ -125,6 +127,8 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 			{
 				var oldPath = file.Path;
 				file.Path = Path.Combine(current.Path, file.Name.Value);
+				if (RootFolder.AllFiles.TryRemove(oldPath, out _) is false) _logger.LogWarning("File {filePath} not found in AllFiles when moving file", oldPath);
+				if (RootFolder.AllFiles.TryAdd(file.Path, file) is false) _logger.LogWarning("File {filePath} already exists in AllFiles when moving file", file.Path);
 				await _fileChangedService.SharpIdeFileMoved(file, oldPath);
 			}
 		}
@@ -162,6 +166,8 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 		destinationParentFolder.Files.Insert(insertionIndex, fileToMove);
 		fileToMove.Parent = destinationParentFolder;
 		fileToMove.Path = newFilePath;
+		if (RootFolder.AllFiles.TryRemove(oldPath, out _) is false) _logger.LogWarning("File {filePath} not found in AllFiles when moving file", oldPath);
+		if (RootFolder.AllFiles.TryAdd(fileToMove.Path, fileToMove) is false) _logger.LogWarning("File {filePath} already exists in AllFiles when moving file", fileToMove.Path);
 		await _fileChangedService.SharpIdeFileMoved(fileToMove, oldPath);
 		return fileToMove;
 	}
@@ -176,6 +182,8 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 		var currentPosition = parentFolder.Files.IndexOf(fileToRename);
 		var insertionPosition = GetMovePosition(parentFolder, fileToRename);
 		if (currentPosition != insertionPosition) parentFolder.Files.Move(currentPosition, insertionPosition);
+		if (RootFolder.AllFiles.TryRemove(oldPath, out _) is false) _logger.LogWarning("File {filePath} not found in AllFiles when moving file", oldPath);
+		if (RootFolder.AllFiles.TryAdd(fileToRename.Path, fileToRename) is false) _logger.LogWarning("File {filePath} already exists in AllFiles when moving file", fileToRename.Path);
 		await _fileChangedService.SharpIdeFileRenamed(fileToRename, oldPath);
 		return fileToRename;
 	}
