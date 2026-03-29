@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Ardalis.GuardClauses;
 using Microsoft.Extensions.Logging;
+using NeoSmart.AsyncLock;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -16,6 +17,7 @@ public class IdeFileExternalChangeHandler
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 
 	private SharpIdeRootFolder RootFolder => SolutionModel.RootFolder;
+	public AsyncLock IdeChangeLock { get; } = new AsyncLock();
 
 	public IdeFileExternalChangeHandler(FileChangedService fileChangedService, SharpIdeRootFolderModificationService rootFolderModificationService, ILogger<IdeFileExternalChangeHandler> logger)
 	{
@@ -34,6 +36,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnFileRenamed(string oldFilePath, string newFilePath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFile = RootFolder.AllFiles.GetValueOrDefault(oldFilePath);
 		if (sharpIdeFile is null) return;
 		await _rootFolderModificationService.RenameFile(sharpIdeFile, Path.GetFileName(newFilePath));
@@ -41,6 +44,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnFileDeleted(string filePath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFile = RootFolder.AllFiles.GetValueOrDefault(filePath);
 		if (sharpIdeFile is null) return;
 		await _rootFolderModificationService.RemoveFile(sharpIdeFile);
@@ -49,6 +53,7 @@ public class IdeFileExternalChangeHandler
 	// TODO: Test - this most likely only will ever be called on linux - windows and macos(?) does delete + create on rename of folders
 	private async Task OnFolderRenamed(string oldFolderPath, string newFolderPath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFolder = RootFolder.AllFolders.SingleOrDefault(f => f.Path == oldFolderPath);
 		if (sharpIdeFolder is null)
 		{
@@ -70,6 +75,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnFolderDeleted(string folderPath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFolder = RootFolder.AllFolders.SingleOrDefault(f => f.Path == folderPath);
 		if (sharpIdeFolder is null)
 		{
@@ -80,6 +86,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnFolderCreated(string folderPath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFolder = RootFolder.AllFolders.SingleOrDefault(f => f.Path == folderPath);
 		if (sharpIdeFolder is not null)
 		{
@@ -99,6 +106,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnFileCreated(string filePath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFile = RootFolder.AllFiles.GetValueOrDefault(filePath);
 		if (sharpIdeFile is not null)
 		{
@@ -118,6 +126,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnFileChanged(string filePath)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		var sharpIdeFile = RootFolder.AllFiles.GetValueOrDefault(filePath);
 		if (sharpIdeFile is null) return;
 		if (sharpIdeFile.SuppressDiskChangeEvents is true) return;
@@ -139,6 +148,7 @@ public class IdeFileExternalChangeHandler
 
 	private async Task OnAnalyzerDllsChanged(ImmutableArray<string> analyzerDllPaths)
 	{
+		using var _ = await IdeChangeLock.LockAsync();
 		await _fileChangedService.AnalyzerDllFilesChanged(analyzerDllPaths);
 	}
 }
