@@ -1363,7 +1363,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentId = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(oldFilePath).Single();
 		_workspace.SetCurrentSolution(oldSolution =>
 		{
-			var newSolution = oldSolution.WithDocumentName(documentId, sharpIdeFile.Name.Value);
+			var newSolution = oldSolution.WithDocumentFilePath(documentId, sharpIdeFile.Path).WithDocumentName(documentId, sharpIdeFile.Name.Value);
 			return newSolution;
 		}, WorkspaceChangeKind.DocumentInfoChanged, documentId: documentId);
 	}
