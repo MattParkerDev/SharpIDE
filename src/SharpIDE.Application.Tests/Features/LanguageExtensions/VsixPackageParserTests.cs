@@ -138,6 +138,68 @@ public class VsixPackageParserTests
         return vsixPath;
     }
 
+    private static string CreateVisualStudioSvelteStyleVsix()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("sharpide-svelte-vsix-test-");
+        var vsixPath = Path.Combine(tempDir.FullName, "svelte.vsix");
+
+        using var archive = System.IO.Compression.ZipFile.Open(vsixPath, System.IO.Compression.ZipArchiveMode.Create);
+
+        var manifestEntry = archive.CreateEntry("extension.vsixmanifest");
+        using (var writer = new StreamWriter(manifestEntry.Open()))
+        {
+            writer.Write(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+                  <Metadata>
+                    <Identity Language="en-US" Id="SvelteVisualStudio_2022.test" Version="2.2.0" Publisher="Jason Lyu" />
+                    <DisplayName>Svelte For Visual Studio</DisplayName>
+                  </Metadata>
+                  <Installation>
+                    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)" />
+                  </Installation>
+                  <Assets>
+                    <Asset Type="Microsoft.VisualStudio.VsPackage" Path="SvelteVisualStudio_2022.pkgdef" />
+                  </Assets>
+                </PackageManifest>
+                """);
+        }
+
+        var pkgdefEntry = archive.CreateEntry("SvelteVisualStudio_2022.pkgdef");
+        using (var writer = new StreamWriter(pkgdefEntry.Open()))
+        {
+            writer.Write(
+                """
+                [$RootKey$\TextMate\Repositories]
+                "svelte"="$PackageFolder$\Grammars"
+                [$RootKey$\Editors\{91b34873-62ff-42e3-9664-a518b922478f}\Extensions]
+                "svelte"=dword:00000064
+                """);
+        }
+
+        var grammarEntry = archive.CreateEntry("Grammars/svelte.tmLanguage.json");
+        using (var writer = new StreamWriter(grammarEntry.Open()))
+        {
+            writer.Write(
+                """
+                {
+                  "scopeName": "source.svelte",
+                  "fileTypes": ["svelte"],
+                  "patterns": []
+                }
+                """);
+        }
+
+        var serverEntry = archive.CreateEntry("node_modules/svelte-language-server/bin/server.js");
+        using (var writer = new StreamWriter(serverEntry.Open()))
+        {
+            writer.Write("console.log('svelte test server');");
+        }
+
+        return vsixPath;
+    }
+
     // ── Metadata ────────────────────────────────────────────────────────────
 
     [Fact]
@@ -289,5 +351,33 @@ public class VsixPackageParserTests
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*does not contain any importable TextMate syntax files*");
         registry.GetAllExtensions().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parse_VisualStudioSvelteStylePackage_FindsBundledNodeLanguageServer()
+    {
+        var vsixPath = CreateVisualStudioSvelteStyleVsix();
+
+        var result = VsixPackageParser.Parse(vsixPath);
+
+        result.PackageKind.Should().Be(ExtensionPackageKind.VisualStudio);
+        result.Languages.Should().ContainSingle(l => l.FileExtensions.Contains(".svelte"));
+        result.LanguageServers.Should().ContainSingle(s =>
+            s.LanguageId == "svelte" &&
+            s.Command == "node_modules/svelte-language-server/bin/server.js");
+        result.LanguageServers[0].Args.Should().Equal("--stdio");
+    }
+
+    [Fact]
+    public void Install_VisualStudioSvelteStylePackage_ExtractsBundledLanguageServerAssets()
+    {
+        var vsixPath = CreateVisualStudioSvelteStyleVsix();
+        var registry = new LanguageExtensionRegistry();
+        var installer = new ExtensionInstaller(registry, NullLogger<ExtensionInstaller>.Instance);
+
+        var installed = installer.Install(vsixPath);
+
+        installed.LanguageServers.Should().ContainSingle();
+        File.Exists(installed.LanguageServers[0].Command).Should().BeTrue();
     }
 }

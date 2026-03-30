@@ -72,6 +72,8 @@
     <PackageReference Include="ObservableCollections" />
     <PackageReference Include="R3" />
     <PackageReference Include="SharpDbg" />
+    <PackageReference Include="StreamJsonRpc" />
+    <PackageReference Include="Nerdbank.Streams" />
   </ItemGroup>
 
   <ItemGroup>

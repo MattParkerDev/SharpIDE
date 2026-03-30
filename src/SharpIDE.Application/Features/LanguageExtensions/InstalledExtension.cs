@@ -56,4 +56,6 @@ public class LanguageServerContribution
     public string[] Args { get; init; } = [];                  // e.g. ["--stdio"]
     public string? WorkingDirectory { get; init; }             // relative to ExtractedPath; null = ExtractedPath itself
     public string TransportType { get; init; } = "stdio";      // only "stdio" supported now
+    public string[] ConfigurationSections { get; init; } = [];
+    public string? InitializationOptionsJson { get; init; }
 }

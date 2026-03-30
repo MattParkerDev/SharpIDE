@@ -55,6 +55,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool _fileChangingSuppressBreakpointToggleEvent;
 	private bool _settingWholeDocumentTextSuppressLineEditsEvent; // A dodgy workaround - setting the whole document doesn't guarantee that the line count stayed the same etc. We are still going to have broken highlighting. TODO: Investigate getting minimal text change ranges, and change those ranges only
 	private bool _fileDeleted;
+	private bool _usingImportedLanguageServer;
 	// Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
 	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
@@ -70,6 +71,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
     [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
     [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
+    [Inject] private readonly ImportedLanguageServerService _importedLanguageServerService = null!;
 
 	public SharpIdeCodeEdit()
 	{
@@ -198,6 +200,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _ExitTree()
 	{
+		if (_currentFile is not null && _usingImportedLanguageServer)
+		{
+			_ = _importedLanguageServerService.CloseDocumentAsync(_currentFile);
+		}
+
 		_currentFile?.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
 		_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
 		_projectDiagnosticsObserveDisposable?.Dispose();
@@ -271,18 +278,27 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnTextChanged)}");
 			_currentFile.IsDirty.Value = true;
-				await _fileChangedService.SharpIdeFileChanged(_currentFile, text, FileChangeType.IdeUnsavedChange);
-				if (pendingCompletionTrigger is not null)
+			await _fileChangedService.SharpIdeFileChanged(_currentFile, text, FileChangeType.IdeUnsavedChange);
+			if (_usingImportedLanguageServer)
+			{
+				var semanticSpans = await _importedLanguageServerService.NotifyDocumentChangedAndGetSemanticTokensAsync(_currentFile, text);
+				if (semanticSpans.Length > 0)
 				{
-					if (_currentFile.IsRoslynWorkspaceFile is false)
-					{
-						HighlightLog($"Skipping Roslyn completion trigger for non-workspace file '{_currentFile.Path}'");
-						return;
-					}
+					await this.InvokeAsync(() => SetSyntaxHighlightingModel(semanticSpans, []));
+				}
+			}
 
-					_completionTrigger = pendingCompletionTrigger;
-					var linePosition = new LinePosition(cursorPosition.line, cursorPosition.col);
-					var shouldTriggerCompletion = await _roslynAnalysis.ShouldTriggerCompletionAsync(_currentFile, text, linePosition, _completionTrigger!.Value);
+			if (pendingCompletionTrigger is not null)
+			{
+				if (_currentFile.IsRoslynWorkspaceFile is false)
+				{
+					HighlightLog($"Skipping Roslyn completion trigger for non-workspace file '{_currentFile.Path}'");
+					return;
+				}
+
+				_completionTrigger = pendingCompletionTrigger;
+				var linePosition = new LinePosition(cursorPosition.line, cursorPosition.col);
+				var shouldTriggerCompletion = await _roslynAnalysis.ShouldTriggerCompletionAsync(_currentFile, text, linePosition, _completionTrigger!.Value);
 				GD.Print($"Code completion trigger typed: '{_completionTrigger.Value.Character}' at {linePosition.Line}:{linePosition.Character} should trigger: {shouldTriggerCompletion}");
 				if (shouldTriggerCompletion)
 				{
@@ -359,6 +375,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var fileExtension = Path.GetExtension(file.Path);
 		var grammarContribution = _languageExtensionRegistry.GetGrammar(fileExtension);
 		_usingGrammarHighlighter = grammarContribution != null;
+		_usingImportedLanguageServer = _importedLanguageServerService.HasServerFor(file);
 		_activeGrammarContribution = grammarContribution;
 		HighlightLog($"SetSharpIdeFile ext='{fileExtension}' grammar={(grammarContribution == null ? "null" : $"LanguageId={grammarContribution.LanguageId} path={grammarContribution.GrammarFilePath}")}");
 		if (grammarContribution != null)
@@ -400,6 +417,17 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			// Apply grammar highlighting immediately so it appears before the Roslyn pipeline completes.
 			// For files Roslyn supports, Roslyn will later upgrade the highlighting.
 			if (_usingGrammarHighlighter) RecolorizeWithGrammar(text);
+			if (_usingImportedLanguageServer)
+			{
+				_ = Task.GodotRun(async () =>
+				{
+					var semanticSpans = await _importedLanguageServerService.OpenDocumentAndGetSemanticTokensAsync(_currentFile, text);
+					if (semanticSpans.Length > 0)
+					{
+						await this.InvokeAsync(() => SetSyntaxHighlightingModel(semanticSpans, []));
+					}
+				});
+			}
 		});
 		_ = Task.GodotRun(async () =>
 		{
@@ -666,6 +694,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		if (_usingGrammarHighlighter && classifiedSpans.IsEmpty && razorClassifiedSpans.IsEmpty)
 		{
 			HighlightLog("  → RecolorizeWithGrammar (Roslyn returned empty)");
+			RecolorizeWithGrammar(Text);
+			return;
+		}
+
+		if (_usingGrammarHighlighter && _usingImportedLanguageServer && !classifiedSpans.IsEmpty)
+		{
+			HighlightLog("  → keeping grammar baseline for imported LSP semantic tokens");
 			RecolorizeWithGrammar(Text);
 			return;
 		}

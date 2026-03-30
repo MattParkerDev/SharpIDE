@@ -59,9 +59,11 @@
     <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
     <PackageVersion Include="R3" Version="1.3.0" />
     <PackageVersion Include="SharpDbg" Version="0.1.0-preview7" />
+    <PackageVersion Include="StreamJsonRpc" Version="2.24.84" />
     <PackageVersion Include="TextMateSharp" Version="2.0.3" />
     <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.0" />
     <PackageVersion Include="XtermBlazor" Version="2.2.0" />
+    <PackageVersion Include="Nerdbank.Streams" Version="2.13.16" />
   </ItemGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />

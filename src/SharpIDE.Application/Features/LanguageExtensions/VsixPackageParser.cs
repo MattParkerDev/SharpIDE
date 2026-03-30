@@ -164,6 +164,11 @@ public static partial class VsixPackageParser
             if (serverContrib != null) serverContributions.Add(serverContrib);
         }
 
+        if (serverContributions.Count == 0)
+        {
+            serverContributions.AddRange(ParseBundledNodeLanguageServers(zip, languages));
+        }
+
         return new InstalledExtension
         {
             Id = id,
@@ -262,6 +267,12 @@ public static partial class VsixPackageParser
 
         foreach (Match m in ShellFileAssociationsRegex().Matches(uncommented))
             yield return m.Groups[1].Value.ToLowerInvariant();
+
+        foreach (Match m in EditorExtensionRegex().Matches(uncommented))
+        {
+            var extension = m.Groups[1].Value.ToLowerInvariant();
+            yield return extension.StartsWith('.') ? extension : "." + extension;
+        }
     }
 
     /// <summary>
@@ -443,6 +454,32 @@ public static partial class VsixPackageParser
         return results;
     }
 
+    private static List<LanguageServerContribution> ParseBundledNodeLanguageServers(
+        ZipArchive zip,
+        List<LanguageContribution> languages)
+    {
+        var results = new List<LanguageServerContribution>();
+        var primaryLanguageId = languages.FirstOrDefault()?.LanguageId;
+        if (string.IsNullOrWhiteSpace(primaryLanguageId))
+            return results;
+
+        var svelteServerEntry = zip.GetEntry("node_modules/svelte-language-server/bin/server.js");
+        if (svelteServerEntry != null)
+        {
+            results.Add(new LanguageServerContribution
+            {
+                LanguageId = primaryLanguageId!,
+                Command = "node_modules/svelte-language-server/bin/server.js",
+                Args = ["--stdio"],
+                TransportType = "stdio",
+                ConfigurationSections = ["svelte", "typescript", "javascript"],
+                InitializationOptionsJson = """{"shouldFilterCodeActionKind":true}"""
+            });
+        }
+
+        return results;
+    }
+
     /// <summary>
     /// Reads the fileTypes array from a TextMate grammar file (plist XML or JSON).
     /// Returns bare extension strings without dots, e.g. "tt", "t4", "ttinclude".
@@ -461,7 +498,8 @@ public static partial class VsixPackageParser
                 result = ft.EnumerateArray()
                     .Select(e => e.GetString())
                     .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => s!);
+                    .Select(s => s!)
+                    .ToArray();
             }
             else // plist XML (.tmLanguage / .tmGrammar)
             {
@@ -470,7 +508,7 @@ public static partial class VsixPackageParser
                     .FirstOrDefault(k => k.Value == "fileTypes");
                 if (fileTypesKey?.NextNode is not XElement { Name.LocalName: "array" } array)
                     yield break;
-                result = array.Elements("string").Select(e => e.Value);
+                result = array.Elements("string").Select(e => e.Value).ToArray();
             }
         }
         catch
@@ -577,6 +615,9 @@ public static partial class VsixPackageParser
 
     [GeneratedRegex(@"\[\$RootKey\$\\ShellFileAssociations\\(\.[a-zA-Z0-9_]+)\]", RegexOptions.IgnoreCase)]
     private static partial Regex ShellFileAssociationsRegex();
+
+    [GeneratedRegex(@"\[\$RootKey\$\\Editors\\\{[^}]+\}\\Extensions\][^\[]*^\s*""([^""\\/\r\n]+)""\s*=\s*dword:", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex EditorExtensionRegex();
 
     [GeneratedRegex(@"\[\$RootKey\$\\TextMate\\Repositories\][^\[]*""[^""]*""\s*=\s*""([^""]+)""", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
     private static partial Regex TextMateRepositoryRegex();

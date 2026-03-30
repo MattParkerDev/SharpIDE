@@ -46,6 +46,7 @@ public static class DependencyInjection
 		services.AddScoped<DotnetTemplateService>();
 		services.AddScoped<VsPersistenceSolutionService>();
 		services.AddSingleton<LanguageExtensionRegistry>();
+		services.AddSingleton<ImportedLanguageServerService>();
 		services.AddScoped<ExtensionInstaller>();
 		services.AddLogging();
 		return services;

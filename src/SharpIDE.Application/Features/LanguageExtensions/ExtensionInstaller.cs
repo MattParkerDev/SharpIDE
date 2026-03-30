@@ -80,7 +80,9 @@ public class ExtensionInstaller(LanguageExtensionRegistry registry, ILogger<Exte
                 Command = Path.Combine(extractedPath, NormalizePath(s.Command)),
                 Args = s.Args,
                 WorkingDirectory = s.WorkingDirectory,
-                TransportType = s.TransportType
+                TransportType = s.TransportType,
+                ConfigurationSections = s.ConfigurationSections,
+                InitializationOptionsJson = s.InitializationOptionsJson
             })
             .ToList();
 
@@ -147,6 +149,20 @@ public class ExtensionInstaller(LanguageExtensionRegistry registry, ILogger<Exte
     private static void ExtractFiles(string vsixPath, string extractedPath, InstalledExtension parsed)
     {
         using var zip = ZipFile.OpenRead(vsixPath);
+
+        if (parsed.LanguageServers.Count > 0)
+        {
+            foreach (var entry in zip.Entries)
+            {
+                if (entry.FullName.EndsWith('/')) continue;
+
+                var destinationPath = Path.Combine(extractedPath, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+                entry.ExtractToFile(destinationPath, overwrite: true);
+            }
+
+            return;
+        }
 
         // Collect the set of paths to extract:
         //  - All grammar assets declared in manifest

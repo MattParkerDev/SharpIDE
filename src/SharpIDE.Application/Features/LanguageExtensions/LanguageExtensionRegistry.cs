@@ -9,6 +9,7 @@ public class LanguageExtensionRegistry
 {
     // file extension (lowercase, e.g. ".axaml") → grammar contribution
     private readonly Dictionary<string, GrammarContribution> _grammarsByExtension = new();
+    private readonly Dictionary<string, string> _languageIdsByExtension = new();
 
     // language ID → language server contribution
     private readonly Dictionary<string, LanguageServerContribution> _serversByLanguageId = new();
@@ -35,6 +36,18 @@ public class LanguageExtensionRegistry
     {
         _serversByLanguageId.TryGetValue(languageId.ToLowerInvariant(), out var server);
         return server;
+    }
+
+    public string? GetLanguageId(string fileExtension)
+    {
+        _languageIdsByExtension.TryGetValue(fileExtension.ToLowerInvariant(), out var languageId);
+        return languageId;
+    }
+
+    public LanguageServerContribution? GetLanguageServerForExtension(string fileExtension)
+    {
+        var languageId = GetLanguageId(fileExtension);
+        return languageId == null ? null : GetLanguageServer(languageId);
     }
 
     /// <summary>
@@ -65,6 +78,7 @@ public class LanguageExtensionRegistry
                     // Later installation wins; log handled by caller
                 }
                 _grammarsByExtension[key] = grammar;
+                _languageIdsByExtension[key] = lang.LanguageId;
             }
         }
 
@@ -101,6 +115,12 @@ public class LanguageExtensionRegistry
                     registered.GrammarFilePath == grammar.GrammarFilePath)
                 {
                     _grammarsByExtension.Remove(key);
+                }
+
+                if (_languageIdsByExtension.TryGetValue(key, out var registeredLanguageId) &&
+                    string.Equals(registeredLanguageId, lang.LanguageId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _languageIdsByExtension.Remove(key);
                 }
             }
         }
