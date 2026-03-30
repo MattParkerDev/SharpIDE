@@ -271,12 +271,18 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnTextChanged)}");
 			_currentFile.IsDirty.Value = true;
-			await _fileChangedService.SharpIdeFileChanged(_currentFile, text, FileChangeType.IdeUnsavedChange);
-			if (pendingCompletionTrigger is not null)
-			{
-				_completionTrigger = pendingCompletionTrigger;
-				var linePosition = new LinePosition(cursorPosition.line, cursorPosition.col);
-				var shouldTriggerCompletion = await _roslynAnalysis.ShouldTriggerCompletionAsync(_currentFile, text, linePosition, _completionTrigger!.Value);
+				await _fileChangedService.SharpIdeFileChanged(_currentFile, text, FileChangeType.IdeUnsavedChange);
+				if (pendingCompletionTrigger is not null)
+				{
+					if (_currentFile.IsRoslynWorkspaceFile is false)
+					{
+						HighlightLog($"Skipping Roslyn completion trigger for non-workspace file '{_currentFile.Path}'");
+						return;
+					}
+
+					_completionTrigger = pendingCompletionTrigger;
+					var linePosition = new LinePosition(cursorPosition.line, cursorPosition.col);
+					var shouldTriggerCompletion = await _roslynAnalysis.ShouldTriggerCompletionAsync(_currentFile, text, linePosition, _completionTrigger!.Value);
 				GD.Print($"Code completion trigger typed: '{_completionTrigger.Value.Character}' at {linePosition.Line}:{linePosition.Character} should trigger: {shouldTriggerCompletion}");
 				if (shouldTriggerCompletion)
 				{

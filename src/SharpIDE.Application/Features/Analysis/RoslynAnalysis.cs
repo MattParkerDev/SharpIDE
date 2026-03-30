@@ -469,8 +469,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static async Task<Document> GetDocumentForSharpIdeFile(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = fileModel.IsCsharpFile ? project.Documents.SingleOrDefault(s => s.FilePath == fileModel.Path)
-				: await GetRazorSourceGeneratedDocumentInProjectForSharpIdeFile(project, fileModel, cancellationToken);
+		Document? document = fileModel switch
+		{
+			{ IsCsharpFile: true } => project.Documents.SingleOrDefault(s => s.FilePath == fileModel.Path),
+			{ IsRazorFile: true } => await GetRazorSourceGeneratedDocumentInProjectForSharpIdeFile(project, fileModel, cancellationToken),
+			_ => throw new InvalidOperationException($"Roslyn document lookup is not supported for file '{fileModel.Path}'.")
+		};
 		Guard.Against.Null(document, nameof(document));
 		return document;
 	}
