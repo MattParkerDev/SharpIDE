@@ -72,9 +72,9 @@ public partial class SharpIdeCodeEdit
         var longestCompletionItem = _codeCompletionOptions
             .Skip(lineOffsetEstimate)
             .Take(completionsToDisplay)
-            .MaxBy(s => s.CompletionItem.DisplayText.Length + s.CompletionItem.DisplayTextSuffix.Length + s.CompletionItem.InlineDescription.Length);
+            .MaxBy(s => s.DisplayText.Length + s.DisplayTextSuffix.Length + s.InlineDescription.Length);
 
-        var codeCompletionLongestLine = (int)font.GetStringsSize([longestCompletionItem.CompletionItem.GetEntireDisplayText(), " ", longestCompletionItem.CompletionItem.InlineDescription], HorizontalAlignment.Left, -1, fontSize).X + 10; // add some padding to prevent clipping
+        var codeCompletionLongestLine = (int)font.GetStringsSize([longestCompletionItem.DisplayText + longestCompletionItem.DisplayTextSuffix, " ", longestCompletionItem.InlineDescription], HorizontalAlignment.Left, -1, fontSize).X + 10; // add some padding to prevent clipping
         if (codeCompletionLongestLine < _codeCompletionMinLineWidth)
         {
             codeCompletionLongestLine = _codeCompletionMinLineWidth;
@@ -234,15 +234,15 @@ public partial class SharpIdeCodeEdit
             }
 
             var sharpIdeCompletionItem = _codeCompletionOptions[l];
-            var displayText = sharpIdeCompletionItem.CompletionItem.DisplayText;
+            var displayText = sharpIdeCompletionItem.DisplayText;
             
             var textLine = _completionTextLine;
             textLine.Clear();
             textLine.AddString(displayText, font, fontSize, lang);
-            textLine.AddString(sharpIdeCompletionItem.CompletionItem.DisplayTextSuffix, font, fontSize, lang);
+            textLine.AddString(sharpIdeCompletionItem.DisplayTextSuffix, font, fontSize, lang);
             _completionInlineDescriptionTextLine.Clear();
             _completionInlineDescriptionTextLine.AddString(" ", font, fontSize, lang);
-            _completionInlineDescriptionTextLine.AddString(sharpIdeCompletionItem.CompletionItem.InlineDescription, font, fontSize, lang);
+            _completionInlineDescriptionTextLine.AddString(sharpIdeCompletionItem.InlineDescription, font, fontSize, lang);
 
             float yOffset = (rowHeight - textLine.GetSize().Y) / 2;
             Vector2 titlePos = new Vector2(

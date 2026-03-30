@@ -290,6 +290,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 			if (pendingCompletionTrigger is not null)
 			{
+				if (_usingImportedLanguageServer)
+				{
+					_completionTrigger = pendingCompletionTrigger;
+					await OnCodeCompletionRequested(_completionTrigger.Value, text, cursorPosition);
+					return;
+				}
+
 				if (_currentFile.IsRoslynWorkspaceFile is false)
 				{
 					HighlightLog($"Skipping Roslyn completion trigger for non-workspace file '{_currentFile.Path}'");

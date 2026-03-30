@@ -12,10 +12,33 @@ public partial class SharpIdeCodeEdit
     private void SetSelectedCompletion(int index)
     {
         _codeCompletionCurrentSelected = index;
-        var currentSelectedCompletionItem = _codeCompletionOptions[_codeCompletionCurrentSelected].CompletionItem;
+        var currentSelectedCompletionItem = _codeCompletionOptions[_codeCompletionCurrentSelected];
         _ = Task.GodotRun(async () =>
         {
-            var description = await _roslynAnalysis.GetCompletionDescription(_currentFile, currentSelectedCompletionItem);
+            if (currentSelectedCompletionItem.IsImportedLanguageServer)
+            {
+                var descriptionText = await _importedLanguageServerService.GetCompletionDescriptionAsync(currentSelectedCompletionItem);
+                _selectedCompletionDescription = null;
+                await this.InvokeAsync(() =>
+                {
+                    _completionDescriptionLabel.Clear();
+                    _completionDescriptionWindow.Size = new Vector2I(10, 10);
+                    if (string.IsNullOrWhiteSpace(descriptionText))
+                    {
+                        _completionDescriptionWindow.Hide();
+                        return;
+                    }
+
+                    _completionDescriptionLabel.Text = descriptionText;
+                    if (_completionDescriptionWindow.Visible is false)
+                    {
+                        _completionDescriptionWindow.Show();
+                    }
+                });
+                return;
+            }
+
+            var description = await _roslynAnalysis.GetCompletionDescription(_currentFile, currentSelectedCompletionItem.CompletionItem);
             _selectedCompletionDescription = description;
             await this.InvokeAsync(() =>
             {
