@@ -5,7 +5,7 @@ using SharpIDE.Application.Features.LanguageExtensions;
 namespace SharpIDE.Godot.Features.ExtensionManager;
 
 /// <summary>
-/// Popup window for installing and uninstalling VS 2022 language extensions (.vsix).
+/// Popup window for installing and uninstalling VS Code and Visual Studio language extensions (.vsix).
 /// Uses programmatic UI — no .tscn required.
 /// </summary>
 public partial class ExtensionManagerWindow : Window
@@ -79,9 +79,9 @@ public partial class ExtensionManagerWindow : Window
         {
             FileMode = FileDialog.FileModeEnum.OpenFile,
             Access = FileDialog.AccessEnum.Filesystem,
-            Title = "Select VS 2022 Language Extension"
+            Title = "Select VS Code or Visual Studio Extension"
         };
-        _vsixFileDialog.AddFilter("*.vsix", "VS 2022 Extension");
+        _vsixFileDialog.AddFilter("*.vsix", "VS Code or Visual Studio Extension");
         _vsixFileDialog.FileSelected += OnVsixFileSelected;
         AddChild(_vsixFileDialog);
     }
@@ -93,7 +93,12 @@ public partial class ExtensionManagerWindow : Window
         {
             var extensions = ext.Languages.SelectMany(l => l.FileExtensions).Distinct().ToList();
             var extLabel = extensions.Count > 0 ? string.Join(", ", extensions) : "no file types";
-            _extensionList.AddItem($"{ext.DisplayName} v{ext.Version}  [{extLabel}]");
+            var packageBadge = ext.PackageKind switch
+            {
+                ExtensionPackageKind.VSCode => "VS Code",
+                _ => "VS"
+            };
+            _extensionList.AddItem($"{ext.DisplayName} [{packageBadge}] v{ext.Version}  [{extLabel}]");
         }
         UpdateButtonStates();
     }

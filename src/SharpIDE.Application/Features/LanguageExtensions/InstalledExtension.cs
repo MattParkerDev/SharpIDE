@@ -1,7 +1,7 @@
 namespace SharpIDE.Application.Features.LanguageExtensions;
 
 /// <summary>
-/// Represents an installed VS 2022 language extension (.vsix package).
+/// Represents an installed VS Code or Visual Studio language extension (.vsix package).
 /// </summary>
 public class InstalledExtension
 {
@@ -10,9 +10,16 @@ public class InstalledExtension
     public required string Publisher { get; init; }
     public required string DisplayName { get; init; }
     public required string ExtractedPath { get; init; } // absolute path to extracted dir
+    public ExtensionPackageKind PackageKind { get; init; } = ExtensionPackageKind.VisualStudio;
     public List<LanguageContribution> Languages { get; init; } = [];
     public List<GrammarContribution> Grammars { get; init; } = [];
     public List<LanguageServerContribution> LanguageServers { get; init; } = [];
+}
+
+public enum ExtensionPackageKind
+{
+    VisualStudio = 0,
+    VSCode = 1
 }
 
 /// <summary>

@@ -6,19 +6,22 @@ using System.Xml.Linq;
 namespace SharpIDE.Application.Features.LanguageExtensions;
 
 /// <summary>
-/// Parses VS 2022 for Windows .vsix packages (ZIP archives).
+/// Parses VS Code and VS 2022 for Windows .vsix packages (ZIP archives).
 ///
 /// Discovery algorithm:
-///  1. Read extension.vsixmanifest (XML) for identity + grammar asset paths
-///  2. Read *.pkgdef for file extension registrations and grammar directory
-///  3. Read LanguageServer/server.json for optional LSP server config
+///  1. Prefer VS Code manifest assets (`extension/package.json`) when present
+///  2. Otherwise read extension.vsixmanifest (XML) for identity + grammar asset paths
+///  3. Read *.pkgdef for file extension registrations and grammar directory
+///  4. Read LanguageServer/server.json for optional LSP server config
 /// </summary>
 public static partial class VsixPackageParser
 {
     private const string ManifestEntryName = "extension.vsixmanifest";
     private const string VsixManifestNamespace = "http://schemas.microsoft.com/developer/vsx-schema/2011";
     private const string GrammarAssetType = "Microsoft.VisualStudio.TextMate.Grammar";
+    private const string VsCodeManifestAssetType = "Microsoft.VisualStudio.Code.Manifest";
     private const string LspServerConfigPath = "LanguageServer/server.json";
+    private const string DefaultVsCodeManifestPath = "extension/package.json";
 
     public static InstalledExtension Parse(string vsixPath)
     {
@@ -28,9 +31,14 @@ public static partial class VsixPackageParser
 
     private static InstalledExtension ParseFromZip(ZipArchive zip)
     {
+        var manifestEntry = zip.GetEntry(ManifestEntryName);
+        var vsCodeManifestPath = FindVsCodeManifestPath(zip, manifestEntry);
+        if (!string.IsNullOrWhiteSpace(vsCodeManifestPath))
+            return ParseVsCodeExtension(zip, vsCodeManifestPath);
+
         // Step 1: Parse extension.vsixmanifest
-        var manifestEntry = zip.GetEntry(ManifestEntryName)
-            ?? throw new InvalidOperationException($"'{ManifestEntryName}' not found in .vsix — is this a VS 2022 extension?");
+        manifestEntry ??= zip.GetEntry(ManifestEntryName)
+            ?? throw new InvalidOperationException($"'{ManifestEntryName}' not found in .vsix — unsupported extension package");
 
         using var manifestStream = manifestEntry.Open();
         var manifest = XDocument.Load(manifestStream);
@@ -163,9 +171,79 @@ public static partial class VsixPackageParser
             Publisher = publisher,
             DisplayName = displayName,
             ExtractedPath = string.Empty,  // set by ExtensionInstaller after extraction
+            PackageKind = ExtensionPackageKind.VisualStudio,
             Languages = languages,
             Grammars = grammars,
             LanguageServers = serverContributions
+        };
+    }
+
+    private static InstalledExtension ParseVsCodeExtension(ZipArchive zip, string packageJsonPath)
+    {
+        var packageEntry = zip.GetEntry(packageJsonPath)
+            ?? throw new InvalidOperationException($"VS Code manifest '{packageJsonPath}' not found in .vsix");
+
+        using var packageStream = packageEntry.Open();
+        using var packageDoc = JsonDocument.Parse(packageStream);
+        var root = packageDoc.RootElement;
+
+        var name = root.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("VS Code extension package.json is missing 'name'");
+
+        var publisher = root.TryGetProperty("publisher", out var publisherEl)
+            ? publisherEl.GetString()
+            : null;
+        publisher = !string.IsNullOrWhiteSpace(publisher)
+            ? publisher
+            : root.TryGetProperty("author", out var authorEl) && authorEl.ValueKind == JsonValueKind.Object &&
+              authorEl.TryGetProperty("name", out var authorNameEl)
+                ? authorNameEl.GetString()
+                : "Unknown";
+
+        var id = !string.IsNullOrWhiteSpace(publisher)
+            ? $"{publisher}.{name}"
+            : name;
+
+        var displayName = root.TryGetProperty("displayName", out var displayNameEl)
+            ? displayNameEl.GetString()
+            : null;
+        var version = root.TryGetProperty("version", out var versionEl)
+            ? versionEl.GetString()
+            : null;
+
+        var packageDirectory = Path.GetDirectoryName(packageJsonPath)?.Replace('\\', '/') ?? string.Empty;
+        var languages = ParseVsCodeLanguages(root, packageDirectory);
+        var grammars = ParseVsCodeGrammars(root, packageDirectory);
+        var servers = ParseVsCodeServerPrograms(root, packageDirectory, languages);
+
+        if (languages.Count == 0 && grammars.Count > 0)
+        {
+            languages = grammars
+                .Where(g => !string.IsNullOrWhiteSpace(g.LanguageId))
+                .Select(g => new LanguageContribution
+                {
+                    LanguageId = g.LanguageId,
+                    FileExtensions = ReadFileExtensionsFromZipGrammar(zip, g.GrammarFilePath)
+                        .Select(ft => ft.StartsWith('.') ? ft.ToLowerInvariant() : "." + ft.ToLowerInvariant())
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray()
+                })
+                .Where(l => l.FileExtensions.Length > 0)
+                .ToList();
+        }
+
+        return new InstalledExtension
+        {
+            Id = id!,
+            Version = version ?? "0.0.0",
+            Publisher = publisher ?? "Unknown",
+            DisplayName = displayName ?? name!,
+            ExtractedPath = string.Empty,
+            PackageKind = ExtensionPackageKind.VSCode,
+            Languages = languages,
+            Grammars = grammars,
+            LanguageServers = servers
         };
     }
 
@@ -248,6 +326,123 @@ public static partial class VsixPackageParser
         };
     }
 
+    private static List<LanguageContribution> ParseVsCodeLanguages(JsonElement root, string packageDirectory)
+    {
+        if (!TryGetVsCodeContributes(root, out var contributes) ||
+            !contributes.TryGetProperty("languages", out var languagesEl) ||
+            languagesEl.ValueKind != JsonValueKind.Array)
+            return [];
+
+        var results = new List<LanguageContribution>();
+        foreach (var languageEl in languagesEl.EnumerateArray())
+        {
+            if (!languageEl.TryGetProperty("id", out var idEl))
+                continue;
+
+            var id = idEl.GetString();
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            results.Add(new LanguageContribution
+            {
+                LanguageId = id!,
+                FileExtensions = ReadStringArray(languageEl, "extensions")
+                    .Select(NormalizeFileExtension)
+                    .Where(static e => !string.IsNullOrWhiteSpace(e))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                FileNames = ReadStringArray(languageEl, "filenames")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                FirstLinePattern = languageEl.TryGetProperty("firstLine", out var firstLineEl)
+                    ? firstLineEl.GetString()
+                    : null
+            });
+        }
+
+        return results;
+    }
+
+    private static List<GrammarContribution> ParseVsCodeGrammars(JsonElement root, string packageDirectory)
+    {
+        if (!TryGetVsCodeContributes(root, out var contributes) ||
+            !contributes.TryGetProperty("grammars", out var grammarsEl) ||
+            grammarsEl.ValueKind != JsonValueKind.Array)
+            return [];
+
+        var results = new List<GrammarContribution>();
+        foreach (var grammarEl in grammarsEl.EnumerateArray())
+        {
+            if (!grammarEl.TryGetProperty("path", out var pathEl))
+                continue;
+
+            var relativePath = pathEl.GetString();
+            if (string.IsNullOrWhiteSpace(relativePath))
+                continue;
+
+            var languageId = grammarEl.TryGetProperty("language", out var languageEl)
+                ? languageEl.GetString()
+                : null;
+            var scopeName = grammarEl.TryGetProperty("scopeName", out var scopeEl)
+                ? scopeEl.GetString()
+                : null;
+
+            results.Add(new GrammarContribution
+            {
+                LanguageId = !string.IsNullOrWhiteSpace(languageId)
+                    ? languageId!
+                    : DeriveLanguageIdFromPath(relativePath!),
+                ScopeName = scopeName ?? string.Empty,
+                GrammarFilePath = CombineZipPath(packageDirectory, relativePath!)
+            });
+        }
+
+        return results;
+    }
+
+    private static List<LanguageServerContribution> ParseVsCodeServerPrograms(
+        JsonElement root,
+        string packageDirectory,
+        List<LanguageContribution> languages)
+    {
+        if (!TryGetVsCodeContributes(root, out var contributes) ||
+            !contributes.TryGetProperty("serverPrograms", out var serversEl) ||
+            serversEl.ValueKind != JsonValueKind.Array)
+            return [];
+
+        var results = new List<LanguageServerContribution>();
+        foreach (var serverEl in serversEl.EnumerateArray())
+        {
+            if (!serverEl.TryGetProperty("command", out var commandEl))
+                continue;
+
+            var command = commandEl.GetString();
+            if (string.IsNullOrWhiteSpace(command))
+                continue;
+
+            var languageId = serverEl.TryGetProperty("language", out var languageEl)
+                ? languageEl.GetString()
+                : languages.FirstOrDefault()?.LanguageId;
+            if (string.IsNullOrWhiteSpace(languageId))
+                continue;
+
+            results.Add(new LanguageServerContribution
+            {
+                LanguageId = languageId!,
+                Command = CombineZipPath(packageDirectory, command!),
+                Args = ReadStringArray(serverEl, "args").ToArray(),
+                WorkingDirectory = serverEl.TryGetProperty("workingDirectory", out var workingDirEl)
+                    ? workingDirEl.GetString()
+                    : null,
+                TransportType = serverEl.TryGetProperty("transportType", out var transportEl)
+                    ? transportEl.GetString() ?? "stdio"
+                    : "stdio"
+            });
+        }
+
+        return results;
+    }
+
     /// <summary>
     /// Reads the fileTypes array from a TextMate grammar file (plist XML or JSON).
     /// Returns bare extension strings without dots, e.g. "tt", "t4", "ttinclude".
@@ -292,6 +487,87 @@ public static partial class VsixPackageParser
         filename.EndsWith(".tmLanguage.json", StringComparison.OrdinalIgnoreCase) ||
         filename.EndsWith(".tmGrammar", StringComparison.OrdinalIgnoreCase) ||
         filename.EndsWith(".tmGrammar.json", StringComparison.OrdinalIgnoreCase);
+
+    private static string? FindVsCodeManifestPath(ZipArchive zip, ZipArchiveEntry? manifestEntry)
+    {
+        if (manifestEntry != null)
+        {
+            using var manifestStream = manifestEntry.Open();
+            var manifest = XDocument.Load(manifestStream);
+            var ns = XNamespace.Get(VsixManifestNamespace);
+            var path = manifest
+                .Descendants(ns + "Asset")
+                .FirstOrDefault(a => a.Attribute("Type")?.Value == VsCodeManifestAssetType)
+                ?.Attribute("Path")?.Value;
+            if (!string.IsNullOrWhiteSpace(path))
+                return path!.Replace('\\', '/');
+        }
+
+        if (zip.GetEntry(DefaultVsCodeManifestPath) != null)
+            return DefaultVsCodeManifestPath;
+
+        return zip.Entries
+            .Where(e => !e.FullName.EndsWith('/'))
+            .Select(e => e.FullName.Replace('\\', '/'))
+            .FirstOrDefault(p => p.EndsWith("/package.json", StringComparison.OrdinalIgnoreCase) &&
+                                 p.StartsWith("extension/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool TryGetVsCodeContributes(JsonElement root, out JsonElement contributes)
+    {
+        if (root.TryGetProperty("contributes", out contributes) &&
+            contributes.ValueKind == JsonValueKind.Object)
+            return true;
+
+        contributes = default;
+        return false;
+    }
+
+    private static IEnumerable<string> ReadStringArray(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var arrayEl) || arrayEl.ValueKind != JsonValueKind.Array)
+            yield break;
+
+        foreach (var item in arrayEl.EnumerateArray())
+        {
+            var value = item.GetString();
+            if (!string.IsNullOrWhiteSpace(value))
+                yield return value!;
+        }
+    }
+
+    private static string NormalizeFileExtension(string extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+            return string.Empty;
+
+        return extension.StartsWith(".", StringComparison.Ordinal)
+            ? extension.ToLowerInvariant()
+            : "." + extension.ToLowerInvariant();
+    }
+
+    private static string CombineZipPath(string baseDirectory, string relativePath)
+    {
+        var normalizedRelative = relativePath.Replace('\\', '/');
+        if (normalizedRelative.StartsWith("./", StringComparison.Ordinal))
+            normalizedRelative = normalizedRelative[2..];
+
+        if (string.IsNullOrWhiteSpace(baseDirectory))
+            return normalizedRelative;
+
+        return $"{baseDirectory.TrimEnd('/')}/{normalizedRelative}".TrimStart('/');
+    }
+
+    private static IEnumerable<string> ReadFileExtensionsFromZipGrammar(ZipArchive zip, string grammarPath)
+    {
+        var entry = zip.GetEntry(grammarPath);
+        if (entry == null)
+            yield break;
+
+        using var stream = entry.Open();
+        foreach (var ft in ReadFileTypesFromGrammar(stream, grammarPath))
+            yield return ft;
+    }
 
     [GeneratedRegex(@"^;.*$", RegexOptions.Multiline)]
     private static partial Regex CommentLineRegex();

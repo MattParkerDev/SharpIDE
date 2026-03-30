@@ -44,9 +44,17 @@ All files in `src/SharpIDE.Godot/Features/CodeEditor/TextMate/`:
 
 ---
 
-## Part 2: VSIX Language Extensions System 🚧 DESIGN COMPLETE
+## Part 2: VSIX Language Extensions System 🚧 PARTIALLY IMPLEMENTED
 
-### What It Will Do
+### What It Does Now
+
+SharpIDE can now parse and install both major `.vsix` families:
+1. **VS Code marketplace extensions** that declare language metadata in `extension/package.json`
+2. **Visual Studio for Windows extensions** that declare grammars via `extension.vsixmanifest` and/or `.pkgdef`
+
+This mattered more than expected in practice: the real Marketplace package `trond-snekvik.simple-rst` ships both a top-level `extension.vsixmanifest` and a VS Code manifest at `extension/package.json`. SharpIDE now prefers the VS Code manifest asset when present instead of assuming every package with `extension.vsixmanifest` is a Windows Visual Studio extension.
+
+### What It Will Do Next
 
 SharpIDE will install Visual Studio or VS Code extensions (`.vsix` packages) that contain:
 1. **TextMate grammars** for new file types (e.g., `.axaml`, `.gd`, `.rs`)
@@ -74,13 +82,14 @@ User opens file.axaml
 
 1. **`InstalledExtension.cs`** — Models
    - `InstalledExtension` — metadata + contributions
+   - `ExtensionPackageKind` — `VSCode` vs `VisualStudio` source marker
    - `LanguageContribution` — file extension → language ID
    - `GrammarContribution` — language ID → grammar file
    - `LanguageServerContribution` — language ID → LSP server + launch args
 
 2. **`VsixPackageParser.cs`** — Reads `.vsix` ZIP
-   - Detects VS Code format (looks for `extension/package.json`)
-   - Detects VS 2022 format (looks for `extension.vsixmanifest` + `.pkgdef`)
+   - Detects VS Code format by looking for `Microsoft.VisualStudio.Code.Manifest` or `extension/package.json`
+   - Falls back to VS 2022 format (`extension.vsixmanifest` + `.pkgdef`)
    - Parses `contributes.languages`, `contributes.grammars`, `contributes.serverPrograms`
    - Uses `System.IO.Compression.ZipFile` (built-in), `System.Text.Json`, `System.Xml.Linq`
 
@@ -88,6 +97,7 @@ User opens file.axaml
    - Extracts grammar and server files to `%APPDATA%/SharpIDE/extensions/<extensionId>/`
    - Registers in `LanguageExtensionRegistry`
    - Persists to `registry.json`
+   - Preserves package origin so the Settings UI can show whether an extension came from VS Code or VS
 
 4. **`LanguageExtensionRegistry.cs`** — Runtime mapping
    - Maps file extension → grammar file path
@@ -125,6 +135,7 @@ User opens file.axaml
    - Install button → FileDialog for `.vsix` files
    - Uninstall button per extension
    - Shows which languages/grammars each extension provides
+   - Shows a compact source badge (`VS Code` or `VS`) for each installed extension
 
 10. **`ExtensionManagerPanel.tscn`** — Godot UI scene
 
@@ -165,6 +176,8 @@ VS Code or VS 2022 extensions declare contributions in their manifest:
 **VS Code (`extension/package.json`):**
 ```json
 {
+  "publisher": "trond-snekvik",
+  "name": "simple-rst",
   "contributes": {
     "languages": [
       {"id": "fsharp", "extensions": [".fs"]}
@@ -179,6 +192,14 @@ VS Code or VS 2022 extensions declare contributions in their manifest:
   }
 }
 ```
+
+Real package analyzed:
+- `trond-snekvik.simple-rst`
+- `extension.vsixmanifest` declares `Microsoft.VisualStudio.Code.Manifest`
+- `extension/package.json` contains `contributes.languages` + `contributes.grammars`
+- Grammar file is `extension/syntaxes/rst.tmLanguage.json`
+
+This package is a good reminder that top-level `extension.vsixmanifest` is not enough to classify a package as "Visual Studio for Windows".
 
 **VS 2022 (`extension.vsixmanifest` + `.pkgdef`):**
 - `.vsixmanifest` lists grammar files as `<Asset Type="Microsoft.VisualStudio.TextMate.Grammar"/>`
@@ -205,10 +226,13 @@ SharpIDE reads it, discovers `fsac` binary in the extension, launches it, and ro
 
 ## Implementation Phases
 
-### Phase 1: Grammar-Only Extensions ✅ TextMate complete
+### Phase 1: Grammar-Only Extensions 🚧 In Progress
 - Install `.vsix` → extract grammar → register extension
 - Open file → use TextMate highlighting
 - No LSP required
+- VS Code `package.json` parsing implemented
+- Visual Studio `.pkgdef` grammar discovery implemented
+- Settings UI now labels installed extensions as `VS Code` or `VS`
 
 ### Phase 2: Progressive Enhancement 🚧 Designed
 - Detect if extension includes language server
@@ -263,9 +287,11 @@ SharpIDE reads it, discovers `fsac` binary in the extension, launches it, and ro
 
 ### Real Extensions
 - Download Avalonia extension for VS from marketplace
-- Extract `.vsix`, convert to portable format if needed
+- Download `trond-snekvik.simple-rst` from the VS Code marketplace
+- Verify SharpIDE treats it as a VS Code extension even though it also includes `extension.vsixmanifest`
 - Test `.axaml` file highlighting
 - Test with F# extension + fsac language server
+- Verify grammar-less `.vsix` packages are rejected with a clear message instead of appearing as successfully installed
 
 ---
 
@@ -277,6 +303,7 @@ SharpIDE reads it, discovers `fsac` binary in the extension, launches it, and ro
 | Language server crash | Log error, revert to TextMate, continue |
 | File extension conflicts | Latest-installed extension wins; warn in logs |
 | Grammar uses unsupported Oniguruma feature | TextMateSharp throws; catch, disable grammar, log |
+| `.vsix` has no TextMate grammar | Show a friendly install error; do not register the extension |
 | LSP request times out | Ignore timeout, continue with TextMate |
 | Server binary not found | Log error, don't launch, use grammar-only |
 

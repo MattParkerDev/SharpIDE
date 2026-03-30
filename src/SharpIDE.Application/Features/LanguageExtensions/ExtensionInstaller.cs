@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace SharpIDE.Application.Features.LanguageExtensions;
 
 /// <summary>
-/// Installs and uninstalls VS 2022 language extensions (.vsix packages).
+/// Installs and uninstalls VS Code and Visual Studio language extensions (.vsix packages).
 ///
 /// Install:
 ///   1. Parse the .vsix via VsixPackageParser
@@ -64,6 +64,14 @@ public class ExtensionInstaller(LanguageExtensionRegistry registry, ILogger<Exte
                 parsed.Id, resolvedGrammars.Count);
         }
 
+        if (resolvedGrammars.Count == 0)
+        {
+            TryDeleteDirectory(extractedPath);
+            throw new InvalidOperationException(
+                $"'{parsed.DisplayName}' does not contain any importable TextMate syntax files. " +
+                "SharpIDE can only import .vsix packages that bundle a TextMate grammar right now.");
+        }
+
         // 5. Resolve language server paths
         var resolvedServers = parsed.LanguageServers
             .Select(s => new LanguageServerContribution
@@ -84,6 +92,7 @@ public class ExtensionInstaller(LanguageExtensionRegistry registry, ILogger<Exte
             Publisher = parsed.Publisher,
             DisplayName = parsed.DisplayName,
             ExtractedPath = extractedPath,
+            PackageKind = parsed.PackageKind,
             Languages = parsed.Languages,
             Grammars = resolvedGrammars,
             LanguageServers = resolvedServers
@@ -190,4 +199,17 @@ public class ExtensionInstaller(LanguageExtensionRegistry registry, ILogger<Exte
 
     private static string SanitizeId(string id) =>
         string.Concat(id.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch
+        {
+            // Best-effort cleanup only.
+        }
+    }
 }

@@ -51,12 +51,16 @@ src/SharpIDE.Godot/Features/Settings/SettingsWindow.cs
 
 ---
 
-### 🚧 Feature 2: VSIX Language Extensions (DESIGN COMPLETE)
+### 🚧 Feature 2: VSIX Language Extensions (PARTIALLY IMPLEMENTED)
 
-**Status:** Comprehensive architecture designed, ready for implementation.
+**Status:** Parser, installer, and Settings UI support now cover both VS Code and Visual Studio `.vsix` formats for TextMate grammar import.
 
-**What Users Will Be Able To Do:**
+**What Users Can Do Now:**
 - Install Visual Studio or VS Code extensions (`.vsix` packages)
+- See whether an installed extension came from `VS Code` or `VS`
+- Get a friendly install error when a `.vsix` contains no importable TextMate grammar
+
+**What Users Will Be Able To Do Next:**
 - Get syntax highlighting for new file types (e.g., `.axaml`, `.gd`, `.rs`)
 - Automatically upgrade from TextMate grammar → language server semantic highlighting
 
@@ -80,20 +84,26 @@ src/SharpIDE.Godot/Features/Settings/SettingsWindow.cs
 **Architecture (8 new services + 3 Godot components):**
 
 *Application Layer (Platform-independent):*
-- `VsixPackageParser` — Reads `.vsix` ZIP, detects format (VS Code or VS 2022)
-- `ExtensionInstaller` — Extracts files, registers in registry
+- `VsixPackageParser` — Reads `.vsix` ZIP, prefers VS Code manifest assets when present
+- `ExtensionInstaller` — Extracts files, registers in registry, rejects grammar-less packages
 - `LanguageExtensionRegistry` — Maps file extension → grammar → language server
 - `LanguageServerManager` — Launches LSP servers via subprocess (uses existing `CliWrap`)
 - `SemanticTokensManager` — Maps LSP tokens to colors
 
 *Godot Layer:*
 - `GrammarSyntaxHighlighter` — Godot `SyntaxHighlighter` using TextMateSharp for tokenization
-- `ExtensionManagerPanel` — UI to install/manage extensions
+- `ExtensionManagerPanel` — UI to install/manage extensions with `VS Code` / `VS` badges
 
 **Format Support:**
 - ✅ VS Code `.vsix` (primary) — reads `extension/package.json`
 - ✅ VS 2022 `.vsix` (secondary) — reads `extension.vsixmanifest` + `.pkgdef`
+- ✅ Mixed packages — if a Marketplace `.vsix` ships both, SharpIDE prefers the VS Code manifest asset
 - Both normalized into unified internal model
+
+**Real package analyzed:**
+- `trond-snekvik.simple-rst`
+- Contains both `extension.vsixmanifest` and `extension/package.json`
+- Confirms detection order matters for Marketplace imports
 
 **Real-World Portability:**
 Extension authors add manifest declaration once — no SharpIDE-specific code needed:
