@@ -105,25 +105,41 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 		Guard.Against.Null(_workspace);
 
+		await LoadSolutionCoreAsync(_sharpIdeSolutionModel.FilePath, cancellationToken);
+
+		timer.Stop();
+		_logger.LogInformation("RoslynAnalysis: Solution loaded in {ElapsedMilliseconds}ms", timer.ElapsedMilliseconds);
+	}
+
+	private async Task LoadSolutionCoreAsync(string solutionFilePath, CancellationToken cancellationToken)
+	{
 		using (var ___ = SharpIdeOtel.Source.StartActivity("RestoreSolution"))
 		{
 			// MsBuildProjectLoader doesn't do a restore which is absolutely required for resolving PackageReferences, if they have changed. I am guessing it just reads from project.assets.json
-			await _buildService.MsBuildAsync(_sharpIdeSolutionModel.FilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
+			// It is important to note that a Workspace has no concept of MSBuild, nuget packages etc. It is just told about project references and "metadata" references, which are dlls. This is what MSBuild does - it reads the csproj, and most importantly resolves nuget package references to dlls
+			await _buildService.MsBuildAsync(solutionFilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
 		}
+
 		using (var ___ = SharpIdeOtel.Source.StartActivity("OpenSolution"))
 		{
 			//_msBuildProjectLoader!.LoadMetadataForReferencedProjects = true;
-			var (solutionInfo, projectFileInfos) = await _msBuildProjectLoader!.LoadSolutionInfoAsync(_sharpIdeSolutionModel.FilePath, cancellationToken: cancellationToken);
+
+			// This call is the expensive part - MSBuild is slow. There doesn't seem to be any incrementalism for solutions.
+			// The best we could do to speed it up is do .LoadProjectInfoAsync for the single project, and somehow munge that into the existing solution
+			var (solutionInfo, projectFileInfos) = await _msBuildProjectLoader!.LoadSolutionInfoAsync(solutionFilePath, cancellationToken: cancellationToken);
 			_projectFileInfoMap = projectFileInfos;
+
 			var analyzerReferencePaths = solutionInfo.Projects
 				.SelectMany(p => p.AnalyzerReferences.OfType<IsolatedAnalyzerFileReference>().Select(a => a.FullPath))
 				.OfType<string>()
 				.Distinct()
 				.ToImmutableArray();
-
 			await _analyzerFileWatcher.StartWatchingFiles(analyzerReferencePaths);
-			_workspace.ClearSolution();
-			var solution = _workspace.AddSolution(solutionInfo);
+
+			// There doesn't appear to be any noticeable difference between ClearSolution + AddSolution vs OnSolutionReloaded
+			//_workspace.OnSolutionReloaded(newSolutionInfo);
+			_workspace!.ClearSolution();
+			_workspace.AddSolution(solutionInfo);
 
 			// If these aren't added, IDiagnosticAnalyzerService will not return compiler analyzer diagnostics
 			// Note that we aren't currently using IDiagnosticAnalyzerService
@@ -131,8 +147,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			//solution = solution.WithAnalyzerReferences(solutionAnalyzerReferences);
 			//_workspace.SetCurrentSolution(solution);
 		}
-		timer.Stop();
-		_logger.LogInformation("RoslynAnalysis: Solution loaded in {ElapsedMilliseconds}ms", timer.ElapsedMilliseconds);
+
 		_solutionLoadedTcs.SetResult();
 	}
 
@@ -199,24 +214,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ReloadSolution)}");
 		_logger.LogInformation("RoslynAnalysis: Reloading solution");
 		await _solutionLoadedTcs.Task;
+		_solutionLoadedTcs = new TaskCompletionSource();
 		Guard.Against.Null(_workspace, nameof(_workspace));
 		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
 
-		// It is important to note that a Workspace has no concept of MSBuild, nuget packages etc. It is just told about project references and "metadata" references, which are dlls. This is the what MSBuild does - it reads the csproj, and most importantly resolves nuget package references to dlls
-		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
-		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.MSBuildProjectLoader.LoadSolutionInfoAsync");
-		// This call is the expensive part - MSBuild is slow. There doesn't seem to be any incrementalism for solutions.
-		// The best we could do to speed it up is do .LoadProjectInfoAsync for the single project, and somehow munge that into the existing solution
-		var (newSolutionInfo, projectFileInfos) = await _msBuildProjectLoader.LoadSolutionInfoAsync(_sharpIdeSolutionModel!.FilePath, cancellationToken: cancellationToken);
-		_projectFileInfoMap = projectFileInfos;
-		__?.Dispose();
+		await LoadSolutionCoreAsync(_sharpIdeSolutionModel!.FilePath, cancellationToken);
 
-		var ___ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.Workspace.OnSolutionReloaded");
-		// There doesn't appear to be any noticeable difference between ClearSolution + AddSolution vs OnSolutionReloaded
-		//_workspace.OnSolutionReloaded(newSolutionInfo);
-		_workspace.ClearSolution();
-		_workspace.AddSolution(newSolutionInfo);
-		___?.Dispose();
 		_logger.LogInformation("RoslynAnalysis: Solution reloaded");
 	}
 
