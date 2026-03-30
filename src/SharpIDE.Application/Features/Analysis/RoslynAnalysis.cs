@@ -362,7 +362,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	public async Task UpdateProjectDiagnosticsForFile(SharpIdeFile sharpIdeFile, CancellationToken cancellationToken = default)
 	{
-		var project = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
+		var project = GetRequiredSharpIdeProjectForSharpIdeFile(sharpIdeFile);
 		Guard.Against.Null(project);
 		await UpdateProjectDiagnostics(project, cancellationToken);
 	}
@@ -1252,6 +1252,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(content, nameof(content));
 
 		var sharpIdeProject = GetSharpIdeProjectForSharpIdeFile(fileModel);
+		if (sharpIdeProject is null) return false;
 		var probableProject = GetProjectForSharpIdeProjectModel(sharpIdeProject);
 		// This file probably belongs to this project, but we need to check its path against the globs for the project to make sure
 		var projectFileInfo = _projectFileInfoMap.GetValueOrDefault(probableProject.Id);
@@ -1377,7 +1378,14 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return outputPath;
 	}
 
-	private SharpIdeProjectModel GetSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	private SharpIdeProjectModel? GetSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	{
+		var containingProjectFolder = sharpIdeFile.GetContainingProjectFolder();
+		if (containingProjectFolder is null) return null;
+		var sharpIdeProject = _sharpIdeSolutionModel!.GetProjectForContainingFolderPath(containingProjectFolder);
+		return sharpIdeProject;
+	}
+	private SharpIdeProjectModel GetRequiredSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
 	{
 		var containingProjectFolder = sharpIdeFile.GetContainingProjectFolder();
 		Guard.Against.Null(containingProjectFolder);
@@ -1396,7 +1404,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			var metadataAsSourceProject = document.Project;
 			return metadataAsSourceProject;
 		}
-		var sharpIdeProjectModel = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
+		var sharpIdeProjectModel = GetRequiredSharpIdeProjectForSharpIdeFile(sharpIdeFile);
 		var project = GetProjectForSharpIdeProjectModel(sharpIdeProjectModel);
 		return project;
 	}
