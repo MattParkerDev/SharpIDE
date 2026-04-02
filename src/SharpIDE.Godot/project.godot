@@ -151,6 +151,16 @@ CodeEditorDuplicateLine={
 ]
 }
 
+[navigation]
+
+2d/navigation_engine="Dummy"
+3d/navigation_engine="Dummy"
+
+[physics]
+
+2d/physics_engine="Dummy"
+3d/physics_engine="Dummy"
+
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
