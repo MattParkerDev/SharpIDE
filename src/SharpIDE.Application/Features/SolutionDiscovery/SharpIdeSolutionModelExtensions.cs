@@ -31,21 +31,26 @@ public static class SharpIdeSolutionModelExtensions
 	private static void DiffProjects(ObservableList<SharpIdeProjectModel> existing, ObservableList<SharpIdeProjectModel> updated)
 	{
 		// Projects whose Folder null-state changed: remove old, re-add new
-		var folderChanged = existing
+		var changedExistingProjects = existing
 			.Join(updated, p => p.FilePath, np => np.FilePath, (p, np) => (Old: p, New: np))
 			.Where(pair => (pair.Old.Folder is null) != (pair.New.Folder is null))
 			.ToList();
-		foreach (var (old, _) in folderChanged) existing.Remove(old);
-		var toRemove = existing.ExceptBy(updated.Select(np => np.FilePath), p => p.FilePath).ToList();
-		List<SharpIdeProjectModel> toAdd = [..updated.ExceptBy(existing.Select(p => p.FilePath), np => np.FilePath), ..folderChanged.Select(pair => pair.New)];
+
+		List<SharpIdeProjectModel> toRemove = [..existing.ExceptBy(updated.Select(np => np.FilePath), p => p.FilePath), ..changedExistingProjects.Select(pair => pair.Old)];
+		List<SharpIdeProjectModel> toAdd = [..updated.ExceptBy(existing.Select(p => p.FilePath), np => np.FilePath), ..changedExistingProjects.Select(pair => pair.New)];
 		foreach (var s in toRemove) existing.Remove(s);
 		foreach (var s in toAdd) existing.Insert(GetInsertionPosition(existing, s), s);
 	}
 
 	private static void DiffSlnFiles(ObservableList<SharpIdeSolutionFile> existing, ObservableList<SharpIdeSolutionFile> updated)
 	{
-		var toRemove = existing.ExceptBy(updated.Select(np => np.Path), p => p.Path).ToList();
-		var toAdd = updated.ExceptBy(existing.Select(p => p.Path), np => np.Path).ToList();
+		// Solution files whose .File null-state changed: remove old, re-add new
+		var changedExistingSlnFiles = existing
+			.Join(updated, p => p.Path, np => np.Path, (p, np) => (Old: p, New: np))
+			.Where(pair => (pair.Old.File is null) != (pair.New.File is null))
+			.ToList();
+		List<SharpIdeSolutionFile> toRemove = [..existing.ExceptBy(updated.Select(np => np.Path), p => p.Path), ..changedExistingSlnFiles.Select(pair => pair.Old)];
+		List<SharpIdeSolutionFile> toAdd = [..updated.ExceptBy(existing.Select(p => p.Path), np => np.Path), ..changedExistingSlnFiles.Select(pair => pair.New)];
 		foreach (var s in toRemove) existing.Remove(s);
 		foreach (var s in toAdd) existing.Insert(GetInsertionPosition(existing, s), s);
 	}
