@@ -80,6 +80,8 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 		return (solutionModel, vsSolution, solutionSerializer);
 	}
 
+	// This currently only adds the project to the VS Persistence solution, and persists it back to disk. We are currently relying on the sln change from disk, for
+	// actually updating the SharpIdeSolutionModel
 	public async Task AddProject(IExpandableSharpIdeNode parentNode, string projectName, string projectFilePath, CancellationToken cancellationToken = default)
 	{
 		Guard.Against.Null(_vsSolution);

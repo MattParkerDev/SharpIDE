@@ -60,9 +60,10 @@ public partial class TemplateComponent : VBoxContainer
             var path = _projectDirectoryAndProjectNameLabel.Text;
             _ = Task.GodotRun(async () =>
             {
+                Guard.Against.Null(SlnFolder);
                 await _dotnetTemplateService.ExecuteTemplate(_selectedTemplate, projectName, path, []);
                 var projectFilePath = Path.Combine(path, $"{projectName}.csproj");
-                Guard.Against.Null(SlnFolder);
+                await Task.Delay(300); // Wait for the files to be added to the SharpIdeRootFolder, before reloading the sln
                 await _sharpIdeSolutionService.AddProject(SlnFolder, projectName, projectFilePath);
             });
             GetWindow().QueueFree();
