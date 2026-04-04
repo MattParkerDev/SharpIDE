@@ -7,7 +7,7 @@ using SharpIDE.Application.Features.FileSystem;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
-public class VsPersistenceSolutionService
+public class SharpIdeSolutionService
 {
 	private SolutionModel? _vsSolution;
 	private ISolutionSerializer? _solutionSerializer;

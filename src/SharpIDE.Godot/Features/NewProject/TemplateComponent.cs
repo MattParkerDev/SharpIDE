@@ -30,7 +30,7 @@ public partial class TemplateComponent : VBoxContainer
     private ITemplateInfo _selectedTemplate = null!;
     
     [Inject] private readonly DotnetTemplateService _dotnetTemplateService = null!;
-    [Inject] private readonly VsPersistenceSolutionService _vsPersistenceSolutionService = null!;
+    [Inject] private readonly SharpIdeSolutionService _sharpIdeSolutionService = null!;
 
     public override void _Ready()
     {
@@ -63,7 +63,7 @@ public partial class TemplateComponent : VBoxContainer
                 await _dotnetTemplateService.ExecuteTemplate(_selectedTemplate, projectName, path, []);
                 var projectFilePath = Path.Combine(path, $"{projectName}.csproj");
                 Guard.Against.Null(SlnFolder);
-                await _vsPersistenceSolutionService.AddProject(SlnFolder, projectName, projectFilePath);
+                await _sharpIdeSolutionService.AddProject(SlnFolder, projectName, projectFilePath);
             });
             GetWindow().QueueFree();
         };
