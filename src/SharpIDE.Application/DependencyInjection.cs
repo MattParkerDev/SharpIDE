@@ -8,6 +8,7 @@ using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.LanguageExtensions;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Nuget;
 using SharpIDE.Application.Features.Run;
@@ -46,6 +47,8 @@ public static class DependencyInjection
 		services.AddScoped<DotnetTemplateService>();
 		services.AddScoped<SharpIdeSolutionService>();
 		services.AddScoped<FileSystemService>();
+		services.AddSingleton<LanguageExtensionRegistry>();
+		services.AddScoped<ExtensionInstaller>();
 		services.AddLogging();
 		return services;
 	}

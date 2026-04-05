@@ -7,6 +7,7 @@ using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.LanguageExtensions;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -54,6 +55,7 @@ public partial class IdeRoot : Control
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly SharpIdeSolutionService _sharpIdeSolutionService = null!;
     [Inject] private readonly ILogger<IdeRoot> _logger = null!;
+    [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
 
 	public override void _EnterTree()
 	{
@@ -85,6 +87,7 @@ public partial class IdeRoot : Control
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
 		_bottomPanelManager = GetNode<BottomPanelManager>("%BottomPanel");
 		
+		LoadLanguageExtensionRegistry();
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
@@ -98,6 +101,24 @@ public partial class IdeRoot : Control
 		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
+	}
+
+	private void LoadLanguageExtensionRegistry()
+	{
+		try
+		{
+			var extensions = LanguageExtensionPersistence.Load();
+			foreach (var extension in extensions)
+			{
+				_languageExtensionRegistry.Register(extension);
+			}
+
+			_logger.LogInformation("Loaded {Count} language extension(s) from registry", extensions.Count);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "Failed to load language extension registry");
+		}
 	}
 
 	private async Task OnBuildStarted(BuildStartedFlags flags) => await OnBuildRunningStateChanged(true, flags);

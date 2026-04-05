@@ -23,6 +23,12 @@ public partial class SharpIdeCodeEdit
     private void UpdateEditorTheme(LightOrDarkTheme lightOrDarkTheme)
     {
         _syntaxHighlighter.UpdateThemeColorCache(lightOrDarkTheme);
+        if (_usingGrammarHighlighter)
+        {
+            RecolorizeWithGrammar(Text);
+            return;
+        }
+
         SyntaxHighlighter = null;
         SyntaxHighlighter = _syntaxHighlighter; // Reassign to trigger redraw
     }

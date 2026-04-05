@@ -1,4 +1,5 @@
 using Godot;
+using SharpIDE.Godot.Features.ExtensionManager;
 using SharpIDE.Godot.Features.IdeSettings;
 
 namespace SharpIDE.Godot.Features.Settings;
@@ -9,6 +10,7 @@ public partial class SettingsWindow : Window
     private LineEdit _debuggerFilePathLineEdit = null!;
     private CheckButton _debuggerUseSharpDbgCheckButton = null!;
     private OptionButton _themeOptionButton = null!;
+    private ExtensionManagerWindow? _extensionManagerWindow;
     
     public override void _Ready()
     {
@@ -22,6 +24,34 @@ public partial class SettingsWindow : Window
         _debuggerUseSharpDbgCheckButton.Toggled += OnDebuggerUseSharpDbgToggled;
         _themeOptionButton.ItemSelected += OnThemeItemSelected;
         AboutToPopup += OnAboutToPopup;
+        AddLanguageExtensionsControls();
+    }
+
+    private void AddLanguageExtensionsControls()
+    {
+        var settingsVBox = _uiScaleSpinBox.GetParent()?.GetParent()?.GetParent<VBoxContainer>();
+        if (settingsVBox == null)
+        {
+            return;
+        }
+
+        settingsVBox.AddChild(new HSeparator());
+        settingsVBox.AddChild(new Label { Text = "Language Extensions" });
+
+        var manageButton = new Button { Text = "Manage Extensions..." };
+        manageButton.Pressed += OnManageExtensionsPressed;
+        settingsVBox.AddChild(manageButton);
+    }
+
+    private void OnManageExtensionsPressed()
+    {
+        if (_extensionManagerWindow == null)
+        {
+            _extensionManagerWindow = new ExtensionManagerWindow();
+            AddChild(_extensionManagerWindow);
+        }
+
+        _extensionManagerWindow.PopupCentered(new Vector2I(540, 380));
     }
 
     private void OnAboutToPopup()

@@ -47,6 +47,17 @@ public partial class SolutionExplorerPanel
         createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
         createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
         createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, project.Folder);
+        var extensionItems = BuildExtensionMenuItems(createNewSubmenu);
+        createNewSubmenu.IdPressed += id =>
+        {
+            if (extensionItems.TryGetValue((int)id, out var extension))
+            {
+                ShowNewExtensionFileDialog(project.Folder, extension);
+                return;
+            }
+
+            OnCreateNewSubmenuPressed(id, project.Folder);
+        };
 
         if (project is { IsLoaded: true, IsRunnable: true })
         {
