@@ -15,10 +15,12 @@ using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.LanguageExtensions;
 using SharpIDE.Application.Features.NavigationHistory;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
+using SharpIDE.Godot.Features.CodeEditor.TextMate;
 using Task = System.Threading.Tasks.Task;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -34,6 +36,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private SharpIdeFile _currentFile = null!;
 	
 	private CustomHighlighter _syntaxHighlighter = new();
+	private GrammarSyntaxHighlighter? _grammarSyntaxHighlighter;
+	private GrammarContribution? _activeGrammarContribution;
+	private bool _usingGrammarHighlighter;
 	private PopupMenu _popupMenu = null!;
 	private CanvasItem _aboveCanvasItem = null!;
 	private Rid? _aboveCanvasItemRid = null!;
@@ -63,6 +68,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
     [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
     [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
     [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+    [Inject] private readonly LanguageExtensionRegistry _languageExtensionRegistry = null!;
 
 	public SharpIdeCodeEdit()
 	{
@@ -241,6 +247,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		_findReplaceBar.NeedsToCountResults = true;
 		var text = Text;
+		if (_usingGrammarHighlighter)
+		{
+			Callable.From(() => RecolorizeWithGrammar(Text)).CallDeferred();
+		}
+
 		var pendingCompletionTrigger = _pendingCompletionTrigger;
 		_pendingCompletionTrigger = null;
 		var cursorPosition = GetCaretPosition();
@@ -299,6 +310,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			SetCaretColumn(currentCaretPosition.col);
 			SetVScroll(vScroll);
 			EndComplexOperation();
+			if (_usingGrammarHighlighter)
+			{
+				RecolorizeWithGrammar(fileContents);
+			}
 		});
 	}
 
@@ -325,6 +340,20 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // get off the UI thread
 		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetSharpIdeFile)}");
+		var grammarContribution = _languageExtensionRegistry.GetGrammar(Path.GetExtension(file.Path));
+		_activeGrammarContribution = grammarContribution;
+		_usingGrammarHighlighter = grammarContribution != null;
+		if (grammarContribution != null)
+		{
+			var grammarHighlighter = new GrammarSyntaxHighlighter();
+			grammarHighlighter.LoadGrammar(grammarContribution);
+			_grammarSyntaxHighlighter = grammarHighlighter;
+		}
+		else
+		{
+			_grammarSyntaxHighlighter = null;
+		}
+
 		_currentFile = file;
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
 		_currentFile.FileContentsChangedExternally.Subscribe(OnFileChangedExternally);
@@ -347,11 +376,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var setTextTask = this.InvokeAsync(async () =>
 		{
 			_fileChangingSuppressBreakpointToggleEvent = true;
-			SetText(await readFileTask);
+			var text = await readFileTask;
+			SetText(text);
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
 			if (file.IsMetadataAsSourceFile) Editable = false;
+			if (_usingGrammarHighlighter)
+			{
+				RecolorizeWithGrammar(text);
+			}
 		});
 		_ = Task.GodotRun(async () =>
 		{
@@ -600,11 +634,35 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[RequiresGodotUiThread]
 	private void SetSyntaxHighlightingModel(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
 	{
+		if (_usingGrammarHighlighter && classifiedSpans.IsEmpty && razorClassifiedSpans.IsEmpty)
+		{
+			RecolorizeWithGrammar(Text);
+			return;
+		}
+
+		if (_usingGrammarHighlighter && (!classifiedSpans.IsEmpty || !razorClassifiedSpans.IsEmpty))
+		{
+			_usingGrammarHighlighter = false;
+		}
+
 		_syntaxHighlighter.SetHighlightingData(classifiedSpans, razorClassifiedSpans);
 		//_syntaxHighlighter.ClearHighlightingCache();
 		_syntaxHighlighter.UpdateCache(); // I don't think this does anything, it will call _UpdateCache which we have not implemented
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _syntaxHighlighter; // Reassign to trigger redraw
+	}
+
+	[RequiresGodotUiThread]
+	internal void RecolorizeWithGrammar(string text)
+	{
+		if (_grammarSyntaxHighlighter == null || !_grammarSyntaxHighlighter.IsGrammarLoaded)
+		{
+			return;
+		}
+
+		_grammarSyntaxHighlighter.Colorize(text, _syntaxHighlighter.ColourSetForTheme);
+		SyntaxHighlighter = null;
+		SyntaxHighlighter = _grammarSyntaxHighlighter;
 	}
 
 	private void OnCodeFixesRequested()

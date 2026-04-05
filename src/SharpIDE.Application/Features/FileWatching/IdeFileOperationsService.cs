@@ -72,9 +72,18 @@ public class IdeFileOperationsService(SharpIdeRootFolderModificationService root
 		await _rootFolderModificationService.RemoveFile(file);
 	}
 
+    public async Task<SharpIdeFile> CreateGenericFile(SharpIdeFolder parentFolder, string fileName)
+	{
+		var newFilePath = Path.Combine(parentFolder.ChildNodeBasePath, fileName);
+		if (File.Exists(newFilePath)) throw new InvalidOperationException($"File {newFilePath} already exists.");
+		using var _ = await _ideFileExternalChangeHandler.IdeChangeLock.LockAsync();
+		await File.WriteAllTextAsync(newFilePath, string.Empty);
+		return await _rootFolderModificationService.CreateFile(parentFolder, newFilePath, fileName, string.Empty);
+	}
+
 	public async Task<SharpIdeFile> CreateCsFile(SharpIdeFolder parentFolder, string newFileName, string typeKeyword)
 	{
-		var newFilePath = Path.Combine(parentFolder.Path, newFileName);
+		var newFilePath = Path.Combine(parentFolder.ChildNodeBasePath, newFileName);
 		if (File.Exists(newFilePath)) throw new InvalidOperationException($"File {newFilePath} already exists.");
 		var className = Path.GetFileNameWithoutExtension(newFileName);
 		var @namespace = NewFileTemplates.ComputeNamespace(parentFolder);
