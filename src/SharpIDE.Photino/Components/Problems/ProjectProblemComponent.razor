@@ -11,7 +11,7 @@
 	<MudTreeViewItem T="string" TextTypo="Typo.body2" EndTextTypo="Typo.caption" Expanded="false" Icon="@Icons.Material.Filled.Code" IconColor="Color.Success" Value="@ProjectModel.Name.Value" Text="@ProjectModel.Name.Value" EndText="@($"{_diagnostics.Length} diagnostics")">
 		@foreach (var diagnostic in _diagnostics)
 		{
-			<MudTreeViewItem T="string" TextTypo="Typo.body2" OnClick="@(async () => await OpenDocumentContainingDiagnostic(diagnostic.Diagnostic))" Icon="@Icons.Material.Filled.Warning" IconColor="@GetDiagnosticIconColour(diagnostic.Diagnostic)" Value="@diagnostic.ToString()">
+			<MudTreeViewItem T="string" TextTypo="Typo.body2" OnClick="@(async () => await OpenDocumentContainingDiagnostic(diagnostic))" Icon="@Icons.Material.Filled.Warning" IconColor="@GetDiagnosticIconColour(diagnostic.Diagnostic)" Value="@diagnostic.ToString()">
 				<BodyContent>
 					<MudText Typo="Typo.body2">
 						@diagnostic.Diagnostic.GetMessage()
@@ -27,6 +27,9 @@
 	[Parameter, EditorRequired]
 	public SharpIdeProjectModel ProjectModel { get; set; } = null!;
 
+	[Parameter, EditorRequired]
+	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
+
 	[Parameter]
 	public EventCallback<SharpIdeFile> OnFileSelected { get; set; }
 
@@ -40,13 +43,9 @@
 		_ => Color.Info
 	};
 
-	private async Task OpenDocumentContainingDiagnostic(Diagnostic diagnostic)
+	private async Task OpenDocumentContainingDiagnostic(SharpIdeDiagnostic diagnostic)
 	{
-		// TODO: probably store a flat list of all files in each project to avoid recursion
-		var file = ProjectModel.Files
-			.Concat(ProjectModel.Folders.SelectMany(f => f.GetAllFiles()))
-			.Single(s => s.Path == diagnostic.Location.SourceTree?.GetMappedLineSpan(diagnostic.Location.SourceSpan).Path);
-
+		var file = SolutionModel!.AllFiles[diagnostic.FilePath];
 		await OnFileSelected.InvokeAsync(file);
 	}
 

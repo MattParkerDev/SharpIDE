@@ -80,7 +80,7 @@
 					 }
 					 @foreach(var file in slnFolder.Files)
 					 {
-						 @GetFileFragment(file)
+						 @GetSlnFileFragment(file)
 					 }
 				 }
 			 </MudTreeViewItem>
@@ -92,12 +92,12 @@
 				 <MudTreeViewItem T="ISharpIdeNode" TextTypo="Typo.body2" Icon="@Icons.Custom.FileFormats.FileCode" IconColor="Color.Success" Text="@project.Name.Value" Value="project" @bind-Expanded="@project.Expanded">
 					 @if (project.Expanded)
 					 {
-						 @foreach (var folder in project.Folders)
+						 @foreach (var folder in project.Folder!.Folders)
 						 {
 							 @GetFolderFragment(folder)
 						 }
 
-						 @foreach (var file in project.Files)
+						 @foreach (var file in project.Folder.Files)
 						 {
 							 @GetFileFragment(file)
 						 }
@@ -122,6 +122,18 @@
 				 }
 			 </MudTreeViewItem>
 
+	</text>;
+
+	private RenderFragment GetSlnFileFragment(SharpIdeSolutionFile slnFile) =>
+		@<text>
+			 @if (slnFile.File is null)
+			 {
+				 <MudTreeViewItem T="ISharpIdeNode" Icon="@Icons.Material.Filled.Warning" TextTypo="Typo.body2" Text="@slnFile.Name" Value="@slnFile"/>
+			 }
+			 else
+			 {
+				 @GetFileFragment(slnFile.File)
+			 }
 	</text>;
 
 	private RenderFragment GetFileFragment(SharpIdeFile file) =>

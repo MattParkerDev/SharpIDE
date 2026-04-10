@@ -5,7 +5,7 @@
 	<MudTreeView T="string" Dense="true" ExpandOnClick="true">
 		@foreach (var project in SolutionModel.AllProjects)
 		{
-			<ProjectProblemComponent ProjectModel="@project" OnFileSelected="@OnFileSelected" />
+			<ProjectProblemComponent ProjectModel="@project" SolutionModel="@SolutionModel" OnFileSelected="@OnFileSelected" />
 		}
 	</MudTreeView>
 </MudStack>

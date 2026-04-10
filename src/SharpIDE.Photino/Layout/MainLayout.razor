@@ -1,6 +1,7 @@
 ﻿@using SharpIDE.Application.Features.Analysis
 @using SharpIDE.Application.Features.Build
 @using SharpIDE.Application.Features.Events
+@using SharpIDE.Application.Features.FileSystem
 @using SharpIDE.Application.Features.SolutionDiscovery
 @using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence
 @using SharpIDE.Photino.Models
@@ -10,7 +11,7 @@
 @inject BuildService BuildService
 @inject AppState AppState
 @inject RoslynAnalysis RoslynAnalysis
-@inject VsPersistenceSolutionService VsPersistenceSolutionService
+@inject SharpIdeSolutionService SharpIdeSolutionService
 
 <MudLayout Style="height: 100%">
 	<MudAppBar Dense="true" Gutters="false" Class="px-2">
@@ -184,9 +185,12 @@
 		var solutionFilePath = (string)result.Data!;
 		_solutionFilePath = solutionFilePath;
 
-		var (solutionModel, _, _) = await VsPersistenceSolutionService.ReadSolution(_solutionFilePath);
+		var sharpIdeRootFolder = await FileSystemService.GetSharpIdeRootFolderForSolutionAsync(solutionFilePath);
+		var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(solutionFilePath, sharpIdeRootFolder);
+		await SharpIdeSolutionService.LoadSolution(solutionModel, solutionFilePath, vsSln, solutionSerializer);
+
 		_solutionModel = solutionModel;
-		RoslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);
+		RoslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel, sharpIdeRootFolder);
 	}
 
 	private CancellationTokenSource? _cancellationTokenSource = null!;
