@@ -4,6 +4,7 @@ using Microsoft.Build.Execution;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Logging;
 using Microsoft.Extensions.Logging;
+using PolyType.SourceGenerator;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Logging;
 using SharpIDE.MsBuildHost.Contracts;
@@ -51,7 +52,7 @@ public class BuildService(ILogger<BuildService> logger)
 			};
 			var process = Process.Start(startupInfo);
 			if (process is null) throw new InvalidOperationException("Failed to start SharpIDE.MsBuildHost");
-			var handler = new HeaderDelimitedMessageHandler(process.StandardInput.BaseStream, process.StandardOutput.BaseStream, new JsonMessageFormatter());
+			var handler = new LengthHeaderMessageHandler(process.StandardInput.BaseStream, process.StandardOutput.BaseStream, new NerdbankMessagePackFormatter { TypeShapeProvider = TypeShapeProvider_SharpIDE_MsBuildHost_Contracts.Default });
 			var rpc = new JsonRpc(handler);
 
 			rpc.StartListening();
