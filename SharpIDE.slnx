@@ -23,6 +23,8 @@
     <Project Path="src/SharpIDE.Godot/SharpIDE.Godot.csproj">
       <BuildType Project="Debug" />
     </Project>
+    <Project Path="src/SharpIDE.MsBuildHost.Contracts/SharpIDE.MsBuildHost.Contracts.csproj" />
+    <Project Path="src/SharpIDE.MsBuildHost/SharpIDE.MsBuildHost.csproj" />
     <Project Path="src/SharpIDE.Photino/SharpIDE.Photino.csproj" />
   </Folder>
   <Folder Name="/tests/">

@@ -9,6 +9,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\tools\GodotServiceDefaults\GodotServiceDefaults.csproj" PrivateAssets="all" />
     <ProjectReference Include="..\SharpIDE.Application\SharpIDE.Application.csproj" />
+     <!-- For build order -->
+    <ProjectReference Include="..\SharpIDE.MsBuildHost\SharpIDE.MsBuildHost.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" />
@@ -35,4 +37,17 @@
   <ItemGroup>
     <Content Include="Properties\launchSettings.json" />
   </ItemGroup>
+
+    <!-- TODO: Not working for publish -->
+    <Target Name="CopyBuildHostOutputToOutput" AfterTargets="Build">
+        <ItemGroup>
+            <BuildHostFiles Include="$(ArtifactsPath)\bin\SharpIDE.MsBuildHost\$(Configuration)\**\*.*" />
+        </ItemGroup>
+
+        <MakeDir Directories="$(OutputPath)SharpIdeMsBuildHost" />
+
+        <Copy SourceFiles="@(BuildHostFiles)"
+              DestinationFiles="@(BuildHostFiles->'$(OutputPath)SharpIdeMsBuildHost\%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true" />
+    </Target>
 </Project>

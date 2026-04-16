@@ -2,7 +2,7 @@
 using Microsoft.Build.Framework;
 using Microsoft.Build.Logging;
 
-namespace SharpIDE.Application.Features.Logging;
+namespace SharpIDE.MsBuildHost;
 
 public class InternalTerminalLoggerFactory
 {

@@ -78,4 +78,8 @@
     <AdditionalFiles Include="BannedSymbols.txt" />
     <Content Remove="$(NuGetPackageRoot)\microsoft.codeanalysis.workspaces.msbuild\**\**\BuildHost-net472\**" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpIDE.MsBuildHost.Contracts\SharpIDE.MsBuildHost.Contracts.csproj" />
+  </ItemGroup>
 </Project>
