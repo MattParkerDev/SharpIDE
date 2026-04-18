@@ -50,4 +50,8 @@
               DestinationFiles="@(BuildHostFiles->'$(OutputPath)SharpIdeMsBuildHost\%(RecursiveDir)%(Filename)%(Extension)')"
               SkipUnchangedFiles="true" />
     </Target>
+
+    <Target Name="CleanBuildHostOutput" AfterTargets="Clean">
+        <RemoveDir Directories="$(OutputPath)SharpIdeMsBuildHost" />
+    </Target>
 </Project>
