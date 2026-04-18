@@ -45,7 +45,7 @@ public partial class BuildService
                 .ToList();
             keysToRemove.ForEach(s => startupInfo.Environment.Remove(s));
             startupInfo.Environment["DOTNET_ROLL_FORWARD_TO_PRERELEASE"] = "1";
-            startupInfo.Environment["DOTNET_ROLL_FORWARD"] = "LatestMajor";
+            // ["DOTNET_ROLL_FORWARD"] = "LatestMajor" isn't necessary as it is set in the SharpIDE.MsBuildHost.runtimeconfig.json, from the <RollForward>LatestMajor</RollForward> csproj property
             var process = Process.Start(startupInfo);
             if (process is null) throw new InvalidOperationException("Failed to start SharpIDE.MsBuildHost");
             var handler = new LengthHeaderMessageHandler(process.StandardInput.BaseStream, process.StandardOutput.BaseStream, new NerdbankMessagePackFormatter { TypeShapeProvider = TypeShapeProvider_SharpIDE_MsBuildHost_Contracts.Default });
