@@ -50,43 +50,55 @@ public partial class ProblemsPanel : Control
         var view = list.CreateView(y => new TreeItemContainer());
         var disposableBuilder = new DisposableBuilder();
         view.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-            .SubscribeAwait(async (e, ct) => await (e.Action switch
+            .Chunk(TimeSpan.FromMilliseconds(50))
+            .SubscribeAwait(async (events, ct) =>
             {
-                NotifyCollectionChangedAction.Add => CreateProjectTreeItem(_tree, _rootItem, e),
-                NotifyCollectionChangedAction.Remove => this.InvokeAsync(() => FreeTreeItem(e.OldItem.View.Value)),
-                _ => Task.CompletedTask
-            }), configureAwait: false).AddTo(ref disposableBuilder);
+                await this.InvokeAsync(() =>
+                {
+                    foreach (var e in events)
+                    {
+                        switch (e.Action)
+                        {
+                            case NotifyCollectionChangedAction.Add: CreateProjectTreeItem(_tree, _rootItem, e); break;
+                            case NotifyCollectionChangedAction.Remove: FreeTreeItem(e.OldItem.View.Value); break;
+                        }
+                    }
+                });
+                
+            }, configureAwait: false).AddTo(ref disposableBuilder);
         _rootItem.SharpIdeDisposable = disposableBuilder.Build();
     }
 
-    private async Task CreateProjectTreeItem(Tree tree, TreeItem parent, ViewChangedEvent<SharpIdeProjectModel, TreeItemContainer> e)
+    [RequiresGodotUiThread]
+    private void CreateProjectTreeItem(Tree tree, TreeItem parent, ViewChangedEvent<SharpIdeProjectModel, TreeItemContainer> e)
     {
-        await this.InvokeAsync(() =>
-        {
-            var treeItem = tree.CreateItem(parent);
-            treeItem.SetText(0, e.NewItem.Value.Name.Value);
-            treeItem.SetIcon(0, CsprojIcon);
-            treeItem.Visible = e.NewItem.Value.Diagnostics.Count is not 0;
-            e.NewItem.View.Value = treeItem;
-            var disposableBuilder = new DisposableBuilder();
-            
-            var projectDiagnosticsView = e.NewItem.Value.Diagnostics.CreateView(y => new TreeItemContainer());
-            projectDiagnosticsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-                .SubscribeAwait(async (innerEvent, ct) =>
+        var treeItem = tree.CreateItem(parent);
+        treeItem.SetText(0, e.NewItem.Value.Name.Value);
+        treeItem.SetIcon(0, CsprojIcon);
+        treeItem.Visible = e.NewItem.Value.Diagnostics.Count is not 0;
+        e.NewItem.View.Value = treeItem;
+        var disposableBuilder = new DisposableBuilder();
+        
+        var projectDiagnosticsView = e.NewItem.Value.Diagnostics.CreateView(y => new TreeItemContainer());
+        projectDiagnosticsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+            .Chunk(TimeSpan.FromMilliseconds(50))
+            .SubscribeAwait(async (innerEvents, ct) =>
+            {
+                await this.InvokeAsync(() =>
                 {
-                    if (innerEvent.Action is not (NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove)) return;
-                    await this.InvokeAsync(() =>
+                    foreach (var innerEvent in innerEvents)
                     {
+                        if (innerEvent.Action is not (NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove)) return;
                         treeItem.Visible = e.NewItem.Value.Diagnostics.Count is not 0;
                         switch (innerEvent.Action)
                         {
                             case NotifyCollectionChangedAction.Add: CreateDiagnosticTreeItem(_tree, treeItem, innerEvent); break;
                             case NotifyCollectionChangedAction.Remove: FreeTreeItem(innerEvent.OldItem.View.Value); break;
                         }
-                    });
-                }, configureAwait: false).AddTo(ref disposableBuilder);
-            treeItem.SharpIdeDisposable = disposableBuilder.Build();
-        });
+                    }
+                });
+            }, configureAwait: false).AddTo(ref disposableBuilder);
+        treeItem.SharpIdeDisposable = disposableBuilder.Build();
     }
 
     private Callable? _diagnosticCustomDrawCallable;
