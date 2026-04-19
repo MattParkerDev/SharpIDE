@@ -27,11 +27,12 @@ public partial class BuildService
             if (_rpcBuildService is not null) return _rpcBuildService;
             if (_fillPipeFromLoggerTask is not null) throw new InvalidOperationException("Build logger pipe is already open, but RPC service is not initialized. This should never happen.");
             var sharpIdeMsBuildHostDllPath = Path.Combine(AppContext.BaseDirectory, "SharpIdeMsBuildHost", "SharpIDE.MsBuildHost.dll");
-            var sdkVersion = await GetCorrectDotnetSdkVersion(solutionOrProjectFilePath);
+			var slnOrProjectDirectory = Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
+            var sdkVersion = await GetCorrectDotnetSdkVersion(slnOrProjectDirectory);
             var startupInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                ArgumentList = { sharpIdeMsBuildHostDllPath, sdkVersion.ToNormalizedString() },
+                ArgumentList = { sharpIdeMsBuildHostDllPath, sdkVersion.ToNormalizedString(), slnOrProjectDirectory },
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -63,10 +64,9 @@ public partial class BuildService
         }
     }
 
-    private static async Task<NuGetVersion> GetCorrectDotnetSdkVersion(string solutionOrProjectFilePath)
+    private static async Task<NuGetVersion> GetCorrectDotnetSdkVersion(string slnOrProjectDirectory)
     {
-	    var workingDirectory = Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
-	    var result = await Cli.Wrap("dotnet").WithWorkingDirectory(workingDirectory).WithArguments("--version").ExecuteBufferedAsync();
+	    var result = await Cli.Wrap("dotnet").WithWorkingDirectory(slnOrProjectDirectory).WithArguments("--version").ExecuteBufferedAsync();
 	    var sdkVersion = NuGetVersion.Parse(result.StandardOutput.Trim());
 	    return sdkVersion;
     }

@@ -6,16 +6,20 @@ namespace SharpIDE.MsBuildHost;
 public static class SharpIdeMsbuildLocator
 {
 	public static string ResolvedMsBuildSdkPath { get; private set; } = null!;
-	public static void Register(string sdkVersion)
+	public static void Register(string sdkVersion, string projectOrSlnDirectory)
 	{
 		if (OperatingSystem.IsMacOS())
 		{
 			FixMacosPath();
 		}
+		// Using VisualStudioInstanceQueryOptions with WorkingDirectory set doesn't seem to resolve a local SDK, but having this process's current directory set does
+		var originalWorkingDirectory = Environment.CurrentDirectory;
+		Environment.CurrentDirectory = projectOrSlnDirectory;
 		// Use latest version - https://github.com/microsoft/MSBuildLocator/issues/81
 		var instance = MSBuildLocator.QueryVisualStudioInstances().FirstOrDefault(s => s.MSBuildPath.EndsWith(sdkVersion, StringComparison.OrdinalIgnoreCase));
 		if (instance is null) throw new InvalidOperationException("No matching MSBuild instances found");
 		MSBuildLocator.RegisterInstance(instance);
+		Environment.CurrentDirectory = originalWorkingDirectory;
 		ResolvedMsBuildSdkPath = instance.MSBuildPath;
 	}
 
