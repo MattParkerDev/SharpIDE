@@ -183,10 +183,7 @@ public partial class IdeRoot : Control
 			_ = Task.GodotRun(async () =>
 			{
 				// Preserves order of tabs
-				foreach (var (file, linePosition, isSelected) in filesToOpen)
-				{
-					await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, linePosition);
-				}
+				await _codeEditorPanel.AddSharpIdeFiles(filesToOpen.Select(file => file.file).ToList());
 				_navigationHistoryService.StartRecording();
 				// Select the selected tab
 				var selectedFile = filesToOpen.SingleOrDefault(f => f.isSelected);
