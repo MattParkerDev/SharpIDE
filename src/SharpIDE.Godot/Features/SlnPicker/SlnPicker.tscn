@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cwvhbsd1mdl2x"]
 
 [ext_resource type="Script" uid="uid://bjvwb6jg6jpsi" path="res://Features/SlnPicker/SlnPicker.cs" id="1_ciq0g"]
+[ext_resource type="Script" uid="uid://dxg3py1fa4tbr" path="res://Features/SlnPicker/SlnPickerTitleBar.cs" id="2_6t7l7"]
 [ext_resource type="Texture2D" uid="uid://tpjfx7mo6cwj" path="res://Resources/SharpIdeV3.svg" id="2_qs47j"]
 [ext_resource type="PackedScene" uid="uid://x5lhwvh5dium" path="res://Features/SlnPicker/PreviousSlnEntry.tscn" id="2_t7l5q"]
 [ext_resource type="Script" uid="uid://but0p7xwpfxtg" path="res://Features/SlnPicker/AutoOpenLastSlnButton.cs" id="4_qs47j"]
@@ -23,6 +24,38 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="SlnPickerTitleBar" type="Control" parent="VBoxContainer" unique_id=920668513]
+visible = false
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+script = ExtResource("2_6t7l7")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SlnPickerTitleBar" unique_id=1663581230]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -11.5
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LeftSpacer" type="Control" parent="VBoxContainer/SlnPickerTitleBar/HBoxContainer" unique_id=644148526]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer/SlnPickerTitleBar/HBoxContainer" unique_id=278357399]
+layout_mode = 2
+size_flags_horizontal = 6
+theme_type_variation = &"Gray700Label"
+text = "SharpIDE"
+
+[node name="RightSpacer" type="Control" parent="VBoxContainer/SlnPickerTitleBar/HBoxContainer" unique_id=1224861667]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="VSplitContainer" type="HSplitContainer" parent="VBoxContainer" unique_id=972202285]
 layout_mode = 2
