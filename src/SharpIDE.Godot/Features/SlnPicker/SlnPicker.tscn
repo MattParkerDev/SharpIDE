@@ -26,22 +26,13 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="SlnPickerTitleBar" type="Control" parent="VBoxContainer" unique_id=920668513]
-visible = false
+[node name="SlnPickerTitleBar" type="MarginContainer" parent="VBoxContainer" unique_id=2089998183]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 script = ExtResource("2_6t7l7")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/SlnPickerTitleBar" unique_id=1663581230]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -11.5
-offset_bottom = 11.5
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 
 [node name="LeftSpacer" type="Control" parent="VBoxContainer/SlnPickerTitleBar/HBoxContainer" unique_id=644148526]
 unique_name_in_owner = true
