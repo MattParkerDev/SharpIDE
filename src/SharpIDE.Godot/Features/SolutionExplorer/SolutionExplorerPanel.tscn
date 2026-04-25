@@ -9,6 +9,15 @@
 [ext_resource type="Texture2D" uid="uid://mnpe6bcnycfh" path="res://Features/SolutionExplorer/Resources/LoadingProjectIcon.svg" id="6_wpvwf"]
 [ext_resource type="Texture2D" uid="uid://b4n5n20uey34i" path="res://Features/SolutionExplorer/Resources/UnloadedProjectIcon.svg" id="7_ykfad"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ykfad"]
+bg_color = Color(0.12156863, 0.6901961, 0.6431373, 0.47843137)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+expand_margin_left = 1.0
+expand_margin_right = 1.0
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_idvpu"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -50,11 +59,28 @@ CsprojIcon = ExtResource("5_r1qfc")
 LoadingProjectIcon = ExtResource("6_wpvwf")
 UnloadedProjectIcon = ExtResource("7_ykfad")
 SlnIcon = ExtResource("6_idvpu")
+SearchMatchHighlight = SubResource("StyleBoxFlat_ykfad")
 
-[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1468166306]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1396470192]
 layout_mode = 2
 
-[node name="Tree" type="Tree" parent="PanelContainer" unique_id=1327553265]
+[node name="SearchInput" type="LineEdit" parent="VBoxContainer" unique_id=724786348]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SearchInput"
+placeholder_text = "Search"
+clear_button_enabled = true
+select_all_on_focus = true
+
+[node name="TreeContainer" type="PanelContainer" parent="VBoxContainer" unique_id=1468166306]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Tree" type="Tree" parent="VBoxContainer/TreeContainer" unique_id=1327553265]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/v_separation = 1
