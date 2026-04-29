@@ -94,14 +94,10 @@ public class AutoUpdate
 
     private static async Task DownloadRelease(Release release)
     {
-        var appdataFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var updateTemp = Path.Combine(appdataFolderPath, "SharpIDE", "UpdateTemp");
-        Directory.CreateDirectory(updateTemp);
-        
         var asset = release.Assets.SingleOrDefault(a => a.Name.StartsWith(ReleaseAssetNamePrefix, StringComparison.OrdinalIgnoreCase));
         Guard.Against.Null(asset);
         var assetFileName = asset.Name;
-        var releaseArchive = new FileInfo(Path.Combine(updateTemp, "raw", assetFileName));
+        var releaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "raw", assetFileName));
         if (releaseArchive.Exists) throw new InvalidOperationException($"Release archive already exists at {releaseArchive.FullName}"); // TODO: don't throw?
         //var downloadUrl = asset.BrowserDownloadUrl;
         //var gitHubClient = GetGitHubClient();
