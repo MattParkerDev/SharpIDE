@@ -102,7 +102,7 @@ public class AutoUpdate
             await using var uncompressedTarFileStream = uncompressedReleaseArchiveToCreate.Create();
             await gz.CopyToAsync(uncompressedTarFileStream);
         }
-        else if (OperatingSystem.IsWindows())
+        else if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
         {
             await using var compressedZipArchive = await ZipArchive.CreateAsync(compressedArchiveStream, ZipArchiveMode.Read, leaveOpen: true, null);
             await using var uncompressedArchiveStream = uncompressedReleaseArchiveToCreate.Create();
@@ -117,10 +117,6 @@ public class AutoUpdate
                 await newEntryStream.FlushAsync();
             }
             await uncompressedArchiveStream.FlushAsync();
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            
         }
     }
 
