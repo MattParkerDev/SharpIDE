@@ -48,15 +48,8 @@ public partial class IdeWindow : Control
             var newRelease = await autoUpdate.CheckForUpdates(Singletons.AppState.LastCheckedForUpdates);
             if (newRelease is null) return;
             var uncompressedReleaseArchiveFilePath = await autoUpdate.EnsureReleaseZipReadyForSwap(newRelease);
-            var currentProcessExecutablePath = OS.GetExecutablePath();
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                ArgumentList = { Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs"), "--", Path.GetDirectoryName(currentProcessExecutablePath)!, currentProcessExecutablePath, uncompressedReleaseArchiveFilePath, Environment.ProcessId.ToString() },
-                UseShellExecute = true
-            };
-            var process = Process.Start(processStartInfo);
-            await Task.Delay(500);
+            await autoUpdate.StartUpdaterProcess(uncompressedReleaseArchiveFilePath);
+            // TODO: Check that child process isn't killed on windows
             GetTree().Quit();
         });
     }

@@ -1,6 +1,7 @@
 ﻿#!/usr/bin/env dotnet
 
 using System.Diagnostics;
+using System.Formats.Tar;
 using System.IO.Compression;
 
 try
@@ -27,7 +28,7 @@ try
 		Console.WriteLine($"Waiting for SharpIDE process (PID: {runningIdeInstancePid}) to exit...");
 		await runningIdeProcess.WaitForExitAsync();
 	}
-	catch (ArgumentException ex)
+	catch (ArgumentException)
 	{
 		// The process already exited
 	}
@@ -54,16 +55,18 @@ try
 
 	Console.WriteLine("Copying new version...");
 
-	var archive = await ZipFile.OpenReadAsync(newSharpIdeReleaseFilePath);
-	archive.ExtractToDirectory(sharpIdeInstallDir.FullName);
+	if (OperatingSystem.IsLinux())
+	{
+		await TarFile.ExtractToDirectoryAsync(newSharpIdeReleaseFilePath, sharpIdeInstallDir.FullName, false);
+	}
+	else if (OperatingSystem.IsWindows())
+	{
+		using var archive = await ZipFile.OpenReadAsync(newSharpIdeReleaseFilePath);
+		archive.ExtractToDirectory(sharpIdeInstallDir.FullName);
+	}
 
 	Console.WriteLine("Successfully updated, re-launching SharpIDE...");
-	Process.Start(new ProcessStartInfo()
-	{
-		FileName = sharpIdeRunningExecutableFilePath,
-		WorkingDirectory = sharpIdeInstallDir.FullName,
-		UseShellExecute = true
-	});
+	await StartProcessFireAndForget(sharpIdeRunningExecutableFilePath, sharpIdeInstallDir.FullName);
 }
 catch (Exception ex)
 {
@@ -72,4 +75,36 @@ catch (Exception ex)
 	Console.WriteLine("Press any key to exit...");
 	Console.ReadKey();
 	return;
+}
+
+async Task StartProcessFireAndForget(string fileName, string workingDirectory)
+{
+	ProcessStartInfo processStartInfo = null;
+	if (OperatingSystem.IsWindows())
+	{
+		processStartInfo = new ProcessStartInfo
+		{
+			FileName = fileName,
+			WorkingDirectory = workingDirectory,
+			UseShellExecute = true
+		};
+	}
+	else if (OperatingSystem.IsLinux())
+	{
+		processStartInfo = new ProcessStartInfo
+		{
+			FileName = "setsid",
+			ArgumentList = { fileName },
+			WorkingDirectory = workingDirectory,
+			UseShellExecute = false,
+			RedirectStandardOutput = false,
+		};
+	}
+	else if (OperatingSystem.IsMacOS())
+	{
+
+	}
+	var process = Process.Start(processStartInfo);
+	// For some reason, on Linux, SharpIDE blows up when opening if this process exits too quickly??
+	await Task.Delay(1000);
 }

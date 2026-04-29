@@ -1,7 +1,9 @@
-﻿using System.IO.Compression;
+﻿using System.Diagnostics;
+using System.IO.Compression;
 using System.Net.Http.Headers;
 using Ardalis.GuardClauses;
 using Godot;
+using Microsoft.CodeAnalysis;
 using NuGet.Versioning;
 using Octokit;
 using Environment = System.Environment;
@@ -52,13 +54,27 @@ public class AutoUpdate
         _ => throw new ArgumentOutOfRangeException()
     };
     private static readonly string ReleaseAssetNamePrefix = $"sharpide-{OsIdentifier}-{Architecture}-";
+    private static readonly string UncompressedArchiveExtension = OsIdentifier switch
+    {
+        "osx" => ".zip",
+        "linux" => ".tar",
+        "win" => ".zip",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+    private static readonly string CompressedArchiveExtension = OsIdentifier switch
+    {
+        "osx" => ".zip",
+        "linux" => ".tar.gz",
+        "win" => ".zip",
+        _ => throw new ArgumentOutOfRangeException()
+    };
     
     public async Task<string> EnsureReleaseZipReadyForSwap(Release release)
     {
         Directory.CreateDirectory(UpdateTempPath);
         Directory.CreateDirectory(Path.Combine(UpdateTempPath, "raw"));
         Directory.CreateDirectory(Path.Combine(UpdateTempPath, "ready"));
-        var uncompressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "ready", $"{ReleaseAssetNamePrefix}{release.Name[1..]}.zip"));
+        var uncompressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "ready", $"{ReleaseAssetNamePrefix}{release.Name[1..]}{UncompressedArchiveExtension}"));
         if (uncompressedReleaseArchive.Exists is false)
         {
             await CreateUncompressedArchiveForRelease(release, uncompressedReleaseArchive);
@@ -71,7 +87,7 @@ public class AutoUpdate
     private async Task CreateUncompressedArchiveForRelease(Release release, FileInfo uncompressedReleaseArchiveToCreate)
     {
         // remove the 'v' prefix from the release name
-        var compressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "raw", $"{ReleaseAssetNamePrefix}{release.Name[1..]}.zip"));
+        var compressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "raw", $"{ReleaseAssetNamePrefix}{release.Name[1..]}{CompressedArchiveExtension}"));
         if (compressedReleaseArchive.Exists is false)
         {
             await DownloadRelease(release);
@@ -79,19 +95,33 @@ public class AutoUpdate
             if (compressedReleaseArchive.Exists is false) throw new InvalidOperationException($"Release archive was not downloaded successfully to {compressedReleaseArchive.FullName}");
         }
         await using var compressedArchiveStream = compressedReleaseArchive.OpenRead();
-        await using var compressedZipArchive = await ZipArchive.CreateAsync(compressedArchiveStream, ZipArchiveMode.Read, leaveOpen: false, null);
-        await using var uncompressedArchiveStream = uncompressedReleaseArchiveToCreate.Create();
-        await using var uncompressedZipArchive = new ZipArchive(uncompressedArchiveStream, ZipArchiveMode.Create);
-        
-        foreach (var entry in compressedZipArchive.Entries)
+
+        if (OperatingSystem.IsLinux())
         {
-            var newEntry = uncompressedZipArchive.CreateEntry(entry.FullName, CompressionLevel.NoCompression);
-            await using var entryStream = await entry.OpenAsync();
-            await using var newEntryStream = await newEntry.OpenAsync();
-            await entryStream.CopyToAsync(newEntryStream);
-            await newEntryStream.FlushAsync();
+            await using var gz = new GZipStream(compressedArchiveStream, CompressionMode.Decompress, leaveOpen: true);
+            await using var uncompressedTarFileStream = uncompressedReleaseArchiveToCreate.Create();
+            await gz.CopyToAsync(uncompressedTarFileStream);
         }
-        await uncompressedArchiveStream.FlushAsync();
+        else if (OperatingSystem.IsWindows())
+        {
+            await using var compressedZipArchive = await ZipArchive.CreateAsync(compressedArchiveStream, ZipArchiveMode.Read, leaveOpen: true, null);
+            await using var uncompressedArchiveStream = uncompressedReleaseArchiveToCreate.Create();
+            await using var uncompressedZipArchive = new ZipArchive(uncompressedArchiveStream, ZipArchiveMode.Create);
+        
+            foreach (var entry in compressedZipArchive.Entries)
+            {
+                var newEntry = uncompressedZipArchive.CreateEntry(entry.FullName, CompressionLevel.NoCompression);
+                await using var entryStream = await entry.OpenAsync();
+                await using var newEntryStream = await newEntry.OpenAsync();
+                await entryStream.CopyToAsync(newEntryStream);
+                await newEntryStream.FlushAsync();
+            }
+            await uncompressedArchiveStream.FlushAsync();
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            
+        }
     }
 
     private static async Task DownloadRelease(Release release)
@@ -132,5 +162,34 @@ public class AutoUpdate
     private static GitHubClient GetGitHubClient()
     {
         return new GitHubClient(new ProductHeaderValue("SharpIDE-AutoUpdate"));
+    }
+
+    public async Task StartUpdaterProcess(string uncompressedReleaseArchiveFilePath)
+    {
+        var currentProcessExecutablePath = OS.GetExecutablePath();
+        List<string> args = [Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs"), "--", Path.GetDirectoryName(currentProcessExecutablePath)!, currentProcessExecutablePath, uncompressedReleaseArchiveFilePath, Environment.ProcessId.ToString()];
+        ProcessStartInfo processStartInfo = null!;
+        if (OperatingSystem.IsWindows())
+        {
+            processStartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                UseShellExecute = true
+            };
+            processStartInfo.ArgumentList.AddRange(args);
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            processStartInfo = new ProcessStartInfo
+            {
+                FileName = "setsid",
+                ArgumentList = { "x-terminal-emulator", "-e", "dotnet" },
+                UseShellExecute = false
+            };
+            processStartInfo.ArgumentList.AddRange(args);
+        }
+        
+        Process.Start(processStartInfo);
+        await Task.Delay(5000);
     }
 }
