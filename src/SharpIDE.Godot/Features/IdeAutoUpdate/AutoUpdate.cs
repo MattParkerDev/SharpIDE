@@ -183,7 +183,8 @@ public class AutoUpdate
             processStartInfo = new ProcessStartInfo
             {
                 FileName = "setsid",
-                ArgumentList = { "x-terminal-emulator", "-e", "dotnet" },
+                //ArgumentList = { "x-terminal-emulator", "-e", "dotnet" },
+                ArgumentList = { "dotnet" },
                 UseShellExecute = false
             };
             processStartInfo.ArgumentList.AddRange(args);
