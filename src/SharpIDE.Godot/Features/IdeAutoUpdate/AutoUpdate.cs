@@ -56,6 +56,8 @@ public class AutoUpdate
     public async Task<string> EnsureReleaseZipReadyForSwap(Release release)
     {
         Directory.CreateDirectory(UpdateTempPath);
+        Directory.CreateDirectory(Path.Combine(UpdateTempPath, "raw"));
+        Directory.CreateDirectory(Path.Combine(UpdateTempPath, "ready"));
         var uncompressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "ready", $"{ReleaseAssetNamePrefix}{release.Name[1..]}.zip"));
         if (uncompressedReleaseArchive.Exists is false)
         {
