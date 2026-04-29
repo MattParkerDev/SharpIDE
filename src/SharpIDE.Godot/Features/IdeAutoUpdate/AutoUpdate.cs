@@ -185,6 +185,16 @@ public class AutoUpdate
             };
             processStartInfo.ArgumentList.AddRange(args);
         }
+        if (OperatingSystem.IsMacOS())
+        {
+            processStartInfo = new ProcessStartInfo
+            {
+                FileName = "nohup",
+                ArgumentList = { "dotnet" },
+                UseShellExecute = true
+            };
+            processStartInfo.ArgumentList.AddRange(args);
+        }
         
         Process.Start(processStartInfo);
         await Task.Delay(5000);
