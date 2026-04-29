@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="ObservableCollections" />
     <PackageReference Include="ObservableCollections.R3" />
+    <PackageReference Include="Octokit" />
     <PackageReference Include="R3" />
     <PackageReference Include="Krafs.Publicizer">
         <PrivateAssets>all</PrivateAssets>
@@ -36,6 +37,7 @@
 
   <ItemGroup>
     <Content Include="Properties\launchSettings.json" />
+    <Content Include="..\update-sharpide.cs" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
     <Target Name="CopyBuildHostOutputToOutput" AfterTargets="Build">

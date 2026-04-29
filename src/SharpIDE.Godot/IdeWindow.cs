@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Godot;
 using Microsoft.Extensions.Hosting;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Godot.Features.IdeAutoUpdate;
 using SharpIDE.Godot.Features.IdeSettings;
 using SharpIDE.Godot.Features.Settings;
 using SharpIDE.Godot.Features.SlnPicker;
@@ -39,6 +41,24 @@ public partial class IdeWindow : Control
         SetIdeThemeFromAppState();
         //GetWindow().SetMinSize(new Vector2I(1152, 648));
         Callable.From(() => PickSolution(true)).CallDeferred();
+        _ = Task.GodotRun(async () =>
+        {
+            //await Task.Delay(5000);
+            var autoUpdate = new AutoUpdate();
+            var newRelease = await autoUpdate.CheckForUpdates(Singletons.AppState.LastCheckedForUpdates);
+            if (newRelease is null) return;
+            var uncompressedReleaseArchiveFilePath = await autoUpdate.EnsureReleaseZipReadyForSwap(newRelease);
+            var currentProcessExecutablePath = OS.GetExecutablePath();
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                ArgumentList = { Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs"), "--", Path.GetDirectoryName(currentProcessExecutablePath)!, currentProcessExecutablePath, uncompressedReleaseArchiveFilePath, Environment.ProcessId.ToString() },
+                UseShellExecute = true
+            };
+            var process = Process.Start(processStartInfo);
+            await Task.Delay(500);
+            GetTree().Quit();
+        });
     }
     
     public override void _ExitTree()
