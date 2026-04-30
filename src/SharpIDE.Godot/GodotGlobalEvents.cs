@@ -1,4 +1,5 @@
-﻿using SharpIDE.Application.Features.Analysis;
+﻿using Godot;
+using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Godot.Features.BottomPanel;
@@ -15,4 +16,6 @@ public class GodotGlobalEvents
     public EventWrapper<SharpIdeFile, SharpIdeFileLinePosition?, Task> FileSelected { get; } = new((_, _) => Task.CompletedTask);
     public EventWrapper<SharpIdeFile, SharpIdeFileLinePosition?, Task> FileExternallySelected { get; } = new((_, _) => Task.CompletedTask);
     public EventWrapper<LightOrDarkTheme, Task> TextEditorThemeChanged { get; } = new(_ => Task.CompletedTask);
+    public EventWrapper<Font, int, Task> TextEditorFontChanged { get; } = new((_, _) => Task.CompletedTask);
+    public EventWrapper<bool, Task> TextEditorCodeFoldingChanged { get; } = new(_ => Task.CompletedTask);
 }
