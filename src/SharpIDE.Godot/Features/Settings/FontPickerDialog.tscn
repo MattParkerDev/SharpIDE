@@ -1,0 +1,88 @@
+[gd_scene format=3 uid="uid://bkw3m18ndkev3"]
+
+[ext_resource type="Script" uid="uid://ol6bjg18q57t" path="res://Features/Settings/FontPickerDialog.cs" id="1_85ic8"]
+[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_fbhsw"]
+
+[node name="FontPickerDialog" type="Window" unique_id=909223170]
+oversampling_override = 1.0
+title = "Select Font"
+position = Vector2i(0, 36)
+size = Vector2i(500, 400)
+script = ExtResource("1_85ic8")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1307484213]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1591562995]
+layout_mode = 2
+
+[node name="FontList" type="ItemList" parent="VBoxContainer/HBoxContainer" unique_id=1670968439]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 100)
+layout_mode = 2
+size_flags_horizontal = 3
+item_count = 3
+item_0/text = "Item 1"
+item_1/text = "Item 2"
+item_2/text = "Item 3"
+
+[node name="FontSize" type="ItemList" parent="VBoxContainer/HBoxContainer" unique_id=1927929300]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+item_count = 12
+item_0/text = "10"
+item_1/text = "12"
+item_2/text = "14"
+item_3/text = "16"
+item_4/text = "18"
+item_5/text = "24"
+item_6/text = "30"
+item_7/text = "36"
+item_8/text = "48"
+item_9/text = "60"
+item_10/text = "72"
+item_11/text = "84"
+
+[node name="Preview" type="CodeEdit" parent="VBoxContainer" unique_id=541199698]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("1_fbhsw")
+theme_override_font_sizes/font_size = 18
+text = "using System;
+
+namespace HelloWorld;
+
+class Hello
+{
+	protected static Main(string[] args)
+	{
+		Console.WriteLine(\"Hello World!\");
+	}
+}"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer" unique_id=1276417969]
+layout_mode = 2
+size_flags_vertical = 8
+alignment = 2
+
+[node name="DefaultFont" type="Button" parent="VBoxContainer/HBoxContainer2" unique_id=1940841584]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Default"
+
+[node name="Apply" type="Button" parent="VBoxContainer/HBoxContainer2" unique_id=1776305453]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Apply"
+
+[node name="Cancel" type="Button" parent="VBoxContainer/HBoxContainer2" unique_id=1389832274]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"
