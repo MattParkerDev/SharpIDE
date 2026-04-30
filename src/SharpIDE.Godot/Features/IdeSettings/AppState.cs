@@ -16,6 +16,9 @@ public class IdeSettings
     public bool DebuggerUseSharpDbg { get; set; } = true;
     public float UiScale { get; set; } = 1.0f;
     public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
+    public string EditorFont { get; set; } = "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres";
+    public int FontSize { get; set; } = 18;
+    public bool AllowFolding { get; set; } = false;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
