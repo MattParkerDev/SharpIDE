@@ -162,7 +162,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		// Note that this means breakpoints on e.g. the first line of Main may be missed. It would be ideal for netcoredbg to fix this behaviour.
 		if (isNetCoreDbg)
 		{
-			new DiagnosticsClient(debuggeeProcessId).ResumeRuntime();
+			await DiagnosticClientResumeRuntime(debuggeeProcessId);
 			var configurationDoneRequest = new ConfigurationDoneRequest();
 			debugProtocolHost.SendRequestSync(configurationDoneRequest);
 		}
@@ -170,11 +170,35 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		{
 			var configurationDoneRequest = new ConfigurationDoneRequest();
 			debugProtocolHost.SendRequestSync(configurationDoneRequest);
-			new DiagnosticsClient(debuggeeProcessId).ResumeRuntime();
+			await DiagnosticClientResumeRuntime(debuggeeProcessId);
 		}
 		var sessionId = new DebuggerSessionId(Guid.NewGuid());
 		_debugProtocolHosts[sessionId] = debugProtocolHost;
 		return sessionId;
+	}
+
+	// For applications like godot, which start their own CLR, diagnostics IPC may not be available immediately.
+	// Retry until it succeeds.
+	private static async Task DiagnosticClientResumeRuntime(int debuggeeProcessId)
+	{
+		var diagnosticsClient = new DiagnosticsClient(debuggeeProcessId);
+		const int maxRetries = 5;
+		var delayMs = 50;
+
+		for (var attempt = 1; attempt <= maxRetries; attempt++)
+		{
+			try
+			{
+				await Task.Delay(delayMs);
+				diagnosticsClient.ResumeRuntime();
+				return;
+			}
+			catch (ServerNotAvailableException) when (attempt < maxRetries)
+			{
+				delayMs *= 2;
+			}
+		}
+		diagnosticsClient.ResumeRuntime();
 	}
 
 	public async Task CloseDebuggerSession(DebuggerSessionId debuggerSessionId)
