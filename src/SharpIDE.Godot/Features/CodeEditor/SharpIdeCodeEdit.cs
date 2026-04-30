@@ -99,6 +99,41 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var vScrollBar = GetVScrollBar();
 		hScrollBar.ValueChanged += OnCodeEditScrolled;
 		vScrollBar.ValueChanged += OnCodeEditScrolled;
+		AddCommentDelimiter("#","", true);
+		SetCodeRegionTags("region","endregion");
+		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(UpdateCodeFolding);
+		GodotGlobalEvents.Instance.TextEditorFontChanged.Subscribe(UpdateFont);
+		_ = UpdateCodeFolding(Singletons.AppState.IdeSettings.AllowFolding);
+
+		Font nfont;
+		if (Singletons.AppState.IdeSettings.EditorFont.StartsWith("res://"))
+			nfont = GD.Load<FontVariation>(Singletons.AppState.IdeSettings.EditorFont);
+		else
+			nfont = new SystemFont()
+			{
+				FontNames = [Singletons.AppState.IdeSettings.EditorFont]
+			};
+		_ = UpdateFont(nfont, Singletons.AppState.IdeSettings.FontSize);
+	}
+
+	private Task UpdateCodeFolding(bool value)
+	{
+		Callable.From(() =>
+		{
+			LineFolding = value;
+			GuttersDrawFoldGutter = value;
+		}).CallDeferred();
+		return Task.CompletedTask;
+	}
+
+	private Task UpdateFont(Font font, int size)
+	{
+		Callable.From(() =>
+		{
+			AddThemeFontOverride("font", font);
+			AddThemeFontSizeOverride("font_size", size);
+		}).CallDeferred();
+		return Task.CompletedTask;
 	}
 
 	private readonly CancellationSeries _solutionAlteredCancellationTokenSeries = new();
