@@ -6,6 +6,10 @@
 [ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="3_cd138"]
 [ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="3_hxkig"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8lles"]
+resource_local_to_scene = true
+bg_color = Color(0.4745098, 0.4745098, 0.4745098, 0)
+
 [sub_resource type="Animation" id="Animation_8lles"]
 resource_name = "BuildingAnimation"
 length = 0.8
@@ -45,17 +49,17 @@ _data = {
 }
 
 [node name="RunMenuItem" type="HBoxContainer" unique_id=1305347884]
-offset_right = 40.0
+offset_right = 181.0
 offset_bottom = 40.0
 script = ExtResource("1_syj0f")
 
 [node name="Label" type="Label" parent="." unique_id=1727711838]
 layout_mode = 2
-text = "Project Name"
-
-[node name="Spacer" type="Control" parent="." unique_id=1831433607]
-layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_8lles")
+text = "Project Name"
+vertical_alignment = 1
 
 [node name="AnimatedTextureParentControl" type="Control" parent="." unique_id=1016714895]
 unique_name_in_owner = true
