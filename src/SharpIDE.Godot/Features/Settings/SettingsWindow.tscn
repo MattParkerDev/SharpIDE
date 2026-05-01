@@ -171,7 +171,6 @@ text = "Editor Font"
 [node name="FontPicker" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1114197524]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 10
 theme_override_fonts/font = ExtResource("2_bmmi8")
 text = "Cascadia | 18"
 

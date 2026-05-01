@@ -114,7 +114,6 @@ public partial class SettingsWindow : Window
         };
         AddChild(dlg);
         dlg.PopupCentered();
-        await ToSignal(dlg, FontPickerDialog.SignalName.FontSelected);
     }
 
     private void OnFoldCodeToggled(bool value)
