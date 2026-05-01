@@ -52,16 +52,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
-	
-    [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
-    [Inject] private readonly RunService _runService = null!;
-    [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-    [Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
-    [Inject] private readonly FileChangedService _fileChangedService = null!;
-    [Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
-    [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
-    [Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
-    [Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
+
+	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
+	[Inject] private readonly RunService _runService = null!;
+	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+	[Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
+	[Inject] private readonly FileChangedService _fileChangedService = null!;
+	[Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
+	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+	[Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
+	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
 
 	public SharpIdeCodeEdit()
 	{
