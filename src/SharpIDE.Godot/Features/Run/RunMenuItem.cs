@@ -4,8 +4,11 @@ using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Godot.Features.Run;
 
-public partial class RunMenuItem : HBoxContainer
+public partial class RunMenuItem : Control
 {
+    [Signal]
+    public delegate void PressedEventHandler();
+    
     public SharpIdeProjectModel Project { get; set; } = null!;
     private Label _label = null!;
     private Button _runButton = null!;
@@ -30,6 +33,31 @@ public partial class RunMenuItem : HBoxContainer
         Project.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
         Project.ProjectStoppedRunning.Subscribe(OnProjectStoppedRunning);
         Project.ProjectRunFailed.Subscribe(OnProjectRunFailed);
+        MouseEntered += HandleMouseEntered;
+        MouseExited += HandleMouseExited;
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton iemb) return;
+        if (iemb is {Pressed: true, ButtonIndex: MouseButton.Left})
+            EmitSignalPressed();
+    }
+
+    private void HandleMouseEntered()
+    {
+        var sb = (StyleBoxFlat)_label.GetThemeStylebox("normal");
+        var color = sb.BgColor;
+        color.A = 255;
+        sb.BgColor = color;
+    }
+
+    private void HandleMouseExited()
+    {
+        var sb = (StyleBoxFlat)_label.GetThemeStylebox("normal");
+        var color = sb.BgColor;
+        color.A = 0;
+        sb.BgColor = color;
     }
 
     private async Task OnProjectRunFailed()
