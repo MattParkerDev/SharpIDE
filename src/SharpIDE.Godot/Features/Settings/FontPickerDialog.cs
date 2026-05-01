@@ -83,7 +83,6 @@ public partial class FontPickerDialog : Window
 	
 	private void OnCloseRequested()
 	{
-		EmitSignalFontSelected("", -1);
 		QueueFree();
 	}
 
@@ -116,6 +115,24 @@ public partial class FontPickerDialog : Window
 		_selectedSize = 18;
 		_preview.AddThemeFontOverride("font", GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
 		_preview.AddThemeFontSizeOverride("font_size", 18);
+		for (var i = 0; i < _fontList.GetItemCount(); i++)
+		{
+			if (_fontList.GetItemText(i) != "Default Font") continue;
+			_fontList.Select(i);
+			break;
+		}
+
+		for (var i = 0; i < _fontSize.GetItemCount(); i++)
+		{
+			if (_fontSize.GetItemText(i) != $"{_selectedSize}") continue;
+			_fontSize.Select(i);
+			break;
+		}
+		Callable.From(() =>
+		{
+			_fontList.EnsureCurrentIsVisible();
+			_fontSize.EnsureCurrentIsVisible();
+		}).CallDeferred();
 	}
 
 	private void OnApplyPressed()
@@ -126,7 +143,6 @@ public partial class FontPickerDialog : Window
 
 	private void OnCancelPressed()
 	{
-		EmitSignalFontSelected("",-1);
 		QueueFree();
 	}
 }
