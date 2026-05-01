@@ -118,21 +118,21 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	private Task UpdateCodeFolding(bool value)
 	{
-		Callable.From(() =>
+		Callable.From<bool>((useFolding) =>
 		{
-			LineFolding = value;
-			GuttersDrawFoldGutter = value;
-		}).CallDeferred();
+			LineFolding = useFolding;
+			GuttersDrawFoldGutter = useFolding;
+		}).CallDeferred(value);
 		return Task.CompletedTask;
 	}
 
 	private Task UpdateFont(Font font, int size)
 	{
-		Callable.From(() =>
+		Callable.From<Font, int>((newFont, newSize) =>
 		{
-			AddThemeFontOverride("font", font);
-			AddThemeFontSizeOverride("font_size", size);
-		}).CallDeferred();
+			AddThemeFontOverride("font", newFont);
+			AddThemeFontSizeOverride("font_size", newSize);
+		}).CallDeferred(font, size);
 		return Task.CompletedTask;
 	}
 
