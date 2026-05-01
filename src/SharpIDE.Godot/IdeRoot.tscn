@@ -14,8 +14,12 @@
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="5_y3aoi"]
 [ext_resource type="Script" uid="uid://cvvgp42r3nml8" path="res://Features/BottomPanel/BottomPanelManager.cs" id="7_i62lx"]
 [ext_resource type="PackedScene" uid="uid://c5dlwgcx3ubyp" path="res://Features/CodeEditor/CodeEditorPanel.tscn" id="8_7ptyn"]
+[ext_resource type="Texture2D" uid="uid://da8cx83rohk50" path="res://Features/LeftSideBar/Resources/Build.svg" id="8_tmssf"]
+[ext_resource type="PackedScene" uid="uid://du1371oogv5dj" path="res://Features/Run/CustomRunButton.tscn" id="9_rl2d5"]
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
+[ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="10_r1ap7"]
 [ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
+[ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="11_rl2d5"]
 [ext_resource type="PackedScene" uid="uid://dkjips8oudqou" path="res://Features/Debug_/DebugPanel.tscn" id="11_s2dv6"]
 [ext_resource type="PackedScene" uid="uid://8lk0qj233a7p" path="res://Features/Search/SearchInFiles/SearchWindow.tscn" id="13_7ptyn"]
 [ext_resource type="PackedScene" uid="uid://b0tjuqq3bca5e" path="res://Features/IdeDiagnostics/IdeDiagnosticsPanel.tscn" id="13_woo5i"]
@@ -111,19 +115,35 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RunMenuButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=193947069]
+[node name="BuildProject" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=63620535]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("8_tmssf")
+expand_icon = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1654824922]
+layout_mode = 2
+
+[node name="ProjectList" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer" unique_id=1336831619 instance=ExtResource("9_rl2d5")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="RunMenuButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer" unique_id=193947069]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
-disabled = true
 icon = ExtResource("2_8x8ub")
 icon_alignment = 1
 
-[node name="RunMenuPopup" type="Popup" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton" unique_id=92504102]
+[node name="RunMenuPopup" type="Popup" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer/RunMenuButton" unique_id=92504102]
 unique_name_in_owner = true
 size = Vector2i(151, 100)
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup" unique_id=911955929]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer/RunMenuButton/RunMenuPopup" unique_id=911955929]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -134,8 +154,21 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup/MarginContainer" unique_id=1372084780]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer/RunMenuButton/RunMenuPopup/MarginContainer" unique_id=1372084780]
 layout_mode = 2
+
+[node name="StopButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer" unique_id=263543484]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("10_r1ap7")
+
+[node name="DebugButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer" unique_id=495543979]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("11_rl2d5")
 
 [node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
 layout_mode = 2

@@ -38,6 +38,8 @@ public partial class IdeRoot : Control
 	private Button _runMenuButton = null!;
 	private Popup _runMenuPopup = null!;
 	private BottomPanelManager _bottomPanelManager = null!;
+
+	private CustomRunButton _projectList = null!;
 	
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -84,6 +86,9 @@ public partial class IdeRoot : Control
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
 		_bottomPanelManager = GetNode<BottomPanelManager>("%BottomPanel");
 		
+		//_projectList = GetNode<OptionButton>("%ProjectList");
+		_projectList = GetNode<CustomRunButton>("%ProjectList");
+		
 		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
@@ -97,6 +102,7 @@ public partial class IdeRoot : Control
 		GodotGlobalEvents.Instance.BottomPanelVisibilityChangeRequested.Subscribe(async show => await this.InvokeAsync(() => _invertedVSplitContainer.InvertedSetCollapsed(!show)));
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
+		_projectList.StartupProjectChanged += OnStartupProjectChanged;
 	}
 
 	private async Task OnBuildStarted(BuildStartedFlags flags) => await OnBuildRunningStateChanged(true, flags);
@@ -201,19 +207,34 @@ public partial class IdeRoot : Control
 
 			var tasks = solutionModel.AllProjects.Select(p => p.MsBuildEvaluationProjectTask).ToList();
 			await Task.WhenAll(tasks).ConfigureAwait(false);
+			
 			var runnableProjects = solutionModel.AllProjects.Where(p => p.IsLoaded && p.IsRunnable).ToList();
+			// Startup Project
+			var cproj = Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.LastStartupProject;
+			
 			await this.InvokeAsync(() =>
 			{
-				var runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
 				foreach (var project in runnableProjects)
 				{
-					var runMenuItem = _runMenuItemScene.Instantiate<RunMenuItem>();
-					runMenuItem.Project = project;
-					runMenuPopupVbox.AddChild(runMenuItem);
+					_projectList.AddOption(project);
+					if (project.FilePath == cproj)
+						_projectList.SelectOption(project);
 				}
-				_runMenuButton.Disabled = false;
 			});
+
+			if (_projectList.CurrentRunOption == null)
+				_projectList.SelectOption(0);
 		});
+	}
+
+	private void OnStartupProjectChanged()
+	{
+		var solutionModel = _solutionExplorerPanel.SolutionModel;
+		var runnableProjects = solutionModel.AllProjects.Where(p => p.IsRunnable).ToList();
+		var cproj = _projectList.CurrentRunOption.Model;
+		if (!runnableProjects.Contains(cproj)) return;
+		
+		Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.LastStartupProject = cproj.FilePath;
 	}
 	
 	public override void _UnhandledKeyInput(InputEvent @event)
