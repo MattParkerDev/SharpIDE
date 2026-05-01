@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
 [ext_resource type="PackedScene" uid="uid://dhyd2tv2xvtwu" path="res://Features/Run/StartupProject.tscn" id="9_tmssf"]
 [ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
+[ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="11_rl2d5"]
 [ext_resource type="PackedScene" uid="uid://dkjips8oudqou" path="res://Features/Debug_/DebugPanel.tscn" id="11_s2dv6"]
 [ext_resource type="PackedScene" uid="uid://8lk0qj233a7p" path="res://Features/Search/SearchInFiles/SearchWindow.tscn" id="13_7ptyn"]
 [ext_resource type="PackedScene" uid="uid://b0tjuqq3bca5e" path="res://Features/IdeDiagnostics/IdeDiagnosticsPanel.tscn" id="13_woo5i"]
@@ -123,6 +124,19 @@ expand_icon = true
 [node name="StartupProject" parent="VBoxContainer/Panel/HBoxContainer" unique_id=341465202 instance=ExtResource("9_tmssf")]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="StopButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer" unique_id=263543484]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("10_r1ap7")
+
+[node name="DebugButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer/HBoxContainer" unique_id=495543979]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("11_rl2d5")
 
 [node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
 layout_mode = 2
