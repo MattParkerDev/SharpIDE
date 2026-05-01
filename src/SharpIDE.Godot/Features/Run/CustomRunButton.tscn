@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://du1371oogv5dj"]
+
+[ext_resource type="Script" uid="uid://nwepdo8njw4l" path="res://Features/Run/CustomRunButton.cs" id="1_rlcoe"]
+
+[sub_resource type="DPITexture" id="DPITexture_l37ox"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\"><path fill=\"none\" stroke=\"#b2b2b2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-opacity=\".85\" stroke-width=\"2\" d=\"m2 4 4 4 4-4\"/></svg>
+"
+
+[node name="CustomRunButton" type="Button" unique_id=1336831619]
+custom_minimum_size = Vector2(143, 0)
+offset_right = 143.0
+offset_bottom = 31.0
+text = "<No Project...>"
+alignment = 0
+script = ExtResource("1_rlcoe")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=256296248]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -21.0
+offset_top = -8.0
+offset_right = -5.0
+offset_bottom = 8.0
+grow_horizontal = 0
+grow_vertical = 2
+texture = SubResource("DPITexture_l37ox")
+
+[node name="RunMenuPopup" type="Popup" parent="." unique_id=1494309304]
+unique_name_in_owner = true
+oversampling_override = 1.0
+position = Vector2i(0, 37)
+size = Vector2i(151, 100)
+
+[node name="MarginContainer" type="MarginContainer" parent="RunMenuPopup" unique_id=2114816769]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="RunOptions" type="VBoxContainer" parent="RunMenuPopup/MarginContainer" unique_id=232179440]
+unique_name_in_owner = true
+layout_mode = 2
