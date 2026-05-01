@@ -100,7 +100,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		hScrollBar.ValueChanged += OnCodeEditScrolled;
 		vScrollBar.ValueChanged += OnCodeEditScrolled;
 		AddCommentDelimiter("#","", true);
-		SetCodeRegionTags("region","endregion");
+		SetCodeRegionTags("region", "endregion");
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(UpdateCodeFolding);
 		GodotGlobalEvents.Instance.TextEditorFontChanged.Subscribe(UpdateFont);
 		_ = UpdateCodeFolding(Singletons.AppState.IdeSettings.AllowFolding);
