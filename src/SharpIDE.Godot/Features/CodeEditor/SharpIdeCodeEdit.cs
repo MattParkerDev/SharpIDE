@@ -130,8 +130,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		Callable.From<Font, int>((newFont, newSize) =>
 		{
-			AddThemeFontOverride("font", newFont);
-			AddThemeFontSizeOverride("font_size", newSize);
+			AddThemeFontOverride(ThemeStringNames.Font, newFont);
+			AddThemeFontSizeOverride(ThemeStringNames.FontSize, newSize);
 		}).CallDeferred(font, size);
 		return Task.CompletedTask;
 	}

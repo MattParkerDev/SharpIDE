@@ -88,7 +88,7 @@ public partial class SettingsWindow : Window
         GodotGlobalEvents.Instance.TextEditorThemeChanged.InvokeParallelFireAndForget(lightOrDarkTheme);
     }
 
-    private async void OnFontPickerPressed()
+    private void OnFontPickerPressed()
     {
         var dlg = GD.Load<PackedScene>("res://Features/Settings/FontPickerDialog.tscn").Instantiate<FontPickerDialog>();
         dlg.FontSelected += (font, size) =>
