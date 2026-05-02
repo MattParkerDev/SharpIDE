@@ -102,18 +102,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		AddCommentDelimiter("#","", true);
 		SetCodeRegionTags("region", "endregion");
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(UpdateCodeFolding);
-		GodotGlobalEvents.Instance.TextEditorFontChanged.Subscribe(UpdateFont);
 		_ = UpdateCodeFolding(Singletons.AppState.IdeSettings.AllowFolding);
-
-		Font nfont;
-		if (Singletons.AppState.IdeSettings.EditorFont.StartsWith("res://"))
-			nfont = GD.Load<FontVariation>(Singletons.AppState.IdeSettings.EditorFont);
-		else
-			nfont = new SystemFont()
-			{
-				FontNames = [Singletons.AppState.IdeSettings.EditorFont]
-			};
-		_ = UpdateFont(nfont, Singletons.AppState.IdeSettings.FontSize);
 	}
 
 	private Task UpdateCodeFolding(bool value)
@@ -123,16 +112,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			LineFolding = useFolding;
 			GuttersDrawFoldGutter = useFolding;
 		}).CallDeferred(value);
-		return Task.CompletedTask;
-	}
-
-	private Task UpdateFont(Font font, int size)
-	{
-		Callable.From<Font, int>((newFont, newSize) =>
-		{
-			AddThemeFontOverride(ThemeStringNames.Font, newFont);
-			AddThemeFontSizeOverride(ThemeStringNames.FontSize, newSize);
-		}).CallDeferred(font, size);
 		return Task.CompletedTask;
 	}
 

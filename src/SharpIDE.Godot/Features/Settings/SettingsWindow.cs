@@ -110,7 +110,8 @@ public partial class SettingsWindow : Window
                 };
             }
             _fontPicker.AddThemeFontOverride("font", nfont);
-            GodotGlobalEvents.Instance.TextEditorFontChanged.InvokeParallelFireAndForget(nfont, size);
+            this.ThemeSetCodeEditFont(nfont);
+            this.ThemeSetCodeEditFontSize(size);
         };
         AddChild(dlg);
         dlg.PopupCentered();
