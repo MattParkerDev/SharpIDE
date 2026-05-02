@@ -64,6 +64,8 @@ public partial class IdeWindow : Control
     
     private void UpdateGlobalThemesFromAppState()
     {
+        SetThemeExtensions.EditorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
+        SetThemeExtensions.EditorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
         var editorFontSize = Singletons.AppState.IdeSettings.EditorFontSize;
         var editorFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
         if (editorFontSize is not null) this.ThemeSetCodeEditFontSize(editorFontSize.Value);

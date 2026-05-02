@@ -14,9 +14,6 @@ public partial class FontPickerDialog : Window
 	private Button _resetToDefaultButton = null!;
 	private Button _saveButton = null!;
 	private Button _cancelButton = null!;
-	
-	private Font _editorDefaultFont = null!;
-	private int _editorDefaultFontSize = -1;
 
 	private string? _selectedSystemFontName;
 	private int? _selectedFontSize;
@@ -29,9 +26,6 @@ public partial class FontPickerDialog : Window
 		_resetToDefaultButton = GetNode<Button>("%ResetToDefaultButton");
 		_saveButton = GetNode<Button>("%SaveButton");
 		_cancelButton = GetNode<Button>("%CancelButton");
-		
-		_editorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
-		_editorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
 
 		CloseRequested += QueueFree;
 		_systemFontItemList.ItemSelected += OnSystemFontItemListItemSelected;
@@ -51,7 +45,7 @@ public partial class FontPickerDialog : Window
 		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorSystemFontName) is false) Singletons.AppState.IdeSettings.EditorSystemFontName = null;
 		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
 
-		_systemFontItemList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}");
+		_systemFontItemList.AddItem($"SharpIDE Default - {SetThemeExtensions.EditorDefaultFont.GetFontName()}");
 		_systemFontItemList.Select(0);
 		foreach (var fontName in systemFontNames)
 		{
@@ -93,7 +87,7 @@ public partial class FontPickerDialog : Window
 		if (index is 0)
 		{
 			_selectedSystemFontName = null;
-			_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, _editorDefaultFont);
+			_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, SetThemeExtensions.EditorDefaultFont);
 			return;
 		}
 		var systemFontName = _systemFontItemList.GetItemText((int)index);
@@ -107,7 +101,7 @@ public partial class FontPickerDialog : Window
 		if (index is 0)
 		{
 			_selectedFontSize = null;
-			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _editorDefaultFontSize);
+			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, SetThemeExtensions.EditorDefaultFontSize);
 			return;
 		}
 		var px = _fontSizeItemList.GetItemText((int)index).ToInt();
@@ -119,8 +113,8 @@ public partial class FontPickerDialog : Window
 	{
 		_selectedSystemFontName = null;
 		_selectedFontSize = null;
-		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, _editorDefaultFont);
-		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _editorDefaultFontSize);
+		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, SetThemeExtensions.EditorDefaultFont);
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, SetThemeExtensions.EditorDefaultFontSize);
 		_systemFontItemList.Select(0);
 		_fontSizeItemList.Select(0);
 		

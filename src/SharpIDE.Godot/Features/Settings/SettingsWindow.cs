@@ -13,8 +13,6 @@ public partial class SettingsWindow : Window
     private CheckButton _foldCodeCheckButton = null!;
 
     private PackedScene _fontPickerDialogScene = ResourceLoader.Load<PackedScene>("uid://bkw3m18ndkev3");
-    private Font _editorDefaultFont = null!;
-    private int _editorDefaultFontSize = -1;
 
     public override void _Ready()
     {
@@ -25,9 +23,6 @@ public partial class SettingsWindow : Window
         _themeOptionButton = GetNode<OptionButton>("%ThemeOptionButton");
         _fontPickerButton = GetNode<Button>("%FontPickerButton");
         _foldCodeCheckButton = GetNode<CheckButton>("%FoldCodeCheckButton");
-
-        _editorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
-        _editorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
         
         _uiScaleSpinBox.ValueChanged += OnUiScaleSpinBoxValueChanged;
         _debuggerFilePathLineEdit.TextChanged += OnDebuggerFilePathChanged;
@@ -94,8 +89,8 @@ public partial class SettingsWindow : Window
             var (systemFontName, selectedFontSize) = result;
             Singletons.AppState.IdeSettings.EditorSystemFontName = systemFontName;
             Singletons.AppState.IdeSettings.EditorFontSize = selectedFontSize;
-            var font = systemFontName is null ? _editorDefaultFont : new SystemFont { FontNames = [systemFontName] };
-            var fontSize = selectedFontSize ?? _editorDefaultFontSize;
+            var font = systemFontName is null ? SetThemeExtensions.EditorDefaultFont : new SystemFont { FontNames = [systemFontName] };
+            var fontSize = selectedFontSize ?? SetThemeExtensions.EditorDefaultFontSize;
             _fontPickerButton.Text = $"{font.GetFontName()} | {fontSize}";
             _fontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, font);
             this.ThemeSetCodeEditFont(font);
