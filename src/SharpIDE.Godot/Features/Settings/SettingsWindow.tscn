@@ -161,26 +161,26 @@ text = "The Light theme is experimental, and may contain visual inconsistencies/
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=450069922]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=450069922]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=320561235]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=320561235]
 layout_mode = 2
 text = "Editor Font"
 
-[node name="FontPicker" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1114197524]
+[node name="FontPicker" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=1114197524]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bmmi8")
 text = "Cascadia | 18"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=772063925]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=772063925]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=1763133258]
+[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1763133258]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
-text = "Sets the Font and Size used in the Text Editor"
+text = "Sets the Font and Font Size used in the text editor"
 
 [node name="VBoxContainer6" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1978540309]
 layout_mode = 2
@@ -204,4 +204,4 @@ layout_mode = 2
 [node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=1973870174]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
-text = "Allows the Editor to fold code by brackets or region tags."
+text = "Enables folding gutter menu for brackets and region tags in the text editor"
