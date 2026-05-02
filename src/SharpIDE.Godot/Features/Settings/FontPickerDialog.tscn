@@ -12,17 +12,27 @@ transient = true
 exclusive = true
 script = ExtResource("1_85ic8")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1307484213]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1407264802]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1591562995]
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=1950915603]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=1307484213]
 layout_mode = 2
 
-[node name="FontList" type="ItemList" parent="VBoxContainer/HBoxContainer" unique_id=1670968439]
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1591562995]
+layout_mode = 2
+
+[node name="FontList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1670968439]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 100)
 layout_mode = 2
@@ -32,7 +42,7 @@ item_0/text = "Item 1"
 item_1/text = "Item 2"
 item_2/text = "Item 3"
 
-[node name="FontSize" type="ItemList" parent="VBoxContainer/HBoxContainer" unique_id=1927929300]
+[node name="FontSize" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1927929300]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
@@ -50,7 +60,7 @@ item_9/text = "60"
 item_10/text = "72"
 item_11/text = "84"
 
-[node name="Preview" type="CodeEdit" parent="VBoxContainer" unique_id=541199698]
+[node name="Preview" type="CodeEdit" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=541199698]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -69,22 +79,22 @@ class Hello
 	}
 }"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer" unique_id=1276417969]
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1276417969]
 layout_mode = 2
 size_flags_vertical = 8
 alignment = 2
 
-[node name="DefaultFont" type="Button" parent="VBoxContainer/HBoxContainer2" unique_id=1940841584]
+[node name="DefaultFont" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1940841584]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Default"
 
-[node name="Apply" type="Button" parent="VBoxContainer/HBoxContainer2" unique_id=1776305453]
+[node name="Apply" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1776305453]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Apply"
 
-[node name="Cancel" type="Button" parent="VBoxContainer/HBoxContainer2" unique_id=1389832274]
+[node name="Cancel" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1389832274]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Cancel"
