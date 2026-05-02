@@ -200,6 +200,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_projectDiagnosticsObserveDisposable?.Dispose();
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
+		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(UpdateCodeFolding);
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
 	
