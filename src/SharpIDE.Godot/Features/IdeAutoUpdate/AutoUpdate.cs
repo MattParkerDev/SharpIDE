@@ -111,6 +111,7 @@ public class AutoUpdate
             foreach (var entry in compressedZipArchive.Entries)
             {
                 var newEntry = uncompressedZipArchive.CreateEntry(entry.FullName, CompressionLevel.NoCompression);
+                newEntry.ExternalAttributes = entry.ExternalAttributes;
                 await using var entryStream = await entry.OpenAsync();
                 await using var newEntryStream = await newEntry.OpenAsync();
                 await entryStream.CopyToAsync(newEntryStream);
