@@ -72,9 +72,9 @@ text = "using System;
 
 namespace HelloWorld;
 
-class Hello
+public class Program
 {
-	protected static Main(string[] args)
+	public static Main(string[] args)
 	{
 		Console.WriteLine(\"Hello World!\");
 	}
