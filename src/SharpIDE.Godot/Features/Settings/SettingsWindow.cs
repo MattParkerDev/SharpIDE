@@ -11,7 +11,9 @@ public partial class SettingsWindow : Window
     private OptionButton _themeOptionButton = null!;
     private Button _fontPickerButton = null!;
     private CheckButton _foldCodeCheckButton = null!;
-    
+
+    private PackedScene _fontPickerDialogScene = ResourceLoader.Load<PackedScene>("uid://bkw3m18ndkev3");
+
     public override void _Ready()
     {
         CloseRequested += Hide;
@@ -90,7 +92,7 @@ public partial class SettingsWindow : Window
 
     private void OnFontPickerButtonPressed()
     {
-        var dlg = GD.Load<PackedScene>("res://Features/Settings/FontPickerDialog.tscn").Instantiate<FontPickerDialog>();
+        var dlg = _fontPickerDialogScene.Instantiate<FontPickerDialog>();
         dlg.FontSelected += (font, size) =>
         {
             Singletons.AppState.IdeSettings.EditorFont = font;
