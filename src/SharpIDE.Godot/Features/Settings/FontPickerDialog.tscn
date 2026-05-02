@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://bkw3m18ndkev3"]
 
 [ext_resource type="Script" uid="uid://ol6bjg18q57t" path="res://Features/Settings/FontPickerDialog.cs" id="1_85ic8"]
-[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_fbhsw"]
 
 [node name="FontPickerDialog" type="Window" unique_id=909223170]
 oversampling_override = 1.0
@@ -66,8 +65,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_fonts/font = ExtResource("1_fbhsw")
-theme_override_font_sizes/font_size = 18
 text = "using System;
 
 namespace HelloWorld;
