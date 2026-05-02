@@ -63,7 +63,7 @@ public partial class FontPickerDialog : Window
 		{
 			FontNames = [currentFont]
 		};
-		_preview.AddThemeFontOverride("font", nfont);
+		_preview.AddThemeFontOverride(ThemeStringNames.Font, nfont);
 	}
 
 	private void UpdateFontSize()
@@ -79,7 +79,7 @@ public partial class FontPickerDialog : Window
 		Callable.From(() => _fontSize.EnsureCurrentIsVisible()).CallDeferred();
 		if (Singletons.AppState.IdeSettings.FontSize is null) return;
 		_selectedSize = Singletons.AppState.IdeSettings.FontSize.Value;
-		_preview.AddThemeFontSizeOverride("font_size", Singletons.AppState.IdeSettings.FontSize.Value);
+		_preview.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.FontSize.Value);
 	}
 
 	private void OnFontListItemSelected(long index)
@@ -88,13 +88,13 @@ public partial class FontPickerDialog : Window
 		_selectedFont = font == "Default Font" ? "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" : font;
 		if (_selectedFont.StartsWith("res://"))
 		{
-			_preview.AddThemeFontOverride("font", GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
+			_preview.AddThemeFontOverride(ThemeStringNames.Font, GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
 		}
 		else
 		{
 			var nfont = new SystemFont();
 			nfont.FontNames = [_selectedFont];
-			_preview.AddThemeFontOverride("font", nfont);
+			_preview.AddThemeFontOverride(ThemeStringNames.Font, nfont);
 		}
 	}
 
@@ -102,15 +102,15 @@ public partial class FontPickerDialog : Window
 	{
 		var points = _fontSize.GetItemText((int)index).ToInt();
 		_selectedSize = points;
-		_preview.AddThemeFontSizeOverride("font_size", _selectedSize);
+		_preview.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _selectedSize);
 	}
 
 	private void OnResetToDefaultButtonPressed()
 	{
 		_selectedFont = "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres";
 		_selectedSize = 18;
-		_preview.AddThemeFontOverride("font", GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
-		_preview.AddThemeFontSizeOverride("font_size", 18);
+		_preview.AddThemeFontOverride(ThemeStringNames.Font, GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
+		_preview.AddThemeFontSizeOverride(ThemeStringNames.FontSize, 18);
 		for (var i = 0; i < _fontList.GetItemCount(); i++)
 		{
 			if (_fontList.GetItemText(i) != "Default Font") continue;
