@@ -177,7 +177,7 @@ text = "Cascadia | 18"
 [node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=772063925]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1763133258]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1763133258]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Sets the Font and Font Size used in the text editor"
@@ -201,7 +201,7 @@ size_flags_horizontal = 8
 [node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6" unique_id=1414460098]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer2" unique_id=1973870174]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer2" unique_id=1973870174]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Enables folding gutter menu for brackets and region tags in the text editor"
