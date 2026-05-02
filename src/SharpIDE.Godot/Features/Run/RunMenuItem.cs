@@ -8,6 +8,9 @@ public partial class RunMenuItem : Control
 {
     [Signal]
     public delegate void PressedEventHandler();
+
+    [Signal]
+    public delegate void RunRequestedEventHandler(RunMenuItem sender);
     
     public SharpIdeProjectModel Project { get; set; } = null!;
     private Label _label = null!;
@@ -103,6 +106,7 @@ public partial class RunMenuItem : Control
     private async void OnRunButtonPressed()
     {
         SetAttemptingRunState();
+        EmitSignalRunRequested(this);
         await _runService.RunProject(Project).ConfigureAwait(false);
     }
     
@@ -114,6 +118,7 @@ public partial class RunMenuItem : Control
             DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
         };
         SetAttemptingRunState();
+        EmitSignalRunRequested(this);
         await _runService.RunProject(Project, true, debuggerExecutableInfo).ConfigureAwait(false);
     }
     
