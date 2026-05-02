@@ -33,9 +33,7 @@ public partial class IdeRoot : Control
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
 	private InvertedVSplitContainer _invertedVSplitContainer = null!;
-	private Button _runMenuButton = null!;
-	private Popup _runMenuPopup = null!;
-	private CustomRunButton _projectList = null!;
+	private StartupProject _startupProject = null!;
 
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -72,15 +70,12 @@ public partial class IdeRoot : Control
 		_cleanSlnButton = GetNode<Button>("%CleanSlnButton");
 		_restoreSlnButton = GetNode<Button>("%RestoreSlnButton");
 		_cancelMsBuildActionButton = GetNode<TextureButton>("%CancelMsBuildActionButton");
-		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
-		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
-		_projectList = GetNode<CustomRunButton>("%ProjectList");
+		_startupProject = GetNode<StartupProject>("%StartupProject");
 
-		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
 		_buildSlnButton.Pressed += OnBuildSlnButtonPressed;
@@ -92,7 +87,7 @@ public partial class IdeRoot : Control
 		_buildService.BuildFinished.Subscribe(OnBuildFinished);
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
-		_projectList.StartupProjectChanged += OnStartupProjectChanged;
+		_startupProject.ProjectChanged += OnStartupProjectChanged;
 	}
 
 	private async Task OnBuildStarted(BuildStartedFlags flags) => await OnBuildRunningStateChanged(true, flags);
@@ -117,14 +112,6 @@ public partial class IdeRoot : Control
 		{
 			_ = Task.GodotRun(async () => await _openTabsFileManager.SaveAllOpenFilesAsync());
 		}
-	}
-
-	private void OnRunMenuButtonPressed()
-	{
-		var popupMenuPosition = _runMenuButton.GlobalPosition;
-		const int buttonHeight = 37;
-		_runMenuPopup.Position = new Vector2I((int)popupMenuPosition.X, (int)popupMenuPosition.Y + buttonHeight);
-		_runMenuPopup.Popup();
 	}
 
 	private void OnBuildSlnButtonPressed() => MsBuild(BuildType.Build);
@@ -204,14 +191,14 @@ public partial class IdeRoot : Control
 			{
 				foreach (var project in runnableProjects)
 				{
-					_projectList.AddOption(project);
+					_startupProject.ProjectList.AddOption(project);
 					if (project.FilePath == cproj)
-						_projectList.SelectOption(project);
+						_startupProject.ProjectList.SelectOption(project);
 				}
 			});
 
-			if (_projectList.CurrentRunOption == null)
-				_projectList.SelectOption(0);
+			if (_startupProject.ProjectList.CurrentRunOption == null)
+				_startupProject.ProjectList.SelectOption(0);
 		});
 	}
 
@@ -219,7 +206,7 @@ public partial class IdeRoot : Control
 	{
 		var solutionModel = _sharpIdeSolutionAccessor.SolutionModel;
 		var runnableProjects = solutionModel.AllProjects.Where(p => p.IsRunnable).ToList();
-		var cproj = _projectList.CurrentRunOption.Model;
+		var cproj = _startupProject.ProjectList.CurrentRunOption.Model;
 		if (!runnableProjects.Contains(cproj)) return;
 
 		Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.LastStartupProject = cproj.FilePath;
