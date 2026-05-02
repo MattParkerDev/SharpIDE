@@ -47,7 +47,7 @@ public partial class FontPickerDialog : Window
 
 		_systemFontItemList.AddItem($"SharpIDE Default - {SetThemeExtensions.EditorDefaultFont.GetFontName()}");
 		_systemFontItemList.Select(0);
-		foreach (var fontName in systemFontNames)
+		foreach (var fontName in systemFontNames.Order())
 		{
 			_systemFontItemList.AddItem(fontName);
 			if (fontName == _selectedSystemFontName)
