@@ -1,0 +1,104 @@
+[gd_scene format=3 uid="uid://dhyd2tv2xvtwu"]
+
+[ext_resource type="PackedScene" uid="uid://du1371oogv5dj" path="res://Features/Run/CustomRunButton.tscn" id="1_2ejfj"]
+[ext_resource type="Script" uid="uid://1bin35w54uw5" path="res://Features/Run/StartupProject.cs" id="1_xvvyx"]
+[ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_koxqn"]
+[ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="3_xvvyx"]
+[ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="4_lc1jj"]
+[ext_resource type="Texture2D" uid="uid://da8cx83rohk50" path="res://Features/LeftSideBar/Resources/Build.svg" id="6_lc1jj"]
+
+[sub_resource type="Animation" id="Animation_8lles"]
+resource_name = "BuildingAnimation"
+length = 0.8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BuildAnimationTextureRect:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.8),
+"transitions": PackedFloat32Array(2, -1.4, -1.4),
+"update": 0,
+"values": [0.34906584, 0.87266463, 0.34906584]
+}
+
+[sub_resource type="Animation" id="Animation_r58gv"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BuildAnimationTextureRect:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.87266463]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_8du37"]
+_data = {
+&"BuildingAnimation": SubResource("Animation_8lles"),
+&"RESET": SubResource("Animation_r58gv")
+}
+
+[node name="StartupProject" type="HBoxContainer" unique_id=341465202]
+script = ExtResource("1_xvvyx")
+
+[node name="ProjectList" parent="." unique_id=1336831619 instance=ExtResource("1_2ejfj")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Spacer" type="Control" parent="." unique_id=1103956024]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+
+[node name="AnimatedTextureParentControl" type="Control" parent="." unique_id=191750868]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BuildAnimationTextureRect" type="TextureRect" parent="AnimatedTextureParentControl" unique_id=976125115]
+layout_mode = 0
+offset_left = -3.0
+offset_top = 2.0
+offset_right = 22.0
+offset_bottom = 27.0
+rotation = 0.87266463
+pivot_offset = Vector2(11.83, 19.69)
+texture = ExtResource("6_lc1jj")
+expand_mode = 5
+stretch_mode = 5
+
+[node name="RunButton" type="Button" parent="." unique_id=510545134]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("2_koxqn")
+icon_alignment = 1
+
+[node name="DebugButton" type="Button" parent="." unique_id=1217205249]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("4_lc1jj")
+
+[node name="StopButton" type="Button" parent="." unique_id=1646206775]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("3_xvvyx")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=962804889]
+root_node = NodePath("../AnimatedTextureParentControl")
+libraries/ = SubResource("AnimationLibrary_8du37")
