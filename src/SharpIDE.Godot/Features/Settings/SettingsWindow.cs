@@ -97,7 +97,7 @@ public partial class SettingsWindow : Window
             var font = systemFontName is null ? _editorDefaultFont : new SystemFont { FontNames = [systemFontName] };
             var fontSize = selectedFontSize ?? _editorDefaultFontSize;
             _fontPickerButton.Text = $"{font.GetFontName()} | {fontSize}";
-            _fontPickerButton.AddThemeFontOverride("font", font);
+            _fontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, font);
             this.ThemeSetCodeEditFont(font);
             this.ThemeSetCodeEditFontSize(fontSize);
         };
