@@ -13,6 +13,8 @@ public partial class SettingsWindow : Window
     private CheckButton _foldCodeCheckButton = null!;
 
     private PackedScene _fontPickerDialogScene = ResourceLoader.Load<PackedScene>("uid://bkw3m18ndkev3");
+    private Font _editorDefaultFont = null!;
+    private int _editorDefaultFontSize = -1;
 
     public override void _Ready()
     {
@@ -23,6 +25,10 @@ public partial class SettingsWindow : Window
         _themeOptionButton = GetNode<OptionButton>("%ThemeOptionButton");
         _fontPickerButton = GetNode<Button>("%FontPickerButton");
         _foldCodeCheckButton = GetNode<CheckButton>("%FoldCodeCheckButton");
+
+        _editorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
+        _editorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
+        
         _uiScaleSpinBox.ValueChanged += OnUiScaleSpinBoxValueChanged;
         _debuggerFilePathLineEdit.TextChanged += OnDebuggerFilePathChanged;
         _debuggerUseSharpDbgCheckButton.Toggled += OnDebuggerUseSharpDbgToggled;
@@ -37,20 +43,10 @@ public partial class SettingsWindow : Window
         _uiScaleSpinBox.Value = Singletons.AppState.IdeSettings.UiScale;
         _debuggerFilePathLineEdit.Text = Singletons.AppState.IdeSettings.DebuggerExecutablePath;
         _debuggerUseSharpDbgCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg;
-        _fontPickerButton.Text = $"{Singletons.AppState.IdeSettings.EditorFont} | {Singletons.AppState.IdeSettings.FontSize}";
-        if (!Singletons.AppState.IdeSettings.EditorFont.StartsWith("res://"))
-        {
-            var nfont = new SystemFont()
-            {
-                FontNames = [Singletons.AppState.IdeSettings.EditorFont]
-            };
-            _fontPickerButton.AddThemeFontOverride("font", nfont);
-            _fontPickerButton.Text = $"{Singletons.AppState.IdeSettings.EditorFont} | {Singletons.AppState.IdeSettings.FontSize}";
-        }
-        else
-        {
-            _fontPickerButton.Text = $"Cascadia | {Singletons.AppState.IdeSettings.FontSize}";
-        }
+        var currentCodeEditThemeFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
+        var currentCodeEditThemeFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
+        _fontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, currentCodeEditThemeFont);
+        _fontPickerButton.Text = $"{currentCodeEditThemeFont.GetFontName()} | {currentCodeEditThemeFontSize}";
 
         _foldCodeCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.AllowFolding;
         var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme.ToString());
@@ -93,27 +89,17 @@ public partial class SettingsWindow : Window
     private void OnFontPickerButtonPressed()
     {
         var dlg = _fontPickerDialogScene.Instantiate<FontPickerDialog>();
-        dlg.FontSelected += (font, size) =>
+        dlg.FontSelected += result =>
         {
-            Singletons.AppState.IdeSettings.EditorFont = font;
-            Singletons.AppState.IdeSettings.FontSize = size;
-            Font nfont;
-            if (font.StartsWith("res://"))
-            {
-                _fontPickerButton.Text = $"Cascadia | {size}";
-                nfont = GD.Load<FontVariation>(font);
-            }
-            else
-            {
-                _fontPickerButton.Text = $"{font} | {size}";
-                nfont = new SystemFont()
-                {
-                    FontNames = [font]
-                };
-            }
-            _fontPickerButton.AddThemeFontOverride("font", nfont);
-            this.ThemeSetCodeEditFont(nfont);
-            this.ThemeSetCodeEditFontSize(size);
+            var (systemFontName, selectedFontSize) = result;
+            Singletons.AppState.IdeSettings.EditorFont = systemFontName;
+            Singletons.AppState.IdeSettings.FontSize = selectedFontSize;
+            var font = systemFontName is null ? _editorDefaultFont : new SystemFont { FontNames = [systemFontName] };
+            var fontSize = selectedFontSize ?? _editorDefaultFontSize;
+            _fontPickerButton.Text = $"{font.GetFontName()} | {fontSize}";
+            _fontPickerButton.AddThemeFontOverride("font", font);
+            this.ThemeSetCodeEditFont(font);
+            this.ThemeSetCodeEditFontSize(fontSize);
         };
         AddChild(dlg);
         dlg.PopupCentered();

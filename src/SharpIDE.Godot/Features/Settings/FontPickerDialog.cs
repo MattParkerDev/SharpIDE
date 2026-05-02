@@ -4,8 +4,9 @@ namespace SharpIDE.Godot.Features.Settings;
 
 public partial class FontPickerDialog : Window
 {
+	// Godot Signals don't support nullable value types, e.g. 'int?'
 	[Signal]
-	public delegate void FontSelectedEventHandler(string font, int fontSize);
+	public delegate void FontSelectedEventHandler(FontPickerResult result);
 	
 	private ItemList _fontList = null!;
 	private ItemList _fontSize = null!;
@@ -76,8 +77,9 @@ public partial class FontPickerDialog : Window
 		}
 
 		Callable.From(() => _fontSize.EnsureCurrentIsVisible()).CallDeferred();
-		_selectedSize = Singletons.AppState.IdeSettings.FontSize;
-		_preview.AddThemeFontSizeOverride("font_size", Singletons.AppState.IdeSettings.FontSize);
+		if (Singletons.AppState.IdeSettings.FontSize is null) return;
+		_selectedSize = Singletons.AppState.IdeSettings.FontSize.Value;
+		_preview.AddThemeFontSizeOverride("font_size", Singletons.AppState.IdeSettings.FontSize.Value);
 	}
 
 	private void OnFontListItemSelected(long index)
@@ -131,7 +133,19 @@ public partial class FontPickerDialog : Window
 
 	private void OnApplyPressed()
 	{
-		EmitSignalFontSelected(_selectedFont, _selectedSize);
+		EmitSignalFontSelected(new FontPickerResult(_selectedFont, _selectedSize));
 		QueueFree();
+	}
+}
+
+public partial class FontPickerResult(string? systemFontName, int? fontSize) : GodotObject
+{
+	public string? SystemFontName { get; init; } = systemFontName;
+	public int? FontSize { get; init; } = fontSize;
+
+	public void Deconstruct(out string? systemFontName, out int? fontSize)
+	{
+		systemFontName = SystemFontName;
+		fontSize = FontSize;
 	}
 }
