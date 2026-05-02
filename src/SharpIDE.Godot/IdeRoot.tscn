@@ -17,7 +17,6 @@
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="9_rllbf"]
 [ext_resource type="PackedScene" uid="uid://dhyd2tv2xvtwu" path="res://Features/Run/StartupProject.tscn" id="9_tmssf"]
 [ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="11_b7c1a"]
-[ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="11_rl2d5"]
 [ext_resource type="PackedScene" uid="uid://dkjips8oudqou" path="res://Features/Debug_/DebugPanel.tscn" id="11_s2dv6"]
 [ext_resource type="PackedScene" uid="uid://8lk0qj233a7p" path="res://Features/Search/SearchInFiles/SearchWindow.tscn" id="13_7ptyn"]
 [ext_resource type="PackedScene" uid="uid://b0tjuqq3bca5e" path="res://Features/IdeDiagnostics/IdeDiagnosticsPanel.tscn" id="13_woo5i"]
