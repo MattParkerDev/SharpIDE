@@ -7,7 +7,13 @@ using SharpIDE.Godot.Features.Run;
 public partial class CustomRunButton : Button
 {
 	[Signal]
-	public delegate void StartupProjectChangedEventHandler();
+	public delegate void ProjectChangedEventHandler();
+
+	[Signal]
+	public delegate void ItemAddedEventHandler(int index);
+
+	[Signal]
+	public delegate void RunRequestedEventHandler(RunMenuItem item);
 	
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private Popup _runMenuPopup = null!;
@@ -51,13 +57,16 @@ public partial class CustomRunButton : Button
 
 	public void AddOption(string name, SharpIdeProjectModel model)
 	{
+		var indx = Options.Count;
 		var ro = new RunOption(name, model);
 		Options.Add(ro);
 		var item = _runMenuItemScene.Instantiate<RunMenuItem>();
 		item.Project = model;
 		item.Pressed += () => HandleOptionPressed(ro);
+		item.RunRequested += EmitSignalRunRequested;
 		_runOptions.AddChild(item);
 		UpdateMinimumSize();
+		EmitSignalItemAdded(indx);
 	}
 
 	public void RemoveOption(SharpIdeProjectModel model)
@@ -121,22 +130,6 @@ public partial class CustomRunButton : Button
 	
 	public void SelectOption(RunOption option) => CurrentRunOption = option;
 
-	public void RunProject()
-	{
-		
-	}
-
-	public void DebugProject()
-	{
-		
-	}
-
-	public void StopProject()
-	{
-		
-	}
-	
-
 	private void UpdateMinimumSize()
 	{
 		var font = GetThemeDefaultFont();
@@ -174,7 +167,7 @@ public partial class CustomRunButton : Button
 		CurrentRunOption = option;
 		Text = option.Name;
 		_runMenuPopup.Hide();
-		EmitSignalStartupProjectChanged();
+		EmitSignalProjectChanged();
 	}
 }
 
