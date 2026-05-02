@@ -171,7 +171,7 @@ public class AutoUpdate
             processStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                UseShellExecute = true
+                UseShellExecute = false
             };
             processStartInfo.ArgumentList.AddRange(args);
         }
@@ -198,6 +198,6 @@ public class AutoUpdate
         }
         
         Process.Start(processStartInfo);
-        await Task.Delay(5000);
+        await Task.Delay(3000);
     }
 }
