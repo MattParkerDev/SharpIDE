@@ -87,7 +87,7 @@ alignment = 2
 [node name="DefaultFont" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1940841584]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Default"
+text = "Reset to Default"
 
 [node name="Apply" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1776305453]
 unique_name_in_owner = true
