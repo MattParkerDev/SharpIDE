@@ -88,8 +88,8 @@ public partial class SettingsWindow : Window
 
     private void OnFontPickerButtonPressed()
     {
-        var dlg = _fontPickerDialogScene.Instantiate<FontPickerDialog>();
-        dlg.FontSelected += result =>
+        var fontPickerDialog = _fontPickerDialogScene.Instantiate<FontPickerDialog>();
+        fontPickerDialog.FontSelected += result =>
         {
             var (systemFontName, selectedFontSize) = result;
             Singletons.AppState.IdeSettings.EditorFont = systemFontName;
@@ -101,8 +101,8 @@ public partial class SettingsWindow : Window
             this.ThemeSetCodeEditFont(font);
             this.ThemeSetCodeEditFontSize(fontSize);
         };
-        AddChild(dlg);
-        dlg.PopupCentered();
+        AddChild(fontPickerDialog);
+        fontPickerDialog.PopupCentered();
     }
 
     private void OnFoldCodeCheckButtonToggled(bool value)
