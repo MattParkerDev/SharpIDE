@@ -1,6 +1,6 @@
 using Godot;
-using System;
-using SharpIDE.Godot;
+
+namespace SharpIDE.Godot.Features.Settings;
 
 public partial class FontPickerDialog : Window
 {
