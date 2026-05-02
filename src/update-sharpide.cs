@@ -18,6 +18,7 @@ try
 	if (File.Exists(newSharpIdeReleaseFilePath) is false) throw new FileNotFoundException("New SharpIDE release file not found", newSharpIdeReleaseFilePath);
 
 	Console.WriteLine($"Update will be installed at: {sharpIdeInstallPath}");
+	Console.WriteLine($"Executable to run after update: {sharpIdeRunningExecutableFilePath}");
 	Console.WriteLine($"New Release: {newSharpIdeReleaseFilePath}");
 
 	try
@@ -102,7 +103,16 @@ async Task StartProcessFireAndForget(string fileName, string workingDirectory)
 	}
 	else if (OperatingSystem.IsMacOS())
 	{
-
+		processStartInfo = new ProcessStartInfo
+		{
+			FileName = "nohup",
+			ArgumentList = { fileName },
+			WorkingDirectory = workingDirectory,
+			UseShellExecute = false,
+			RedirectStandardInput = true,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+		};
 	}
 	var process = Process.Start(processStartInfo);
 	// For some reason, on Linux, SharpIDE blows up when opening if this process exits too quickly??
