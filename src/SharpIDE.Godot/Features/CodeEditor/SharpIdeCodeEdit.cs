@@ -101,18 +101,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		vScrollBar.ValueChanged += OnCodeEditScrolled;
 		AddCommentDelimiter("#","", true);
 		SetCodeRegionTags("region", "endregion");
-		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(UpdateCodeFolding);
-		_ = UpdateCodeFolding(Singletons.AppState.IdeSettings.AllowFolding);
+		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(UpdateCodeFoldingAsync);
+		UpdateCodeFolding(Singletons.AppState.IdeSettings.AllowFolding);
 	}
 
-	private Task UpdateCodeFolding(bool value)
+	private async Task UpdateCodeFoldingAsync(bool enabled) => await this.InvokeAsync(() => UpdateCodeFolding(enabled));
+	[RequiresGodotUiThread]
+	private void UpdateCodeFolding(bool enabled)
 	{
-		Callable.From<bool>((useFolding) =>
-		{
-			LineFolding = useFolding;
-			GuttersDrawFoldGutter = useFolding;
-		}).CallDeferred(value);
-		return Task.CompletedTask;
+		LineFolding = enabled;
+		GuttersDrawFoldGutter = enabled;
 	}
 
 	private readonly CancellationSeries _solutionAlteredCancellationTokenSeries = new();
@@ -200,7 +198,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_projectDiagnosticsObserveDisposable?.Dispose();
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
-		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(UpdateCodeFolding);
+		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(UpdateCodeFoldingAsync);
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
 	
