@@ -168,7 +168,7 @@ layout_mode = 2
 layout_mode = 2
 text = "Editor Font"
 
-[node name="FontPicker" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=1114197524]
+[node name="FontPickerButton" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=1114197524]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bmmi8")
@@ -193,7 +193,7 @@ layout_mode = 2
 layout_mode = 2
 text = "Editor Code Folding"
 
-[node name="FoldCode" type="CheckButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=255623137]
+[node name="FoldCodeCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=255623137]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8

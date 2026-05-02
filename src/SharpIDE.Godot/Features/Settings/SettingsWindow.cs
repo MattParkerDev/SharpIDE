@@ -9,8 +9,8 @@ public partial class SettingsWindow : Window
     private LineEdit _debuggerFilePathLineEdit = null!;
     private CheckButton _debuggerUseSharpDbgCheckButton = null!;
     private OptionButton _themeOptionButton = null!;
-    private Button _fontPicker = null!;
-    private CheckButton _foldCode = null!;
+    private Button _fontPickerButton = null!;
+    private CheckButton _foldCodeCheckButton = null!;
     
     public override void _Ready()
     {
@@ -19,14 +19,14 @@ public partial class SettingsWindow : Window
         _debuggerFilePathLineEdit = GetNode<LineEdit>("%DebuggerFilePathLineEdit");
         _debuggerUseSharpDbgCheckButton = GetNode<CheckButton>("%DebuggerUseSharpDbgCheckButton");
         _themeOptionButton = GetNode<OptionButton>("%ThemeOptionButton");
-        _fontPicker = GetNode<Button>("%FontPicker");
-        _foldCode = GetNode<CheckButton>("%FoldCode");
+        _fontPickerButton = GetNode<Button>("%FontPickerButton");
+        _foldCodeCheckButton = GetNode<CheckButton>("%FoldCodeCheckButton");
         _uiScaleSpinBox.ValueChanged += OnUiScaleSpinBoxValueChanged;
         _debuggerFilePathLineEdit.TextChanged += OnDebuggerFilePathChanged;
         _debuggerUseSharpDbgCheckButton.Toggled += OnDebuggerUseSharpDbgToggled;
         _themeOptionButton.ItemSelected += OnThemeItemSelected;
-        _fontPicker.Pressed += OnFontPickerPressed;
-        _foldCode.Toggled += OnFoldCodeToggled;
+        _fontPickerButton.Pressed += OnFontPickerButtonPressed;
+        _foldCodeCheckButton.Toggled += OnFoldCodeCheckButtonToggled;
         AboutToPopup += OnAboutToPopup;
     }
 
@@ -35,22 +35,22 @@ public partial class SettingsWindow : Window
         _uiScaleSpinBox.Value = Singletons.AppState.IdeSettings.UiScale;
         _debuggerFilePathLineEdit.Text = Singletons.AppState.IdeSettings.DebuggerExecutablePath;
         _debuggerUseSharpDbgCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg;
-        _fontPicker.Text = $"{Singletons.AppState.IdeSettings.EditorFont} | {Singletons.AppState.IdeSettings.FontSize}";
+        _fontPickerButton.Text = $"{Singletons.AppState.IdeSettings.EditorFont} | {Singletons.AppState.IdeSettings.FontSize}";
         if (!Singletons.AppState.IdeSettings.EditorFont.StartsWith("res://"))
         {
             var nfont = new SystemFont()
             {
                 FontNames = [Singletons.AppState.IdeSettings.EditorFont]
             };
-            _fontPicker.AddThemeFontOverride("font", nfont);
-            _fontPicker.Text = $"{Singletons.AppState.IdeSettings.EditorFont} | {Singletons.AppState.IdeSettings.FontSize}";
+            _fontPickerButton.AddThemeFontOverride("font", nfont);
+            _fontPickerButton.Text = $"{Singletons.AppState.IdeSettings.EditorFont} | {Singletons.AppState.IdeSettings.FontSize}";
         }
         else
         {
-            _fontPicker.Text = $"Cascadia | {Singletons.AppState.IdeSettings.FontSize}";
+            _fontPickerButton.Text = $"Cascadia | {Singletons.AppState.IdeSettings.FontSize}";
         }
 
-        _foldCode.ButtonPressed = Singletons.AppState.IdeSettings.AllowFolding;
+        _foldCodeCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.AllowFolding;
         var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme.ToString());
         if (themeOptionIndex is not null) _themeOptionButton.Selected = themeOptionIndex.Value;
     }
@@ -88,7 +88,7 @@ public partial class SettingsWindow : Window
         GodotGlobalEvents.Instance.TextEditorThemeChanged.InvokeParallelFireAndForget(lightOrDarkTheme);
     }
 
-    private void OnFontPickerPressed()
+    private void OnFontPickerButtonPressed()
     {
         var dlg = GD.Load<PackedScene>("res://Features/Settings/FontPickerDialog.tscn").Instantiate<FontPickerDialog>();
         dlg.FontSelected += (font, size) =>
@@ -98,18 +98,18 @@ public partial class SettingsWindow : Window
             Font nfont;
             if (font.StartsWith("res://"))
             {
-                _fontPicker.Text = $"Cascadia | {size}";
+                _fontPickerButton.Text = $"Cascadia | {size}";
                 nfont = GD.Load<FontVariation>(font);
             }
             else
             {
-                _fontPicker.Text = $"{font} | {size}";
+                _fontPickerButton.Text = $"{font} | {size}";
                 nfont = new SystemFont()
                 {
                     FontNames = [font]
                 };
             }
-            _fontPicker.AddThemeFontOverride("font", nfont);
+            _fontPickerButton.AddThemeFontOverride("font", nfont);
             this.ThemeSetCodeEditFont(nfont);
             this.ThemeSetCodeEditFontSize(size);
         };
@@ -117,7 +117,7 @@ public partial class SettingsWindow : Window
         dlg.PopupCentered();
     }
 
-    private void OnFoldCodeToggled(bool value)
+    private void OnFoldCodeCheckButtonToggled(bool value)
     {
         Singletons.AppState.IdeSettings.AllowFolding = value;
         GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.InvokeParallelFireAndForget(value);
