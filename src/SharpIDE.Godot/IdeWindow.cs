@@ -35,6 +35,7 @@ public partial class IdeWindow : Control
         GodotOtelExtensions.AddServiceDefaults();
         Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
         GetTree().GetRoot().ContentScaleFactor = Singletons.AppState.IdeSettings.UiScale;
+        UpdateGlobalThemesFromAppState();
         SetIdeThemeFromAppState();
         //GetWindow().SetMinSize(new Vector2I(1152, 648));
         Callable.From(() => PickSolution(true)).CallDeferred();
@@ -59,6 +60,18 @@ public partial class IdeWindow : Control
         var refreshRateBelowCapRoundedDownToInt = (int)refreshRateBelowCap;
         GD.Print($"Detected display refresh rate: {refreshRate} Hz, setting max FPS to {refreshRateBelowCapRoundedDownToInt} Hz");
         Engine.MaxFps = refreshRateBelowCapRoundedDownToInt;
+    }
+    
+    private void UpdateGlobalThemesFromAppState()
+    {
+        var editorFontSize = Singletons.AppState.IdeSettings.FontSize;
+        var editorFontName = Singletons.AppState.IdeSettings.EditorFont;
+        if (editorFontSize is not null) this.ThemeSetCodeEditFontSize(editorFontSize.Value);
+        if (editorFontName is not null)
+        {
+            var font = new SystemFont { FontNames = [editorFontName] };
+            this.ThemeSetCodeEditFont(font);
+        }
     }
 
     private void SetIdeThemeFromAppState()

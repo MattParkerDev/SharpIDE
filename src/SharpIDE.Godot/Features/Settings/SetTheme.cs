@@ -25,7 +25,7 @@ public static class SetTheme
         }
     }
     
-    public static void ThemeSetCodeEditFont(this SettingsWindow node, Font font)
+    public static void ThemeSetCodeEditFont(this Node node, Font font)
     {
         DarkTheme.SetFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit, font);
         LightTheme.SetFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit, font);
