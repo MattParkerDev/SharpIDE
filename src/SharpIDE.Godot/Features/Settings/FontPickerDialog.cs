@@ -10,22 +10,28 @@ public partial class FontPickerDialog : Window
 	
 	private ItemList _fontList = null!;
 	private ItemList _fontSize = null!;
-	private CodeEdit _preview = null!;
+	private CodeEdit _previewCodeEdit = null!;
 	private Button _resetToDefaultButton = null!;
 	private Button _apply = null!;
 	private Button _cancel = null!;
+	
+	private Font _editorDefaultFont = null!;
+	private int _editorDefaultFontSize = -1;
 
-	private string _selectedFont = "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres";
-	private int _selectedSize = 18;
+	private string? _selectedSystemFontName;
+	private int? _selectedFontSize;
 
 	public override void _Ready()
 	{
 		_fontList = GetNode<ItemList>("%FontList");
 		_fontSize = GetNode<ItemList>("%FontSize");
-		_preview = GetNode<CodeEdit>("%Preview");
+		_previewCodeEdit = GetNode<CodeEdit>("%Preview");
 		_resetToDefaultButton = GetNode<Button>("%ResetToDefaultButton");
 		_apply = GetNode<Button>("%Apply");
 		_cancel = GetNode<Button>("%Cancel");
+		
+		_editorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
+		_editorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
 
 		CloseRequested += QueueFree;
 		_fontList.ItemSelected += OnFontListItemSelected;
@@ -41,34 +47,35 @@ public partial class FontPickerDialog : Window
 	private void PopulateFontList()
 	{
 		_fontList.Clear();
-		var fonts = OS.GetSystemFonts().ToList();
-		var currentFont = Singletons.AppState.IdeSettings.EditorFont;
-		if (currentFont.StartsWith("res://"))
-			currentFont = "Default Font";
-		fonts.Add("Default Font");
-		foreach (var font in fonts.Order())
+		var systemFontNames = OS.GetSystemFonts();
+		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorFont) is false) Singletons.AppState.IdeSettings.EditorFont = null;
+		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorFont;
+
+		_fontList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}", null);
+		_fontList.Select(0);
+		foreach (var fontName in systemFontNames)
 		{
-			var i = _fontList.GetItemCount();
-			_fontList.AddItem(font);
-			if (currentFont == font)
+			_fontList.AddItem(fontName);
+			if (fontName == _selectedSystemFontName)
 			{
-				_fontList.Select(i);
-				_selectedFont = font;
+				_fontList.Select(_fontList.GetItemCount() - 1);
 			}
 		}
-
-		Callable.From(() => _fontList.EnsureCurrentIsVisible()).CallDeferred();
-		if (currentFont == "Default Font") return;
-		var nfont = new SystemFont()
-		{
-			FontNames = [currentFont]
-		};
-		_preview.AddThemeFontOverride(ThemeStringNames.Font, nfont);
+		_fontList.EnsureCurrentIsVisible();
+		
+		if (_selectedSystemFontName is null) return;
+		var font = new SystemFont { FontNames = [_selectedSystemFontName] };
+		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, font);
 	}
 
 	private void UpdateFontSize()
 	{
-		var currentSize = $"{Singletons.AppState.IdeSettings.FontSize}";
+		if (Singletons.AppState.IdeSettings.FontSize is null)
+		{
+			_fontSize.Select(0);
+			return;
+		}
+		var currentSize = Singletons.AppState.IdeSettings.FontSize.ToString();
 		for (var i = 0; i < _fontSize.GetItemCount(); i++)
 		{
 			if (_fontSize.GetItemText(i) != currentSize) continue;
@@ -76,64 +83,54 @@ public partial class FontPickerDialog : Window
 			break;
 		}
 
-		Callable.From(() => _fontSize.EnsureCurrentIsVisible()).CallDeferred();
-		if (Singletons.AppState.IdeSettings.FontSize is null) return;
-		_selectedSize = Singletons.AppState.IdeSettings.FontSize.Value;
-		_preview.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.FontSize.Value);
+		_fontSize.EnsureCurrentIsVisible();
+		_selectedFontSize = Singletons.AppState.IdeSettings.FontSize.Value;
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.FontSize.Value);
 	}
 
 	private void OnFontListItemSelected(long index)
 	{
-		var font = _fontList.GetItemText((int)index);
-		_selectedFont = font == "Default Font" ? "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" : font;
-		if (_selectedFont.StartsWith("res://"))
+		if (index is 0)
 		{
-			_preview.AddThemeFontOverride(ThemeStringNames.Font, GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
+			_selectedSystemFontName = null;
+			_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, _editorDefaultFont);
+			return;
 		}
-		else
-		{
-			var nfont = new SystemFont();
-			nfont.FontNames = [_selectedFont];
-			_preview.AddThemeFontOverride(ThemeStringNames.Font, nfont);
-		}
+		var systemFontName = _fontList.GetItemText((int)index);
+		_selectedSystemFontName = systemFontName;
+		var font = new SystemFont { FontNames = [_selectedSystemFontName] };
+		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, font);
 	}
 
 	private void OnFontSizeItemSelected(long index)
 	{
-		var points = _fontSize.GetItemText((int)index).ToInt();
-		_selectedSize = points;
-		_preview.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _selectedSize);
+		if (index is 0)
+		{
+			_selectedFontSize = null;
+			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _editorDefaultFontSize);
+			return;
+		}
+		var px = _fontSize.GetItemText((int)index).ToInt();
+		_selectedFontSize = px;
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _selectedFontSize.Value);
 	}
 
 	private void OnResetToDefaultButtonPressed()
 	{
-		_selectedFont = "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres";
-		_selectedSize = 18;
-		_preview.AddThemeFontOverride(ThemeStringNames.Font, GD.Load<FontVariation>("res://Features/CodeEditor/Resources/CascadiaFontVariation.tres"));
-		_preview.AddThemeFontSizeOverride(ThemeStringNames.FontSize, 18);
-		for (var i = 0; i < _fontList.GetItemCount(); i++)
-		{
-			if (_fontList.GetItemText(i) != "Default Font") continue;
-			_fontList.Select(i);
-			break;
-		}
-
-		for (var i = 0; i < _fontSize.GetItemCount(); i++)
-		{
-			if (_fontSize.GetItemText(i) != $"{_selectedSize}") continue;
-			_fontSize.Select(i);
-			break;
-		}
-		Callable.From(() =>
-		{
-			_fontList.EnsureCurrentIsVisible();
-			_fontSize.EnsureCurrentIsVisible();
-		}).CallDeferred();
+		_selectedSystemFontName = null;
+		_selectedFontSize = null;
+		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, _editorDefaultFont);
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _editorDefaultFontSize);
+		_fontList.Select(0);
+		_fontSize.Select(0);
+		
+		_fontList.EnsureCurrentIsVisible();
+		_fontSize.EnsureCurrentIsVisible();
 	}
 
 	private void OnApplyPressed()
 	{
-		EmitSignalFontSelected(new FontPickerResult(_selectedFont, _selectedSize));
+		EmitSignalFontSelected(new FontPickerResult(_selectedSystemFontName, _selectedFontSize));
 		QueueFree();
 	}
 }
