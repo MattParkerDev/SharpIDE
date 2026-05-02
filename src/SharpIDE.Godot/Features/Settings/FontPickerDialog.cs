@@ -8,12 +8,12 @@ public partial class FontPickerDialog : Window
 	[Signal]
 	public delegate void FontSelectedEventHandler(FontPickerResult result);
 	
-	private ItemList _fontList = null!;
-	private ItemList _fontSize = null!;
+	private ItemList _systemFontItemList = null!;
+	private ItemList _fontSizeItemList = null!;
 	private CodeEdit _previewCodeEdit = null!;
 	private Button _resetToDefaultButton = null!;
-	private Button _apply = null!;
-	private Button _cancel = null!;
+	private Button _saveButton = null!;
+	private Button _cancelButton = null!;
 	
 	private Font _editorDefaultFont = null!;
 	private int _editorDefaultFontSize = -1;
@@ -23,22 +23,22 @@ public partial class FontPickerDialog : Window
 
 	public override void _Ready()
 	{
-		_fontList = GetNode<ItemList>("%FontList");
-		_fontSize = GetNode<ItemList>("%FontSize");
-		_previewCodeEdit = GetNode<CodeEdit>("%Preview");
+		_systemFontItemList = GetNode<ItemList>("%SystemFontItemList");
+		_fontSizeItemList = GetNode<ItemList>("%FontSizeItemList");
+		_previewCodeEdit = GetNode<CodeEdit>("%PreviewCodeEdit");
 		_resetToDefaultButton = GetNode<Button>("%ResetToDefaultButton");
-		_apply = GetNode<Button>("%Apply");
-		_cancel = GetNode<Button>("%Cancel");
+		_saveButton = GetNode<Button>("%SaveButton");
+		_cancelButton = GetNode<Button>("%CancelButton");
 		
 		_editorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
 		_editorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
 
 		CloseRequested += QueueFree;
-		_fontList.ItemSelected += OnFontListItemSelected;
-		_fontSize.ItemSelected += OnFontSizeItemSelected;
+		_systemFontItemList.ItemSelected += OnSystemFontItemListItemSelected;
+		_fontSizeItemList.ItemSelected += OnFontSizeItemListItemSelected;
 		_resetToDefaultButton.Pressed += OnResetToDefaultButtonPressed;
-		_apply.Pressed += OnApplyPressed;
-		_cancel.Pressed += QueueFree;
+		_saveButton.Pressed += OnSaveButtonPressed;
+		_cancelButton.Pressed += QueueFree;
 
 		PopulateFontList();
 		UpdateFontSize();
@@ -46,22 +46,22 @@ public partial class FontPickerDialog : Window
 
 	private void PopulateFontList()
 	{
-		_fontList.Clear();
+		_systemFontItemList.Clear();
 		var systemFontNames = OS.GetSystemFonts();
 		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorFont) is false) Singletons.AppState.IdeSettings.EditorFont = null;
 		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorFont;
 
-		_fontList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}", null);
-		_fontList.Select(0);
+		_systemFontItemList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}", null);
+		_systemFontItemList.Select(0);
 		foreach (var fontName in systemFontNames)
 		{
-			_fontList.AddItem(fontName);
+			_systemFontItemList.AddItem(fontName);
 			if (fontName == _selectedSystemFontName)
 			{
-				_fontList.Select(_fontList.GetItemCount() - 1);
+				_systemFontItemList.Select(_systemFontItemList.GetItemCount() - 1);
 			}
 		}
-		_fontList.EnsureCurrentIsVisible();
+		_systemFontItemList.EnsureCurrentIsVisible();
 		
 		if (_selectedSystemFontName is null) return;
 		var font = new SystemFont { FontNames = [_selectedSystemFontName] };
@@ -72,23 +72,23 @@ public partial class FontPickerDialog : Window
 	{
 		if (Singletons.AppState.IdeSettings.FontSize is null)
 		{
-			_fontSize.Select(0);
+			_fontSizeItemList.Select(0);
 			return;
 		}
 		var currentSize = Singletons.AppState.IdeSettings.FontSize.ToString();
-		for (var i = 0; i < _fontSize.GetItemCount(); i++)
+		for (var i = 0; i < _fontSizeItemList.GetItemCount(); i++)
 		{
-			if (_fontSize.GetItemText(i) != currentSize) continue;
-			_fontSize.Select(i);
+			if (_fontSizeItemList.GetItemText(i) != currentSize) continue;
+			_fontSizeItemList.Select(i);
 			break;
 		}
 
-		_fontSize.EnsureCurrentIsVisible();
+		_fontSizeItemList.EnsureCurrentIsVisible();
 		_selectedFontSize = Singletons.AppState.IdeSettings.FontSize.Value;
 		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.FontSize.Value);
 	}
 
-	private void OnFontListItemSelected(long index)
+	private void OnSystemFontItemListItemSelected(long index)
 	{
 		if (index is 0)
 		{
@@ -96,13 +96,13 @@ public partial class FontPickerDialog : Window
 			_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, _editorDefaultFont);
 			return;
 		}
-		var systemFontName = _fontList.GetItemText((int)index);
+		var systemFontName = _systemFontItemList.GetItemText((int)index);
 		_selectedSystemFontName = systemFontName;
 		var font = new SystemFont { FontNames = [_selectedSystemFontName] };
 		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, font);
 	}
 
-	private void OnFontSizeItemSelected(long index)
+	private void OnFontSizeItemListItemSelected(long index)
 	{
 		if (index is 0)
 		{
@@ -110,7 +110,7 @@ public partial class FontPickerDialog : Window
 			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _editorDefaultFontSize);
 			return;
 		}
-		var px = _fontSize.GetItemText((int)index).ToInt();
+		var px = _fontSizeItemList.GetItemText((int)index).ToInt();
 		_selectedFontSize = px;
 		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _selectedFontSize.Value);
 	}
@@ -121,14 +121,14 @@ public partial class FontPickerDialog : Window
 		_selectedFontSize = null;
 		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, _editorDefaultFont);
 		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, _editorDefaultFontSize);
-		_fontList.Select(0);
-		_fontSize.Select(0);
+		_systemFontItemList.Select(0);
+		_fontSizeItemList.Select(0);
 		
-		_fontList.EnsureCurrentIsVisible();
-		_fontSize.EnsureCurrentIsVisible();
+		_systemFontItemList.EnsureCurrentIsVisible();
+		_fontSizeItemList.EnsureCurrentIsVisible();
 	}
 
-	private void OnApplyPressed()
+	private void OnSaveButtonPressed()
 	{
 		EmitSignalFontSelected(new FontPickerResult(_selectedSystemFontName, _selectedFontSize));
 		QueueFree();

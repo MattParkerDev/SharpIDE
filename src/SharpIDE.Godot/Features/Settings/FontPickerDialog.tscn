@@ -32,7 +32,7 @@ layout_mode = 2
 [node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1591562995]
 layout_mode = 2
 
-[node name="FontList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1670968439]
+[node name="SystemFontItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1670968439]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 100)
 layout_mode = 2
@@ -42,7 +42,7 @@ item_0/text = "Item 1"
 item_1/text = "Item 2"
 item_2/text = "Item 3"
 
-[node name="FontSize" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1927929300]
+[node name="FontSizeItemList" type="ItemList" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1927929300]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
@@ -61,7 +61,7 @@ item_10/text = "60"
 item_11/text = "72"
 item_12/text = "84"
 
-[node name="Preview" type="CodeEdit" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=541199698]
+[node name="PreviewCodeEdit" type="CodeEdit" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=541199698]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -90,12 +90,16 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Reset to Default"
 
-[node name="Apply" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1776305453]
+[node name="Spacer" type="Control" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=134571150]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SaveButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1776305453]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Apply"
+text = "Save"
 
-[node name="Cancel" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1389832274]
+[node name="CancelButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1389832274]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Cancel"
