@@ -48,8 +48,8 @@ public partial class FontPickerDialog : Window
 	{
 		_systemFontItemList.Clear();
 		var systemFontNames = OS.GetSystemFonts();
-		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorFont) is false) Singletons.AppState.IdeSettings.EditorFont = null;
-		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorFont;
+		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorSystemFontName) is false) Singletons.AppState.IdeSettings.EditorSystemFontName = null;
+		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
 
 		_systemFontItemList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}");
 		_systemFontItemList.Select(0);
@@ -70,12 +70,12 @@ public partial class FontPickerDialog : Window
 
 	private void UpdateFontSize()
 	{
-		if (Singletons.AppState.IdeSettings.FontSize is null)
+		if (Singletons.AppState.IdeSettings.EditorFontSize is null)
 		{
 			_fontSizeItemList.Select(0);
 			return;
 		}
-		var currentSize = Singletons.AppState.IdeSettings.FontSize.ToString();
+		var currentSize = Singletons.AppState.IdeSettings.EditorFontSize.ToString();
 		for (var i = 0; i < _fontSizeItemList.GetItemCount(); i++)
 		{
 			if (_fontSizeItemList.GetItemText(i) != currentSize) continue;
@@ -84,8 +84,8 @@ public partial class FontPickerDialog : Window
 		}
 
 		_fontSizeItemList.EnsureCurrentIsVisible();
-		_selectedFontSize = Singletons.AppState.IdeSettings.FontSize.Value;
-		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.FontSize.Value);
+		_selectedFontSize = Singletons.AppState.IdeSettings.EditorFontSize.Value;
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.EditorFontSize.Value);
 	}
 
 	private void OnSystemFontItemListItemSelected(long index)

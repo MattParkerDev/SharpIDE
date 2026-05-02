@@ -48,7 +48,7 @@ public partial class SettingsWindow : Window
         _fontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, currentCodeEditThemeFont);
         _fontPickerButton.Text = $"{currentCodeEditThemeFont.GetFontName()} | {currentCodeEditThemeFontSize}";
 
-        _foldCodeCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.AllowFolding;
+        _foldCodeCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.EditorEnableFolding;
         var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme.ToString());
         if (themeOptionIndex is not null) _themeOptionButton.Selected = themeOptionIndex.Value;
     }
@@ -92,8 +92,8 @@ public partial class SettingsWindow : Window
         fontPickerDialog.FontSelected += result =>
         {
             var (systemFontName, selectedFontSize) = result;
-            Singletons.AppState.IdeSettings.EditorFont = systemFontName;
-            Singletons.AppState.IdeSettings.FontSize = selectedFontSize;
+            Singletons.AppState.IdeSettings.EditorSystemFontName = systemFontName;
+            Singletons.AppState.IdeSettings.EditorFontSize = selectedFontSize;
             var font = systemFontName is null ? _editorDefaultFont : new SystemFont { FontNames = [systemFontName] };
             var fontSize = selectedFontSize ?? _editorDefaultFontSize;
             _fontPickerButton.Text = $"{font.GetFontName()} | {fontSize}";
@@ -107,7 +107,7 @@ public partial class SettingsWindow : Window
 
     private void OnFoldCodeCheckButtonToggled(bool value)
     {
-        Singletons.AppState.IdeSettings.AllowFolding = value;
+        Singletons.AppState.IdeSettings.EditorEnableFolding = value;
         GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.InvokeParallelFireAndForget(value);
     }
 }

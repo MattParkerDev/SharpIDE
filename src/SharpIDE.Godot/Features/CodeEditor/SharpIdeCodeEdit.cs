@@ -102,7 +102,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		AddCommentDelimiter("#","", true);
 		SetCodeRegionTags("region", "endregion");
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(SetCodeFoldingAsync);
-		SetCodeFolding(Singletons.AppState.IdeSettings.AllowFolding);
+		SetCodeFolding(Singletons.AppState.IdeSettings.EditorEnableFolding);
 	}
 
 	private async Task SetCodeFoldingAsync(bool enabled) => await this.InvokeAsync(() => SetCodeFolding(enabled));

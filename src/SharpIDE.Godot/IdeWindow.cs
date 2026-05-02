@@ -64,8 +64,8 @@ public partial class IdeWindow : Control
     
     private void UpdateGlobalThemesFromAppState()
     {
-        var editorFontSize = Singletons.AppState.IdeSettings.FontSize;
-        var editorFontName = Singletons.AppState.IdeSettings.EditorFont;
+        var editorFontSize = Singletons.AppState.IdeSettings.EditorFontSize;
+        var editorFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
         if (editorFontSize is not null) this.ThemeSetCodeEditFontSize(editorFontSize.Value);
         if (editorFontName is not null)
         {
