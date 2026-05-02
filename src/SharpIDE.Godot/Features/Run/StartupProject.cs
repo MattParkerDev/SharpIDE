@@ -61,20 +61,20 @@ public partial class StartupProject : HBoxContainer
 
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
-		if (@event.IsActionPressed(InputStringNames.StopStartupProject))
+		if (@event.IsActionPressed(InputStringNames.RunStartupProject, exactMatch: true))
 		{
 			AcceptEvent();
-			OnStopButtonPressed();
+			OnRunButtonPressed();
 		}
-		else if (@event.IsActionPressed(InputStringNames.DebugStartupProject))
+		else if (@event.IsActionPressed(InputStringNames.DebugStartupProject, exactMatch: true))
 		{
 			AcceptEvent();
 			OnDebugButtonPressed();
 		}
-		else if (@event.IsActionPressed(InputStringNames.RunStartupProject))
+		else if (@event.IsActionPressed(InputStringNames.StopStartupProject, exactMatch: true))
 		{
 			AcceptEvent();
-			OnRunButtonPressed();
+			OnStopButtonPressed();
 		}
 	}
 
