@@ -10,7 +10,7 @@ public partial class FontPickerDialog : Window
 	private ItemList _fontList = null!;
 	private ItemList _fontSize = null!;
 	private CodeEdit _preview = null!;
-	private Button _defaultFont = null!;
+	private Button _resetToDefaultButton = null!;
 	private Button _apply = null!;
 	private Button _cancel = null!;
 
@@ -22,14 +22,14 @@ public partial class FontPickerDialog : Window
 		_fontList = GetNode<ItemList>("%FontList");
 		_fontSize = GetNode<ItemList>("%FontSize");
 		_preview = GetNode<CodeEdit>("%Preview");
-		_defaultFont = GetNode<Button>("%DefaultFont");
+		_resetToDefaultButton = GetNode<Button>("%ResetToDefaultButton");
 		_apply = GetNode<Button>("%Apply");
 		_cancel = GetNode<Button>("%Cancel");
 
 		CloseRequested += QueueFree;
 		_fontList.ItemSelected += OnFontListItemSelected;
 		_fontSize.ItemSelected += OnFontSizeItemSelected;
-		_defaultFont.Pressed += OnDefaultFontPressed;
+		_resetToDefaultButton.Pressed += OnResetToDefaultButtonPressed;
 		_apply.Pressed += OnApplyPressed;
 		_cancel.Pressed += QueueFree;
 
@@ -103,7 +103,7 @@ public partial class FontPickerDialog : Window
 		_preview.AddThemeFontSizeOverride("font_size", _selectedSize);
 	}
 
-	private void OnDefaultFontPressed()
+	private void OnResetToDefaultButtonPressed()
 	{
 		_selectedFont = "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres";
 		_selectedSize = 18;
