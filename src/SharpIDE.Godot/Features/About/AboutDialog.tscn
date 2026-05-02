@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://ojk87rgonxey"]
+
+[ext_resource type="Texture2D" uid="uid://tpjfx7mo6cwj" path="res://Resources/SharpIdeV3.svg" id="2_xawuc"]
+
+[node name="AboutDialog" type="Window" unique_id=909223170]
+oversampling_override = 1.0
+title = "About"
+position = Vector2i(0, 36)
+size = Vector2i(500, 400)
+transient = true
+exclusive = true
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1407264802]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=1950915603]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=1307484213]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1104681218]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TextureRect" type="TextureRect" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=922435446]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+texture = ExtResource("2_xawuc")
+expand_mode = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=409263285]
+layout_mode = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1551309784]
+layout_mode = 2
+text = "SharpIDE"
+
+[node name="VersionLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1245543677]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "v0.1.2"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1276417969]
+layout_mode = 2
+
+[node name="CheckForUpdatesButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1940841584]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Check for Updates"
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1363449898]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Last checked at: 12:48pm 26/06/26"
