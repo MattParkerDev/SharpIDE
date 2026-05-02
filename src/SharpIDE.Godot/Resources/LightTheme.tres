@@ -1,5 +1,8 @@
 [gd_resource type="Theme" format=3 uid="uid://dc7l6bjhn61i5"]
 
+[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_6nunt"]
+[ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_s0gn1"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_f60rw"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -233,6 +236,7 @@ border_color = Color(0.82, 0.82, 0.82, 1)
 corner_detail = 1
 
 [resource]
+default_font = ExtResource("1_s0gn1")
 Button/colors/font_color = Color(0.12, 0.12, 0.12, 1)
 Button/colors/font_disabled_color = Color(0.12, 0.12, 0.12, 0.5019608)
 Button/colors/font_hover_color = Color(0.12156863, 0.12156863, 0.12156863, 1)
@@ -258,6 +262,7 @@ CodeEdit/colors/font_readonly_color = Color(1, 1, 1, 1)
 CodeEdit/colors/search_result_border_color = Color(0.61, 0.805, 1, 1)
 CodeEdit/colors/search_result_color = Color(0.5, 0.5, 0.5, 0.15294118)
 CodeEdit/colors/selection_color = Color(0.6784314, 0.8392157, 1, 1)
+CodeEdit/fonts/font = ExtResource("1_6nunt")
 CodeEdit/styles/normal = SubResource("StyleBoxFlat_1icbt")
 CodeEdit/styles/read_only = SubResource("StyleBoxFlat_1icbt")
 CodeEditorTabContainer/base_type = &"TabContainer"

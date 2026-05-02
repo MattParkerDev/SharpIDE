@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://cinaqbdghcvoi"]
 
-[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_s7ira"]
 [ext_resource type="Script" uid="uid://blwx5v5ufga65" path="res://Features/CodeEditor/SharpIdeCodeEditContainer.cs" id="1_so235"]
 [ext_resource type="Script" uid="uid://du2lt7r1p1qfy" path="res://Features/CodeEditor/SharpIdeCodeEdit.cs" id="2_kp2fd"]
 [ext_resource type="PackedScene" uid="uid://b4m8xvyw3nq6t" path="res://Features/CodeEditor/FindReplaceBar.tscn" id="3_frbar"]
@@ -19,7 +18,6 @@ CodeEdit = NodePath("SharpIdeCodeEdit")
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_fonts/font = ExtResource("1_s7ira")
 theme_override_font_sizes/font_size = 18
 highlight_all_occurrences = true
 highlight_current_line = true

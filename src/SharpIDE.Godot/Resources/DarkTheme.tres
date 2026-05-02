@@ -1,5 +1,8 @@
 [gd_resource type="Theme" format=3 uid="uid://epmt8kq6efrs"]
 
+[ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_6e8is"]
+[ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="2_amw38"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_38n5o"]
 bg_color = Color(0.16862746, 0.1764706, 0.1882353, 1)
 border_width_left = 1
@@ -137,6 +140,7 @@ shadow_color = Color(0, 0, 0, 0.11764706)
 shadow_size = 4
 
 [resource]
+default_font = ExtResource("2_amw38")
 CodeEdit/colors/completion_background_color = Color(1, 1, 1, 0)
 CodeEdit/colors/completion_selected_color = Color(0.18039216, 0.2627451, 0.43137255, 1)
 CodeEdit/colors/current_line_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
@@ -144,6 +148,7 @@ CodeEdit/colors/font_readonly_color = Color(1, 1, 1, 1)
 CodeEdit/colors/search_result_border_color = Color(0.14117648, 0.35686275, 0.50980395, 1)
 CodeEdit/colors/search_result_color = Color(0.3, 0.3, 0.3, 0.4117647)
 CodeEdit/colors/selection_color = Color(0.14117648, 0.35686275, 0.50980395, 1)
+CodeEdit/fonts/font = ExtResource("1_6e8is")
 CodeEdit/styles/completion = SubResource("StyleBoxFlat_38n5o")
 CodeEdit/styles/normal = SubResource("StyleBoxFlat_82udi")
 CodeEdit/styles/read_only = SubResource("StyleBoxFlat_82udi")

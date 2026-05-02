@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://b2oniigcp5ew5"]
 
-[ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="1_7ptyn"]
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
 [ext_resource type="Script" uid="uid://kvnhndc3l6ih" path="res://Features/CustomControls/InvertedVSplitContainer.cs" id="3_0ybuf"]
@@ -25,9 +24,6 @@
 [ext_resource type="PackedScene" uid="uid://hwdok1kch3b3" path="res://Features/TestExplorer/TestExplorerPanel.tscn" id="16_0sv7o"]
 [ext_resource type="PackedScene" uid="uid://dr41a4isv0dd5" path="res://Features/BottomBar/BottomBar.tscn" id="18_gyy5s"]
 
-[sub_resource type="Theme" id="Theme_s2dv6"]
-default_font = ExtResource("1_7ptyn")
-
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_woo5i"]
 size = Vector2(0, 0)
 
@@ -41,7 +37,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme = SubResource("Theme_s2dv6")
 script = ExtResource("1_whawi")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=64458129]
