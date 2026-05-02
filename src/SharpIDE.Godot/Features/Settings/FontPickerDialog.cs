@@ -51,7 +51,7 @@ public partial class FontPickerDialog : Window
 		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorFont) is false) Singletons.AppState.IdeSettings.EditorFont = null;
 		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorFont;
 
-		_systemFontItemList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}", null);
+		_systemFontItemList.AddItem($"SharpIDE Default - {_editorDefaultFont.GetFontName()}");
 		_systemFontItemList.Select(0);
 		foreach (var fontName in systemFontNames)
 		{
