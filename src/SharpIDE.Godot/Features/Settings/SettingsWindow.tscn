@@ -28,38 +28,38 @@ theme_override_icons/grabber = SubResource("PlaceholderTexture2D_xkmyt")
 split_offsets = PackedInt32Array(200)
 split_offset = 200
 
-[node name="PanelContainer2" type="PanelContainer" parent="HSplitContainer" unique_id=677108459]
+[node name="PanelContainer" type="PanelContainer" parent="HSplitContainer" unique_id=677108459]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer2" unique_id=1935042219]
+[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer" unique_id=1935042219]
 layout_mode = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="HSplitContainer" unique_id=1751415736]
+[node name="PanelContainer2" type="PanelContainer" parent="HSplitContainer" unique_id=1751415736]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="HSplitContainer/PanelContainer" unique_id=857306300]
+[node name="MarginContainer" type="MarginContainer" parent="HSplitContainer/PanelContainer2" unique_id=857306300]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer" unique_id=1400512159]
+[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer" unique_id=1400512159]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=2071498267]
+[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=2071498267]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=1076811258]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer" unique_id=1076811258]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer/HBoxContainer" unique_id=1086532735]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=1086532735]
 layout_mode = 2
 text = "UI Scale"
 
-[node name="UiScaleSpinBox" type="SpinBox" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer/HBoxContainer" unique_id=411172344]
+[node name="UiScaleSpinBox" type="SpinBox" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=411172344]
 unique_name_in_owner = true
 layout_mode = 2
 min_value = 0.5
@@ -69,76 +69,76 @@ value = 1.0
 update_on_text_changed = true
 custom_arrow_step = 0.1
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=1451296891]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer" unique_id=1451296891]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Experimental. Non-integer scales will be blurry."
 
-[node name="VBoxContainer3" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1724284108]
+[node name="VBoxContainer2" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1724284108]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer3" unique_id=1152514179]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2" unique_id=1152514179]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer3/HBoxContainer2" unique_id=1980223509]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2/HBoxContainer" unique_id=1980223509]
 layout_mode = 2
 text = "Use SharpDbg"
 
-[node name="DebuggerUseSharpDbgCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer3/HBoxContainer2" unique_id=141032093]
+[node name="DebuggerUseSharpDbgCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2/HBoxContainer" unique_id=141032093]
 unique_name_in_owner = true
 layout_mode = 2
 button_pressed = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer3" unique_id=273716476]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2" unique_id=273716476]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer3/HBoxContainer" unique_id=1566337417]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2/HBoxContainer2" unique_id=1566337417]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Use the included SharpDbg debugger"
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1049513313]
+[node name="VBoxContainer3" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1049513313]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2" unique_id=900893193]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3" unique_id=900893193]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2/HBoxContainer2" unique_id=2028826210]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3/HBoxContainer" unique_id=2028826210]
 layout_mode = 2
 text = "Debugger File Path"
 
-[node name="DebuggerFilePathLineEdit" type="LineEdit" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2/HBoxContainer2" unique_id=298954064]
+[node name="DebuggerFilePathLineEdit" type="LineEdit" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3/HBoxContainer" unique_id=298954064]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2" unique_id=1803130747]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3" unique_id=1803130747]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2/HBoxContainer" unique_id=742843520]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3/HBoxContainer2" unique_id=742843520]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Necessary if 'Use SharpDbg' is disabled. Get netcoredbg from"
 
-[node name="LinkButton" type="LinkButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer2/HBoxContainer" unique_id=1607764631]
+[node name="LinkButton" type="LinkButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3/HBoxContainer2" unique_id=1607764631]
 layout_mode = 2
 text = "here"
 uri = "https://github.com/Samsung/netcoredbg/releases"
 
-[node name="VBoxContainer4" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1649657136]
+[node name="VBoxContainer4" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1649657136]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer4" unique_id=987671656]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4" unique_id=987671656]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer4/HBoxContainer2" unique_id=1404561371]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4/HBoxContainer" unique_id=1404561371]
 layout_mode = 2
 text = "Theme"
 
-[node name="ThemeOptionButton" type="OptionButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer4/HBoxContainer2" unique_id=1638166442]
+[node name="ThemeOptionButton" type="OptionButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4/HBoxContainer" unique_id=1638166442]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -149,59 +149,59 @@ popup/item_0/id = 0
 popup/item_1/text = "Light"
 popup/item_1/id = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer4" unique_id=1201262823]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4" unique_id=1201262823]
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer4/HBoxContainer" unique_id=2074714339]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4/HBoxContainer2" unique_id=2074714339]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "The Light theme is experimental, and may contain visual inconsistencies/glitches"
 
-[node name="VBoxContainer5" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=310117635]
+[node name="VBoxContainer5" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=310117635]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=450069922]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5" unique_id=450069922]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=320561235]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5/HBoxContainer" unique_id=320561235]
 layout_mode = 2
 text = "Editor Font"
 
-[node name="FontPickerButton" type="Button" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer" unique_id=1114197524]
+[node name="FontPickerButton" type="Button" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5/HBoxContainer" unique_id=1114197524]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bmmi8")
 text = "Cascadia | 18"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5" unique_id=772063925]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5" unique_id=772063925]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer5/HBoxContainer2" unique_id=1763133258]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5/HBoxContainer2" unique_id=1763133258]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Sets the Font and Font Size used in the text editor"
 
-[node name="VBoxContainer6" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2" unique_id=1978540309]
+[node name="VBoxContainer6" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1978540309]
 layout_mode = 2
 theme_override_constants/separation = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6" unique_id=1747525387]
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6" unique_id=1747525387]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=1031337714]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6/HBoxContainer" unique_id=1031337714]
 layout_mode = 2
 text = "Editor Code Folding"
 
-[node name="FoldCodeCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer" unique_id=255623137]
+[node name="FoldCodeCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6/HBoxContainer" unique_id=255623137]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6" unique_id=1414460098]
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6" unique_id=1414460098]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer2/VBoxContainer6/HBoxContainer2" unique_id=1973870174]
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6/HBoxContainer2" unique_id=1973870174]
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Enables folding gutter menu for brackets and region tags in the text editor"
