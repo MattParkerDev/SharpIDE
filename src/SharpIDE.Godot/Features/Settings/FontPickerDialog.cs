@@ -16,8 +16,7 @@ public partial class FontPickerDialog : Window
 
 	private string _selectedFont = "res://Features/CodeEditor/Resources/CascadiaFontVariation.tres";
 	private int _selectedSize = 18;
-	
-	// Called when the node enters the scene tree for the first time.
+
 	public override void _Ready()
 	{
 		_fontList = GetNode<ItemList>("%FontList");
@@ -27,12 +26,12 @@ public partial class FontPickerDialog : Window
 		_apply = GetNode<Button>("%Apply");
 		_cancel = GetNode<Button>("%Cancel");
 
-		CloseRequested += OnCloseRequested;
+		CloseRequested += QueueFree;
 		_fontList.ItemSelected += OnFontListItemSelected;
 		_fontSize.ItemSelected += OnFontSizeItemSelected;
 		_defaultFont.Pressed += OnDefaultFontPressed;
 		_apply.Pressed += OnApplyPressed;
-		_cancel.Pressed += OnCancelPressed;
+		_cancel.Pressed += QueueFree;
 
 		PopulateFontList();
 		UpdateFontSize();
@@ -79,11 +78,6 @@ public partial class FontPickerDialog : Window
 		Callable.From(() => _fontSize.EnsureCurrentIsVisible()).CallDeferred();
 		_selectedSize = Singletons.AppState.IdeSettings.FontSize;
 		_preview.AddThemeFontSizeOverride("font_size", Singletons.AppState.IdeSettings.FontSize);
-	}
-	
-	private void OnCloseRequested()
-	{
-		QueueFree();
 	}
 
 	private void OnFontListItemSelected(long index)
@@ -138,11 +132,6 @@ public partial class FontPickerDialog : Window
 	private void OnApplyPressed()
 	{
 		EmitSignalFontSelected(_selectedFont, _selectedSize);
-		QueueFree();
-	}
-
-	private void OnCancelPressed()
-	{
 		QueueFree();
 	}
 }
