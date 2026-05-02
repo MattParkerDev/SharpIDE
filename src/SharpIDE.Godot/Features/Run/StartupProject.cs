@@ -8,7 +8,7 @@ public partial class StartupProject : HBoxContainer
 	[Signal]
 	public delegate void ProjectChangedEventHandler();
 	
-	private CustomRunButton _projectList = null!;
+	private ProjectOptionButton _projectList = null!;
 	private Control _spacer = null!;
 	private Control _animatedBuilding = null!;
 	private Button _runButton = null!;
@@ -16,14 +16,14 @@ public partial class StartupProject : HBoxContainer
 	private Button _stopButton = null!;
 	private AnimationPlayer _buildingAnim = null!;
 	
-	public CustomRunButton ProjectList => _projectList;
+	public ProjectOptionButton ProjectList => _projectList;
 
 	[Inject] private readonly RunService _runService = null!;
 	
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		_projectList = GetNode<CustomRunButton>("%ProjectList");
+		_projectList = GetNode<ProjectOptionButton>("%ProjectList");
 		_spacer = GetNode<Control>("%Spacer");
 		_animatedBuilding = GetNode<Control>("%AnimatedTextureParentControl");
 		_runButton = GetNode<Button>("%RunButton");

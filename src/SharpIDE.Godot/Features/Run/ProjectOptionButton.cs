@@ -4,7 +4,7 @@ using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Godot;
 using SharpIDE.Godot.Features.Run;
 
-public partial class CustomRunButton : Button
+public partial class ProjectOptionButton : Button
 {
 	[Signal]
 	public delegate void ProjectChangedEventHandler();
