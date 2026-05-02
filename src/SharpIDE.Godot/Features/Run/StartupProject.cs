@@ -59,6 +59,25 @@ public partial class StartupProject : HBoxContainer
 		_projectList.ProjectChanged += EmitSignalProjectChanged;
 	}
 
+	public override void _UnhandledKeyInput(InputEvent @event)
+	{
+		if (@event.IsActionPressed(InputStringNames.StopStartupProject))
+		{
+			AcceptEvent();
+			OnStopButtonPressed();
+		}
+		else if (@event.IsActionPressed(InputStringNames.DebugStartupProject))
+		{
+			AcceptEvent();
+			OnDebugButtonPressed();
+		}
+		else if (@event.IsActionPressed(InputStringNames.RunStartupProject))
+		{
+			AcceptEvent();
+			OnRunButtonPressed();
+		}
+	}
+
 	private async Task OnProjectRunFailed(SharpIdeProjectModel project)
 	{
 		if (_projectList.CurrentRunOption.Model != project) return;
