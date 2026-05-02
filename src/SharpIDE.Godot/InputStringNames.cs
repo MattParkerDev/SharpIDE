@@ -26,6 +26,9 @@ public static class InputStringNames
     public static readonly StringName CodeEditorDuplicateLine = nameof(CodeEditorDuplicateLine);
     public static readonly StringName FindInCurrentFile = nameof(FindInCurrentFile);
     public static readonly StringName ReplaceInCurrentFile = nameof(ReplaceInCurrentFile);
+    public static readonly StringName RunStartupProject = nameof(RunStartupProject);
+    public static readonly StringName DebugStartupProject = nameof(DebugStartupProject);
+    public static readonly StringName StopStartupProject = nameof(StopStartupProject);
 }
 
 public static class ThemeStringNames
