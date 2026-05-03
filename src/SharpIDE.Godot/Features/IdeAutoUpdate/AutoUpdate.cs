@@ -69,7 +69,7 @@ public static class AutoUpdate
         _ => throw new ArgumentOutOfRangeException()
     };
     
-    public static async Task<string> EnsureReleaseZipReadyForSwap(Release release)
+    public static async Task<string> EnsureReleaseZipReadyForSwap(Release release, IProgress<(long currentBytes, long totalBytes)>? progress = null)
     {
         Directory.CreateDirectory(UpdateTempPath);
         Directory.CreateDirectory(Path.Combine(UpdateTempPath, "raw"));
@@ -77,7 +77,7 @@ public static class AutoUpdate
         var uncompressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "ready", $"{ReleaseAssetNamePrefix}{release.Name[1..]}{UncompressedArchiveExtension}"));
         if (uncompressedReleaseArchive.Exists is false)
         {
-            await CreateUncompressedArchiveForRelease(release, uncompressedReleaseArchive);
+            await CreateUncompressedArchiveForRelease(release, uncompressedReleaseArchive, progress);
             uncompressedReleaseArchive.Refresh();
             if (uncompressedReleaseArchive.Exists is false) throw new InvalidOperationException($"Failed to prepare release archive for swap: uncompressed archive was not created successfully at {uncompressedReleaseArchive.FullName}");
         }
@@ -87,13 +87,13 @@ public static class AutoUpdate
         return uncompressedReleaseArchive.FullName;
     }
 
-    private static async Task CreateUncompressedArchiveForRelease(Release release, FileInfo uncompressedReleaseArchiveToCreate)
+    private static async Task CreateUncompressedArchiveForRelease(Release release, FileInfo uncompressedReleaseArchiveToCreate, IProgress<(long currentBytes, long totalBytes)>? progress = null)
     {
         // remove the 'v' prefix from the release name
         var compressedReleaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "raw", $"{ReleaseAssetNamePrefix}{release.Name[1..]}{CompressedArchiveExtension}"));
         if (compressedReleaseArchive.Exists is false)
         {
-            await DownloadRelease(release);
+            await DownloadRelease(release, progress);
             compressedReleaseArchive.Refresh();
             if (compressedReleaseArchive.Exists is false) throw new InvalidOperationException($"Release archive was not downloaded successfully to {compressedReleaseArchive.FullName}");
         }
@@ -124,21 +124,26 @@ public static class AutoUpdate
         }
     }
 
-    private static async Task DownloadRelease(Release release)
+    private static async Task DownloadRelease(Release release, IProgress<(long currentBytes, long totalBytes)>? progress = null)
     {
         var asset = release.Assets.SingleOrDefault(a => a.Name.StartsWith(ReleaseAssetNamePrefix, StringComparison.OrdinalIgnoreCase));
         Guard.Against.Null(asset);
         var assetFileName = asset.Name;
+        var assetSizeBytes = asset.Size;
         var releaseArchive = new FileInfo(Path.Combine(UpdateTempPath, "raw", assetFileName));
         if (releaseArchive.Exists) throw new InvalidOperationException($"Release archive already exists at {releaseArchive.FullName}"); // TODO: don't throw?
         using var httpClient = new HttpClient();
+        
+        // our CopyToWithProgressAsync extension does not and should not know about the total bytes, so we use an intermediate Progress for it to report the current total bytes it has read
+        var intermediateProgress = new Progress<long>(totalBytesRead => progress?.Report((totalBytesRead, assetSizeBytes)));
+        
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
         httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(new System.Net.Http.Headers.ProductHeaderValue("SharpIDE-AutoUpdate")));
         using var response = await httpClient.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
         await using var contentStream = await response.Content.ReadAsStreamAsync();
         await using var fileStream = releaseArchive.Create();
-        await contentStream.CopyToAsync(fileStream);
+        await contentStream.CopyToWithProgressAsync(fileStream, 81920, intermediateProgress);
         await contentStream.FlushAsync();
         await fileStream.FlushAsync();
     }

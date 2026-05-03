@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using Godot;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -337,6 +338,39 @@ public static class GodotTask
                     GD.PrintErr($"Error: {ex}");
                 }
             });
+        }
+    }
+}
+
+public static class StreamExtensions
+{
+    public static Task CopyToWithProgressAsync(this Stream source, Stream destination, int bufferSize, IProgress<long>? progress = null, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
+        if (source is null) throw new ArgumentNullException(nameof(source));
+        if (source.CanRead is false) throw new ArgumentException("Source Stream must be readable", nameof(source));
+        if (destination.CanWrite is false) throw new ArgumentException("Destination Stream must be writable", nameof(destination));
+        
+        return Core(source, destination, bufferSize, progress, cancellationToken);
+
+        static async Task Core(Stream source, Stream destination, int bufferSize, IProgress<long>? progress = null, CancellationToken cancellationToken = default)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+            long totalBytesRead = 0;
+            try
+            {
+                int bytesRead;
+                while ((bytesRead = await source.ReadAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false)) != 0)
+                {
+                    await destination.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, bytesRead), cancellationToken).ConfigureAwait(false);
+                    totalBytesRead += bytesRead;
+                    progress?.Report(totalBytesRead);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
     }
 }

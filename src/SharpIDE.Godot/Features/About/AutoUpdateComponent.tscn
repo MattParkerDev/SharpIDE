@@ -68,9 +68,12 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="ProgressBar" type="ProgressBar" parent="DownloadingUpdateHBoxContainer" unique_id=1313741992]
+[node name="DownloadProgressBar" type="ProgressBar" parent="DownloadingUpdateHBoxContainer" unique_id=1313741992]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 28)
 layout_mode = 2
+indeterminate = true
+editor_preview_indeterminate = false
 
 [node name="Label" type="Label" parent="DownloadingUpdateHBoxContainer" unique_id=1025800488]
 layout_mode = 2

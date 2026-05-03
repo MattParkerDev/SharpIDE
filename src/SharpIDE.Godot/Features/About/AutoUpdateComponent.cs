@@ -19,7 +19,9 @@ public partial class AutoUpdateComponent : VBoxContainer
 	
 	private HBoxContainer _noUpdatesFoundHBoxContainer = null!;
 	private HBoxContainer _checkingForUpdatesHBoxContainer = null!;
+	
 	private HBoxContainer _downloadingUpdateHBoxContainer = null!;
+	private ProgressBar _downloadProgressBar = null!;
 	
 	private VBoxContainer _finishUpdateAndRestartVBoxContainer = null!;
 	private Button _finishUpdateAndRestartButton = null!;
@@ -38,6 +40,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_lastCheckedAtLabel = GetNode<Label>("%LastCheckedAtLabel");
 		_newerVersionLabel = GetNode<Label>("%NewerVersionLabel");
 		_failedLabel = GetNode<Label>("%FailedLabel");
+		_downloadProgressBar = GetNode<ProgressBar>("%DownloadProgressBar");
 		_checkForUpdatesHBoxContainer = GetNode<HBoxContainer>("%CheckForUpdatesHBoxContainer");
 		_downloadUpdateHBoxContainer = GetNode<HBoxContainer>("%DownloadUpdateHBoxContainer");
 		_noUpdatesFoundHBoxContainer = GetNode<HBoxContainer>("%NoUpdatesFoundHBoxContainer");
@@ -88,6 +91,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 			GD.PrintErr($"Auto-update failed: {ex}");
 			_failedLabel.Text = $"Failed: {ex.Message}";
 			SetStage(UpdateStage.Failed);
+			_downloadProgress = null;
 		}
 	}
 
@@ -118,13 +122,31 @@ public partial class AutoUpdateComponent : VBoxContainer
 		SetStage(UpdateStage.UpdateAvailable);
 	}
 
+	public override void _Process(double delta)
+	{
+		if (_downloadProgress is not null)
+		{
+			if (_downloadProgress.TotalBytes is 0) return;
+			if (_downloadProgressBar.Indeterminate)
+			{
+				_downloadProgressBar.Indeterminate = false;
+				_downloadProgressBar.Value = 0;
+				_downloadProgressBar.MaxValue = _downloadProgress.TotalBytes;
+			}
+			_downloadProgressBar.Value = _downloadProgress.CurrentBytes;
+		}
+	}
+
+	private DownloadProgress? _downloadProgress;
 	private async Task OnDownloadUpdatePressed()
 	{
 		if (_pendingRelease is null) return;
 		
 		SetStage(UpdateStage.Downloading);
-		_pendingArchivePath = await AutoUpdate.EnsureReleaseZipReadyForSwap(_pendingRelease);
+		_downloadProgress = new DownloadProgress();
+		_pendingArchivePath = await AutoUpdate.EnsureReleaseZipReadyForSwap(_pendingRelease, _downloadProgress);
 		SetStage(UpdateStage.ReadyToInstall);
+		_downloadProgress = null;
 	}
 
 	private async Task OnFinishUpdateAndRestartPressed()
@@ -142,5 +164,17 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_lastCheckedAtLabel.Text = lastChecked is null
 			? "Last checked at: never"
 			: $"Last checked at: {lastChecked.Value.ToLocalTime():g}";
+	}
+}
+
+public class DownloadProgress : IProgress<(long currentBytes, long totalBytes)>
+{
+	public long CurrentBytes;
+	public long TotalBytes;
+
+	public void Report((long currentBytes, long totalBytes) s)
+	{
+		CurrentBytes = s.currentBytes;
+		TotalBytes = s.totalBytes;
 	}
 }
