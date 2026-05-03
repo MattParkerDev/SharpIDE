@@ -77,21 +77,35 @@ layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Downloading"
 
-[node name="FinishUpdateAndRestartHBoxContainer" type="HBoxContainer" parent="." unique_id=1056739365]
+[node name="FinishUpdateAndRestartVBoxContainer" type="VBoxContainer" parent="." unique_id=1135015568]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="FinishUpdateAndRestartButton" type="Button" parent="FinishUpdateAndRestartHBoxContainer" unique_id=1448656790]
+[node name="HBoxContainer" type="HBoxContainer" parent="FinishUpdateAndRestartVBoxContainer" unique_id=1056739365]
+layout_mode = 2
+
+[node name="FinishUpdateAndRestartButton" type="Button" parent="FinishUpdateAndRestartVBoxContainer/HBoxContainer" unique_id=1448656790]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Update & Restart"
 
-[node name="Label" type="Label" parent="FinishUpdateAndRestartHBoxContainer" unique_id=1499460401]
+[node name="Label" type="Label" parent="FinishUpdateAndRestartVBoxContainer/HBoxContainer" unique_id=1499460401]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Update ready"
+
+[node name="Label" type="Label" parent="FinishUpdateAndRestartVBoxContainer" unique_id=1451493380]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Self-updating requires the .NET 10 SDK to be installed.
+Review the updater logs if SharpIDE doesn't re-launch:"
+
+[node name="UpdaterLogLinkButton" type="LinkButton" parent="FinishUpdateAndRestartVBoxContainer" unique_id=1979836369]
+unique_name_in_owner = true
+layout_mode = 2
+text = "update-log.txt"
 
 [node name="UpdatingAndRestartingHBoxContainer" type="HBoxContainer" parent="." unique_id=169059207]
 unique_name_in_owner = true

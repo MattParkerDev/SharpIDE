@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Godot;
 using Octokit;
 using SharpIDE.Godot.Features.IdeAutoUpdate;
+using Environment = System.Environment;
 using Label = Godot.Label;
 
 namespace SharpIDE.Godot.Features.About;
@@ -20,8 +21,9 @@ public partial class AutoUpdateComponent : VBoxContainer
 	private HBoxContainer _checkingForUpdatesHBoxContainer = null!;
 	private HBoxContainer _downloadingUpdateHBoxContainer = null!;
 	
-	private HBoxContainer _finishUpdateAndRestartHBoxContainer = null!;
+	private VBoxContainer _finishUpdateAndRestartVBoxContainer = null!;
 	private Button _finishUpdateAndRestartButton = null!;
+	private LinkButton _updaterLogLinkButton = null!;
 	
 	private HBoxContainer _updatingAndRestartingHBoxContainer = null!;
 	
@@ -42,17 +44,24 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_noUpdatesFoundHBoxContainer = GetNode<HBoxContainer>("%NoUpdatesFoundHBoxContainer");
 		_checkingForUpdatesHBoxContainer = GetNode<HBoxContainer>("%CheckingForUpdatesHBoxContainer");
 		_downloadingUpdateHBoxContainer = GetNode<HBoxContainer>("%DownloadingUpdateHBoxContainer");
-		_finishUpdateAndRestartHBoxContainer = GetNode<HBoxContainer>("%FinishUpdateAndRestartHBoxContainer");
+		_finishUpdateAndRestartVBoxContainer = GetNode<VBoxContainer>("%FinishUpdateAndRestartVBoxContainer");
 		_updatingAndRestartingHBoxContainer = GetNode<HBoxContainer>("%UpdatingAndRestartingHBoxContainer");
 		_failedHBoxContainer = GetNode<HBoxContainer>("%FailedHBoxContainer");
 		
 		_checkForUpdatesButton = GetNode<Button>("%CheckForUpdatesButton");
 		_downloadUpdateButton = GetNode<Button>("%DownloadUpdateButton");
 		_finishUpdateAndRestartButton = GetNode<Button>("%FinishUpdateAndRestartButton");
+		_updaterLogLinkButton = GetNode<LinkButton>("%UpdaterLogLinkButton");
 
 		_checkForUpdatesButton.Pressed += () => WithFailureGuard(OnCheckForUpdatesPressed);
 		_downloadUpdateButton.Pressed += () => WithFailureGuard(OnDownloadUpdatePressed);
 		_finishUpdateAndRestartButton.Pressed += () => WithFailureGuard(OnFinishUpdateAndRestartPressed);
+		_updaterLogLinkButton.Pressed += () =>
+		{
+			var logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SharpIDE", "update-log.txt");
+			if (File.Exists(logFilePath) is false) File.OpenWrite(logFilePath).Dispose();
+			OS.ShellShowInFileManager(logFilePath);
+		};
 		
 		UpdateLastCheckedAtLabel();
 	}
@@ -64,7 +73,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_downloadUpdateHBoxContainer.Visible = stage is UpdateStage.UpdateAvailable;
 		_noUpdatesFoundHBoxContainer.Visible = stage is UpdateStage.NoUpdateFound;
 		_downloadingUpdateHBoxContainer.Visible = stage is UpdateStage.Downloading;
-		_finishUpdateAndRestartHBoxContainer.Visible = stage is UpdateStage.ReadyToInstall;
+		_finishUpdateAndRestartVBoxContainer.Visible = stage is UpdateStage.ReadyToInstall;
 		_updatingAndRestartingHBoxContainer.Visible = stage is UpdateStage.Installing;
 		_failedHBoxContainer.Visible = stage is UpdateStage.Failed;
 	}
