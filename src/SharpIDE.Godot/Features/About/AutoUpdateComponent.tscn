@@ -75,7 +75,8 @@ layout_mode = 2
 indeterminate = true
 editor_preview_indeterminate = false
 
-[node name="Label" type="Label" parent="DownloadingUpdateHBoxContainer" unique_id=1025800488]
+[node name="DownloadProgressLabel" type="Label" parent="DownloadingUpdateHBoxContainer" unique_id=1025800488]
+unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Downloading"

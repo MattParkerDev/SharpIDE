@@ -22,6 +22,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 	
 	private HBoxContainer _downloadingUpdateHBoxContainer = null!;
 	private ProgressBar _downloadProgressBar = null!;
+	private Label _downloadProgressLabel = null!;
 	
 	private VBoxContainer _finishUpdateAndRestartVBoxContainer = null!;
 	private Button _finishUpdateAndRestartButton = null!;
@@ -40,6 +41,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_lastCheckedAtLabel = GetNode<Label>("%LastCheckedAtLabel");
 		_newerVersionLabel = GetNode<Label>("%NewerVersionLabel");
 		_failedLabel = GetNode<Label>("%FailedLabel");
+		_downloadProgressLabel = GetNode<Label>("%DownloadProgressLabel");
 		_downloadProgressBar = GetNode<ProgressBar>("%DownloadProgressBar");
 		_checkForUpdatesHBoxContainer = GetNode<HBoxContainer>("%CheckForUpdatesHBoxContainer");
 		_downloadUpdateHBoxContainer = GetNode<HBoxContainer>("%DownloadUpdateHBoxContainer");
@@ -132,6 +134,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 				_downloadProgressBar.Indeterminate = false;
 				_downloadProgressBar.Value = 0;
 				_downloadProgressBar.MaxValue = _downloadProgress.TotalBytes;
+				_downloadProgressLabel.Text = $"Downloading - {_downloadProgress.TotalBytes / (1024.0 * 1024.0):F1}MB total";
 			}
 			_downloadProgressBar.Value = _downloadProgress.CurrentBytes;
 		}
