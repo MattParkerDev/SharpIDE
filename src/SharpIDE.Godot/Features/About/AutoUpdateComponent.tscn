@@ -91,6 +91,7 @@ text = "Update & Restart"
 [node name="Label" type="Label" parent="FinishUpdateAndRestartHBoxContainer" unique_id=1499460401]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
+text = "Update ready"
 
 [node name="UpdatingAndRestartingHBoxContainer" type="HBoxContainer" parent="." unique_id=169059207]
 unique_name_in_owner = true

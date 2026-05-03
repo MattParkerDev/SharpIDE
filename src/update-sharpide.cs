@@ -128,7 +128,7 @@ async Task StartProcessFireAndForget(string fileName, string workingDirectory)
 		{
 			FileName = fileName,
 			WorkingDirectory = workingDirectory,
-			UseShellExecute = true
+			UseShellExecute = false
 		};
 	}
 	else if (OperatingSystem.IsLinux())
