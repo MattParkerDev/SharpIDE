@@ -118,7 +118,6 @@ public static class AutoUpdate
                 await using var entryStream = await entry.OpenAsync();
                 await using var newEntryStream = await newEntry.OpenAsync();
                 await entryStream.CopyToAsync(newEntryStream);
-                await newEntryStream.FlushAsync();
             }
             await uncompressedArchiveStream.FlushAsync();
         }

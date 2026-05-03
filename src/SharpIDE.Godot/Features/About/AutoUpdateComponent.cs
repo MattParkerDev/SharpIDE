@@ -86,6 +86,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 	{
 		try
 		{
+			await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 			await func();
 		}
 		catch (Exception ex)
@@ -111,17 +112,20 @@ public partial class AutoUpdateComponent : VBoxContainer
 		}
 		
 		Singletons.AppState.LastCheckedForUpdates = DateTimeOffset.UtcNow;
-		UpdateLastCheckedAtLabel();
-		
-		if (release is null)
+		await this.InvokeAsync(() =>
 		{
-			SetStage(UpdateStage.NoUpdateFound);
-			return;
-		}
+			UpdateLastCheckedAtLabel();
+		
+			if (release is null)
+			{
+				SetStage(UpdateStage.NoUpdateFound);
+				return;
+			}
 
-		_pendingRelease = release;
-		_newerVersionLabel.Text = $"Newer version: {release.Name}";
-		SetStage(UpdateStage.UpdateAvailable);
+			_pendingRelease = release;
+			_newerVersionLabel.Text = $"Newer version: {release.Name}";
+			SetStage(UpdateStage.UpdateAvailable);
+		});
 	}
 
 	public override void _Process(double delta)
@@ -151,20 +155,19 @@ public partial class AutoUpdateComponent : VBoxContainer
 	private async Task OnDownloadUpdatePressed()
 	{
 		if (_pendingRelease is null) return;
-		
-		SetStage(UpdateStage.Downloading);
+		await this.InvokeAsync(() => SetStage(UpdateStage.Downloading));
 		_downloadProgress = new DownloadProgress();
 		_pendingArchivePath = await AutoUpdate.EnsureReleaseZipReadyForSwap(_pendingRelease, _downloadProgress);
-		SetStage(UpdateStage.ReadyToInstall);
+		await this.InvokeAsync(() => SetStage(UpdateStage.ReadyToInstall));
 	}
 
 	private async Task OnFinishUpdateAndRestartPressed()
 	{
 		if (_pendingArchivePath is null) return;
 		
-		SetStage(UpdateStage.Installing);
+		await this.InvokeAsync(() => SetStage(UpdateStage.Installing));
 		await AutoUpdate.StartUpdaterProcess(_pendingArchivePath);
-		GetTree().Quit();
+		await this.InvokeAsync(() => GetTree().Quit());
 	}
 
 	private void UpdateLastCheckedAtLabel()
