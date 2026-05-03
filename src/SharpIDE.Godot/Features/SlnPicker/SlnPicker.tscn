@@ -104,7 +104,6 @@ text = "v0.1.2"
 
 [node name="AboutButton" type="Button" parent="VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer" unique_id=719403798]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 text = "About"
 
