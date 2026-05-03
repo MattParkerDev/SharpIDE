@@ -91,16 +91,19 @@ public partial class AutoUpdateComponent : VBoxContainer
 		}
 		catch (Exception ex)
 		{
-			GD.PrintErr($"Auto-update failed: {ex}");
-			_failedLabel.Text = $"Failed: {ex.Message}";
-			SetStage(UpdateStage.Failed);
 			_downloadProgress = null;
+			Callable.From(() =>
+			{
+				GD.PrintErr($"Auto-update failed: {ex}");
+				_failedLabel.Text = $"Failed: {ex.Message}";
+				SetStage(UpdateStage.Failed);
+			}).CallDeferred();
 		}
 	}
 
 	private async Task OnCheckForUpdatesPressed()
 	{
-		SetStage(UpdateStage.Checking);
+		await this.InvokeAsync(() => SetStage(UpdateStage.Checking));
 
 		var timer = Stopwatch.StartNew();
 		var release = await AutoUpdate.CheckForUpdates(Singletons.AppState.LastCheckedForUpdates);
