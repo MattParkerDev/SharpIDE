@@ -1,6 +1,4 @@
 using Godot;
-using NuGet.Versioning;
-using FileAccess = Godot.FileAccess;
 
 namespace SharpIDE.Godot.Features.SlnPicker;
 
@@ -11,7 +9,6 @@ public partial class SlnPicker : Control
     private Button _openSlnButton = null!;
     private VBoxContainer _previousSlnsVBoxContainer = null!;
     private Label _versionLabel = null!;
-    private static NuGetVersion? _version;
 
     private PackedScene _previousSlnEntryScene = ResourceLoader.Load<PackedScene>("res://Features/SlnPicker/PreviousSlnEntry.tscn");
 
@@ -32,12 +29,7 @@ public partial class SlnPicker : Control
         var windowParent = GetParentOrNull<Window>();
         _fileDialog.FileSelected += path => _tcs.SetResult(path);
         windowParent?.CloseRequested += () => _tcs.SetResult(null);
-        if (_version is null)
-        {
-            var version = FileAccess.GetFileAsString("res://version.txt").Trim();
-            _version = NuGetVersion.Parse(version);
-        }
-        _versionLabel.Text = $"v{_version.ToNormalizedString()}";
+        _versionLabel.Text = $"v{Singletons.SharpIdeVersion.ToNormalizedString()}";
         if (Singletons.AppState.IdeSettings.AutoOpenLastSolution && GetParent() is not Window)
         {
             var lastSln = Singletons.AppState.RecentSlns.LastOrDefault();

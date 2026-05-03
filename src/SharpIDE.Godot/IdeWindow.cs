@@ -1,11 +1,13 @@
 using System.Runtime.InteropServices;
 using Godot;
 using Microsoft.Extensions.Hosting;
+using NuGet.Versioning;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Godot.Features.IdeSettings;
 using SharpIDE.Godot.Features.Settings;
 using SharpIDE.Godot.Features.SlnPicker;
 using Environment = System.Environment;
+using FileAccess = Godot.FileAccess;
 
 namespace SharpIDE.Godot;
 
@@ -35,6 +37,7 @@ public partial class IdeWindow : Control
         GodotOtelExtensions.AddServiceDefaults();
         Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
         GetTree().GetRoot().ContentScaleFactor = Singletons.AppState.IdeSettings.UiScale;
+        Singletons.SharpIdeVersion = NuGetVersion.Parse(FileAccess.GetFileAsString("res://version.txt").Trim());
         UpdateGlobalThemesFromAppState();
         SetIdeThemeFromAppState();
         //GetWindow().SetMinSize(new Vector2I(1152, 648));
