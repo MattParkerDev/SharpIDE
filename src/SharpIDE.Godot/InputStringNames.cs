@@ -26,6 +26,7 @@ public static class InputStringNames
     public static readonly StringName CodeEditorDuplicateLine = nameof(CodeEditorDuplicateLine);
     public static readonly StringName FindInCurrentFile = nameof(FindInCurrentFile);
     public static readonly StringName ReplaceInCurrentFile = nameof(ReplaceInCurrentFile);
+    public static readonly StringName FindInSolutionExplorer = nameof(FindInSolutionExplorer);
 }
 
 public static class ThemeStringNames
@@ -47,6 +48,8 @@ public static class ThemeStringNames
     public static readonly StringName CompletionScrollColor = "completion_scroll_color";
     public static readonly StringName CompletionExistingColor = "completion_existing_color";
     public static readonly StringName CompletionColorBgIcon = "completion_color_bg";
+    
+    public static readonly StringName HSeparation = "h_separation";
 }
 
 public static class ThemeVariationStringNames
