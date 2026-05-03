@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using Ardalis.GuardClauses;
+using CliWrap;
 using Godot;
 using Microsoft.CodeAnalysis;
 using NuGet.Versioning;
@@ -80,6 +81,9 @@ public static class AutoUpdate
             uncompressedReleaseArchive.Refresh();
             if (uncompressedReleaseArchive.Exists is false) throw new InvalidOperationException($"Failed to prepare release archive for swap: uncompressed archive was not created successfully at {uncompressedReleaseArchive.FullName}");
         }
+
+        // Pre-build the updater cs file based app
+        await Cli.Wrap("dotnet").WithArguments(["build", Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs")]).ExecuteAsync();
         return uncompressedReleaseArchive.FullName;
     }
 
@@ -157,7 +161,7 @@ public static class AutoUpdate
     public static async Task StartUpdaterProcess(string uncompressedReleaseArchiveFilePath)
     {
         var currentProcessExecutablePath = OS.GetExecutablePath();
-        List<string> args = [Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs"), "--", Path.GetDirectoryName(currentProcessExecutablePath)!, currentProcessExecutablePath, uncompressedReleaseArchiveFilePath, Environment.ProcessId.ToString()];
+        List<string> args = [Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs"), "--no-build", "--", Path.GetDirectoryName(currentProcessExecutablePath)!, currentProcessExecutablePath, uncompressedReleaseArchiveFilePath, Environment.ProcessId.ToString()];
         ProcessStartInfo processStartInfo = null!;
         if (OperatingSystem.IsWindows())
         {

@@ -1,5 +1,7 @@
 ﻿#!/usr/bin/env dotnet
 
+#:property TargetFramework=net10.0
+
 using System.Diagnostics;
 using System.Formats.Tar;
 using System.IO.Compression;
