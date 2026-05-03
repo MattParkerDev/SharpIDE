@@ -65,3 +65,76 @@ text = "Check for Updates"
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Last checked at: 12:48pm 26/06/26"
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=181822089]
+layout_mode = 2
+
+[node name="CheckForUpdatesButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=270719984]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Download"
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer3" unique_id=2079751522]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Newer version: 0.1.20"
+
+[node name="HBoxContainer4" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1529318880]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer4" unique_id=1241487356]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "No updates found"
+
+[node name="HBoxContainer5" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=956997962]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=496630617]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+indeterminate = true
+editor_preview_indeterminate = true
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer5" unique_id=816213878]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Checking for updates"
+
+[node name="HBoxContainer6" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=883247107]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=845280918]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer6" unique_id=790448715]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Downloading"
+
+[node name="HBoxContainer7" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1760595195]
+layout_mode = 2
+
+[node name="CheckForUpdatesButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=1923956993]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Update & Restart"
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer7" unique_id=1289020871]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+
+[node name="HBoxContainer8" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1015790625]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=1291056050]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+indeterminate = true
+editor_preview_indeterminate = true
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/HBoxContainer8" unique_id=848680284]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Installing update and restarting"
