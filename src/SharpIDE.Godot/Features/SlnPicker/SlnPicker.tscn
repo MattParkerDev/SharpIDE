@@ -102,6 +102,12 @@ layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "v0.1.2"
 
+[node name="AboutButton" type="Button" parent="VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer" unique_id=719403798]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "About"
+
 [node name="Panel" type="Panel" parent="VBoxContainer/VSplitContainer" unique_id=663586740]
 layout_mode = 2
 

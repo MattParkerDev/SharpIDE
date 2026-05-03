@@ -9,8 +9,10 @@ public partial class SlnPicker : Control
     private Button _openSlnButton = null!;
     private VBoxContainer _previousSlnsVBoxContainer = null!;
     private Label _versionLabel = null!;
+    private Button _aboutButton = null!;
 
     private PackedScene _previousSlnEntryScene = ResourceLoader.Load<PackedScene>("res://Features/SlnPicker/PreviousSlnEntry.tscn");
+    private PackedScene _aboutDialogScene = ResourceLoader.Load<PackedScene>("uid://ojk87rgonxey");
 
     private readonly TaskCompletionSource<string?> _tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -25,7 +27,15 @@ public partial class SlnPicker : Control
         _versionLabel = GetNode<Label>("%VersionLabel");
         _fileDialog = GetNode<FileDialog>("%FileDialog");
         _openSlnButton = GetNode<Button>("%OpenSlnButton");
+        _aboutButton = GetNode<Button>("%AboutButton");
         _openSlnButton.Pressed += () => _fileDialog.PopupCentered();
+        _aboutButton.Pressed += () =>
+        {
+            var aboutDialog = _aboutDialogScene.Instantiate<Window>();
+            aboutDialog.CloseRequested += aboutDialog.QueueFree;
+            AddChild(aboutDialog);
+            aboutDialog.PopupCentered();
+        };
         var windowParent = GetParentOrNull<Window>();
         _fileDialog.FileSelected += path => _tcs.SetResult(path);
         windowParent?.CloseRequested += () => _tcs.SetResult(null);
