@@ -107,3 +107,14 @@ editor_preview_indeterminate = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Installing update and restarting"
+
+[node name="FailedHBoxContainer" type="HBoxContainer" parent="." unique_id=2142113195]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="FailedLabel" type="Label" parent="FailedHBoxContainer" unique_id=773478992]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Failed:"

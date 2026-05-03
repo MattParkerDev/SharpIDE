@@ -24,6 +24,9 @@ public partial class AutoUpdateComponent : VBoxContainer
 	private Button _finishUpdateAndRestartButton = null!;
 	
 	private HBoxContainer _updatingAndRestartingHBoxContainer = null!;
+	
+	private HBoxContainer _failedHBoxContainer = null!;
+	private Label _failedLabel = null!;
 
 	private readonly AutoUpdate _autoUpdate = new();
 	private Release? _pendingRelease;
@@ -33,6 +36,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 	{
 		_lastCheckedAtLabel = GetNode<Label>("%LastCheckedAtLabel");
 		_newerVersionLabel = GetNode<Label>("%NewerVersionLabel");
+		_failedLabel = GetNode<Label>("%FailedLabel");
 		_checkForUpdatesHBoxContainer = GetNode<HBoxContainer>("%CheckForUpdatesHBoxContainer");
 		_downloadUpdateHBoxContainer = GetNode<HBoxContainer>("%DownloadUpdateHBoxContainer");
 		_noUpdatesFoundHBoxContainer = GetNode<HBoxContainer>("%NoUpdatesFoundHBoxContainer");
@@ -40,30 +44,46 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_downloadingUpdateHBoxContainer = GetNode<HBoxContainer>("%DownloadingUpdateHBoxContainer");
 		_finishUpdateAndRestartHBoxContainer = GetNode<HBoxContainer>("%FinishUpdateAndRestartHBoxContainer");
 		_updatingAndRestartingHBoxContainer = GetNode<HBoxContainer>("%UpdatingAndRestartingHBoxContainer");
+		_failedHBoxContainer = GetNode<HBoxContainer>("%FailedHBoxContainer");
 		
 		_checkForUpdatesButton = GetNode<Button>("%CheckForUpdatesButton");
 		_downloadUpdateButton = GetNode<Button>("%DownloadUpdateButton");
 		_finishUpdateAndRestartButton = GetNode<Button>("%FinishUpdateAndRestartButton");
-		
-		_checkForUpdatesButton.Pressed += OnCheckForUpdatesPressed;
-		_downloadUpdateButton.Pressed += OnDownloadUpdatePressed;
-		_finishUpdateAndRestartButton.Pressed += OnFinishUpdateAndRestartPressed;
+
+		_checkForUpdatesButton.Pressed += () => WithFailureGuard(OnCheckForUpdatesPressed);
+		_downloadUpdateButton.Pressed += () => WithFailureGuard(OnDownloadUpdatePressed);
+		_finishUpdateAndRestartButton.Pressed += () => WithFailureGuard(OnFinishUpdateAndRestartPressed);
 		
 		UpdateLastCheckedAtLabel();
 	}
 
 	private void SetStage(UpdateStage stage)
 	{
-		_checkForUpdatesHBoxContainer.Visible = stage is UpdateStage.Idle or UpdateStage.NoUpdateFound;
+		_checkForUpdatesHBoxContainer.Visible = stage is UpdateStage.Idle or UpdateStage.NoUpdateFound or UpdateStage.Failed;
 		_checkingForUpdatesHBoxContainer.Visible = stage is UpdateStage.Checking;
 		_downloadUpdateHBoxContainer.Visible = stage is UpdateStage.UpdateAvailable;
 		_noUpdatesFoundHBoxContainer.Visible = stage is UpdateStage.NoUpdateFound;
 		_downloadingUpdateHBoxContainer.Visible = stage is UpdateStage.Downloading;
 		_finishUpdateAndRestartHBoxContainer.Visible = stage is UpdateStage.ReadyToInstall;
 		_updatingAndRestartingHBoxContainer.Visible = stage is UpdateStage.Installing;
+		_failedHBoxContainer.Visible = stage is UpdateStage.Failed;
 	}
 
-	private async void OnCheckForUpdatesPressed()
+	private async void WithFailureGuard(Func<Task> func)
+	{
+		try
+		{
+			await func();
+		}
+		catch (Exception ex)
+		{
+			GD.PrintErr($"Auto-update failed: {ex}");
+			_failedLabel.Text = $"Failed: {ex.Message}";
+			SetStage(UpdateStage.Failed);
+		}
+	}
+
+	private async Task OnCheckForUpdatesPressed()
 	{
 		SetStage(UpdateStage.Checking);
 
@@ -90,7 +110,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 		SetStage(UpdateStage.UpdateAvailable);
 	}
 
-	private async void OnDownloadUpdatePressed()
+	private async Task OnDownloadUpdatePressed()
 	{
 		if (_pendingRelease is null) return;
 		
@@ -99,7 +119,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 		SetStage(UpdateStage.ReadyToInstall);
 	}
 
-	private async void OnFinishUpdateAndRestartPressed()
+	private async Task OnFinishUpdateAndRestartPressed()
 	{
 		if (_pendingArchivePath is null) return;
 		

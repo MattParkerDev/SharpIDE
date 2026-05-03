@@ -9,4 +9,5 @@ public enum UpdateStage
     Downloading,
     ReadyToInstall,
     Installing,
+    Failed
 }
