@@ -7,7 +7,7 @@ public class AppState
     public string? LastOpenSolutionFilePath { get; set; }
     public IdeSettings IdeSettings { get; set; } = new IdeSettings();
     public List<RecentSln> RecentSlns { get; set; } = [];
-    public DateTimeOffset? LastCheckedForUpdates; // Make auto-property once finalized
+    public DateTimeOffset? LastCheckedForUpdates { get; set; }
 }
 
 public class IdeSettings
