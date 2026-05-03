@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Godot;
 using Octokit;
 using SharpIDE.Godot.Features.IdeAutoUpdate;
@@ -65,8 +66,15 @@ public partial class AutoUpdateComponent : VBoxContainer
 	private async void OnCheckForUpdatesPressed()
 	{
 		SetStage(UpdateStage.Checking);
-		
+
+		var timer = Stopwatch.StartNew();
 		var release = await _autoUpdate.CheckForUpdates(Singletons.AppState.LastCheckedForUpdates);
+		timer.Stop();
+		if (release is null && timer.Elapsed < TimeSpan.FromSeconds(1))
+		{
+			var extraTimeToWait = TimeSpan.FromSeconds(1) - timer.Elapsed;
+			await Task.Delay(extraTimeToWait);
+		}
 		
 		Singletons.AppState.LastCheckedForUpdates = DateTimeOffset.UtcNow;
 		UpdateLastCheckedAtLabel();
