@@ -10,6 +10,7 @@ public partial class SettingsWindow : Window
     private CheckButton _debuggerUseSharpDbgCheckButton = null!;
     private OptionButton _themeOptionButton = null!;
     private Button _fontPickerButton = null!;
+    private Button _terminalFontPickerButton = null!;
     private CheckButton _foldCodeCheckButton = null!;
 
     private PackedScene _fontPickerDialogScene = ResourceLoader.Load<PackedScene>("uid://bkw3m18ndkev3");
@@ -22,6 +23,7 @@ public partial class SettingsWindow : Window
         _debuggerUseSharpDbgCheckButton = GetNode<CheckButton>("%DebuggerUseSharpDbgCheckButton");
         _themeOptionButton = GetNode<OptionButton>("%ThemeOptionButton");
         _fontPickerButton = GetNode<Button>("%FontPickerButton");
+        _terminalFontPickerButton = GetNode<Button>("%TerminalFontPickerButton");
         _foldCodeCheckButton = GetNode<CheckButton>("%FoldCodeCheckButton");
         
         _uiScaleSpinBox.ValueChanged += OnUiScaleSpinBoxValueChanged;
@@ -29,6 +31,7 @@ public partial class SettingsWindow : Window
         _debuggerUseSharpDbgCheckButton.Toggled += OnDebuggerUseSharpDbgToggled;
         _themeOptionButton.ItemSelected += OnThemeItemSelected;
         _fontPickerButton.Pressed += OnFontPickerButtonPressed;
+        _terminalFontPickerButton.Pressed += OnTerminalFontPickerButtonPressed;
         _foldCodeCheckButton.Toggled += OnFoldCodeCheckButtonToggled;
         AboutToPopup += OnAboutToPopup;
     }
@@ -42,6 +45,9 @@ public partial class SettingsWindow : Window
         var currentCodeEditThemeFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
         _fontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, currentCodeEditThemeFont);
         _fontPickerButton.Text = $"{currentCodeEditThemeFont.GetFontName()} | {currentCodeEditThemeFontSize}";
+        var currentTerminalThemeNormalFont = GetThemeFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal);
+        _terminalFontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, currentTerminalThemeNormalFont);
+        _terminalFontPickerButton.Text = $"{currentTerminalThemeNormalFont.GetFontName()} | {GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal)}";
 
         _foldCodeCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.EditorEnableFolding;
         var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme.ToString());
@@ -84,6 +90,10 @@ public partial class SettingsWindow : Window
     private void OnFontPickerButtonPressed()
     {
         var fontPickerDialog = _fontPickerDialogScene.Instantiate<FontPickerDialog>();
+        fontPickerDialog.CurrentSystemFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
+        fontPickerDialog.CurrentFontSize = Singletons.AppState.IdeSettings.EditorFontSize;
+        fontPickerDialog.DefaultFont = SetThemeExtensions.EditorDefaultFont;
+        fontPickerDialog.DefaultFontSize = SetThemeExtensions.EditorDefaultFontSize;
         fontPickerDialog.FontSelected += result =>
         {
             var (systemFontName, selectedFontSize) = result;
@@ -95,6 +105,29 @@ public partial class SettingsWindow : Window
             _fontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, font);
             this.ThemeSetCodeEditFont(font);
             this.ThemeSetCodeEditFontSize(fontSize);
+        };
+        AddChild(fontPickerDialog);
+        fontPickerDialog.PopupCentered();
+    }
+    
+    private void OnTerminalFontPickerButtonPressed()
+    {
+        var fontPickerDialog = _fontPickerDialogScene.Instantiate<FontPickerDialog>();
+        fontPickerDialog.CurrentSystemFontName = Singletons.AppState.IdeSettings.TerminalSystemFontName;
+        fontPickerDialog.CurrentFontSize = Singletons.AppState.IdeSettings.TerminalFontSize;
+        fontPickerDialog.DefaultFont = SetThemeExtensions.TerminalDefaultFont;
+        fontPickerDialog.DefaultFontSize = SetThemeExtensions.TerminalDefaultFontSize;
+        fontPickerDialog.FontSelected += result =>
+        {
+            var (systemFontName, selectedFontSize) = result;
+            Singletons.AppState.IdeSettings.TerminalSystemFontName = systemFontName;
+            Singletons.AppState.IdeSettings.TerminalFontSize = selectedFontSize;
+            var font = systemFontName is null ? SetThemeExtensions.TerminalDefaultFont : new SystemFont { FontNames = [systemFontName] };
+            var fontSize = selectedFontSize ?? SetThemeExtensions.TerminalDefaultFontSize;
+            _terminalFontPickerButton.Text = $"{font.GetFontName()} | {fontSize}";
+            _terminalFontPickerButton.AddThemeFontOverride(ThemeStringNames.Font, font);
+            this.ThemeSetTerminalFont(font);
+            this.ThemeSetTerminalFontSize(fontSize);
         };
         AddChild(fontPickerDialog);
         fontPickerDialog.PopupCentered();

@@ -69,6 +69,8 @@ public partial class IdeWindow : Control
     {
         SetThemeExtensions.EditorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
         SetThemeExtensions.EditorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
+        SetThemeExtensions.TerminalDefaultFont = GetThemeFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal);
+        SetThemeExtensions.TerminalDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal);
         var editorFontSize = Singletons.AppState.IdeSettings.EditorFontSize;
         var editorFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
         if (editorFontSize is not null) this.ThemeSetCodeEditFontSize(editorFontSize.Value);
@@ -77,6 +79,10 @@ public partial class IdeWindow : Control
             var font = new SystemFont { FontNames = [editorFontName] };
             this.ThemeSetCodeEditFont(font);
         }
+        var terminalFontSize = Singletons.AppState.IdeSettings.TerminalFontSize;
+        var terminalFontName = Singletons.AppState.IdeSettings.TerminalSystemFontName;
+        if (terminalFontSize is not null) this.ThemeSetTerminalFontSize(terminalFontSize.Value);
+        if (terminalFontName is not null) this.ThemeSetTerminalFont(new SystemFont { FontNames = [terminalFontName] });
     }
 
     private void SetIdeThemeFromAppState()

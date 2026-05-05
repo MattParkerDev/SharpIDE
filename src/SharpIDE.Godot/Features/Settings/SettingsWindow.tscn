@@ -9,7 +9,7 @@
 oversampling_override = 1.0
 title = "Settings"
 initial_position = 2
-size = Vector2i(845, 400)
+size = Vector2i(845, 450)
 transient = true
 exclusive = true
 popup_window = true
@@ -205,3 +205,28 @@ layout_mode = 2
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Enables folding gutter menu for brackets and region tags in the text editor"
+
+[node name="VBoxContainer7" type="VBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=284365762]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7" unique_id=36133952]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7/HBoxContainer" unique_id=1356652171]
+layout_mode = 2
+text = "Terminal Font"
+
+[node name="TerminalFontPickerButton" type="Button" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7/HBoxContainer" unique_id=19502130]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bmmi8")
+text = "Inter | 16"
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7" unique_id=269096577]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7/HBoxContainer2" unique_id=1994731982]
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "Sets the Font and Font Size used in terminals"

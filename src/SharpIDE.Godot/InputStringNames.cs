@@ -47,6 +47,14 @@ public static class ThemeStringNames
     public static readonly StringName CompletionScrollColor = "completion_scroll_color";
     public static readonly StringName CompletionExistingColor = "completion_existing_color";
     public static readonly StringName CompletionColorBgIcon = "completion_color_bg";
+
+    public static class Terminal
+    {
+        public static readonly StringName NormalFont = "normal_font";
+        public static readonly StringName ItalicsFont = "italics_font";
+        public static readonly StringName BoldFont = "bold_font";
+        public static readonly StringName BoldItalicsFont = "bold_italics_font";
+    }
 }
 
 public static class ThemeVariationStringNames
@@ -57,4 +65,5 @@ public static class ThemeVariationStringNames
 public static class GodotNodeStringNames
 {
     public static readonly StringName CodeEdit = nameof(CodeEdit);
+    public static readonly StringName Terminal = nameof(Terminal);
 }

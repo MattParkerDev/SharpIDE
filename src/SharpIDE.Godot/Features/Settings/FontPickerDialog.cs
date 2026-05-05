@@ -15,6 +15,12 @@ public partial class FontPickerDialog : Window
 	private Button _saveButton = null!;
 	private Button _cancelButton = null!;
 
+	public Font DefaultFont { get; set; } = null!;
+	public int DefaultFontSize { get; set; } = -1;
+
+	public string? CurrentSystemFontName { get; set; }
+	public int? CurrentFontSize { get; set; }
+
 	private string? _selectedSystemFontName;
 	private int? _selectedFontSize;
 
@@ -34,18 +40,18 @@ public partial class FontPickerDialog : Window
 		_saveButton.Pressed += OnSaveButtonPressed;
 		_cancelButton.Pressed += QueueFree;
 
-		PopulateFontList();
-		UpdateFontSize();
+		PopulateFontList(CurrentSystemFontName);
+		SetInitialFontSize(CurrentFontSize);
 	}
 
-	private void PopulateFontList()
+	private void PopulateFontList(string? currentSystemFontName)
 	{
 		_systemFontItemList.Clear();
 		var systemFontNames = OS.GetSystemFonts();
-		if (systemFontNames.Contains(Singletons.AppState.IdeSettings.EditorSystemFontName) is false) Singletons.AppState.IdeSettings.EditorSystemFontName = null;
-		_selectedSystemFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
+		if (systemFontNames.Contains(currentSystemFontName) is false) currentSystemFontName = null;
+		_selectedSystemFontName = currentSystemFontName;
 
-		_systemFontItemList.AddItem($"SharpIDE Default - {SetThemeExtensions.EditorDefaultFont.GetFontName()}");
+		_systemFontItemList.AddItem($"Default - {DefaultFont.GetFontName()}");
 		_systemFontItemList.Select(0);
 		foreach (var fontName in systemFontNames.Order())
 		{
@@ -56,20 +62,21 @@ public partial class FontPickerDialog : Window
 			}
 		}
 		_systemFontItemList.EnsureCurrentIsVisible();
-		
-		if (_selectedSystemFontName is null) return;
-		var font = new SystemFont { FontNames = [_selectedSystemFontName] };
+
+		var font = _selectedSystemFontName is null ? DefaultFont : new SystemFont { FontNames = [_selectedSystemFontName] };
 		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, font);
 	}
 
-	private void UpdateFontSize()
+	private void SetInitialFontSize(int? fontSize)
 	{
-		if (Singletons.AppState.IdeSettings.EditorFontSize is null)
+		_fontSizeItemList.SetItemText(0, $"Default - {DefaultFontSize}");
+		if (fontSize is null)
 		{
 			_fontSizeItemList.Select(0);
+			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, DefaultFontSize);
 			return;
 		}
-		var currentSize = Singletons.AppState.IdeSettings.EditorFontSize.ToString();
+		var currentSize = fontSize.ToString();
 		for (var i = 0; i < _fontSizeItemList.GetItemCount(); i++)
 		{
 			if (_fontSizeItemList.GetItemText(i) != currentSize) continue;
@@ -78,8 +85,8 @@ public partial class FontPickerDialog : Window
 		}
 
 		_fontSizeItemList.EnsureCurrentIsVisible();
-		_selectedFontSize = Singletons.AppState.IdeSettings.EditorFontSize.Value;
-		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, Singletons.AppState.IdeSettings.EditorFontSize.Value);
+		_selectedFontSize = fontSize.Value;
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, fontSize.Value);
 	}
 
 	private void OnSystemFontItemListItemSelected(long index)
@@ -87,7 +94,7 @@ public partial class FontPickerDialog : Window
 		if (index is 0)
 		{
 			_selectedSystemFontName = null;
-			_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, SetThemeExtensions.EditorDefaultFont);
+			_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, DefaultFont);
 			return;
 		}
 		var systemFontName = _systemFontItemList.GetItemText((int)index);
@@ -101,7 +108,7 @@ public partial class FontPickerDialog : Window
 		if (index is 0)
 		{
 			_selectedFontSize = null;
-			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, SetThemeExtensions.EditorDefaultFontSize);
+			_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, DefaultFontSize);
 			return;
 		}
 		var px = _fontSizeItemList.GetItemText((int)index).ToInt();
@@ -113,8 +120,8 @@ public partial class FontPickerDialog : Window
 	{
 		_selectedSystemFontName = null;
 		_selectedFontSize = null;
-		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, SetThemeExtensions.EditorDefaultFont);
-		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, SetThemeExtensions.EditorDefaultFontSize);
+		_previewCodeEdit.AddThemeFontOverride(ThemeStringNames.Font, DefaultFont);
+		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, DefaultFontSize);
 		_systemFontItemList.Select(0);
 		_fontSizeItemList.Select(0);
 		

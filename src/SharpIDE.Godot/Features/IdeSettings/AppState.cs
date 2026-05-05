@@ -20,6 +20,8 @@ public class IdeSettings
     public string? EditorSystemFontName { get; set; } = null;
     public int? EditorFontSize { get; set; } = null;
     public bool EditorEnableFolding { get; set; } = true;
+    public string? TerminalSystemFontName { get; set; } = null;
+    public int? TerminalFontSize { get; set; } = null;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -12,6 +12,8 @@ public static class SetThemeExtensions
 
     public static Font EditorDefaultFont { get; set; } = null!;
     public static int EditorDefaultFontSize { get; set; } = -1;
+    public static Font TerminalDefaultFont { get; set; } = null!;
+    public static int TerminalDefaultFontSize { get; set; } = -1;
 
     public static void SetIdeTheme(this Node node, LightOrDarkTheme theme)
     {
@@ -38,5 +40,24 @@ public static class SetThemeExtensions
     {
         LightTheme.SetFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit, fontSize);
         DarkTheme.SetFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit, fontSize);
+    }
+    
+    public static void ThemeSetTerminalFont(this Node node, Font font)
+    {
+        DarkTheme.SetFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal, font);
+        DarkTheme.SetFont(ThemeStringNames.Terminal.BoldFont, GodotNodeStringNames.Terminal, font);
+        DarkTheme.SetFont(ThemeStringNames.Terminal.ItalicsFont, GodotNodeStringNames.Terminal, font);
+        DarkTheme.SetFont(ThemeStringNames.Terminal.BoldItalicsFont, GodotNodeStringNames.Terminal, font);
+        
+        LightTheme.SetFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal, font);
+        LightTheme.SetFont(ThemeStringNames.Terminal.BoldFont, GodotNodeStringNames.Terminal, font);
+        LightTheme.SetFont(ThemeStringNames.Terminal.ItalicsFont, GodotNodeStringNames.Terminal, font);
+        LightTheme.SetFont(ThemeStringNames.Terminal.BoldItalicsFont, GodotNodeStringNames.Terminal, font);
+    }
+
+    public static void ThemeSetTerminalFontSize(this Node node, int fontSize)
+    {
+        LightTheme.SetFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal, fontSize);
+        DarkTheme.SetFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal, fontSize);
     }
 }
