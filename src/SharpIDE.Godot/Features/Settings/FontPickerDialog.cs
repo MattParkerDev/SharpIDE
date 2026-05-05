@@ -136,7 +136,7 @@ public partial class FontPickerDialog : Window
 	}
 }
 
-public partial class FontPickerResult(string? systemFontName, int? fontSize) : GodotObject
+public partial class FontPickerResult(string? systemFontName, int? fontSize) : RefCounted
 {
 	public string? SystemFontName { get; init; } = systemFontName;
 	public int? FontSize { get; init; } = fontSize;
