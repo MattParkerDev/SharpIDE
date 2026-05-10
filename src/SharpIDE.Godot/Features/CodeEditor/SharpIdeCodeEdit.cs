@@ -53,6 +53,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
+	private Color _cachedCurrentCaretLineColor;
 
 	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
 	[Inject] private readonly RunService _runService = null!;
@@ -80,6 +81,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_methodSignatureHelpWindow = GetNode<Window>("%MethodSignatureHelpWindow");
 		_completionDescriptionLabel = _completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
 		_canvasItemRid = GetCanvasItem();
+		_cachedCurrentCaretLineColor = GetThemeColor(ThemeStringNames.CodeEdit.CurrentLineColor, GodotNodeStringNames.CodeEdit);
 		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, _canvasItemRid);
 		_findReplaceBar = GetNode<FindReplaceBar>("%FindReplaceBar");
 		_findReplaceBar.SetTextEdit(this);
@@ -105,6 +107,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SetCodeRegionTags("region", "endregion");
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(SetCodeFoldingAsync);
 		SetCodeFolding(Singletons.AppState.IdeSettings.EditorEnableFolding);
+	}
+	
+	public override void _Notification(int what)
+	{
+		if (what == NotificationThemeChanged) 
+			_cachedCurrentCaretLineColor = GetThemeColor(ThemeStringNames.CodeEdit.CurrentLineColor, GodotNodeStringNames.CodeEdit);
 	}
 
 	private async Task SetCodeFoldingAsync(bool enabled) => await this.InvokeAsync(() => SetCodeFolding(enabled));
@@ -442,7 +450,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 		var currentCaretLine = GetCaretLine();
 		// We draw this ourselves, as the normal "current caret line bg color" is placed above anything drawn in _Draw, so we can't draw e.g. 'Executing line col range bg highlights' above caret line bg, but below text
-		DrawLineBackgroundColorCustom(currentCaretLine, new Color("0f0f0f"));
+		DrawLineBackgroundColorCustom(currentCaretLine, _cachedCurrentCaretLineColor);
 		
 		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 		{

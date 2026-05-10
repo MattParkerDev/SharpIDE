@@ -55,6 +55,10 @@ public static class ThemeStringNames
         public static readonly StringName BoldFont = "bold_font";
         public static readonly StringName BoldItalicsFont = "bold_italics_font";
     }
+    public static class CodeEdit
+    {
+        public static readonly StringName CurrentLineColor = "current_line_color";
+    }
 }
 
 public static class ThemeVariationStringNames
