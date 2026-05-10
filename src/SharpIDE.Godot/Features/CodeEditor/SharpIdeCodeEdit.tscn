@@ -19,7 +19,6 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 highlight_all_occurrences = true
-highlight_current_line = true
 symbol_lookup_on_click = true
 symbol_tooltip_on_hover = true
 line_folding = true

@@ -36,6 +36,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private PopupMenu _popupMenu = null!;
 	private CanvasItem _aboveCanvasItem = null!;
 	private Rid? _aboveCanvasItemRid = null!;
+	private Rid _canvasItemRid;
 	private Window _completionDescriptionWindow = null!;
 	private Window _methodSignatureHelpWindow = null!;
 	private RichTextLabel _completionDescriptionLabel = null!;
@@ -78,7 +79,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_completionDescriptionWindow = GetNode<Window>("%CompletionDescriptionWindow");
 		_methodSignatureHelpWindow = GetNode<Window>("%MethodSignatureHelpWindow");
 		_completionDescriptionLabel = _completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
-		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, GetCanvasItem());
+		_canvasItemRid = GetCanvasItem();
+		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, _canvasItemRid);
 		_findReplaceBar = GetNode<FindReplaceBar>("%FindReplaceBar");
 		_findReplaceBar.SetTextEdit(this);
 		_popupMenu.IdPressed += OnCodeFixSelected;
@@ -416,6 +418,18 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 		RenderingServer.Singleton.DrawDashedLine(_aboveCanvasItemRid!.Value, startPos, endPos, color, thickness);
 	}
+	public void DrawLineBackgroundColorCustom(int line, Color color)
+	{
+		var startRect = GetRectAtLineColumn(line, 0);
+		if (startRect.Position.X < 0) return; // line is off-screen
+		var rect = new Rect2(
+			0,
+			startRect.Position.Y,
+			Size.X - (MinimapDraw ? MinimapWidth : 0),
+			GetLineHeight()
+		);
+		RenderingServer.Singleton.CanvasItemAddRect(_canvasItemRid, rect, color);
+	}
 	public override void _Draw()
 	{
 		RenderingServer.Singleton.CanvasItemClear(_aboveCanvasItemRid!.Value);
@@ -425,6 +439,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var leftEdgeStart = new Vector2(gutterWidth, 0);
 		var leftEdgeEnd = new Vector2(gutterWidth, Size.Y);
 		RenderingServer.Singleton.CanvasItemAddLine(_aboveCanvasItemRid.Value, leftEdgeStart, leftEdgeEnd, new Color("464646"), 1);
+
+		var currentCaretLine = GetCaretLine();
+		// We draw this ourselves, as the normal "current caret line bg color" is placed above anything drawn in _Draw, so we can't draw e.g. 'Executing line col range bg highlights' above caret line bg, but below text
+		DrawLineBackgroundColorCustom(currentCaretLine, new Color("0f0f0f"));
 		
 		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 		{
