@@ -63,6 +63,7 @@ theme_override_constants/separation = 0
 [node name="SlnNameLabel" type="Label" parent="Button/MarginContainer/PreviousSlnEntry/VBoxContainer" unique_id=1193279800]
 unique_name_in_owner = true
 layout_mode = 2
+theme_type_variation = &"Gray800Label"
 text = "Solution Name"
 text_overrun_behavior = 3
 

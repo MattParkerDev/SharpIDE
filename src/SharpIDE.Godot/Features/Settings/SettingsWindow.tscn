@@ -57,7 +57,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=1086532735]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "UI Scale"
 
 [node name="UiScaleSpinBox" type="SpinBox" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=411172344]
@@ -84,7 +84,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2/HBoxContainer" unique_id=1980223509]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "Use SharpDbg"
 
 [node name="DebuggerUseSharpDbgCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer2/HBoxContainer" unique_id=141032093]
@@ -109,7 +109,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3/HBoxContainer" unique_id=2028826210]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "Debugger File Path"
 
 [node name="DebuggerFilePathLineEdit" type="LineEdit" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer3/HBoxContainer" unique_id=298954064]
@@ -139,7 +139,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4/HBoxContainer" unique_id=1404561371]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "Theme"
 
 [node name="ThemeOptionButton" type="OptionButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer4/HBoxContainer" unique_id=1638166442]
@@ -170,7 +170,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5/HBoxContainer" unique_id=320561235]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "Editor Font"
 
 [node name="FontPickerButton" type="Button" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer5/HBoxContainer" unique_id=1114197524]
@@ -196,7 +196,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6/HBoxContainer" unique_id=1031337714]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "Editor Code Folding"
 
 [node name="FoldCodeCheckButton" type="CheckButton" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer6/HBoxContainer" unique_id=255623137]
@@ -221,7 +221,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7/HBoxContainer" unique_id=1356652171]
 layout_mode = 2
-theme_type_variation = &"Gray700Label"
+theme_type_variation = &"Gray800Label"
 text = "Terminal Font"
 
 [node name="TerminalFontPickerButton" type="Button" parent="HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer7/HBoxContainer" unique_id=19502130]
