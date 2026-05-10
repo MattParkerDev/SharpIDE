@@ -85,14 +85,15 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 					return;
 				}
 				var additionalProperties = @event.AdditionalProperties;
-				// source, line, column
+
+				string? filePath = null;
+				int? line = null;
+				DecompiledSourceInfo? decompiledSourceInfo = null;
 				if (additionalProperties?.Count is > 0)
 				{
-					var filePath = additionalProperties["source"]?["path"]!.Value<string>()!;
-					var line = (additionalProperties["line"]?.Value<int>()!).Value;
-					var decompiledSourceInfo = additionalProperties.GetValueOrDefault("decompiledSourceInfo")?.ToObject<DecompiledSourceInfo>();
-					var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
-					GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
+					filePath = additionalProperties["source"]?["path"]!.Value<string>()!;
+					line = (additionalProperties["line"]?.Value<int>()!).Value;
+					decompiledSourceInfo = additionalProperties.GetValueOrDefault("decompiledSourceInfo")?.ToObject<DecompiledSourceInfo>();
 				}
 				else
 				{
@@ -100,11 +101,11 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 					var stackTraceRequest = new StackTraceRequest { ThreadId = @event.ThreadId!.Value, StartFrame = 0, Levels = 1 };
 					var stackTraceResponse = debugProtocolHost.SendRequestSync(stackTraceRequest);
 					var topFrame = stackTraceResponse.StackFrames.Single();
-					var filePath = topFrame.Source.Path;
-					var line = topFrame.Line;
-					var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = null };
-					GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
+					filePath ??= topFrame.Source.Path;
+					line ??= topFrame.Line;
 				}
+				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line.Value, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
+				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 			catch (Exception e)
 			{
