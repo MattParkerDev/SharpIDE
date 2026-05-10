@@ -88,14 +88,22 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 
 				string? filePath = null;
 				int? line = null;
+				int? column = null;
+				int? endLine = null;
+				int? endColumn = null;
 				DecompiledSourceInfo? decompiledSourceInfo = null;
-				if (additionalProperties?.Count is > 0)
+
+				var hasAdditionalProperties = additionalProperties?.Count is > 0;
+				if (hasAdditionalProperties)
 				{
-					filePath = additionalProperties["source"]?["path"]!.Value<string>()!;
+					filePath = additionalProperties!["source"]?["path"]!.Value<string>()!;
 					line = (additionalProperties["line"]?.Value<int>()!).Value;
+					column = (additionalProperties["column"]?.Value<int>()!).Value;
+					endLine = additionalProperties.GetValueOrDefault("endLine")?.Value<int>();
+					endColumn = additionalProperties.GetValueOrDefault("endColumn")?.Value<int>();
 					decompiledSourceInfo = additionalProperties.GetValueOrDefault("decompiledSourceInfo")?.ToObject<DecompiledSourceInfo>();
 				}
-				else
+				if (hasAdditionalProperties is false || endLine is null || endColumn is null)
 				{
 					// we need to get the top stack frame to find out where we are
 					var stackTraceRequest = new StackTraceRequest { ThreadId = @event.ThreadId!.Value, StartFrame = 0, Levels = 1 };
@@ -103,8 +111,11 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 					var topFrame = stackTraceResponse.StackFrames.Single();
 					filePath ??= topFrame.Source.Path;
 					line ??= topFrame.Line;
+					column ??= topFrame.Column;
+					endLine ??= topFrame.EndLine;
+					endColumn ??= topFrame.EndColumn;
 				}
-				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath, Line = line.Value, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
+				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath!, Line = line!.Value, EndLine = endLine!.Value, StartColumn = column!.Value, EndColumn = endColumn.Value, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
 				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 			catch (Exception e)
