@@ -115,7 +115,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 					endLine ??= topFrame.EndLine;
 					endColumn ??= topFrame.EndColumn;
 				}
-				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath!, Line = line!.Value, EndLine = endLine!.Value, StartColumn = column!.Value, EndColumn = endColumn.Value, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
+				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath!, StartLine = line!.Value, EndLine = endLine!.Value, StartColumn = column!.Value, EndColumn = endColumn.Value, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
 				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 			catch (Exception e)

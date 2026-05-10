@@ -211,7 +211,7 @@ public partial class CodeEditorPanel : MarginContainer
 	{
 		Guard.Against.Null(Solution, nameof(Solution));
 		
-		var lineInt = executionStopInfo.Line - 1; // Debugging is 1-indexed, Godot is 0-indexed
+		var lineInt = executionStopInfo.StartLine - 1; // Debugging is 1-indexed, Godot is 0-indexed
 		Guard.Against.Negative(lineInt);
 
 		SharpIdeFile file;
@@ -253,7 +253,7 @@ public partial class CodeEditorPanel : MarginContainer
 		if (stoppedProjects.Count == 0) return; // ie not currently stopped anywhere
 		var project = stoppedProjects[0];
 		if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
-		var godotLine = executionStopInfo.Line - 1;
+		var godotLine = executionStopInfo.StartLine - 1;
 		var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath);
 		tabForStopInfo.CodeEdit.SetLineAsExecuting(godotLine, false);
 		tabForStopInfo.CodeEdit.SetLineColour(godotLine);
@@ -277,7 +277,7 @@ public partial class CodeEditorPanel : MarginContainer
 		if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
 		await this.InvokeAsync(() =>
 		{
-			var godotLine = executionStopInfo.Line - 1;
+			var godotLine = executionStopInfo.StartLine - 1;
 			var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
 			tabForStopInfo.SetLineAsExecuting(godotLine, false);
 			tabForStopInfo.SetLineColour(godotLine);

@@ -5,7 +5,7 @@ namespace SharpIDE.Application.Features.Debugging;
 public class ExecutionStopInfo
 {
     public required string FilePath { get; set; }
-    public required int Line { get; init; }
+    public required int StartLine { get; init; }
     public required int EndLine { get; init; }
     public required int StartColumn { get; init; }
     public required int EndColumn { get; init; }
