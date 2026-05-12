@@ -60,7 +60,7 @@ internal sealed class BuiltInTemplatePackageProvider(BuiltInTemplatePackageProvi
             //IList<string> versionedFolders = GetBestVersionsByMajorMinor(parsedNames);
 
             // templateFoldersToInstall.AddRange(versionedFolders.Select(versionedFolder => Path.Combine(templatesRootFolder, versionedFolder)));
-            templateFoldersToInstall.AddRange(parsedNames.Select(s => s.Key));
+            foreach (var entry in parsedNames) templateFoldersToInstall.Add(entry.Key);
         }
 
         // Now grab templates from our base folder, if present.

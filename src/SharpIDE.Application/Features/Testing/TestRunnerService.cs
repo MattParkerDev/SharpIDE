@@ -28,7 +28,7 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 			await discoveryResponse.WaitCompletionAsync();
 
 			await client.ExitAsync();
-			allDiscoveredTestNodes.AddRange(testNodeUpdates.Select(tn => tn.Node));
+			foreach (var testNodeUpdate in testNodeUpdates) allDiscoveredTestNodes.Add(testNodeUpdate.Node);
 		}
 		_logger.LogInformation("Discovered {DiscoveredTestCount} tests", allDiscoveredTestNodes.Count);
 		return allDiscoveredTestNodes;

@@ -4,12 +4,6 @@ namespace SharpIDE.Application.Features.SolutionDiscovery;
 
 public static class TreeMapperV2
 {
-	public static IEnumerable<SharpIdeFile> GetAllFiles(this SharpIdeFolder folder)
-	{
-		return folder.Files
-			.Concat(folder.Folders.SelectMany(sub => sub.GetAllFiles()));
-	}
-
 	private static readonly string[] _excludedFolders = ["bin", "obj", "node_modules", ".vs", ".git", ".idea", ".vscode"];
 	public static List<SharpIdeFolder> GetSubFolders(this SharpIdeFolder folder, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders) => GetSubFolders(folder.Path, parent, allFiles, allFolders);
 	public static List<SharpIdeFolder> GetSubFolders(string folderPath, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders)

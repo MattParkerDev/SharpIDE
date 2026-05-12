@@ -39,7 +39,8 @@ public class NugetClientService
 				log: _nugetLogger,
 				cancellationToken: cancellationToken).ConfigureAwait(false);
 
-			packagesResult.AddRange(results.Select(s => new IdePackageResult(s.Identity.Id, [new IdePackageFromSourceResult(s, source)], null)));
+			var idePackageResults = results.AsValueEnumerable().Select(s => new IdePackageResult(s.Identity.Id, [new IdePackageFromSourceResult(s, source)], null));
+			foreach (var idePackageResult in idePackageResults) packagesResult.Add(idePackageResult);
 		}
 
 		// Combine, group, and order by download count

@@ -344,7 +344,7 @@ public partial class CustomMsBuildProjectLoader
 				var documents = CreateDocumentInfos(projectFileInfo.Documents, projectId, commandLineArgs.Encoding);
 				var additionalDocuments = CreateDocumentInfos(projectFileInfo.AdditionalDocuments, projectId, commandLineArgs.Encoding);
 				var analyzerConfigDocuments = CreateDocumentInfos(projectFileInfo.AnalyzerConfigDocuments, projectId, commandLineArgs.Encoding);
-				CheckForDuplicateDocuments(documents.Concat(additionalDocuments).Concat(analyzerConfigDocuments), projectPath, projectId);
+				CheckForDuplicateDocuments([..documents, ..additionalDocuments, ..analyzerConfigDocuments], projectPath, projectId);
 
 				var analyzerReferences = ResolveAnalyzerReferences(commandLineArgs);
 

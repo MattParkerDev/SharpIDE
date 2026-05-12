@@ -269,7 +269,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			var projectInfo = loadedProjectInfo
 				.WithId(existingProject.Id)
 				.WithDocuments(MapDocuments(_workspace.CurrentSolution, existingProject.Id, loadedProjectInfo.Documents))
-				.WithProjectReferences(loadedProjectInfo.ProjectReferences.Select(MapProjectReference))
+				.WithProjectReferences(loadedProjectInfo.ProjectReferences.AsValueEnumerable().Select(MapProjectReference).ToImmutableArray())
 				.WithAdditionalDocuments(MapDocuments(_workspace.CurrentSolution, existingProject.Id, loadedProjectInfo.AdditionalDocuments))
 				.WithAnalyzerConfigDocuments(MapDocuments(_workspace.CurrentSolution, existingProject.Id, loadedProjectInfo.AnalyzerConfigDocuments));
 			return projectInfo;

@@ -315,7 +315,7 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 			return d;
 		});
 
-		temporaryProjectInfo = temporaryProjectInfo.WithDocuments(updatedDocuments);
+		temporaryProjectInfo = temporaryProjectInfo.WithDocuments(updatedDocuments.AsValueEnumerable().ToImmutableArray());
 		metadataWorkspace.OnProjectAdded(temporaryProjectInfo);
 
 		// Register all document paths in the lookup dictionary.

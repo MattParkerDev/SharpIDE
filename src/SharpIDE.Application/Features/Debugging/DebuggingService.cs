@@ -337,7 +337,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		return null;
 		var methodName = name.Split('!')[1].Split('(')[0];
 		var className = methodName.Split('.').Reverse().Skip(1).First();
-		var namespaceName = string.Join('.', methodName.Split('.').Reverse().Skip(2).Reverse());
+		var namespaceName = methodName.Split('.').AsValueEnumerable().Reverse().Skip(2).Reverse().JoinToString(".");
 		var assemblyName = name.Split('!')[0];
 		methodName = methodName.Split('.').Reverse().First();
 		var managedStackFrameInfo = new ManagedStackFrameInfo

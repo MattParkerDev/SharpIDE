@@ -127,7 +127,7 @@ namespace SharpIDE.Application.Features.Analysis.WorkspaceServices
 
 			void ProcessFiles(List<IGrouping<string, TypeDefinitionHandle>> fileGroups)
 			{
-				processedTypes.AddRange(fileGroups.SelectMany(f => f));
+				foreach (var s in fileGroups.AsValueEnumerable().SelectMany(f => f)) processedTypes.Add(s);
 				Parallel.ForEach(
 					Partitioner.Create(fileGroups, loadBalance: true),
 					new ParallelOptions {
