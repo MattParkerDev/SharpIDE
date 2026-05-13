@@ -49,7 +49,7 @@ public partial class PackageDetailsProjectEntry : MarginContainer
                 .ToList();
             _installedVersionLabel.TooltipText = $"""
                                                   Implicitly Referenced Versions
-                                                  {string.Join("\n", transitiveOriginsGroupedByVersion.Select(t => $"{t.RequestedVersion.ToString("p", VersionRangeFormatter.Instance)} by {string.Join(", ", t.PackageNames)}"))}
+                                                  {transitiveOriginsGroupedByVersion.AsValueEnumerable().Select(t => $"{t.RequestedVersion.ToString("p", VersionRangeFormatter.Instance)} by {string.Join(", ", t.PackageNames)}").JoinToString('\n')}
                                                   """;
         }
         DisplayRelevantButtons();

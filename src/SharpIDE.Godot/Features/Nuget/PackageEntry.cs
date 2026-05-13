@@ -64,7 +64,7 @@ public partial class PackageEntry : MarginContainer
 				.ToList();
 			_button.TooltipText = $"""
 								  Implicitly Referenced Versions
-								  {string.Join("\n", transitiveOriginsGroupedByVersion.Select(t => $"{t.RequestedVersion.ToString("p", VersionRangeFormatter.Instance)} by {string.Join(", ", t.PackageNames)}"))}
+								  {transitiveOriginsGroupedByVersion.AsValueEnumerable().Select(t => $"{t.RequestedVersion.ToString("p", VersionRangeFormatter.Instance)} by {string.Join(", ", t.PackageNames)}").JoinToString('\n')}
 								  """;
 		}
 		_installedVersionLabel.Text = GetInstalledVersionsText(installedPackagedInfo);
