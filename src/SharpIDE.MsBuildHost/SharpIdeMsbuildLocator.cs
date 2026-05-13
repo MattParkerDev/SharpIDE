@@ -12,6 +12,7 @@ public static class SharpIdeMsbuildLocator
 		{
 			FixMacosPath();
 		}
+		Environment.SetEnvironmentVariable("MSBUILD_PARSE_SLN_WITH_SOLUTIONPERSISTENCE", "1");
 		// Using VisualStudioInstanceQueryOptions with WorkingDirectory set doesn't seem to resolve a local SDK, but having this process's current directory set does
 		var originalWorkingDirectory = Environment.CurrentDirectory;
 		Environment.CurrentDirectory = projectOrSlnDirectory;

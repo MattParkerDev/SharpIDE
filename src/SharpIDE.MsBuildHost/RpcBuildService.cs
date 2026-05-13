@@ -24,7 +24,8 @@ public class RpcBuildService : IRpcBuildService
 		var buildParameters = new BuildParameters
 		{
 			MaxNodeCount = nodesToBuildWith,
-			DisableInProcNode = true,
+			DisableInProcNode = false,
+			EnableNodeReuse = true,
 			Loggers =
 			[
 				//new BinaryLogger { Parameters = "msbuild.binlog" },
