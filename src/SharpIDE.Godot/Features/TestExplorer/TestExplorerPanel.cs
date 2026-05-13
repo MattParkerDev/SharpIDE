@@ -47,16 +47,16 @@ public partial class TestExplorerPanel : Control
             await _buildService.MsBuildAsync(solution.FilePath, buildStartedFlags: BuildStartedFlags.Internal);
         }
         var testNodes = await _testRunnerService.DiscoverTests(solution);
-        var scenes = testNodes.Select(s =>
+        using var scenes = testNodes.AsValueEnumerable().Select(s =>
         {
             var entry = _testNodeEntryScene.Instantiate<TestNodeEntry>();
             entry.TestNode = s;
             return entry;
-        });
+        }).ToArrayPool();
         await this.InvokeAsync(() =>
         {
             _testNodesVBoxContainer.QueueFreeChildren();
-            foreach (var scene in scenes)
+            foreach (var scene in scenes.Span)
             {
                 _testNodesVBoxContainer.AddChild(scene);
             }
