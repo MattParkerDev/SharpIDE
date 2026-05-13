@@ -137,17 +137,17 @@ public partial class NugetPanel : Control
 		return;
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetPanel)}.{nameof(PopulateSearchResults)}");
 		var result = await _nugetClientService.GetTop100Results(_solution!.DirectoryPath);
-		var scenes = result.Select(s =>
+		using var scenes = result.AsValueEnumerable().Select(s =>
 		{
 			var scene = _packageEntryScene.Instantiate<PackageEntry>();
 			scene.PackageResult = s;
 			scene.PackageSelected += OnPackageSelected;
 			return scene;
-		}).ToList();
+		}).ToArrayPool();
 		await this.InvokeAsync(() =>
 		{
 			_availablePackagesItemList.QueueFreeChildren();
-			foreach (var scene in scenes)
+			foreach (var scene in scenes.Span)
 			{
 				_availablePackagesItemList.AddChild(scene);
 			}

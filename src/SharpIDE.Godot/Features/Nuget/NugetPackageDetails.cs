@@ -32,7 +32,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		_versionOptionButton = GetNode<OptionButton>("%VersionOptionButton");
 		_nugetSourceOptionButton = GetNode<OptionButton>("%NugetSourceOptionButton");
 		_projectsVBoxContainer = GetNode<VBoxContainer>("%ProjectsVBoxContainer");
-		_nugetSourceOptionButton.ItemSelected += OnNugetSourceSelected;
+		_nugetSourceOptionButton.ItemSelected += index => _ = Task.GodotRun(() => OnNugetSourceSelected(index));
 		_versionOptionButton.ItemSelected += VersionSelected;
 		
 		_projectsVBoxContainer.QueueFreeChildren();
@@ -71,8 +71,8 @@ public partial class NugetPackageDetails : VBoxContainer
 				_nugetSourceOptionButton.AddItem(packageFromSource.Source.Name);
 			}
 			_nugetSourceOptionButton.Selected = 0;
-			OnNugetSourceSelected(0);
 		});
+		await OnNugetSourceSelected(0);
 	}
 	
 	public async Task SetProjects(HashSet<SharpIdeProjectModel> projects)
@@ -112,7 +112,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		});
 	}
 	
-	private async void OnNugetSourceSelected(long sourceIndex)
+	private async Task OnNugetSourceSelected(long sourceIndex)
 	{
 		var packageFromSource = _package!.PackageFromSources[(int)sourceIndex];
 		var results = await _nugetClientService.GetAllVersionsOfPackageInSource(packageFromSource.PackageSearchMetadata.Identity.Id, packageFromSource.Source);

@@ -44,7 +44,7 @@ public partial class PackageEntry : MarginContainer
 		_packageIconTextureRect = GetNode<TextureRect>("%PackageIconTextureRect");
 		_latestVersionLabel.Text = string.Empty;
 		ApplyValues();
-		_button.Pressed += async () => await PackageSelected.Invoke(PackageResult);
+		_button.Pressed += () => _ = Task.GodotRun(() => PackageSelected.Invoke(PackageResult));
 	}
 	
 	private void ApplyValues()
