@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Ardalis.GuardClauses;
 using Godot;
+using Microsoft.CodeAnalysis.Text;
 using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Debugging;
@@ -211,8 +212,14 @@ public partial class CodeEditorPanel : MarginContainer
 	{
 		Guard.Against.Null(Solution, nameof(Solution));
 		
-		var lineInt = executionStopInfo.StartLine - 1; // Debugging is 1-indexed, Godot is 0-indexed
-		Guard.Against.Negative(lineInt);
+		var startLine = executionStopInfo.StartLine - 1; // Debugging is 1-indexed, Godot is 0-indexed
+		var endLine = executionStopInfo.EndLine - 1;
+		var startColumn = executionStopInfo.StartColumn - 1;
+		var endColumn = executionStopInfo.EndColumn - 1;
+		Guard.Against.Negative(startLine);
+		Guard.Against.Negative(endLine);
+		Guard.Against.Negative(startColumn);
+		Guard.Against.Negative(endColumn);
 
 		SharpIdeFile file;
 		if (executionStopInfo.DecompiledSourceInfo is { } decompiledSourceInfo)
@@ -228,7 +235,7 @@ public partial class CodeEditorPanel : MarginContainer
 		
 		// A line being darkened by the caret being on that line completely obscures the executing line color, so as a "temporary" workaround, move the caret to the previous line
 		// Ideally, like Rider, we would only yellow highlight the sequence point range, with the cursor line black being behind it
-		var fileLinePosition = new SharpIdeFileLinePosition(lineInt is 0 ? 0 : lineInt - 1, 0);
+		var fileLinePosition = new SharpIdeFileLinePosition(startLine is 0 ? 0 : startLine - 1, 0);
 		// Although the file may already be the selected tab, we need to also move the caret
 		await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, fileLinePosition).ConfigureAwait(false);
 		
@@ -238,8 +245,8 @@ public partial class CodeEditorPanel : MarginContainer
 		await this.InvokeAsync(() =>
 		{
 			var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
-			tabForStopInfo.SetLineBackgroundColor(lineInt, ExecutingLineColor);
-			tabForStopInfo.SetLineAsExecuting(lineInt, true);
+			tabForStopInfo.SetExecutingTextSpanInfo(new LinePositionSpan(new LinePosition(startLine, startColumn), new LinePosition(endLine, endColumn)));
+			tabForStopInfo.SetLineAsExecuting(startLine, true);
 		});
 	}
 	
@@ -254,9 +261,9 @@ public partial class CodeEditorPanel : MarginContainer
 		var project = stoppedProjects[0];
 		if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
 		var godotLine = executionStopInfo.StartLine - 1;
-		var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath);
-		tabForStopInfo.CodeEdit.SetLineAsExecuting(godotLine, false);
-		tabForStopInfo.CodeEdit.SetLineColour(godotLine);
+		var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
+		tabForStopInfo.SetLineAsExecuting(godotLine, false);
+		tabForStopInfo.SetExecutingTextSpanInfo(null);
 		var threadId = executionStopInfo.ThreadId;
 		_ = Task.GodotRun(async () =>
 		{

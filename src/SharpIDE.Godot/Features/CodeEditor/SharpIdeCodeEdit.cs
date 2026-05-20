@@ -54,6 +54,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
 	private Color _cachedCurrentCaretLineColor;
+	private LinePositionSpan? _executingLineInfo; // Used for drawing orange executing background highlighting
 
 	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
 	[Inject] private readonly RunService _runService = null!;
@@ -429,6 +430,23 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 		RenderingServer.Singleton.DrawDashedLine(_aboveCanvasItemRid!.Value, startPos, endPos, color, thickness);
 	}
+	public void HighlightLineTextRange(int line, int startCol, int endCol, Color color)
+	{
+		if (line < 0 || line >= GetLineCount()) return;
+		if (startCol > endCol) return;
+		var lineLength = GetLine(line).Length;
+		startCol = Mathf.Clamp(startCol, 0, lineLength);
+		endCol   = Mathf.Clamp(endCol,   0, lineLength);
+		var startRect = GetRectAtLineColumn(line, startCol);
+		var endRect   = GetRectAtLineColumn(line, endCol);
+		float left  = startCol == 0 ? startRect.Position.X : startRect.End.X;
+		float right = startCol == endCol ? endRect.End.X + 10 : endRect.End.X;
+		float top   = startRect.Position.Y;
+		float height = startRect.Size.Y;
+		var rect = new Rect2(left, top, right - left, height);
+		RenderingServer.Singleton.CanvasItemAddRect(_canvasItemRid, rect, color);
+	}
+
 	public void DrawLineBackgroundColorCustom(int line, Color color)
 	{
 		var startRect = GetRectAtLineColumn(line, 0);
@@ -454,6 +472,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var currentCaretLine = GetCaretLine();
 		// We draw this ourselves, as the normal "current caret line bg color" is placed above anything drawn in _Draw, so we can't draw e.g. 'Executing line col range bg highlights' above caret line bg, but below text
 		DrawLineBackgroundColorCustom(currentCaretLine, _cachedCurrentCaretLineColor);
+
+		if (_executingLineInfo is {} linePositionSpan)
+		{
+			for (var line = linePositionSpan.Start.Line; line <= linePositionSpan.End.Line; line++)
+			{
+				var lineStartCol = line == linePositionSpan.Start.Line ? linePositionSpan.Start.Character : 0;
+				var lineEndCol = line == linePositionSpan.End.Line ? linePositionSpan.End.Character : GetLine(line).Length;
+				HighlightLineTextRange(line, lineStartCol, lineEndCol, _executingLineColor);
+			}
+		}
 		
 		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 		{
@@ -621,6 +649,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			(false, false) => Colors.Transparent
 		};
 		SetLineBackgroundColor(line, lineColour);
+	}
+
+	public void SetExecutingTextSpanInfo(LinePositionSpan? linePositionSpan)
+	{
+		_executingLineInfo = linePositionSpan;
+		QueueRedraw();
 	}
 
 	[RequiresGodotUiThread]
