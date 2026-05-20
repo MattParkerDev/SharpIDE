@@ -232,10 +232,8 @@ public partial class CodeEditorPanel : MarginContainer
 		{
 			file = Solution.AllFiles[executionStopInfo.FilePath];
 		}
-		
-		// A line being darkened by the caret being on that line completely obscures the executing line color, so as a "temporary" workaround, move the caret to the previous line
-		// Ideally, like Rider, we would only yellow highlight the sequence point range, with the cursor line black being behind it
-		var fileLinePosition = new SharpIdeFileLinePosition(startLine is 0 ? 0 : startLine - 1, 0);
+
+		var fileLinePosition = new SharpIdeFileLinePosition(startLine, startColumn);
 		// Although the file may already be the selected tab, we need to also move the caret
 		await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, fileLinePosition).ConfigureAwait(false);
 		
