@@ -67,11 +67,13 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Features" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
+    <PackageReference Include="NeoSmart.AsyncLock" />
     <PackageReference Include="NuGet.ProjectModel" />
     <PackageReference Include="NuGet.Protocol" />
     <PackageReference Include="ObservableCollections" />
     <PackageReference Include="R3" />
     <PackageReference Include="SharpDbg" />
+    <PackageReference Include="ZLinq" />
   </ItemGroup>
 
   <ItemGroup>

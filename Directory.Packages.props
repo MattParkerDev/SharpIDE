@@ -49,6 +49,7 @@
     <PackageVersion Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" Version="18.0.10427.1" />
     <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
     <PackageVersion Include="MudBlazor" Version="9.4.0" />
+    <PackageVersion Include="NeoSmart.AsyncLock" Version="3.2.1" />
     <PackageVersion Include="NuGet.ProjectModel" Version="7.6.0" />
     <PackageVersion Include="NuGet.Protocol" Version="7.6.0" />
     <PackageVersion Include="NuGet.Versioning" Version="7.6.0" />
@@ -62,6 +63,7 @@
     <PackageVersion Include="StreamJsonRpc" Version="2.24.92" />
     <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.2" />
     <PackageVersion Include="XtermBlazor" Version="2.4.0" />
+    <PackageVersion Include="ZLinq" Version="1.5.6" />
   </ItemGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
