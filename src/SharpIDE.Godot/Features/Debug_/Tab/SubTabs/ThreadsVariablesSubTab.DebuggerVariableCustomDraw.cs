@@ -29,6 +29,7 @@ public partial class ThreadsVariablesSubTab
         {
             // unlike sharpdbg and presumably vsdbg, netcoredbg does not set PresentationHint for variables
             if (variable.Name == "Static members") icon = _staticMembersIcon; // Will not currently occur, as 'Static members' are not handled by this custom draw
+            else if (variable.Name is "$exception") icon = _exceptionIcon;
             else icon = _fieldIcon;
         }
 
