@@ -148,7 +148,6 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			if (isDebug)
 			{
 				await _debuggingService.CloseDebuggerSession(_debuggerSessionId!.Value);
-				//_projectDebuggerSessionIds.TryRemove(project, out _);
 				_debuggerSessionId = null;
 				GlobalEvents.Instance.ProjectStoppedDebugging.InvokeParallelFireAndForget(project);
 			}

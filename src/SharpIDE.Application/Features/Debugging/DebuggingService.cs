@@ -62,11 +62,6 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		{
 			initializedEventTcs.SetResult();
 		});
-		debugProtocolHost.RegisterEventType<ExitedEvent>(async void (@event) =>
-		{
-			await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // The VS Code Debug Protocol throws if you try to send a request from the dispatcher thread
-			debugProtocolHost.SendRequestSync(new DisconnectRequest());
-		});
 		debugProtocolHost.RegisterClientRequestType<HandshakeRequest, HandshakeArguments, HandshakeResponse>(async void (responder) =>
 		{
 			var signatureResponse = await DebuggerHandshakeSigner.Sign(responder.Arguments.Value);
@@ -217,6 +212,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 	{
 		if (_debugProtocolHosts.TryRemove(debuggerSessionId, out var debugProtocolHost))
 		{
+			debugProtocolHost.SendRequestSync(new DisconnectRequest());
 			debugProtocolHost.Stop();
 		}
 		else
