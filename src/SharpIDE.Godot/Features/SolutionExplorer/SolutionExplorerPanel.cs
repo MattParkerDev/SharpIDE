@@ -7,9 +7,9 @@ using SharpIDE.Application;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.SolutionDiscovery;
-using SharpIDE.Godot.Features.BottomPanel;
 using SharpIDE.Godot.Features.Common;
 using SharpIDE.Godot.Features.Git;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer;
 
@@ -90,7 +90,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 			case (MouseButtonMask.Right, SharpIdeFile file): OpenContextMenuFile(file); break;
 			case (MouseButtonMask.Left, SharpIdeSolutionFile { File: not null } slnFile): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(slnFile.File, null); break;
 			case (MouseButtonMask.Right, SharpIdeSolutionFile { File: not null } slnFile): OpenContextMenuFile(slnFile.File); break;
-			case (MouseButtonMask.Left, SharpIdeProjectModel { IsInvalid: true }): GodotGlobalEvents.Instance.BottomPanelTabExternallySelected.InvokeParallelFireAndForget(BottomPanelType.Problems); break;
+			case (MouseButtonMask.Left, SharpIdeProjectModel { IsInvalid: true }): GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Problems); break;
 			case (MouseButtonMask.Right, SharpIdeProjectModel { Folder: not null } project): OpenContextMenuProject(project); break;
 			case (MouseButtonMask.Left, SharpIdeFolder): break;
 			case (MouseButtonMask.Right, SharpIdeFolder folder): OpenContextMenuFolder(folder, selected); break;

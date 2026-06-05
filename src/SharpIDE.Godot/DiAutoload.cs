@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application;
 using SharpIDE.Godot.Features.ActivityListener;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot;
 
@@ -23,6 +24,7 @@ public partial class DiAutoload : Node
 
         services.AddApplication();
         services.AddScoped<SharpIdeSolutionAccessor>();
+        services.AddScoped<SharpIdeToolManager>();
         services.AddScoped<ActivityMonitor>();
 
         services.AddHttpClient();

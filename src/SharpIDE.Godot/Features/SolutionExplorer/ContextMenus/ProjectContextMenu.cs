@@ -1,9 +1,11 @@
-﻿using Ardalis.GuardClauses;
+using Ardalis.GuardClauses;
 using Godot;
+using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.Godot.Features.Tools;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer;
 
@@ -65,6 +67,7 @@ public partial class SolutionExplorerPanel
             {
                 _ = Task.GodotRun(async () =>
                 {
+                    GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Run);
                     await _runService.RunProject(project);
                 });
             }
@@ -100,6 +103,7 @@ public partial class SolutionExplorerPanel
     }
     private async Task MsBuildProject(SharpIdeProjectModel project, BuildType buildType)
     {
+        GodotGlobalEvents.Instance.IdeToolExternallyActivated.InvokeParallelFireAndForget(IdeToolId.Build);
         await _buildService.MsBuildAsync(project.FilePath, buildType);
     }
 }
