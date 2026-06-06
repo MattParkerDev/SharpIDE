@@ -1,4 +1,6 @@
 using Godot;
+using SharpIDE.Application.Features.Events;
+using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Godot.Features.ToolPanes;
 
 namespace SharpIDE.Godot;
@@ -76,7 +78,12 @@ public partial class ToolPaneManager : Node
 			}
 		}
 		GodotGlobalEvents.Instance.ToolPaneExternallyActivated.Subscribe(OnToolPaneExternallyActivated);
+		GlobalEvents.Instance.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
+		GlobalEvents.Instance.ProjectStartedDebugging.Subscribe(OnProjectStartedDebugging);
 	}
+
+	private async Task OnProjectStartedRunning(SharpIdeProjectModel _) => GodotGlobalEvents.Instance.ToolPaneExternallyActivated.InvokeParallelFireAndForget(ToolPaneType.Run);
+	private async Task OnProjectStartedDebugging(SharpIdeProjectModel arg) => GodotGlobalEvents.Instance.ToolPaneExternallyActivated.InvokeParallelFireAndForget(ToolPaneType.Debug);
 
 	private async Task OnToolPaneExternallyActivated(ToolPaneType arg)
 	{
