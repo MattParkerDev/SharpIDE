@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="ToolPaneResource" format=3 uid="uid://bo3vtb7smg7uo"]
 
 [ext_resource type="PackedScene" uid="uid://bcoytt3bw0gpe" path="res://Features/Run/RunPanel.tscn" id="1_67r83"]
-[ext_resource type="Texture2D" uid="uid://cre7q0efp4vrq" path="res://Features/LeftSideBar/Resources/SidebarRun.svg" id="1_gtaoe"]
+[ext_resource type="Texture2D" uid="uid://cre7q0efp4vrq" path="res://Features/ToolPanes/Resources/ButtonIcons/SidebarRun.svg" id="1_gtaoe"]
 [ext_resource type="Script" uid="uid://bhoa85trep7li" path="res://Features/ToolPanes/ToolPaneResource.cs" id="3_11gel"]
 
 [resource]

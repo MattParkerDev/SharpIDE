@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://d2ewm2lajutpv"]
 
 [ext_resource type="Script" uid="uid://btsnapfx0dlbb" path="res://Features/Run/RunMenuItem.cs" id="1_syj0f"]
-[ext_resource type="Texture2D" uid="uid://da8cx83rohk50" path="res://Features/LeftSideBar/Resources/Build.svg" id="2_8lles"]
+[ext_resource type="Texture2D" uid="uid://da8cx83rohk50" path="res://Features/ToolPanes/Resources/ButtonIcons/Build.svg" id="2_8lles"]
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_hxkig"]
 [ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="3_cd138"]
 [ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="3_hxkig"]

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ToolPaneResource" format=3 uid="uid://ch4wy8i05fgf4"]
 
-[ext_resource type="Texture2D" uid="uid://ccj0dw81x3bkc" path="res://Features/LeftSideBar/Resources/SidebarFolder.svg" id="1_3ne0a"]
+[ext_resource type="Texture2D" uid="uid://ccj0dw81x3bkc" path="res://Features/ToolPanes/Resources/ButtonIcons/SidebarFolder.svg" id="1_3ne0a"]
 [ext_resource type="Script" uid="uid://bhoa85trep7li" path="res://Features/ToolPanes/ToolPaneResource.cs" id="1_6cu5g"]
 [ext_resource type="PackedScene" uid="uid://cy1bb32g7j7dr" path="res://Features/SolutionExplorer/SolutionExplorerPanel.tscn" id="1_pvwqu"]
 

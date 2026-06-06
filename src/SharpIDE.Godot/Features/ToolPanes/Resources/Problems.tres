@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bhoa85trep7li" path="res://Features/ToolPanes/ToolPaneResource.cs" id="1_2hgm7"]
 [ext_resource type="PackedScene" uid="uid://tqpmww430cor" path="res://Features/Problems/ProblemsPanel.tscn" id="1_2wuve"]
-[ext_resource type="Texture2D" uid="uid://uukf1nwjhthv" path="res://Features/LeftSideBar/Resources/SidebarProblem.svg" id="1_pu1br"]
+[ext_resource type="Texture2D" uid="uid://uukf1nwjhthv" path="res://Features/ToolPanes/Resources/ButtonIcons/SidebarProblem.svg" id="1_pu1br"]
 
 [resource]
 script = ExtResource("1_2hgm7")

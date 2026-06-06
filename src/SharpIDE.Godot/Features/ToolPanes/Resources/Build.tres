@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ToolPaneResource" format=3 uid="uid://4m8aaxjeoraa"]
 
-[ext_resource type="Texture2D" uid="uid://b0170ypw8uf3a" path="res://Features/LeftSideBar/Resources/Terminal.svg" id="1_0nvn2"]
+[ext_resource type="Texture2D" uid="uid://b0170ypw8uf3a" path="res://Features/ToolPanes/Resources/ButtonIcons/Terminal.svg" id="1_0nvn2"]
 [ext_resource type="PackedScene" uid="uid://co6dkhdolriej" path="res://Features/Build/BuildPanel.tscn" id="1_10rin"]
 [ext_resource type="Script" uid="uid://bhoa85trep7li" path="res://Features/ToolPanes/ToolPaneResource.cs" id="1_40pq4"]
 
