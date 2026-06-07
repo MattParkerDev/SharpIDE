@@ -27,11 +27,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 {
 	[Signal]
 	public delegate void CodeFixesRequestedEventHandler();
-	
+
 	public SharpIdeSolutionModel? Solution { get; set; }
 	public SharpIdeFile SharpIdeFile => _currentFile;
 	private SharpIdeFile _currentFile = null!;
-	
+
 	private CustomHighlighter _syntaxHighlighter = new();
 	private PopupMenu _popupMenu = null!;
 	private CanvasItem _aboveCanvasItem = null!;
@@ -111,7 +111,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(SetCodeFoldingAsync);
 		SetCodeFolding(Singletons.AppState.IdeSettings.EditorEnableFolding);
 	}
-	
+
 	public override void _Notification(int what)
 	{
 		if (what == NotificationThemeChanged)
@@ -217,7 +217,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(SetCodeFoldingAsync);
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
-	
+
 	private void OnFocusEntered()
 	{
 		// The selected tab changed, report the caret position
@@ -303,7 +303,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GD.Print($"Code fix selected: {id}");
 		var codeAction = _currentCodeActionsInPopup[(int)id];
 		if (codeAction is null) return;
-		
+
 		_ = Task.GodotRun(async () =>
 		{
 			await _ideCodeActionService.ApplyCodeAction(codeAction);
@@ -365,7 +365,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 					await this.InvokeAsync(() => SetProjectDiagnostics(projectDiagnosticsForFile));
 				}, configureAwait: false);
 		}
-		
+
 		var syntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
 		var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
 		var diagnostics = _roslynAnalysis.GetDocumentDiagnostics(_currentFile);
@@ -409,13 +409,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		int lineLength = GetLine(line).Length;
 		caretStartCol = Mathf.Clamp(caretStartCol, 0, lineLength);
 		caretEndCol   = Mathf.Clamp(caretEndCol, 0, lineLength);
-		
+
 		// GetRectAtLineColumn returns the rectangle for the character before the column passed in, or the first character if the column is 0.
 		var startRect = GetRectAtLineColumn(line, caretStartCol);
 		var endRect = GetRectAtLineColumn(line, caretEndCol);
 		//DrawLine(startRect.Position, startRect.End, color);
 		//DrawLine(endRect.Position, endRect.End, color);
-		
+
 		var startPos = startRect.End;
 		if (caretStartCol is 0)
 		{
@@ -464,7 +464,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public override void _Draw()
 	{
 		RenderingServer.Singleton.CanvasItemClear(_aboveCanvasItemRid!.Value);
-		
+
 		// Draw a guideline at the left edge of the text area
 		var gutterWidth = GetTotalGutterWidth();
 		var leftEdgeStart = new Vector2(gutterWidth, 0);
@@ -472,7 +472,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		RenderingServer.Singleton.CanvasItemAddLine(_aboveCanvasItemRid.Value, leftEdgeStart, leftEdgeEnd, new Color("464646"), 1);
 
 		var currentCaretLine = GetCaretLine();
-		
+
 		using var nativeInt32ArrayHandle = GetBreakpointedLinesUnmanaged();
 		foreach (var line in nativeInt32ArrayHandle.Span)
 		{
@@ -491,7 +491,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				HighlightLineTextRange(line, lineStartCol, lineEndCol, _executingLineColor);
 			}
 		}
-		
+
 		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
 		{
 			var line = sharpIdeDiagnostic.Span.Start.Line;
@@ -590,6 +590,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			MoveLinesDown();
 			return;
 		}
+		if (@event.IsActionPressed(InputStringNames.RenameSymbol))
+		{
+			AcceptEvent();
+			_ = Task.GodotRun(async () => await RenameSymbol());
+			return;
+		}
 		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left or MouseButton.Right } mouseEvent)
 		{
 			var (col, line) = GetLineColumnAtPos((Vector2I)mouseEvent.Position);
@@ -627,10 +633,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			AcceptEvent();
 			_findReplaceBar.PopupReplace();
 		}
-		else if (@event.IsActionPressed(InputStringNames.RenameSymbol))
-		{
-			_ = Task.GodotRun(async () => await RenameSymbol());
-		}
 		else if (@event.IsActionPressed(InputStringNames.CodeFixes))
 		{
 			EmitSignalCodeFixesRequested();
@@ -657,14 +659,14 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_fileDiagnostics = diagnostics;
 		QueueRedraw();
 	}
-	
+
 	[RequiresGodotUiThread]
 	private void SetAnalyzerDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics)
 	{
 		_fileAnalyzerDiagnostics = diagnostics;
 		QueueRedraw();
 	}
-	
+
 	[RequiresGodotUiThread]
 	private void SetProjectDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics)
 	{
@@ -710,7 +712,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			});
 		});
 	}
-	
+
 	private (int line, int col) GetCaretPosition(bool startAt1 = false)
 	{
 		var caretColumn = GetCaretColumn();

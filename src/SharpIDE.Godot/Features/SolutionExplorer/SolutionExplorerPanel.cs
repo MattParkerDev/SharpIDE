@@ -48,6 +48,16 @@ public partial class SolutionExplorerPanel : MarginContainer
 		_ = Task.GodotRun(BindToSolution);
 	}
 
+
+	public override void _ShortcutInput(InputEvent @event)
+	{
+		if (@event.IsActionPressed(InputStringNames.RenameSymbol))
+		{
+			AcceptEvent();
+			var selectedTreeItem = _tree.GetSelected();
+		}
+	}
+
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
 		// Copy
