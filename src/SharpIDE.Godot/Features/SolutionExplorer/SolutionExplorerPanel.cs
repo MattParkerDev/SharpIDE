@@ -51,7 +51,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	public override void _ShortcutInput(InputEvent @event)
 	{
-		if (@event.IsActionPressed(InputStringNames.RenameSymbol))
+		if (@event.IsActionPressed(InputStringNames.RenameSymbol) && this.HasFocusOrIsParentOfFocus())
 		{
 			AcceptEvent();
 			var selectedTreeItem = _tree.GetSelected();

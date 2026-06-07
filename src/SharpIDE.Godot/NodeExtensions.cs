@@ -232,7 +232,7 @@ public static class NodeExtensions
             }, (workItem, taskCompletionSource));
             return taskCompletionSource.Task;
         }
-        
+
         public Task InvokeAsync(Func<Task> workItem, [CallerMemberName] string? callerName = null)
         {
             GuardAgainstUiThreadCallingInvokeAsync(callerName);
@@ -252,7 +252,7 @@ public static class NodeExtensions
             }, (workItem, taskCompletionSource));
             return taskCompletionSource.Task;
         }
-        
+
         public Task InvokeDeferredAsync(Action workItem, [CallerMemberName] string? callerName = null)
         {
             GuardAgainstUiThreadCallingInvokeAsync(callerName);
@@ -272,7 +272,7 @@ public static class NodeExtensions
             }).CallDeferred();
             return taskCompletionSource.Task;
         }
-        
+
         public Task InvokeDeferredAsync(Func<Task> workItem, [CallerMemberName] string? callerName = null)
         {
             GuardAgainstUiThreadCallingInvokeAsync(callerName);
@@ -293,7 +293,19 @@ public static class NodeExtensions
             return taskCompletionSource.Task;
         }
     }
-    
+
+    extension(Control control)
+    {
+	    public bool HasFocusOrIsParentOfFocus()
+		{
+			if (control.HasFocus()) return true;
+			Control? focusedControl = control.GetViewport().GuiGetFocusOwner();
+			if (focusedControl is null) return false;
+			var isParentOfFocus = control.IsAncestorOf(focusedControl);
+			return isParentOfFocus;
+		}
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void GuardAgainstUiThreadCallingInvokeAsync(string? callerName = null)
     {
@@ -324,7 +336,7 @@ public static class GodotTask
                 }
             });
         }
-    
+
         public static async Task GodotRun(Func<Task> action)
         {
             await Task.Run(async () =>
@@ -350,7 +362,7 @@ public static class StreamExtensions
         if (source is null) throw new ArgumentNullException(nameof(source));
         if (source.CanRead is false) throw new ArgumentException("Source Stream must be readable", nameof(source));
         if (destination.CanWrite is false) throw new ArgumentException("Destination Stream must be writable", nameof(destination));
-        
+
         return Core(source, destination, bufferSize, progress, cancellationToken);
 
         static async Task Core(Stream source, Stream destination, int bufferSize, IProgress<long>? progress = null, CancellationToken cancellationToken = default)
