@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://b2oniigcp5ew5"]
 
 [ext_resource type="Script" uid="uid://bavypuy7b375x" path="res://IdeRoot.cs" id="1_whawi"]
-[ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="2_8x8ub"]
 [ext_resource type="Script" uid="uid://dlh88che820p" path="res://ToolPaneManager.cs" id="2_uvk4l"]
 [ext_resource type="Script" uid="uid://kvnhndc3l6ih" path="res://Features/CustomControls/InvertedVSplitContainer.cs" id="3_0ybuf"]
 [ext_resource type="PackedScene" uid="uid://biyhfwx36ium8" path="res://Features/LeftSideBar/LeftSideBar.tscn" id="3_f60gr"]
@@ -12,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://ccj73acbnukyt" path="res://Resources/cancel-disabled.svg" id="5_qo7tr"]
 [ext_resource type="Texture2D" uid="uid://c0gl3rvabse1f" path="res://Resources/cancel-darker.svg" id="5_uvk4l"]
 [ext_resource type="PackedScene" uid="uid://c5dlwgcx3ubyp" path="res://Features/CodeEditor/CodeEditorPanel.tscn" id="8_7ptyn"]
+[ext_resource type="Texture2D" uid="uid://da8cx83rohk50" path="res://Features/ToolPanes/Resources/ButtonIcons/Build.svg" id="8_tmssf"]
 [ext_resource type="PackedScene" uid="uid://dhyd2tv2xvtwu" path="res://Features/Run/StartupProject.tscn" id="9_tmssf"]
 [ext_resource type="PackedScene" uid="uid://8lk0qj233a7p" path="res://Features/Search/SearchInFiles/SearchWindow.tscn" id="13_7ptyn"]
 [ext_resource type="PackedScene" uid="uid://c3ow337fhh1v1" path="res://Features/ToolPanes/ToolPaneContainer.tscn" id="13_tmssf"]
