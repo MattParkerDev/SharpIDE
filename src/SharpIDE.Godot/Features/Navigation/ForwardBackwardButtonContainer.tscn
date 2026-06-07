@@ -1,16 +1,24 @@
 [gd_scene format=3 uid="uid://bgpc5vsddmakc"]
 
 [ext_resource type="Script" uid="uid://cao2o2singwnb" path="res://Features/Navigation/ForwardBackwardButtonContainer.cs" id="1_vep4b"]
+[ext_resource type="Texture2D" uid="uid://0rv1451gadc7" path="res://Resources/arrow-left.svg" id="2_ogbp4"]
+[ext_resource type="Texture2D" uid="uid://bbc35hpyjaeuy" path="res://Resources/arrow-right.svg" id="3_lne2n"]
 
 [node name="ForwardBackwardButtonContainer" type="HBoxContainer" unique_id=2041353079]
 script = ExtResource("1_vep4b")
 
 [node name="BackwardButton" type="Button" parent="." unique_id=1906848363]
+custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
 size_flags_vertical = 4
-text = " < "
+theme_type_variation = &"NavigationArrowButton"
+icon = ExtResource("2_ogbp4")
+expand_icon = true
 
 [node name="ForwardButton" type="Button" parent="." unique_id=273531263]
+custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
 size_flags_vertical = 4
-text = " > "
+theme_type_variation = &"NavigationArrowButton"
+icon = ExtResource("3_lne2n")
+expand_icon = true
