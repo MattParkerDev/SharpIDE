@@ -7,11 +7,11 @@ namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 public partial class RenameDirectoryDialog : ConfirmationDialog
 {
     private LineEdit _nameLineEdit = null!;
-    
+
     public SharpIdeFolder Folder { get; set; } = null!;
 
     [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
-    
+
     private bool _isNameValid = true;
     private string _folderParentPath = null!;
 
@@ -24,6 +24,11 @@ public partial class RenameDirectoryDialog : ConfirmationDialog
         _nameLineEdit.SelectAll();
         _nameLineEdit.TextChanged += ValidateNewDirectoryName;
         Confirmed += OnConfirmed;
+        FocusExited += () =>
+        {
+	        // work around bug: https://github.com/godotengine/godot/issues/81370
+	        Callable.From(GrabFocus).CallDeferred();
+        };
     }
 
     private void ValidateNewDirectoryName(string newDirectoryNameText)

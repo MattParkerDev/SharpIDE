@@ -28,7 +28,7 @@ public partial class RenameFileDialog : ConfirmationDialog
         FocusExited += () =>
         {
 	        // work around bug: https://github.com/godotengine/godot/issues/81370
-	        Callable.From(() => GrabFocus()).CallDeferred();
+	        Callable.From(GrabFocus).CallDeferred();
         };
     }
 
