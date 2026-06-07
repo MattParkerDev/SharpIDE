@@ -7,11 +7,11 @@ namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 public partial class RenameFileDialog : ConfirmationDialog
 {
     private LineEdit _nameLineEdit = null!;
-    
+
     public SharpIdeFile File { get; set; } = null!;
 
     [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
-    
+
     private bool _isNameValid = true;
     private string _fileParentPath = null!;
 
@@ -25,6 +25,11 @@ public partial class RenameFileDialog : ConfirmationDialog
         _nameLineEdit.Select(0, File.Name.Value.LastIndexOf('.'));
         _nameLineEdit.TextChanged += ValidateNewFileName;
         Confirmed += OnConfirmed;
+        FocusExited += () =>
+        {
+	        // work around bug: https://github.com/godotengine/godot/issues/81370
+	        Callable.From(() => GrabFocus()).CallDeferred();
+        };
     }
 
     private void ValidateNewFileName(string newFileNameText)
