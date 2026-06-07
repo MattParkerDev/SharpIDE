@@ -163,6 +163,43 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_al7qp"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+draw_center = false
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ch0dy"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.7413847, 0.7413847, 0.7413844, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qn0n3"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.5609549, 0.5609549, 0.56095487, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3gh6f"]
 content_margin_left = 0.0
 content_margin_top = 0.0
@@ -329,6 +366,16 @@ LineEdit/colors/caret_color = Color(0.05, 0.05, 0.05, 1)
 LineEdit/colors/font_color = Color(0.12, 0.12, 0.12, 1)
 LineEdit/colors/font_placeholder_color = Color(0.12, 0.12, 0.12, 0.6)
 LineEdit/styles/normal = SubResource("StyleBoxFlat_guqd5")
+NavigationArrowButton/base_type = &"Button"
+NavigationArrowButton/colors/icon_disabled_color = Color(0.7539839, 0.75398386, 0.75398386, 1)
+NavigationArrowButton/colors/icon_hover_color = Color(0.22352941, 0.22352941, 0.22352941, 1)
+NavigationArrowButton/colors/icon_hover_pressed_color = Color(0.22352941, 0.22352941, 0.22352941, 1)
+NavigationArrowButton/colors/icon_normal_color = Color(0.22352941, 0.22352941, 0.22352941, 1)
+NavigationArrowButton/colors/icon_pressed_color = Color(0.22352941, 0.22352941, 0.22352941, 1)
+NavigationArrowButton/styles/disabled = SubResource("StyleBoxFlat_al7qp")
+NavigationArrowButton/styles/hover = SubResource("StyleBoxFlat_ch0dy")
+NavigationArrowButton/styles/normal = SubResource("StyleBoxFlat_al7qp")
+NavigationArrowButton/styles/pressed = SubResource("StyleBoxFlat_qn0n3")
 Panel/styles/panel = SubResource("StyleBoxFlat_3gh6f")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_3gh6f")
 PopupMenu/colors/font_color = Color(0.12, 0.12, 0.12, 1)

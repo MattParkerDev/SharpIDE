@@ -21,9 +21,9 @@
      inkscape:pageopacity="0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#505050"
-     inkscape:zoom="45.254834"
-     inkscape:cx="1.259534"
-     inkscape:cy="16.429184"
+     inkscape:zoom="32"
+     inkscape:cx="9.5"
+     inkscape:cy="16.484375"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="2552"
@@ -44,12 +44,12 @@
     </bx:export>
   </defs>
   <path
-     style="display:inline;fill:none;stroke:#bababa;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+     style="display:inline;fill:none;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
      d="M 20.051414,12.5 H 4.9485862"
      id="path1"
      sodipodi:nodetypes="cc" />
   <path
-     style="display:inline;fill:none;stroke:#bababa;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+     style="display:inline;fill:none;stroke:#ffffff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
      d="M 10.786204,18.337618 4.9485862,12.5 10.786204,6.662382"
      id="path3"
      sodipodi:nodetypes="ccc" />
