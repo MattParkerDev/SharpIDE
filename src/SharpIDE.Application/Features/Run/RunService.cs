@@ -130,6 +130,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			}
 
 			await project.ProcessStandardIo.OutputReadComplete.Task.ConfigureAwait(false);
+			await project.ProcessStandardIo.StdinWriteComplete.Task.ConfigureAwait(false);
 			project.RunningCancellationTokenSource.Dispose();
 			project.RunningCancellationTokenSource = null;
 			project.Running = false;

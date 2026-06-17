@@ -25,7 +25,7 @@
 	private async Task OnProjectStartedRunning()
 	{
 		Guard.Against.Null(Project);
-		Guard.Against.Null(Project.RunningOutputChannel, nameof(Project.RunningOutputChannel));
+		Guard.Against.Null(Project.ProcessStandardIo);
 
 		_ = Task.Run(async () =>
 		{
@@ -33,11 +33,24 @@
 			{
 				if (_terminalDisplayRef is not null) await _terminalDisplayRef.Clear();
 				await InvokeAsync(async () => await OnProjectStarted.InvokeAsync(Project));
-				await foreach (var log in Project.RunningOutputChannel.Reader.ReadAllAsync().ConfigureAwait(false))
+				var reader = Project.ProcessStandardIo.OutputReader;
+				Guard.Against.Null(reader);
+				while (true)
 				{
-					// Better hope you don't get a log until we get the component ref lol
-					await _terminalDisplayRef!.Write(log).ConfigureAwait(false);
+					var result = await reader.ReadAsync();
+					var buffer = result.Buffer;
+					foreach (var segment in buffer)
+					{
+						// Better hope you don't get a log until we get the component ref lol
+						await _terminalDisplayRef!.Write(segment).ConfigureAwait(false);
+					}
+					reader.AdvanceTo(buffer.End);
+					if (result.IsCompleted) break;
 				}
+				await reader.CompleteAsync();
+				Project.ProcessStandardIo.OutputReadComplete.SetResult();
+				await Project.ProcessStandardIo.StdinWriter.CompleteAsync();
+				Project.ProcessStandardIo.StdinWriteComplete.SetResult();
 			}
 			catch (Exception e) when (e is not OperationCanceledException)
 			{

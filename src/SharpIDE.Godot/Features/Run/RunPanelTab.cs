@@ -18,7 +18,7 @@ public partial class RunPanelTab : Control
 	    _terminal = GetNode<SharpIdeTerminal>("SharpIdeTerminal");
     }
 
-    public void StartWritingFromProjectOutput()
+    public void StartProjectProcessIo()
     {
 	    if (_writeTask.IsCompleted is not true)
 	    {
@@ -27,6 +27,8 @@ public partial class RunPanelTab : Control
 	    }
 	    Guard.Against.Null(Project.ProcessStandardIo);
 	    Guard.Against.Null(Project.ProcessStandardIo.OutputReader);
+	    Guard.Against.Null(Project.ProcessStandardIo.StdinWriter);
+	    _terminal.InputWriter = Project.ProcessStandardIo.StdinWriter;
 	    _writeTask = Task.GodotRun(async () =>
 	    {
 		    var reader = Project.ProcessStandardIo.OutputReader;
@@ -44,6 +46,9 @@ public partial class RunPanelTab : Control
 		    }
 		    await reader.CompleteAsync();
 		    Project.ProcessStandardIo.OutputReadComplete.SetResult();
+		    _terminal.InputWriter = null;
+		    await Project.ProcessStandardIo.StdinWriter.CompleteAsync();
+		    Project.ProcessStandardIo.StdinWriteComplete.SetResult();
 	    });
     }
 

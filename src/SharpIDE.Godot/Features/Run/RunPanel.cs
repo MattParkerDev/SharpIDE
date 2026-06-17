@@ -8,10 +8,10 @@ public partial class RunPanel : Control
 {
 	private TabBar _tabBar = null!;
 	private MarginContainer _tabsPanel = null!;
-	
+
 	[Export]
 	public Texture2D RunningIcon { get; set; } = null!;
-	
+
 	private PackedScene _runPanelTabScene = GD.Load<PackedScene>("res://Features/Run/RunPanelTab.tscn");
 	public override void _Ready()
 	{
@@ -52,10 +52,10 @@ public partial class RunPanel : Control
 			_tabBar.CurrentTab = existingRunPanelTab.TabBarTab;
 			OnTabBarTabClicked(existingRunPanelTab.TabBarTab);
 			existingRunPanelTab.ClearTerminal();
-			existingRunPanelTab.StartWritingFromProjectOutput();
+			existingRunPanelTab.StartProjectProcessIo();
 			return;
 		}
-		
+
 		var runPanelTab = _runPanelTabScene.Instantiate<RunPanelTab>();
 		runPanelTab.Project = projectModel;
 		_tabBar.AddTab(projectModel.Name.Value);
@@ -65,9 +65,9 @@ public partial class RunPanel : Control
 		_tabBar.CurrentTab = runPanelTab.TabBarTab;
 		_tabsPanel.AddChild(runPanelTab);
 		OnTabBarTabClicked(runPanelTab.TabBarTab);
-		runPanelTab.StartWritingFromProjectOutput();
+		runPanelTab.StartProjectProcessIo();
 	}
-	
+
 	public void ProjectStoppedRunning(SharpIdeProjectModel projectModel)
 	{
 		var runPanelTab = _tabsPanel.GetChildren().OfType<RunPanelTab>().Single(s => s.Project == projectModel);

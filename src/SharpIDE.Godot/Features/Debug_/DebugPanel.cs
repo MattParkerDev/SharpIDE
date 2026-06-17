@@ -53,7 +53,7 @@ public partial class DebugPanel : Control
 			_tabBar.CurrentTab = existingRunPanelTab.TabBarTab;
 			OnTabBarTabClicked(existingRunPanelTab.TabBarTab);
 			existingRunPanelTab.ClearTerminal();
-			existingRunPanelTab.StartWritingFromProjectOutput();
+			existingRunPanelTab.StartProjectProcessIo();
 			return;
 		}
 		
@@ -66,7 +66,7 @@ public partial class DebugPanel : Control
 		_tabBar.CurrentTab = debugPanelTab.TabBarTab;
 		_tabsPanel.AddChild(debugPanelTab);
 		OnTabBarTabClicked(debugPanelTab.TabBarTab);
-		debugPanelTab.StartWritingFromProjectOutput();
+		debugPanelTab.StartProjectProcessIo();
 	}
 	
 	public void ProjectStoppedDebugging(SharpIdeProjectModel projectModel)

@@ -1,3 +1,4 @@
+using System.IO.Pipelines;
 using GDExtensionBindgen;
 using Godot;
 
@@ -6,12 +7,20 @@ namespace SharpIDE.Godot.Features.TerminalBase;
 public partial class SharpIdeTerminal : Control
 {
 	private Terminal _terminal = null!;
+	public PipeWriter? InputWriter { get; set; }
 	public override void _Ready()
 	{
 		var terminalControl = GetNode<Control>("Terminal");
 		_terminal = new Terminal(terminalControl);
+		// TODO: Use lower level with no GC allocations, see GetBreakpointedLinesUnmanaged()
+		_terminal.DataSent += async void (s) =>
+		{
+			var writer = InputWriter;
+			if (writer is null) return;
+			await writer.WriteAsync(s);
+		};
 	}
-	
+
 	public void Write(ReadOnlySpan<byte> text)
 	{
 		// need a buffer 2x the length of our span, as in theory each byte could be \n, requiring a new \r to accompany it
