@@ -71,14 +71,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public bool IsBlazorProject => MsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
 	public bool IsGodotProject => MsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");
 	public bool IsMtpTestProject => MsBuildEvaluationProject.GetPropertyValue("IsTestingPlatformApplication") is "true";
-	public string RootNamespace
-	{
-		get
-		{
-			var rootNamespace = MsBuildEvaluationProject.GetPropertyValue("RootNamespace");
-			return string.IsNullOrWhiteSpace(rootNamespace) ? Name.Value : rootNamespace;
-		}
-	}
+	public string RootNamespace => MsBuildEvaluationProject.GetPropertyValue("RootNamespace");
 	public string BlazorDevServerVersion => MsBuildEvaluationProject.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version");
 	public bool OpenInRunPanel { get; set; }
 	public StandardIo? ProcessStandardIo { get; set; }
