@@ -12,7 +12,7 @@ config_version=5
 
 config/name="SharpIDE"
 run/main_scene="uid://b70jhun5a4las"
-config/features=PackedStringArray("4.6", "C#", "Forward Plus")
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 run/max_fps=60
 boot_splash/stretch_mode=0
 boot_splash/image="uid://c58xmy2syss8s"
