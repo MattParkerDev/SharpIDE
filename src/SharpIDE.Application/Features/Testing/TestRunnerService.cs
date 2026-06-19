@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.Testing.Client;
@@ -6,24 +5,9 @@ using SharpIDE.Application.Features.Testing.Client.Dtos;
 
 namespace SharpIDE.Application.Features.Testing;
 
-public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunnerService> logger)
+public class TestRunnerService(RoslynAnalysis roslynAnalysis)
 {
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
-	private readonly ILogger<TestRunnerService> _logger = logger;
-
-	public async Task<List<TestNode>> DiscoverTests(SharpIdeSolutionModel solutionModel)
-	{
-		await Task.WhenAll(solutionModel.AllProjects.Select(s => s.MsBuildEvaluationProjectTask));
-		var testProjects = solutionModel.AllProjects.Where(p => p.IsMtpTestProject).ToList();
-		List<TestNode> allDiscoveredTestNodes = [];
-		foreach (var testProject in testProjects)
-		{
-			allDiscoveredTestNodes.AddRange(await DiscoverTests(testProject));
-		}
-
-		_logger.LogInformation("Discovered {DiscoveredTestCount} tests", allDiscoveredTestNodes.Count);
-		return allDiscoveredTestNodes;
-	}
 
 	public async Task<List<TestNodeHierarchy>> DiscoverTestHierarchy(SharpIdeSolutionModel solutionModel)
 	{
@@ -40,9 +24,6 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 
 		return hierarchy;
 	}
-
-	public static List<TestNodeHierarchy> BuildTestHierarchy(IEnumerable<TestNode> testNodes, string? rootNamespace = null)
-		=> BuildTestHierarchy(testNodes, rootNamespace, []);
 
 	private static List<TestNodeHierarchy> BuildTestHierarchy(IEnumerable<TestNode> testNodes, string? rootNamespace, HashSet<string> addedGroupUids)
 	{
@@ -113,16 +94,6 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 		});
 
 		return hierarchy;
-	}
-
-	public async Task RunTestsAsync(SharpIdeSolutionModel solutionModel, Func<TestNodeUpdate[], Task> func)
-	{
-		await Task.WhenAll(solutionModel.AllProjects.Select(s => s.MsBuildEvaluationProjectTask));
-		var testProjects = solutionModel.AllProjects.Where(p => p.IsMtpTestProject).ToList();
-		foreach (var testProject in testProjects)
-		{
-			await RunTestsAsync(testProject, func);
-		}
 	}
 
 	public async Task RunTestsAsync(SharpIdeSolutionModel solutionModel, Func<SharpIdeProjectModel, TestNodeUpdate[], Task> func)
