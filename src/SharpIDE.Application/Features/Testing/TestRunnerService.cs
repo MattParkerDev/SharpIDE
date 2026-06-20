@@ -18,15 +18,15 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 		List<TestNode> allDiscoveredTestNodes = [];
 		foreach (var testProject in testProjects)
 		{
-			using var client = await GetInitialisedClient(testProject);
+			await using var client = await GetInitialisedClient(testProject);
 			var testNodes = await DiscoverTestsForProject(client, testProject);
-			foreach (var testNode in testNodes) allDiscoveredTestNodes.Add(testNode.Node);
+			foreach (var testNode in testNodes) allDiscoveredTestNodes.Add(testNode);
 		}
 		_logger.LogInformation("Discovered {DiscoveredTestCount} tests", allDiscoveredTestNodes.Count);
 		return allDiscoveredTestNodes;
 	}
 
-	private async Task<List<TestNodeUpdate>> DiscoverTestsForProject(TestingPlatformClient clientForProject, SharpIdeProjectModel project)
+	private async Task<TestNode[]> DiscoverTestsForProject(TestingPlatformClient clientForProject, SharpIdeProjectModel project)
 	{
 		List<TestNodeUpdate> testNodeUpdates = [];
 		var discoveryResponse = await clientForProject.DiscoverTestsAsync(Guid.NewGuid(), node =>
@@ -36,9 +36,9 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 		});
 		await discoveryResponse.WaitCompletionAsync();
 
-		await clientForProject.ExitAsync();
-		_logger.LogInformation("Discovered {DiscoveredTestCount} tests for project {ProjectName}", testNodeUpdates.Count, project.Name.Value);
-		return testNodeUpdates;
+		var discoveredTestNodes = testNodeUpdates.Select(x => x.Node).ToArray();
+		_logger.LogInformation("Discovered {DiscoveredTestCount} tests for project {ProjectName}", discoveredTestNodes.Length, project.Name.Value);
+		return discoveredTestNodes;
 	}
 
 	public async Task RunTestsForSolution(SharpIdeSolutionModel solutionModel, Func<TestNodeUpdate[], Task> func)
@@ -47,25 +47,17 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 		var testProjects = solutionModel.AllProjects.Where(p => p.IsMtpTestProject).ToList();
 		foreach (var testProject in testProjects)
 		{
-			using var client = await GetInitialisedClient(testProject);
-			await RunTestsForProject(client, testProject, func);
+			await using var client = await GetInitialisedClient(testProject);
+			var discoveredTestNodes = await DiscoverTestsForProject(client, testProject);
+			await RunTestsForProject(client, testProject, discoveredTestNodes, func);
 		}
 	}
 
 	// Assumes it has already been built
-	private async Task RunTestsForProject(TestingPlatformClient clientForProject, SharpIdeProjectModel project, Func<TestNodeUpdate[], Task> func)
+	private async Task RunTestsForProject(TestingPlatformClient clientForProject, SharpIdeProjectModel project, TestNode[] testNodes, Func<TestNodeUpdate[], Task> func)
 	{
-		List<TestNodeUpdate> testNodeUpdates = [];
-		var discoveryResponse = await clientForProject.DiscoverTestsAsync(Guid.NewGuid(), async nodeUpdates =>
-		{
-			testNodeUpdates.AddRange(nodeUpdates);
-			await func(nodeUpdates);
-		});
-		await discoveryResponse.WaitCompletionAsync();
-
-		ResponseListener runRequest = await clientForProject.RunTestsAsync(Guid.NewGuid(), testNodeUpdates.Select(x => x.Node).ToArray(), func);
+		ResponseListener runRequest = await clientForProject.RunTestsAsync(Guid.NewGuid(), testNodes, func);
 		await runRequest.WaitCompletionAsync();
-		await clientForProject.ExitAsync();
 	}
 
 	private async Task<TestingPlatformClient> GetInitialisedClient(SharpIdeProjectModel project)

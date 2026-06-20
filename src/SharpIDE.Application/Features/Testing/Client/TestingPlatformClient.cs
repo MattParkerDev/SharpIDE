@@ -10,7 +10,7 @@ using ClientInfo = SharpIDE.Application.Features.Testing.Client.Dtos.ClientInfo;
 
 namespace SharpIDE.Application.Features.Testing.Client;
 
-public sealed class TestingPlatformClient : IDisposable
+public sealed class TestingPlatformClient : IAsyncDisposable
 {
     private readonly TcpClient _tcpClient = new();
     private readonly IProcessHandle _processHandler;
@@ -150,12 +150,13 @@ public sealed class TestingPlatformClient : IDisposable
         return runListener;
     });
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        JsonRpcClient.Dispose();
-        _tcpClient.Dispose();
-        _processHandler.WaitForExit();
-        _processHandler.Dispose();
+	    await ExitAsync();
+	    JsonRpcClient.Dispose();
+	    _tcpClient.Dispose();
+	    await _processHandler.WaitForExitAsync();
+	    _processHandler.Dispose();
     }
 
     public record Log(LogLevel LogLevel, string Message);
