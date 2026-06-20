@@ -24,6 +24,18 @@ public sealed record TestNode
 	[JsonPropertyName("location.method")]
 	public required string LocationMethod { get; init; }
 
+	[JsonPropertyName("location.file")]
+	public required string LocationFile { get; init; }
+
+	[JsonPropertyName("location.line-start")]
+	public required int LocationLineStart { get; init; }
+
+	[JsonPropertyName("location.line-end")]
+	public required int LocationLineEnd { get; init; }
+
+	[JsonPropertyName("location.method-arity")]
+	public required int LocationMethodArity { get; init; }
+
     // Captures every other server-sent field (traits, location.*, error.*, etc.)
     // so that when we round-trip the node back in testCases, the server sees
     // the full payload it originally produced.
