@@ -47,21 +47,13 @@ public partial class TestExplorerPanel : Control
 		{
 			await _buildService.MsBuildAsync(solution.FilePath, buildStartedFlags: BuildStartedFlags.Internal);
 		}
-		var testNodes = await _testRunnerService.DiscoverTestsForSolution(solution);
-
-		_testNodeTreeItems.Clear();
 		await this.InvokeAsync(() =>
 		{
 			_testNodesTree.Clear();
-			var root = _testNodesTree.CreateItem();
-
-			foreach (var testNode in testNodes)
-			{
-				var treeItem = root.CreateChild();
-				UpdateTestNodeTreeItem(treeItem, testNode);
-				_testNodeTreeItems[testNode.Uid] = treeItem;
-			}
+			_testNodesTree.CreateItem(); // create a new root
 		});
+		_testNodeTreeItems.Clear();
+		await _testRunnerService.DiscoverTestsForSolution(solution, HandleTestNodeUpdates);
 	}
 
 	private void UpdateTestNodeTreeItem(TreeItem treeItem, TestNode testNode)

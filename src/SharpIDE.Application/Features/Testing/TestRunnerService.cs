@@ -11,28 +11,27 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
 	private readonly ILogger<TestRunnerService> _logger = logger;
 
-	public async Task<List<TestNode>> DiscoverTestsForSolution(SharpIdeSolutionModel solutionModel)
+	public async Task DiscoverTestsForSolution(SharpIdeSolutionModel solutionModel, Func<TestNodeUpdate[], Task> func)
 	{
 		await Task.WhenAll(solutionModel.AllProjects.Select(s => s.MsBuildEvaluationProjectTask));
 		var testProjects = solutionModel.AllProjects.Where(p => p.IsMtpTestProject).ToList();
-		List<TestNode> allDiscoveredTestNodes = [];
+		var discoveredNodeCount = 0;
 		foreach (var testProject in testProjects)
 		{
 			await using var client = await GetInitialisedClient(testProject);
-			var testNodes = await DiscoverTestsForProject(client, testProject);
-			foreach (var testNode in testNodes) allDiscoveredTestNodes.Add(testNode);
+			var testNodes = await DiscoverTestsForProject(client, testProject, func);
+			discoveredNodeCount += testNodes.Length;
 		}
-		_logger.LogInformation("Discovered {DiscoveredTestCount} tests", allDiscoveredTestNodes.Count);
-		return allDiscoveredTestNodes;
+		_logger.LogInformation("Discovered {DiscoveredTestCount} tests", discoveredNodeCount);
 	}
 
-	private async Task<TestNode[]> DiscoverTestsForProject(TestingPlatformClient clientForProject, SharpIdeProjectModel project)
+	private async Task<TestNode[]> DiscoverTestsForProject(TestingPlatformClient clientForProject, SharpIdeProjectModel project, Func<TestNodeUpdate[], Task> func)
 	{
 		List<TestNodeUpdate> testNodeUpdates = [];
-		var discoveryResponse = await clientForProject.DiscoverTestsAsync(Guid.NewGuid(), node =>
+		var discoveryResponse = await clientForProject.DiscoverTestsAsync(Guid.NewGuid(), async nodeUpdates =>
 		{
-			testNodeUpdates.AddRange(node);
-			return Task.CompletedTask;
+			testNodeUpdates.AddRange(nodeUpdates);
+			await func(nodeUpdates);
 		});
 		await discoveryResponse.WaitCompletionAsync();
 
@@ -48,7 +47,7 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 		foreach (var testProject in testProjects)
 		{
 			await using var client = await GetInitialisedClient(testProject);
-			var discoveredTestNodes = await DiscoverTestsForProject(client, testProject);
+			var discoveredTestNodes = await DiscoverTestsForProject(client, testProject, func);
 			await RunTestsForProject(client, testProject, discoveredTestNodes, func);
 		}
 	}
