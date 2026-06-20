@@ -14,6 +14,9 @@ public partial class TestExplorerPanel : Control
 	private Tree _testNodesTree = null!;
 	private Button _runAllTestsButton = null!;
 
+    private readonly Texture2D _namespaceIcon = ResourceLoader.Load<Texture2D>("uid://bob5blfjll4h3");
+    private readonly Texture2D _csharpClassIcon = ResourceLoader.Load<Texture2D>("uid://b027uufaewitj");
+
 	private readonly Dictionary<string, TreeItem> _testNodeTreeItems = [];
 	private readonly Dictionary<SharpIdeProjectModel, TreeItem> _projectTreeItems = [];
 
@@ -131,6 +134,8 @@ public partial class TestExplorerPanel : Control
 				{
 					namespaceSegmentTreeItem = parentTreeItem.CreateChild();
 					namespaceSegmentTreeItem.SetText(0, namespaceSegment.ToString());
+					namespaceSegmentTreeItem.SetIcon(0, _namespaceIcon);
+					namespaceSegmentTreeItem.SetIconMaxWidth(0, 20);
 				}
 				parentTreeItem = namespaceSegmentTreeItem;
 			}
@@ -145,6 +150,8 @@ public partial class TestExplorerPanel : Control
 		{
 			classTreeItem = parentOfClassTreeItem.CreateChild();
 			classTreeItem.SetText(0, className.ToString());
+			classTreeItem.SetIcon(0, _csharpClassIcon);
+			classTreeItem.SetIconMaxWidth(0, 20);
 		}
 
 		Guard.Against.Null(classTreeItem);
