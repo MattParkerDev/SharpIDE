@@ -17,8 +17,7 @@ public partial class TestExplorerPanel
 		var displayName = testNode.DisplayName;
 		var executionState = testNode.ExecutionState;
 
-		// Define padding and spacing
-		const float padding = 4.0f;
+		const float padding = 6.0f;
 		const float spacing = 6.0f;
 
 		var currentX = rect.Position.X + padding;
@@ -36,27 +35,25 @@ public partial class TestExplorerPanel
 		};
 		var textYPos = currentY + (rect.Size.Y + fontSize) / 2 - 2;
 
-		// Calculate right-hand status width first
-		var statusWidth = font.GetStringSize(executionState, HorizontalAlignment.Left, -1, fontSize).X;
-		var rightSideWidth = statusWidth + padding;
-
-		// Draw test name on the left with ellipsis truncation to avoid overlap
+		// Draw test name on the left with ellipsis truncation
 		var textLine = _testNodeTextLine;
 		textLine.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
 		textLine.SetHorizontalAlignment(HorizontalAlignment.Left);
 		textLine.AddString(displayName, font, fontSize);
 
-		var maxNameWidth = rect.Size.X - currentX - rightSideWidth - spacing;
+		var statusWidth = font.GetStringSize(executionState, HorizontalAlignment.Left, -1, fontSize).X;
+		var maxNameWidth = rect.Position.X + rect.Size.X - currentX - spacing - statusWidth - padding;
+		float nameWidth = 0;
 		if (maxNameWidth > 0)
 		{
 			textLine.Width = maxNameWidth;
 			textLine.Draw(_testNodesTree.GetCanvasItem(), new Vector2(currentX, textYPos - textLine.GetLineAscent()), textColor);
+			nameWidth = textLine.GetLineWidth();
 			textLine.Clear();
 		}
 
-		// Draw execution state on the right side with status color
-		var statusX = rect.Position.X + rect.Size.X - rightSideWidth;
+		// Draw execution state immediately after the test name
 		var statusColor = GetTextColour(executionState);
-		_testNodesTree.DrawString(font, new Vector2(statusX, textYPos), executionState, HorizontalAlignment.Left, -1, fontSize, statusColor);
+		_testNodesTree.DrawString(font, new Vector2(currentX + nameWidth + spacing, textYPos), executionState, HorizontalAlignment.Left, -1, fontSize, statusColor);
 	}
 }
