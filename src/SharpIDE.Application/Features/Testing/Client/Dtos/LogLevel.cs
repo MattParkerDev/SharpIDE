@@ -1,6 +1,4 @@
-﻿
-
-namespace SharpIDE.Application.Features.Testing.Client.Dtos;
+﻿namespace SharpIDE.Application.Features.Testing.Client.Dtos;
 
 /// <summary>
 /// Log level.

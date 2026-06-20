@@ -136,7 +136,7 @@ public sealed class TestingPlatformClient : IAsyncDisposable
             using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromMinutes(3));
             var runListener = new TestNodeUpdatesResponseListener(requestId, action);
             _targetHandler.RegisterResponseListener(runListener);
-            await JsonRpcClient.InvokeWithParameterObjectAsync("testing/runTests", new RunRequest(RunId: requestId, TestCases: null), cancellationToken: cancellationTokenSource.Token);
+            await JsonRpcClient.InvokeWithParameterObjectAsync("testing/runTests", new RunTestsRequest(RunId: requestId, Tests: null), cancellationToken: cancellationTokenSource.Token);
             return runListener;
         });
 
@@ -146,7 +146,7 @@ public sealed class TestingPlatformClient : IAsyncDisposable
         using CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromMinutes(3));
         var runListener = new TestNodeUpdatesResponseListener(requestId, action);
         _targetHandler.RegisterResponseListener(runListener);
-        await JsonRpcClient.InvokeWithParameterObjectAsync("testing/runTests", new RunRequest(TestCases: filter, RunId: requestId), cancellationToken: cancellationTokenSource.Token);
+        await JsonRpcClient.InvokeWithParameterObjectAsync("testing/runTests", new RunTestsRequest(Tests: filter, RunId: requestId), cancellationToken: cancellationTokenSource.Token);
         return runListener;
     });
 

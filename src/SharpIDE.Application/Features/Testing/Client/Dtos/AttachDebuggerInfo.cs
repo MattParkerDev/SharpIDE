@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace SharpIDE.Application.Features.Testing.Client.Dtos;
 
 public sealed record AttachDebuggerInfo(
-    [property:JsonProperty("processId")]
+    [property:JsonPropertyName("processId")]
     int ProcessId);

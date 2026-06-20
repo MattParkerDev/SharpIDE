@@ -1,9 +1,7 @@
-﻿
-
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace SharpIDE.Application.Features.Testing.Client.Dtos;
 
 public sealed record DiscoveryRequest(
-    [property:JsonProperty("runId")]
+    [property:JsonPropertyName("runId")]
     Guid RunId);

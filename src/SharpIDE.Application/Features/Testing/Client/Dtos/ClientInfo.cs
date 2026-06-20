@@ -1,12 +1,10 @@
-﻿
-
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace SharpIDE.Application.Features.Testing.Client.Dtos;
 
 public sealed record ClientInfo(
-    [property:JsonProperty("name")]
+    [property:JsonPropertyName("name")]
     string Name,
 
-    [property:JsonProperty("version")]
+    [property:JsonPropertyName("version")]
     string Version = "1.0.0");

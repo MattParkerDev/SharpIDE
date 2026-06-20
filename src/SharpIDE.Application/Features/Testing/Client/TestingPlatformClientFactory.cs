@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
+using StreamJsonRpc;
 
 namespace SharpIDE.Application.Features.Testing.Client;
 
@@ -64,8 +66,9 @@ public partial /* for codegen regx */ class TestingPlatformClientFactory
         {
             throw new OperationCanceledException($"Timeout on connection for command line '{processConfig.FileName} {processConfig.Arguments}'\n{builder}", ex, cancellationTokenSource.Token);
         }
-
-        return new TestingPlatformClient(new(tcpClient.GetStream()), tcpClient, processHandler);
+        var tcpStream = tcpClient.GetStream();
+	    var handler = new HeaderDelimitedMessageHandler(tcpStream, tcpStream, new SystemTextJsonFormatter { JsonSerializerOptions = RpcJsonSerializerOptions.Default });
+        return new TestingPlatformClient(new JsonRpc(handler), tcpClient, processHandler);
     }
 }
 

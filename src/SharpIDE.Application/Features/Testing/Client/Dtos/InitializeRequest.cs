@@ -1,15 +1,13 @@
-﻿
-
-using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace SharpIDE.Application.Features.Testing.Client.Dtos;
 
 public sealed record InitializeRequest(
-    [property:JsonProperty("processId")]
+    [property:JsonPropertyName("processId")]
     int ProcessId,
 
-    [property:JsonProperty("clientInfo")]
+    [property:JsonPropertyName("clientInfo")]
     ClientInfo ClientInfo,
 
-    [property:JsonProperty("capabilities")]
+    [property:JsonPropertyName("capabilities")]
     ClientCapabilities Capabilities);
