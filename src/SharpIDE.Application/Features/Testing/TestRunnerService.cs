@@ -18,20 +18,28 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 		List<TestNode> allDiscoveredTestNodes = [];
 		foreach (var testProject in testProjects)
 		{
-			using var client = await GetInitialisedClientAsync(testProject);
-			List<TestNodeUpdate> testNodeUpdates = [];
-			var discoveryResponse = await client.DiscoverTestsAsync(Guid.NewGuid(), node =>
-			{
-				testNodeUpdates.AddRange(node);
-				return Task.CompletedTask;
-			});
-			await discoveryResponse.WaitCompletionAsync();
-
-			await client.ExitAsync();
-			foreach (var testNodeUpdate in testNodeUpdates) allDiscoveredTestNodes.Add(testNodeUpdate.Node);
+			var testNodes = await DiscoverTestsForProject(testProject);
+			foreach (var testNode in testNodes) allDiscoveredTestNodes.Add(testNode);
 		}
 		_logger.LogInformation("Discovered {DiscoveredTestCount} tests", allDiscoveredTestNodes.Count);
 		return allDiscoveredTestNodes;
+	}
+
+	private async Task<List<TestNode>> DiscoverTestsForProject(SharpIdeProjectModel project)
+	{
+		using var client = await GetInitialisedClientAsync(project);
+		List<TestNodeUpdate> testNodeUpdates = [];
+		var discoveryResponse = await client.DiscoverTestsAsync(Guid.NewGuid(), node =>
+		{
+			testNodeUpdates.AddRange(node);
+			return Task.CompletedTask;
+		});
+		await discoveryResponse.WaitCompletionAsync();
+
+		await client.ExitAsync();
+		var discoveredTestNodes = testNodeUpdates.Select(x => x.Node).ToList();
+		_logger.LogInformation("Discovered {DiscoveredTestCount} tests for project {ProjectName}", discoveredTestNodes.Count, project.Name.Value);
+		return discoveredTestNodes;
 	}
 
 	public async Task RunTestsForSolutionAsync(SharpIdeSolutionModel solutionModel, Func<TestNodeUpdate[], Task> func)
@@ -45,7 +53,7 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 	}
 
 	// Assumes it has already been built
-	public async Task RunTestsForProjectAsync(SharpIdeProjectModel project, Func<TestNodeUpdate[], Task> func)
+	private async Task RunTestsForProjectAsync(SharpIdeProjectModel project, Func<TestNodeUpdate[], Task> func)
 	{
 		using var client = await GetInitialisedClientAsync(project);
 		List<TestNodeUpdate> testNodeUpdates = [];
