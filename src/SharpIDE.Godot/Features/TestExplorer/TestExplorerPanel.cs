@@ -112,6 +112,7 @@ public partial class TestExplorerPanel : Control
 			projectTreeItem = _testNodesTree.GetRoot().CreateChild();
 			projectTreeItem.SetText(0, project!.Name.Value);
 			projectTreeItem.SetIcon(0, FileIconHelper.CsprojIcon);
+			projectTreeItem.Collapsed = true;
 			_projectTreeItems[project] = projectTreeItem;
 		}
 		Guard.Against.Null(projectTreeItem);
@@ -136,6 +137,7 @@ public partial class TestExplorerPanel : Control
 					namespaceSegmentTreeItem.SetText(0, namespaceSegment.ToString());
 					namespaceSegmentTreeItem.SetIcon(0, _namespaceIcon);
 					namespaceSegmentTreeItem.SetIconMaxWidth(0, 20);
+					namespaceSegmentTreeItem.Collapsed = true;
 				}
 				parentTreeItem = namespaceSegmentTreeItem;
 			}
@@ -156,6 +158,7 @@ public partial class TestExplorerPanel : Control
 				existing.SetText(0, classSegment.ToString());
 				existing.SetIcon(0, _csharpClassIcon);
 				existing.SetIconMaxWidth(0, 20);
+				existing.Collapsed = true;
 			}
 			classTreeItem = existing;
 			parentOfNextNestedClass = existing;
