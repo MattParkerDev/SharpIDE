@@ -150,8 +150,10 @@ public sealed class TestingPlatformClient : IAsyncDisposable
         return runListener;
     });
 
+    private int _disposed = 0;
     public async ValueTask DisposeAsync()
     {
+	    if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 	    await ExitAsync();
 	    JsonRpcClient.Dispose();
 	    _tcpClient.Dispose();

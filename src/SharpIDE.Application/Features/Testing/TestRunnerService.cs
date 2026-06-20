@@ -44,11 +44,27 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 	{
 		await Task.WhenAll(solutionModel.AllProjects.Select(s => s.MsBuildEvaluationProjectTask));
 		var testProjects = solutionModel.AllProjects.Where(p => p.IsMtpTestProject).ToList();
-		foreach (var testProject in testProjects)
+
+		var sessions = new List<(TestingPlatformClient Client, SharpIdeProjectModel Project, TestNode[] Nodes)>();
+		try
 		{
-			await using var client = await GetInitialisedClient(testProject);
-			var discoveredTestNodes = await DiscoverTestsForProject(client, testProject, func);
-			await RunTestsForProject(client, testProject, discoveredTestNodes, func);
+			// Run all discovery first, so that the UI is populated with every test
+			foreach (var testProject in testProjects)
+			{
+				var client = await GetInitialisedClient(testProject);
+				var discoveredTestNodes = await DiscoverTestsForProject(client, testProject, func);
+				sessions.Add((client, testProject, discoveredTestNodes));
+			}
+
+			foreach (var (client, project, nodes) in sessions)
+			{
+				await RunTestsForProject(client, project, nodes, func);
+				await client.DisposeAsync();
+			}
+		}
+		finally
+		{
+			foreach (var (client, _, _) in sessions) await client.DisposeAsync();
 		}
 	}
 
