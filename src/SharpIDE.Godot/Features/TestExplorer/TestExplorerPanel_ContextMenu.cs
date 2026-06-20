@@ -15,7 +15,7 @@ public partial class TestExplorerPanel
     private Texture2D _runIcon = ResourceLoader.Load<Texture2D>("uid://bkty6563cthj8");
     private Texture2D _debugIcon = ResourceLoader.Load<Texture2D>("uid://c7cmou8hipsvc");
 
-    private void OpenContextMenuTestNode(TestNode testNode)
+    private void OpenContextMenuTestNode(TestNode testNode, Vector2 globalMousePosition)
     {
         Guard.Against.Null(testNode);
         var menu = new PopupMenu();
@@ -49,7 +49,6 @@ public partial class TestExplorerPanel
             }
         };
 
-        var globalMousePosition = GetGlobalMousePosition();
         menu.Position = new Vector2I((int)globalMousePosition.X, (int)globalMousePosition.Y);
         menu.Popup();
     }

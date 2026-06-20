@@ -187,12 +187,13 @@ public partial class TestExplorerPanel : Control
 		if (selected is null) return;
 		if (_testNodesTree.HasMultipleNodesSelected()) return;
 
+        var globalMousePosition = _testNodesTree.GlobalPosition + mousePosition;
 		var mouseButtonMask = (MouseButtonMask)mouseButtonIndex;
 
 		var testNode = selected.SharpIdeTestNode;
 		if (testNode is not null && mouseButtonMask is MouseButtonMask.Right)
 		{
-			OpenContextMenuTestNode(testNode);
+			OpenContextMenuTestNode(testNode, globalMousePosition);
 		}
 	}
 }
