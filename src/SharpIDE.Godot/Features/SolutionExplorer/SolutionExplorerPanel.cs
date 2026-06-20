@@ -110,7 +110,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		var selected = _tree.GetSelected();
 		if (selected is null) return;
-		if (HasMultipleNodesSelected()) return;
+		if (_tree.HasMultipleNodesSelected()) return;
 
 		var mouseButtonMask = (MouseButtonMask)mouseButtonIndex;
 

@@ -189,6 +189,22 @@ public static class NodeExtensions
 	        return null;
         }
     }
+
+    extension(Tree tree)
+    {
+	    public bool HasMultipleNodesSelected()
+	    {
+		    var selectedCount = 0;
+		    var currentItem = tree.GetNextSelected(null);
+		    while (currentItem != null)
+		    {
+			    selectedCount++;
+			    if (selectedCount > 1) return true;
+			    currentItem = tree.GetNextSelected(currentItem);
+		    }
+		    return false;
+	    }
+    }
     extension(Node node)
     {
         public void QueueFreeChildren()

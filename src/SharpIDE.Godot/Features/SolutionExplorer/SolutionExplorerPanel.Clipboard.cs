@@ -28,7 +28,7 @@ public partial class SolutionExplorerPanel
             clipboardOperation);
         GD.Print($"Solution Explorer - Added {_itemsOnClipboard.Value.Item1.Count} items to clipboard with operation {clipboardOperation}");
     }
-    
+
     private List<TreeItem> GetSelectedTreeItems()
     {
         var selectedItems = new List<TreeItem>();
@@ -40,20 +40,7 @@ public partial class SolutionExplorerPanel
         }
         return selectedItems;
     }
-    
-    private bool HasMultipleNodesSelected()
-    {
-        var selectedCount = 0;
-        var currentItem = _tree.GetNextSelected(null);
-        while (currentItem != null)
-        {
-            selectedCount++;
-            if (selectedCount > 1) return true;
-            currentItem = _tree.GetNextSelected(currentItem);
-        }
-        return false;
-    }
-    
+
     private void ClearSlnExplorerClipboard()
     {
         _itemsOnClipboard = null;
@@ -71,7 +58,7 @@ public partial class SolutionExplorerPanel
             _ => null
         };
         if (destinationFolder is null) return;
-			
+
         var (filesToPaste, operation) = _itemsOnClipboard.Value;
         _itemsOnClipboard = null;
         _ = Task.GodotRun(async () =>
