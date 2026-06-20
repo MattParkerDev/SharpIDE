@@ -15,7 +15,7 @@ public partial class TestExplorerPanel
 		var testNode = treeItem.SharpIdeTestNode;
 		if (testNode is null) return;
 
-		var displayName = testNode.DisplayName;
+		var displayName = testNode.LocationMethod;
 		var executionState = testNode.ExecutionState;
 
 		const float padding = 4.0f;
