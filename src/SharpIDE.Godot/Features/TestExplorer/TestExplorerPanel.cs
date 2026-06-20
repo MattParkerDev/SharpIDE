@@ -56,13 +56,18 @@ public partial class TestExplorerPanel : Control
 	        foreach (var testNode in testNodes)
 	        {
 		        var treeItem = root.CreateChild();
-		        treeItem.SetText(0, testNode.DisplayName);
-		        treeItem.SetText(1, testNode.ExecutionState);
-		        treeItem.SetCustomColor(1, GetTextColour(testNode.ExecutionState));
+		        UpdateTestNodeTreeItem(treeItem, testNode);
 		        _testNodeTreeItems[testNode.Uid] = treeItem;
 	        }
         });
     }
+
+    private void UpdateTestNodeTreeItem(TreeItem treeItem, TestNode testNode)
+	{
+	    treeItem.SetText(0, testNode.DisplayName);
+	    treeItem.SetText(1, testNode.ExecutionState);
+	    treeItem.SetCustomColor(1, GetTextColour(testNode.ExecutionState));
+	}
 
     private readonly Dictionary<string, TreeItem> _testNodeTreeItems = [];
     private void OnRunAllTestsButtonPressed()
@@ -91,16 +96,12 @@ public partial class TestExplorerPanel : Control
             {
                 if (_testNodeTreeItems.TryGetValue(update.Node.Uid, out var treeItem))
                 {
-	                treeItem.SetText(0, update.Node.DisplayName);
-	                treeItem.SetText(1, update.Node.ExecutionState);
-	                treeItem.SetCustomColor(1, GetTextColour(update.Node.ExecutionState));
+	                UpdateTestNodeTreeItem(treeItem, update.Node);
                 }
                 else
                 {
 	                var newTreeItem = _testNodesTree.GetRoot().CreateChild();
-	                newTreeItem.SetText(0, update.Node.DisplayName);
-	                newTreeItem.SetText(1, update.Node.ExecutionState);
-	                newTreeItem.SetCustomColor(1, GetTextColour(update.Node.ExecutionState));
+	                UpdateTestNodeTreeItem(newTreeItem, update.Node);
 	                _testNodeTreeItems[update.Node.Uid] = newTreeItem;
                 }
             }
