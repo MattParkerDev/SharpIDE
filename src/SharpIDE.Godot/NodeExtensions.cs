@@ -177,6 +177,17 @@ public static class NodeExtensions
             else
                 treeItem.MoveAfter(target);
         }
+        public TreeItem? GetFirstChildWithName(ref ReadOnlySpan<char> name)
+        {
+	        foreach (var child in treeItem.GetChildren().AsValueEnumerable())
+	        {
+		        if (child.GetText(0).AsSpan().Equals(name, StringComparison.Ordinal))
+		        {
+			        return child;
+		        }
+	        }
+	        return null;
+        }
     }
     extension(Node node)
     {

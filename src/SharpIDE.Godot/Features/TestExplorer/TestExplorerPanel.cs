@@ -1,3 +1,4 @@
+using Ardalis.GuardClauses;
 using Godot;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -110,10 +111,44 @@ public partial class TestExplorerPanel : Control
 			projectTreeItem.SetIcon(0, FileIconHelper.CsprojIcon);
 			_projectTreeItems[project] = projectTreeItem;
 		}
+		Guard.Against.Null(projectTreeItem);
+
+		TreeItem? classTreeItem = null;
+		TreeItem? parentOfClassTreeItem = null;
 
 		// Could be e.g. 'TestProject.UnitTest1+NestedClassTests' or 'TestProject.UnitTest1' or 'TestProject.SomeNamespace.UnitTests1'
-		var fullyQualifiedClass = testNode.LocationType;
-		var newTreeItem = projectTreeItem.CreateChild();
+		var fullyQualifiedClass = testNode.LocationType.AsSpan();
+		var lastDotIndex = fullyQualifiedClass.LastIndexOf('.');
+		if (lastDotIndex is not -1)
+		{
+			var namespaceName = fullyQualifiedClass[..lastDotIndex];
+			var parentTreeItem = projectTreeItem;
+			foreach (var range in namespaceName.Split('.'))
+			{
+				var namespaceSegment = namespaceName[range];
+				var namespaceSegmentTreeItem = parentTreeItem.GetFirstChildWithName(ref namespaceSegment);
+				if (namespaceSegmentTreeItem is null)
+				{
+					namespaceSegmentTreeItem = parentTreeItem.CreateChild();
+					namespaceSegmentTreeItem.SetText(0, namespaceSegment.ToString());
+				}
+				parentTreeItem = namespaceSegmentTreeItem;
+			}
+			parentOfClassTreeItem = parentTreeItem;
+		}
+		parentOfClassTreeItem ??= projectTreeItem;
+
+		// className might have + in it, indicating nested class
+		var className = fullyQualifiedClass[(lastDotIndex + 1)..];
+		classTreeItem = parentOfClassTreeItem.GetFirstChildWithName(ref className);
+		if (classTreeItem is null)
+		{
+			classTreeItem = parentOfClassTreeItem.CreateChild();
+			classTreeItem.SetText(0, className.ToString());
+		}
+
+		Guard.Against.Null(classTreeItem);
+		var newTreeItem = classTreeItem.CreateChild();
 		UpdateTestNodeTreeItem(newTreeItem, testNode);
 		return newTreeItem;
 	}
