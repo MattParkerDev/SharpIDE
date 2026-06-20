@@ -33,6 +33,7 @@ public partial class TestExplorerPanel : Control
 		_ = Task.GodotRun(AsyncReady);
 		_refreshButton.Pressed += OnRefreshButtonPressed;
 		_runAllTestsButton.Pressed += OnRunAllTestsButtonPressed;
+		_testNodesTree.ItemMouseSelected += TreeOnItemMouseSelected;
 	}
 
 	private async Task AsyncReady()
@@ -178,5 +179,20 @@ public partial class TestExplorerPanel : Control
 		treeItem.SharpIdeTestNode = testNode;
 		// Avoid allocation via Callable.From((TreeItem s, Rect2 x) => CustomDraw(s, x))
 		treeItem.SetCustomDrawCallback(0, _testNodeCustomDrawCallable!.Value);
+	}
+
+	private void TreeOnItemMouseSelected(Vector2 mousePosition, long mouseButtonIndex)
+	{
+		var selected = _testNodesTree.GetSelected();
+		if (selected is null) return;
+		if (_testNodesTree.HasMultipleNodesSelected()) return;
+
+		var mouseButtonMask = (MouseButtonMask)mouseButtonIndex;
+
+		var testNode = selected.SharpIdeTestNode;
+		if (testNode is not null && mouseButtonMask is MouseButtonMask.Right)
+		{
+			OpenContextMenuTestNode(testNode);
+		}
 	}
 }

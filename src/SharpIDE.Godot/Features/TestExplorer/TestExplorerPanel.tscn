@@ -101,6 +101,7 @@ size_flags_horizontal = 3
 theme_override_constants/inner_item_margin_left = 2
 theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_vj6ii")
+allow_rmb_select = true
 hide_root = true
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer" unique_id=1777548425]
