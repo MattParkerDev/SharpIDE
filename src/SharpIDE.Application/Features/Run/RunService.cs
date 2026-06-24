@@ -194,7 +194,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 		return await _debuggingService!.GetVariablesForVariablesReference(_debuggerSessionId!.Value, variablesReferenceId);
 	}
 
-	private async Task<string> GetRunArguments(SharpIdeProjectModel project)
+	private async Task<List<string>> GetRunArguments(SharpIdeProjectModel project)
 	{
 		var dllFullPath = await _roslynAnalysis.GetOutputDllPathForProject(project);
 		if (project.IsBlazorProject)
@@ -212,8 +212,8 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			var blazorDevServerFile = new FileInfo(blazorDevServerDllPath);
 			if (blazorDevServerFile.Exists is false) throw new FileNotFoundException($"Blazor dev server not found at expected path: {blazorDevServerDllPath}");
 			// C:/Users/Matthew/.nuget/packages/microsoft.aspnetcore.components.webassembly.devserver/9.0.7/tools/blazor-devserver.dll --applicationpath C:\Users\Matthew\Documents\Git\BlazorCodeBreaker\artifacts\bin\WebUi\debug\WebUi.dll
-			return $" \"{blazorDevServerFile.FullName}\" --applicationpath  \"{dllFullPath}\"";
+			return [blazorDevServerFile.FullName, "--applicationpath", dllFullPath];
 		}
-		return $"\"{dllFullPath}\"";
+		return [dllFullPath];
 	}
 }
