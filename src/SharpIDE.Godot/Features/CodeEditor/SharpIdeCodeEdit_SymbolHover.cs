@@ -143,13 +143,13 @@ public partial class SharpIdeCodeEdit
             ContentMarginRight = 12
         };
 
-        PanelContainer? diagnosticPanel = null;
+		PanelContainer? diagnosticPanel = null;
         if (diagnosticsForLinePosition is not null)
         {
             var diagnosticNode = SymbolInfoComponents.GetDiagnostic(diagnosticsForLinePosition);
             diagnosticNode.FitContent = true;
-            diagnosticNode.AutowrapMode = TextServer.AutowrapMode.Off;
-            diagnosticNode.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            diagnosticNode.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            diagnosticNode.SetAnchorsPreset(LayoutPreset.FullRect);
             diagnosticNode.SelectionEnabled = true;
             diagnosticPanel = new PanelContainer();
             diagnosticPanel.AddThemeStyleboxOverride(ThemeStringNames.Panel, styleBox);
@@ -179,8 +179,8 @@ public partial class SharpIdeCodeEdit
         if (symbolInfoNode is not null)
         {
             symbolInfoNode.FitContent = true;
-            symbolInfoNode.AutowrapMode = TextServer.AutowrapMode.Off;
-            symbolInfoNode.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            symbolInfoNode.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            symbolInfoNode.SetAnchorsPreset(LayoutPreset.FullRect);
             symbolInfoNode.SelectionEnabled = true;
             symbolInfoPanel = new PanelContainer();
             symbolInfoPanel.AddThemeStyleboxOverride(ThemeStringNames.Panel, styleBox);
@@ -192,6 +192,11 @@ public partial class SharpIdeCodeEdit
         vboxContainer.AddThemeConstantOverride(ThemeStringNames.Separation, 0);
         if (diagnosticPanel is not null) vboxContainer.AddChild(diagnosticPanel);
         if (symbolInfoPanel is not null) vboxContainer.AddChild(symbolInfoPanel);
+
+        var rightEdgePosition = GetViewport().GetVisibleRect().Size.X;
+		var maxWidth = rightEdgePosition - globalMousePosition.X - 20;
+
+        vboxContainer.CustomMaximumSize = new Vector2(maxWidth, -1);
         tooltipWindow.AddChild(vboxContainer);
         tooltipWindow.ChildControlsChanged();
         AddChild(tooltipWindow);
