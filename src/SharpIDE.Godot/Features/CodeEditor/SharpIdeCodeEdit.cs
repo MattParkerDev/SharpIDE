@@ -577,7 +577,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 		if (@event.IsActionPressed(InputStringNames.Copy))
 		{
-			if (_symbolInfoRichTextLabel is not null)
+			if (_symbolInfoRichTextLabel is not null && _symbolInfoRichTextLabel.GetSelectionFrom() is not -1)
 			{
 				var selectedText = _symbolInfoRichTextLabel.GetSelectedText();
 				if (!string.IsNullOrEmpty(selectedText))
@@ -586,7 +586,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 					DisplayServer.ClipboardSet(selectedText);
 				}
 			}
-			else if (_diagnosticInfoRichTextLabel is not null)
+			else if (_diagnosticInfoRichTextLabel is not null && _diagnosticInfoRichTextLabel.GetSelectionFrom() is not -1)
 			{
 				var selectedText = _diagnosticInfoRichTextLabel.GetSelectedText();
 				if (!string.IsNullOrEmpty(selectedText))
