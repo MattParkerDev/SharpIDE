@@ -282,9 +282,9 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 				var pdbPath = Path.Combine(pdbDir, $"{assemblyName}.decompiled.pdb");
 				Directory.CreateDirectory(pdbDir);
 
-				await using var pdbStream = new FileStream(pdbPath, FileMode.Create, FileAccess.Write, FileShare.None);
 				try
 				{
+					await using var pdbStream = new FileStream(pdbPath, FileMode.Create, FileAccess.Write, FileShare.None);
 					var sourceFiles = await PortablePdbWriter2.DecompiledAndWritePdb(file, ts, settings, pdbStream, noLogo: true, cancellationToken: cancellationToken);
 					return sourceFiles.Count > 0 ? sourceFiles : null;
 				}
