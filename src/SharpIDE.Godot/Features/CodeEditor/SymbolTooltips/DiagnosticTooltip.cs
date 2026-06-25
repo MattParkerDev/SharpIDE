@@ -11,6 +11,10 @@ public static partial class SymbolInfoComponents
         label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFontSize(14);
         label.AddText(diagnostic.Diagnostic.GetMessage());
+        label.PushColor(TextEditorDotnetColoursDark.Gray);
+        label.AddText(" ");
+        label.AddText(diagnostic.Diagnostic.Id);
+        label.Pop();
         label.Pop();
         return label;
     }
