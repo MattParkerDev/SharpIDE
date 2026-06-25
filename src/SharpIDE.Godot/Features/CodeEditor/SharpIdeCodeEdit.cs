@@ -610,7 +610,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
-		CloseSymbolHoverWindow();
+		if (@event is not InputEventKey { Keycode: Key.Ctrl or Key.Alt or Key.Shift or Key.Meta })
+		{
+			CloseSymbolHoverWindow();
+		}
 		// Let each open tab respond to this event
 		if (@event.IsActionPressed(InputStringNames.SaveAllFiles))
 		{
