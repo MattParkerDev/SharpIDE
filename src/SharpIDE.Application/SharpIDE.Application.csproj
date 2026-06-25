@@ -26,6 +26,7 @@
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.CSharp.Features" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.Build" MemberPattern="^Microsoft\.Build\.Logging\.(TerminalLogger|Terminal)\..*" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces:System.Linq.RoslynEnumerableExtensions" />
+    <DoNotPublicize Include="Microsoft.CodeAnalysis.Razor.Workspaces:System.Collections.Immutable.ImmutableArrayExtensions" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts:Microsoft.CodeAnalysis.ErrorReporting.FatalError" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts:Microsoft.CodeAnalysis.ErrorReporting.ErrorSeverity" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts:Microsoft.CodeAnalysis.Contract" />
@@ -62,7 +63,6 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" />
 <!--    <PackageReference Include="Microsoft.VisualStudioCode.RazorExtension" />--> <!-- Either this or Microsoft.CodeAnalysis.Remote.Razor supplies RemoteSnapshotManager -->
     <PackageReference Include="Microsoft.CodeAnalysis.Remote.Razor" />
-    <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.Razor.Features" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.Features" />
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" PrivateAssets="all" />

@@ -93,7 +93,7 @@ public partial class CustomMsBuildProjectLoader(Workspace workspace, ImmutableDi
 		IBinLogPathProvider binLogPathProvider = null!; // TODO: Fix
 
 		var knownCommandLineParserLanguages = _solutionServices.GetSupportedLanguages<ICommandLineParserService>();
-		var buildHostProcessManager = new BuildHostProcessManager(knownCommandLineParserLanguages, Properties, binLogPathProvider, _loggerFactory);
+		var buildHostProcessManager = new BuildHostProcessManager(knownCommandLineParserLanguages, Properties, binLogPathProvider, null, _loggerFactory);
 		await using var _ = buildHostProcessManager.ConfigureAwait(false);
 
 		var worker = new CustomWorker(
