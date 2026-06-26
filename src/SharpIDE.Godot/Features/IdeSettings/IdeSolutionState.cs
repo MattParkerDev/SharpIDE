@@ -3,6 +3,7 @@
 public class IdeSolutionState
 {
     public List<OpenTab> OpenTabs { get; set; } = [];
+    public string LastStartupProject { get; set; } = "";
 }
 
 public class OpenTab
