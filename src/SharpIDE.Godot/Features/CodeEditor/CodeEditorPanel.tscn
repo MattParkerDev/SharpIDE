@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://cy7erscaagrtj" path="res://Features/CodeEditor/CodeEditorPanel.cs" id="1_eraxv"]
 [ext_resource type="PackedScene" uid="uid://cinaqbdghcvoi" path="res://Features/CodeEditor/SharpIdeCodeEdit.tscn" id="1_y4okr"]
 [ext_resource type="Texture2D" uid="uid://do0edciarrnp0" path="res://Features/SolutionExplorer/Resources/CsharpFile.svg" id="2_dbtmr"]
+[ext_resource type="Texture2D" uid="uid://qqpwpn4f6r4j" path="res://Features/CodeEditor/Resources/LoadingSpinner.svg" id="3_dbtmr"]
 
 [node name="CodeEditorPanel" type="MarginContainer" unique_id=154728753]
 anchors_preset = 15
@@ -25,3 +26,16 @@ drag_to_rearrange_enabled = true
 [node name="SharpIdeCodeEdit" parent="TabContainer" unique_id=170225652 instance=ExtResource("1_y4okr")]
 layout_mode = 2
 metadata/_tab_index = 0
+
+[node name="LoadingSpinner" type="TextureProgressBar" parent="." unique_id=33022366]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+value = 100.0
+fill_mode = 4
+radial_fill_degrees = 180.0
+nine_patch_stretch = true
+texture_progress = ExtResource("3_dbtmr")
