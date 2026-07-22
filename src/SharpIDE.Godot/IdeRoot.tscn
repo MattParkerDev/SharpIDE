@@ -107,7 +107,10 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RunMenuButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=193947069]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer" unique_id=849383975]
+layout_mode = 2
+
+[node name="RunMenuButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer/MarginContainer" unique_id=193947069]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -115,11 +118,11 @@ disabled = true
 icon = ExtResource("2_8x8ub")
 icon_alignment = 1
 
-[node name="RunMenuPopup" type="Popup" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton" unique_id=92504102]
+[node name="RunMenuPopup" type="Popup" parent="VBoxContainer/Panel/HBoxContainer/MarginContainer/RunMenuButton" unique_id=92504102]
 unique_name_in_owner = true
 size = Vector2i(151, 100)
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup" unique_id=911955929]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/Panel/HBoxContainer/MarginContainer/RunMenuButton/RunMenuPopup" unique_id=911955929]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -130,7 +133,7 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/Panel/HBoxContainer/RunMenuButton/RunMenuPopup/MarginContainer" unique_id=1372084780]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/Panel/HBoxContainer/MarginContainer/RunMenuButton/RunMenuPopup/MarginContainer" unique_id=1372084780]
 layout_mode = 2
 
 [node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
