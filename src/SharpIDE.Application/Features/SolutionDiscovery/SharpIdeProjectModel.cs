@@ -55,25 +55,25 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 						LoadState = Evaluation.MsBuildProjectLoadState.Missing,
 						Project = null
 					},
-					ActiveProjectLoadResult = null!,
+					DefaultActiveProjectLoadResult = null!,
 					TfmSpecificLoadResults = []
 				};
 			}
 			var result = await ProjectEvaluation.LoadOrReloadProject(FilePath);
 			Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
-			if (result.ActiveProjectLoadResult.LoadState is Evaluation.MsBuildProjectLoadState.Invalid)
+			if (result.DefaultActiveProjectLoadResult.LoadState is Evaluation.MsBuildProjectLoadState.Invalid)
 			{
-				Guard.Against.Null(result.ActiveProjectLoadResult.Diagnostic);
-				Diagnostics.Add(result.ActiveProjectLoadResult.Diagnostic);
+				Guard.Against.Null(result.DefaultActiveProjectLoadResult.Diagnostic);
+				Diagnostics.Add(result.DefaultActiveProjectLoadResult.Diagnostic);
 			}
 
-			ActiveMsBuildProjectLoadState.Value = result.ActiveProjectLoadResult.LoadState;
+			ActiveMsBuildProjectLoadState.Value = result.DefaultActiveProjectLoadResult.LoadState;
 
 			return result;
 		});
 	}
 
-	public Project ActiveMsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully && MsBuildEvaluationProjectTask.Result.ActiveProjectLoadResult is { LoadState: MsBuildProjectLoadState.Loaded } loadResult ? loadResult.Project! : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
+	public Project ActiveMsBuildEvaluationProject => MsBuildEvaluationProjectTask.IsCompletedSuccessfully && MsBuildEvaluationProjectTask.Result.DefaultActiveProjectLoadResult is { LoadState: MsBuildProjectLoadState.Loaded } loadResult ? loadResult.Project! : throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
 
 	public bool IsLoading => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loading;
 	public bool IsLoaded => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded;

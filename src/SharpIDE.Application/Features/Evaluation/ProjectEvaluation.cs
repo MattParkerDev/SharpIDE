@@ -26,7 +26,7 @@ public sealed record MsBuildProjectLoadResult
 	/// Always set, in a single TFM project, this is both the "outer" and main project. In multi-TFM project scenarios, this is the outer project that has TargetFrameworks set
 	public required MsBuildProjectInstanceLoadResult OuterProjectLoadResult { get; set; }
 	public required List<MsBuildProjectInstanceLoadResult> TfmSpecificLoadResults { get; set; }
-	public required MsBuildProjectInstanceLoadResult ActiveProjectLoadResult { get; set; }
+	public required MsBuildProjectInstanceLoadResult DefaultActiveProjectLoadResult { get; set; }
 }
 
 public sealed record MsBuildProjectInstanceLoadResult
@@ -56,7 +56,7 @@ public static class ProjectEvaluation
 			{
 				OuterProjectLoadResult = missingResult,
 				TfmSpecificLoadResults = [],
-				ActiveProjectLoadResult = missingResult
+				DefaultActiveProjectLoadResult = missingResult
 			};
 		}
 
@@ -96,7 +96,7 @@ public static class ProjectEvaluation
 				{
 					OuterProjectLoadResult = outerProjectLoadResult,
 					TfmSpecificLoadResults = [],
-					ActiveProjectLoadResult = outerProjectLoadResult
+					DefaultActiveProjectLoadResult = outerProjectLoadResult
 				};
 			}
 
@@ -148,7 +148,7 @@ public static class ProjectEvaluation
 			{
 				OuterProjectLoadResult = outerProjectLoadResult,
 				TfmSpecificLoadResults = tfmSpecificLoadResults,
-				ActiveProjectLoadResult = GetActiveProjectLoadResult(tfmSpecificLoadResults)
+				DefaultActiveProjectLoadResult = GetActiveProjectLoadResult(tfmSpecificLoadResults)
 			};
 		}
 		catch (InvalidProjectFileException ex)
@@ -162,7 +162,7 @@ public static class ProjectEvaluation
 			{
 				OuterProjectLoadResult = invalidResult,
 				TfmSpecificLoadResults = [],
-				ActiveProjectLoadResult = invalidResult
+				DefaultActiveProjectLoadResult = invalidResult
 			};
 		}
 	}
