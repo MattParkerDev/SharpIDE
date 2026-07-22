@@ -19,7 +19,16 @@ public enum MsBuildProjectLoadState
 	Invalid,
 	Missing
 }
+
 public sealed record MsBuildProjectLoadResult
+{
+	/// Always set, in a single TFM project, this is both the "outer" and main project. In multi-TFM project scenarios, this is the outer project that has TargetFrameworks set
+	public required MsBuildProjectInstanceLoadResult OuterProjectLoadResult { get; set; }
+	public required List<MsBuildProjectInstanceLoadResult> TfmSpecificLoadResults { get; set; }
+	public required MsBuildProjectInstanceLoadResult ActiveProjectLoadResult { get; set; }
+}
+
+public sealed record MsBuildProjectInstanceLoadResult
 {
 	public MsBuildProjectLoadState LoadState { get; set; }
 	public Project? Project { get; init; }
@@ -31,37 +40,116 @@ public static class ProjectEvaluation
 	private static readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
 	public static async Task<MsBuildProjectLoadResult> LoadOrReloadProject(string projectFilePath)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadOrReloadProject)}");
+		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadOrReloadProject)}");
 		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
 
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
+		if (File.Exists(projectFilePath) is false)
+		{
+			var missingResult = new MsBuildProjectInstanceLoadResult
+			{
+				LoadState = MsBuildProjectLoadState.Missing
+			};
+			return new MsBuildProjectLoadResult
+			{
+				OuterProjectLoadResult = missingResult,
+				TfmSpecificLoadResults = [],
+				ActiveProjectLoadResult = missingResult
+			};
+		}
+
 		try
 		{
-			Project project;
-			if (_projectCollection.GetLoadedProjects(projectFilePath).SingleOrDefault() is {} existingProject)
+			var loadedProjects = _projectCollection.GetLoadedProjects(projectFilePath);
+			var outerProject = loadedProjects.FirstOrDefault(project => project.GlobalProperties.ContainsKey("TargetFramework") is false);
+			if (outerProject is not null)
 			{
-				var projectRootElement = existingProject.Xml;
+				var projectRootElement = outerProject.Xml;
 				projectRootElement.Reload(false);
-				existingProject.ReevaluateIfNecessary();
-				project = existingProject;
+				outerProject.ReevaluateIfNecessary();
 			}
 			else
 			{
-				project = _projectCollection.LoadProject(projectFilePath);
+				outerProject = _projectCollection.LoadProject(projectFilePath);
 			}
-			return new MsBuildProjectLoadResult
+
+			var outerProjectLoadResult = new MsBuildProjectInstanceLoadResult
 			{
 				LoadState = MsBuildProjectLoadState.Loaded,
-				Project = project
+				Project = outerProject
+			};
+
+			var targetFrameworks = outerProject.GetPropertyValue("TargetFrameworks")
+				.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.ToList();
+			if (targetFrameworks.Count == 0)
+			{
+				foreach (var innerProject in loadedProjects.Where(project => project.GlobalProperties.ContainsKey("TargetFramework")))
+				{
+					_projectCollection.UnloadProject(innerProject);
+				}
+
+				return new MsBuildProjectLoadResult
+				{
+					OuterProjectLoadResult = outerProjectLoadResult,
+					TfmSpecificLoadResults = [],
+					ActiveProjectLoadResult = outerProjectLoadResult
+				};
+			}
+
+			var desiredTargetFrameworks = targetFrameworks.ToHashSet(StringComparer.OrdinalIgnoreCase);
+			var innerProjectsByTargetFramework = new Dictionary<string, Project>(StringComparer.OrdinalIgnoreCase);
+			foreach (var innerProject in loadedProjects.Where(project => project.GlobalProperties.TryGetValue("TargetFramework", out _)))
+			{
+				var targetFramework = innerProject.GlobalProperties["TargetFramework"];
+				if (desiredTargetFrameworks.Contains(targetFramework) is false || innerProjectsByTargetFramework.TryAdd(targetFramework, innerProject) is false)
+				{
+					_projectCollection.UnloadProject(innerProject);
+					continue;
+				}
+
+				innerProject.ReevaluateIfNecessary();
+			}
+
+			var tfmSpecificLoadResults = new List<MsBuildProjectInstanceLoadResult>(targetFrameworks.Count);
+			foreach (var targetFramework in targetFrameworks)
+			{
+				if (innerProjectsByTargetFramework.TryGetValue(targetFramework, out var innerProject) is false)
+				{
+					innerProject = _projectCollection.LoadProject(projectFilePath, new Dictionary<string, string>
+					{
+						["TargetFramework"] = targetFramework
+					}, toolsVersion: null);
+				}
+
+				tfmSpecificLoadResults.Add(new MsBuildProjectInstanceLoadResult
+				{
+					LoadState = MsBuildProjectLoadState.Loaded,
+					Project = innerProject
+				});
+			}
+
+			return new MsBuildProjectLoadResult
+			{
+				OuterProjectLoadResult = outerProjectLoadResult,
+				TfmSpecificLoadResults = tfmSpecificLoadResults,
+				ActiveProjectLoadResult = tfmSpecificLoadResults[0]
 			};
 		}
 		catch (InvalidProjectFileException ex)
 		{
-			return new MsBuildProjectLoadResult
+			var invalidResult = new MsBuildProjectInstanceLoadResult
 			{
 				LoadState = MsBuildProjectLoadState.Invalid,
 				Diagnostic = ex.ToDiagnostic()
+			};
+			return new MsBuildProjectLoadResult
+			{
+				OuterProjectLoadResult = invalidResult,
+				TfmSpecificLoadResults = [],
+				ActiveProjectLoadResult = invalidResult
 			};
 		}
 	}

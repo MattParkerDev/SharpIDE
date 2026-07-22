@@ -304,7 +304,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 
         var disposableBuilder = new DisposableBuilder();
 
-		projectModel.MsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadState, ct) =>
+		projectModel.ActiveMsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadState, ct) =>
 		{
 			var newIcon = loadState switch
 			{
