@@ -3,6 +3,7 @@ using Microsoft.Build.Evaluation;
 using Microsoft.Build.Exceptions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using NuGet.Frameworks;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 using SharpIDE.Application.Features.Analysis;
@@ -147,7 +148,7 @@ public static class ProjectEvaluation
 			{
 				OuterProjectLoadResult = outerProjectLoadResult,
 				TfmSpecificLoadResults = tfmSpecificLoadResults,
-				ActiveProjectLoadResult = tfmSpecificLoadResults[0]
+				ActiveProjectLoadResult = GetActiveProjectLoadResult(tfmSpecificLoadResults)
 			};
 		}
 		catch (InvalidProjectFileException ex)
@@ -164,6 +165,31 @@ public static class ProjectEvaluation
 				ActiveProjectLoadResult = invalidResult
 			};
 		}
+	}
+
+	private static MsBuildProjectInstanceLoadResult GetActiveProjectLoadResult(List<MsBuildProjectInstanceLoadResult> loadResults)
+	{
+		var loadedProjects = loadResults
+			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Project: not null })
+			.Select(result => (Result: result, Framework: NuGetFramework.Parse(result.Project!.GetPropertyValue("TargetFramework"))))
+			.ToList();
+
+		if (loadedProjects.Count is 0) return loadResults[0];
+
+		var candidateProjects = loadedProjects.Where(project => project.Framework.IsDesktop() is false).ToList();
+		if (candidateProjects.Count is 0) candidateProjects = loadedProjects;
+
+		if (candidateProjects.Any(project => project.Framework.Framework is FrameworkConstants.FrameworkIdentifiers.NetCoreApp))
+		{
+			candidateProjects = candidateProjects
+				.Where(project => project.Framework.Framework is FrameworkConstants.FrameworkIdentifiers.NetCoreApp)
+				.ToList();
+		}
+
+		return candidateProjects
+			.OrderByDescending(project => project.Framework, NuGetFrameworkSorter.Instance)
+			.Select(project => project.Result)
+			.First();
 	}
 
 	public static void ClearLoadedProjects()

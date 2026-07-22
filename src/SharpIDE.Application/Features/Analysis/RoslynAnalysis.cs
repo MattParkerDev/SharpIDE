@@ -31,7 +31,6 @@ using Microsoft.CodeAnalysis.SignatureHelp;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
-using NuGet.Frameworks;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
@@ -1454,31 +1453,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			return projectsForProjectPath[0];
 		}
 
-		// Multiple projects with same path, different TFMs
-		var projectAndFrameworkList = projectsForProjectPath
-			.Select(s =>
-			{
-				var flavor = s.State.NameAndFlavor.flavor!;
-				var framework = NuGetFramework.Parse(flavor);
-				return (Project: s, Framework: framework);
-			})
-			.Where(s => s.Framework.IsDesktop() is false) // Exclude .NET Framework projects
-			.ToList();
-
-		if (projectAndFrameworkList.Any(s => s.Framework.Framework == FrameworkConstants.FrameworkIdentifiers.NetCoreApp)) // .NET Core project // I would prefer to use Framework.IsNet5Era
-		{
-			// remove .net standard projects
-			projectAndFrameworkList = projectAndFrameworkList
-				.Where(s => s.Framework.Framework == FrameworkConstants.FrameworkIdentifiers.NetCoreApp)
-				.ToList();
-		}
-
-		var selectedProject = projectAndFrameworkList
-			.OrderByDescending(s => s.Framework, NuGetFrameworkSorter.Instance)
-			.Select(s => s.Project)
-			.First();
-
-		return selectedProject;
+		var activeTargetFramework = projectModel.TargetFramework;
+		return projectsForProjectPath.Single(project => string.Equals(project.State.NameAndFlavor.flavor, activeTargetFramework, StringComparison.OrdinalIgnoreCase));
 	}
 }
 

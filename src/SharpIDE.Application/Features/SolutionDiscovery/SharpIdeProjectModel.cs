@@ -84,6 +84,9 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public bool IsMtpTestProject => ActiveMsBuildEvaluationProject.GetPropertyValue("IsTestingPlatformApplication") is "true";
 	public string BlazorDevServerVersion => ActiveMsBuildEvaluationProject.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version");
 	public string RootNamespace => ActiveMsBuildEvaluationProject.GetPropertyValue("RootNamespace");
+	public string TargetFramework => ActiveMsBuildEvaluationProject.GetPropertyValue("TargetFramework");
+	public string RunCommand => ActiveMsBuildEvaluationProject.GetPropertyValue("RunCommand");
+	public string RunArguments => ActiveMsBuildEvaluationProject.GetPropertyValue("RunArguments");
 	public bool OpenInRunPanel { get; set; }
 	public StandardIo? ProcessStandardIo { get; set; }
 
