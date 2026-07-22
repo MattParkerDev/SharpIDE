@@ -69,8 +69,8 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 				Diagnostics.Add(result.DefaultActiveProjectLoadResult.Diagnostic);
 			}
 
-			ActiveMsBuildProjectLoadState.Value = result.DefaultActiveProjectLoadResult.LoadState;
 			ActiveMsBuildEvaluationProject = result.DefaultActiveProjectLoadResult.Project!;
+			ActiveMsBuildProjectLoadState.Value = result.DefaultActiveProjectLoadResult.LoadState;
 			return result;
 		});
 	}
