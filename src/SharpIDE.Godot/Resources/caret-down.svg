@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 25 25"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="caret-up.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   width="25"
+   height="25"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:bx="https://boxy-svg.com">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="45.254834"
+     inkscape:cx="12.341223"
+     inkscape:cy="14.595126"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="2552"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <defs
+     id="defs1">
+    <bx:export>
+      <bx:file
+         format="svg"
+         href="#object-0"
+         excluded="true" />
+      <bx:file
+         format="svg"
+         href="#object-1"
+         path="Untitled 2.svg" />
+    </bx:export>
+  </defs>
+  <path
+     style="display:inline;fill:none;stroke:#a8a8a8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+     d="M 18.337618,9.5812123 12.5,15.418829 6.6623819,9.5812123"
+     id="path3"
+     sodipodi:nodetypes="ccc" />
+</svg>

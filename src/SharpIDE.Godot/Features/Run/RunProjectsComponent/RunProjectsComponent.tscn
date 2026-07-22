@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="1_ir76l"]
 [ext_resource type="Script" uid="uid://btpyvql7ky3t8" path="res://Features/Run/RunProjectsComponent/RunProjectsComponent.cs" id="1_pce8v"]
+[ext_resource type="Texture2D" uid="uid://b060t4eywvbk3" path="res://Resources/caret-down.svg" id="2_8p0e0"]
 [ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="3_p3s3k"]
 [ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="4_k3crf"]
 
@@ -15,9 +16,12 @@ layout_mode = 2
 [node name="ProjectListMenuButton" type="Button" parent="HBoxContainer" unique_id=757349258]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/icon_max_width = 24
 disabled = true
 toggle_mode = true
 text = "Loading...                  "
+icon = ExtResource("2_8p0e0")
+icon_alignment = 2
 
 [node name="RunMenuPopup" type="Popup" parent="HBoxContainer/ProjectListMenuButton" unique_id=795203495]
 unique_name_in_owner = true
