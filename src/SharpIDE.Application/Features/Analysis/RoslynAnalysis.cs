@@ -235,11 +235,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(CustomMsBuildProjectLoader)}.{nameof(CustomMsBuildProjectLoader.LoadProjectInfosAsync)}");
 
 		var thisProject = GetProjectForSharpIdeProjectModel(projectModel);
+		var oldSolution = _workspace.CurrentSolution;
 
 		// we can reliably rely on the Solution's graph of project inter-references, as a project has only been reloaded - no projects have been added or removed from the solution
-		var dependentProjects = _workspace.CurrentSolution.GetProjectDependencyGraph().GetProjectsThatTransitivelyDependOnThisProject(thisProject.Id);
-		var projectPathsToReload = dependentProjects.Select(id => _workspace.CurrentSolution.GetProject(id)!.FilePath!).Append(thisProject.FilePath!).Distinct().ToList();
-		//var projectMap = ProjectMap.Create(_workspace.CurrentSolution); // using a projectMap may speed up LoadProjectInfosAsync, TODO: test
+		var dependentProjects = oldSolution.GetProjectDependencyGraph().GetProjectsThatTransitivelyDependOnThisProject(thisProject.Id);
+		var projectPathsToReload = dependentProjects.Select(id => oldSolution.GetProject(id)!.FilePath!).Append(thisProject.FilePath!).Distinct().ToList();
+		//var projectMap = ProjectMap.Create(oldSolution); // using a projectMap may speed up LoadProjectInfosAsync, TODO: test
 		// This will get all projects necessary to build this group of projects, regardless of whether those projects are actually affected by the original project change
 		// We can potentially optimise this, but given this is the expensive part, lets just proceed with reloading them all in the solution
 		// We potentially lose performance because Workspace/Solution caches are dropped, but lets not prematurely optimise
@@ -252,33 +253,51 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 		var ___ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.Workspace.UpdateSolution");
 
-		var oldProjectIdFilePathMap = _workspace.CurrentSolution.Projects.ToDictionary(keySelector: static p => (p.FilePath!, p.Name), elementSelector: static p => p.Id);
+		var oldProjectIdFilePathMap = oldSolution.Projects.ToDictionary(keySelector: static p => (p.FilePath!, p.Name), elementSelector: static p => p.Id);
 
 		var projectIdMap = loadedProjectInfos.ToDictionary(
 			keySelector: static info => info.Id,
-			elementSelector: info => oldProjectIdFilePathMap[(info.FilePath!, info.Name)]);
+			elementSelector: info => oldProjectIdFilePathMap.GetValueOrDefault((info.FilePath!, info.Name)));
+
+		var newSolution = oldSolution;
 
 		// When we "reload" a project, we assume: no projects have been removed from the solution, and none added (TODO: Consider/handle a project gaining a project reference to a project outside of the solution)
 		// Therefore, loadedProjectInfos ⊆ (is a subset of) _workspace.CurrentSolution.Projects
 		// The ProjectIds will not match however, so we need to match on FilePath
 		// Since the ProjectIds don't match, we also need to remap all ProjectReferences to the existing ProjectIds
 		// same for documents
-		var projectInfosToUpdateWith = loadedProjectInfos.Select(loadedProjectInfo =>
+		foreach (var newProjectInfo in loadedProjectInfos)
 		{
-			var existingProject = _workspace.CurrentSolution.Projects.Single(p => p.FilePath == loadedProjectInfo.FilePath && p.Name == loadedProjectInfo.Name);
-			var projectInfo = loadedProjectInfo
-				.WithId(existingProject.Id)
-				.WithDocuments(MapDocuments(_workspace.CurrentSolution, existingProject.Id, loadedProjectInfo.Documents))
-				.WithProjectReferences(loadedProjectInfo.ProjectReferences.AsValueEnumerable().Select(MapProjectReference).ToImmutableArray())
-				.WithAdditionalDocuments(MapDocuments(_workspace.CurrentSolution, existingProject.Id, loadedProjectInfo.AdditionalDocuments))
-				.WithAnalyzerConfigDocuments(MapDocuments(_workspace.CurrentSolution, existingProject.Id, loadedProjectInfo.AnalyzerConfigDocuments));
-			return projectInfo;
-		}).ToList();
+			Contract.ThrowIfNull(newProjectInfo.FilePath);
 
-		var newSolution = _workspace.CurrentSolution;
-		foreach (var projectInfo in projectInfosToUpdateWith)
-		{
-			newSolution = newSolution.WithProjectInfo(projectInfo);
+			var oldProjectId = projectIdMap[newProjectInfo.Id];
+			if (oldProjectId == null)
+			{
+				newSolution = newSolution.AddProject(newProjectInfo);
+				continue;
+			}
+
+			newSolution = newSolution.WithProjectInfo(ProjectInfo.Create(
+					oldProjectId,
+					newProjectInfo.Version,
+					newProjectInfo.Name,
+					newProjectInfo.AssemblyName,
+					newProjectInfo.Language,
+					newProjectInfo.FilePath,
+					newProjectInfo.OutputFilePath,
+					newProjectInfo.CompilationOptions,
+					newProjectInfo.ParseOptions,
+					MapDocuments(oldProjectId, newProjectInfo.Documents),
+					newProjectInfo.ProjectReferences.Select(MapProjectReference),
+					newProjectInfo.MetadataReferences,
+					newProjectInfo.AnalyzerReferences,
+					MapDocuments(oldProjectId, newProjectInfo.AdditionalDocuments),
+					isSubmission: false,
+					hostObjectType: null,
+					outputRefFilePath: newProjectInfo.OutputRefFilePath)
+				.WithChecksumAlgorithm(newProjectInfo.ChecksumAlgorithm)
+				.WithAnalyzerConfigDocuments(MapDocuments(oldProjectId, newProjectInfo.AnalyzerConfigDocuments))
+				.WithCompilationOutputInfo(newProjectInfo.CompilationOutputInfo));
 		}
 		// Doesn't raise a workspace change event, for now we don't care?
 		_workspace.SetCurrentSolution(newSolution);
@@ -300,12 +319,24 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		___?.Dispose();
 		_logger.LogInformation("RoslynAnalysis: Project reloaded");
 		return;
-		ProjectReference MapProjectReference(ProjectReference oldRef) => new ProjectReference(projectIdMap[oldRef.ProjectId], oldRef.Aliases, oldRef.EmbedInteropTypes);
 
-		static ImmutableArray<DocumentInfo> MapDocuments(Solution oldSolution, ProjectId mappedProjectId, IReadOnlyList<DocumentInfo> documents)
+		ProjectReference MapProjectReference(ProjectReference oldRef)
+		{
+			// Only C# and VB projects are loaded by the MSBuildProjectLoader, so some references might be missing.
+			// When a new project is added along with a new project reference the old project id is also null.
+			return new(
+				projectId: projectIdMap.TryGetValue(oldRef.ProjectId, out var oldProjectId) && oldProjectId != null ? oldProjectId : oldRef.ProjectId,
+				aliases: oldRef.Aliases,
+				embedInteropTypes: oldRef.EmbedInteropTypes);
+		}
+		ImmutableArray<DocumentInfo> MapDocuments(ProjectId mappedProjectId, IReadOnlyList<DocumentInfo> documents)
 			=> documents.Select(docInfo =>
 			{
-				var mappedDocumentId = oldSolution.GetDocumentIdsWithFilePath(docInfo.FilePath).SingleOrDefault(id => id.ProjectId == mappedProjectId) ?? DocumentId.CreateNewId(mappedProjectId);
+				// Map to a document of the same path. If there isn't one (a new document is added to the project),
+				// create a new document id with the mapped project id.
+				var mappedDocumentId = oldSolution.GetDocumentIdsWithFilePath(docInfo.FilePath).FirstOrDefault(id => id.ProjectId == mappedProjectId)
+				                       ?? DocumentId.CreateNewId(mappedProjectId);
+
 				return docInfo.WithId(mappedDocumentId);
 			}).ToImmutableArray();
 	}
