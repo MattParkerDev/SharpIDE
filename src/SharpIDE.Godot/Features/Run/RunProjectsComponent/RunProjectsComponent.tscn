@@ -2,24 +2,27 @@
 
 [ext_resource type="Texture2D" uid="uid://bkty6563cthj8" path="res://Features/Run/Resources/Run.svg" id="1_ir76l"]
 [ext_resource type="Script" uid="uid://btpyvql7ky3t8" path="res://Features/Run/RunProjectsComponent/RunProjectsComponent.cs" id="1_pce8v"]
+[ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="3_p3s3k"]
 
 [node name="RunProjectsComponent" type="MarginContainer" unique_id=1780495061]
 size_flags_vertical = 4
 script = ExtResource("1_pce8v")
 
-[node name="RunMenuButton" type="Button" parent="." unique_id=757349258]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1085006403]
+layout_mode = 2
+
+[node name="ProjectListMenuButton" type="Button" parent="HBoxContainer" unique_id=757349258]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 4
 disabled = true
-icon = ExtResource("1_ir76l")
-icon_alignment = 1
+toggle_mode = true
+text = "Loading...                  "
 
-[node name="RunMenuPopup" type="Popup" parent="RunMenuButton" unique_id=795203495]
+[node name="RunMenuPopup" type="Popup" parent="HBoxContainer/ProjectListMenuButton" unique_id=795203495]
 unique_name_in_owner = true
 size = Vector2i(151, 100)
 
-[node name="MarginContainer" type="MarginContainer" parent="RunMenuButton/RunMenuPopup" unique_id=1923799845]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/ProjectListMenuButton/RunMenuPopup" unique_id=1923799845]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -30,5 +33,21 @@ theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 5
 
-[node name="VBoxContainer" type="VBoxContainer" parent="RunMenuButton/RunMenuPopup/MarginContainer" unique_id=782752797]
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/ProjectListMenuButton/RunMenuPopup/MarginContainer" unique_id=782752797]
 layout_mode = 2
+
+[node name="RunButton" type="Button" parent="HBoxContainer" unique_id=1639602407]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+icon = ExtResource("1_ir76l")
+icon_alignment = 1
+
+[node name="DebugButton" type="Button" parent="HBoxContainer" unique_id=847838350]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+icon = ExtResource("3_p3s3k")
+icon_alignment = 1

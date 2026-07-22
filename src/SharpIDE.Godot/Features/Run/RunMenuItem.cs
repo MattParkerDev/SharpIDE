@@ -8,6 +8,7 @@ namespace SharpIDE.Godot.Features.Run;
 public partial class RunMenuItem : HBoxContainer
 {
     public SharpIdeProjectModel Project { get; set; } = null!;
+    public event Action<RunMenuItem>? Selected;
     private Label _label = null!;
     private Button _runButton = null!;
     private Button _debugButton = null!;
@@ -83,11 +84,23 @@ public partial class RunMenuItem : HBoxContainer
     private StringName _buildAnimationName = "BuildingAnimation";
     private async void OnRunButtonPressed()
     {
+        Selected?.Invoke(this);
+        await RunProject().ConfigureAwait(false);
+    }
+
+    public async Task RunProject()
+    {
         SetAttemptingRunState();
         await _runService.RunProject(Project).ConfigureAwait(false);
     }
 
     private async void OnDebugButtonPressed()
+    {
+        Selected?.Invoke(this);
+        await DebugProject().ConfigureAwait(false);
+    }
+
+    public async Task DebugProject()
     {
         var debuggerExecutableInfo = new DebuggerExecutableInfo
         {
@@ -96,6 +109,12 @@ public partial class RunMenuItem : HBoxContainer
         };
         SetAttemptingRunState();
         await _runService.RunProject(Project, true, debuggerExecutableInfo).ConfigureAwait(false);
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+            Selected?.Invoke(this);
     }
 
     private void SetAttemptingRunState()

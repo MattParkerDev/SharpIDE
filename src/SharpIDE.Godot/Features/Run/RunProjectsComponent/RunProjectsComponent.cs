@@ -9,10 +9,14 @@ namespace SharpIDE.Godot.Features.Run.RunProjectsComponent;
 
 public partial class RunProjectsComponent : MarginContainer
 {
-	private Button _runMenuButton = null!;
+	private Button _projectListMenuButton = null!;
+	private Button _runButton = null!;
+	private Button _debugButton = null!;
 	private Popup _runMenuPopup = null!;
 	private VBoxContainer _runMenuPopupVbox = null!;
 	private readonly List<RunMenuItemContainer> _runMenuItemContainers = [];
+	private RunMenuItemContainer? _activeRunMenuItemContainer;
+	private IDisposable? _activeProjectNameSubscription;
 
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 
@@ -20,14 +24,20 @@ public partial class RunProjectsComponent : MarginContainer
 	public override void _Ready()
 	{
 		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
-		_runMenuButton = GetNode<Button>("%RunMenuButton");
+		_projectListMenuButton = GetNode<Button>("%ProjectListMenuButton");
+		_runButton = GetNode<Button>("%RunButton");
+		_debugButton = GetNode<Button>("%DebugButton");
 		_runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
-		_runMenuButton.Pressed += OnRunMenuButtonPressed;
+		_runMenuPopup.PopupHide += OnRunMenuPopupHidden;
+		_projectListMenuButton.Pressed += OnProjectListMenuButtonPressed;
+		_runButton.Pressed += OnRunButtonPressed;
+		_debugButton.Pressed += OnDebugButtonPressed;
 		_ = Task.GodotRun(AsyncReady);
 	}
 
 	public override void _ExitTree()
 	{
+		_activeProjectNameSubscription?.Dispose();
 		foreach (var container in _runMenuItemContainers)
 		{
 			container.ProjectSubscription?.Dispose();
@@ -83,12 +93,19 @@ public partial class RunProjectsComponent : MarginContainer
 			{
 				var runMenuItem = _runMenuItemScene.Instantiate<RunMenuItem>();
 				runMenuItem.Project = project;
+				runMenuItem.Selected += OnRunMenuItemSelected;
 				_runMenuPopupVbox.AddChild(runMenuItem);
 				runMenuItemContainer.MenuItem = runMenuItem;
+				if (_activeRunMenuItemContainer is null) SetActiveRunMenuItem(runMenuItemContainer);
 			}
 		}
 		else if (runMenuItemContainer.MenuItem is not null)
 		{
+			// Set active to a different project since this one is no longer runnable
+			if (_activeRunMenuItemContainer == runMenuItemContainer)
+			{
+				SetActiveRunMenuItem(GetFirstAvailableRunMenuItem(runMenuItemContainer));
+			}
 			runMenuItemContainer.MenuItem.QueueFree();
 			runMenuItemContainer.MenuItem = null;
 		}
@@ -100,25 +117,90 @@ public partial class RunProjectsComponent : MarginContainer
 	private void UnbindProject(RunMenuItemContainer runMenuItemContainer)
 	{
 		runMenuItemContainer.ProjectSubscription?.Dispose();
+		if (_activeRunMenuItemContainer == runMenuItemContainer)
+			SetActiveRunMenuItem(GetFirstAvailableRunMenuItem(runMenuItemContainer));
 		runMenuItemContainer.MenuItem?.QueueFree();
 		_runMenuItemContainers.Remove(runMenuItemContainer);
 		UpdateRunMenuButton();
 	}
 
 	[RequiresGodotUiThread]
+	private RunMenuItemContainer? GetFirstAvailableRunMenuItem(RunMenuItemContainer? excluded = null)
+	{
+		return _runMenuItemContainers.FirstOrDefault(container => container != excluded && container.MenuItem is not null);
+	}
+
+	[RequiresGodotUiThread]
+	private void OnRunMenuItemSelected(RunMenuItem runMenuItem)
+	{
+		var container = _runMenuItemContainers.Single(container => container.MenuItem == runMenuItem);
+		SetActiveRunMenuItem(container);
+		_runMenuPopup.Hide();
+	}
+
+	[RequiresGodotUiThread]
+	private void SetActiveRunMenuItem(RunMenuItemContainer? container)
+	{
+		_activeProjectNameSubscription?.Dispose();
+		_activeProjectNameSubscription = null;
+		_activeRunMenuItemContainer = container;
+
+		if (container?.MenuItem is not { } menuItem)
+		{
+			_projectListMenuButton.Text = "No runnable projects";
+			return;
+		}
+
+		_projectListMenuButton.Text = menuItem.Project.Name.Value;
+		_activeProjectNameSubscription = menuItem.Project.Name.Skip(1).SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (name, ct) => await this.InvokeAsync(() =>
+			{
+				if (_activeRunMenuItemContainer == container)
+					_projectListMenuButton.Text = name;
+			}), configureAwait: false);
+	}
+
+	[RequiresGodotUiThread]
 	private void UpdateRunMenuButton()
 	{
-		_runMenuButton.Disabled = _runMenuItemContainers.All(s => s.MenuItem is null);
-		if (_runMenuButton.Disabled)
+		_projectListMenuButton.Disabled = _runMenuItemContainers.All(s => s.MenuItem is null);
+		var disabled = _activeRunMenuItemContainer?.MenuItem is null;
+		_runButton.Disabled = disabled;
+		_debugButton.Disabled = disabled;
+		if (_projectListMenuButton.Disabled)
 			_runMenuPopup.Hide();
 	}
 
-	private void OnRunMenuButtonPressed()
+	private void OnProjectListMenuButtonPressed()
 	{
-		var popupMenuPosition = _runMenuButton.GlobalPosition;
+		if (_projectListMenuButton.ButtonPressed is false)
+		{
+			_runMenuPopup.Hide();
+			return;
+		}
+		var popupMenuPosition = _projectListMenuButton.GlobalPosition;
 		const int buttonHeight = 37;
 		_runMenuPopup.Position = new Vector2I((int)popupMenuPosition.X, (int)popupMenuPosition.Y + buttonHeight);
 		_runMenuPopup.Popup();
+	}
+
+	private void OnRunMenuPopupHidden()
+	{
+		// A click on the toggle will turn it off on mouse-up. Other dismissals need to update the toggle state
+		if (!_projectListMenuButton.GetGlobalRect().HasPoint(GetGlobalMousePosition()))
+			_projectListMenuButton.ButtonPressed = false;
+	}
+
+	private async void OnRunButtonPressed()
+	{
+		if (_activeRunMenuItemContainer?.MenuItem is { } menuItem)
+			await menuItem.RunProject().ConfigureAwait(false);
+	}
+
+	private async void OnDebugButtonPressed()
+	{
+		if (_activeRunMenuItemContainer?.MenuItem is { } menuItem)
+			await menuItem.DebugProject().ConfigureAwait(false);
 	}
 
 	private sealed class RunMenuItemContainer

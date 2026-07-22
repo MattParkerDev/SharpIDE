@@ -51,11 +51,13 @@ script = ExtResource("1_syj0f")
 
 [node name="Label" type="Label" parent="." unique_id=1727711838]
 layout_mode = 2
+mouse_filter = 1
 text = "Project Name"
 
 [node name="Spacer" type="Control" parent="." unique_id=1831433607]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 1
 
 [node name="AnimatedTextureParentControl" type="Control" parent="." unique_id=1016714895]
 unique_name_in_owner = true
