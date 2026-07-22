@@ -34,9 +34,7 @@ public partial class IdeRoot : Control
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
 	private InvertedVSplitContainer _invertedVSplitContainer = null!;
-	private Button _runMenuButton = null!;
-	private Popup _runMenuPopup = null!;
-	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
+
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Inject] private readonly FileChangedService _fileChangedService = null!;
@@ -71,13 +69,10 @@ public partial class IdeRoot : Control
 		_cleanSlnButton = GetNode<Button>("%CleanSlnButton");
 		_restoreSlnButton = GetNode<Button>("%RestoreSlnButton");
 		_cancelMsBuildActionButton = GetNode<TextureButton>("%CancelMsBuildActionButton");
-		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
-		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
-		_runMenuButton.Pressed += OnRunMenuButtonPressed;
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
 		_buildSlnButton.Pressed += OnBuildSlnButtonPressed;
@@ -113,14 +108,6 @@ public partial class IdeRoot : Control
 		{
 			_ = Task.GodotRun(async () => await _openTabsFileManager.SaveAllOpenFilesAsync());
 		}
-	}
-
-	private void OnRunMenuButtonPressed()
-	{
-		var popupMenuPosition = _runMenuButton.GlobalPosition;
-		const int buttonHeight = 37;
-		_runMenuPopup.Position = new Vector2I((int)popupMenuPosition.X, (int)popupMenuPosition.Y + buttonHeight);
-		_runMenuPopup.Popup();
 	}
 
 	private void OnBuildSlnButtonPressed() => MsBuild(BuildType.Build);
@@ -188,21 +175,6 @@ public partial class IdeRoot : Control
 					if (firstTab.file is not null) selectedFile = firstTab;
 				}
 				if (selectedFile.file is not null) await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(selectedFile.file, selectedFile.linePosition);
-			});
-
-			var tasks = solutionModel.AllProjects.Select(p => p.MsBuildEvaluationProjectTask).ToList();
-			await Task.WhenAll(tasks).ConfigureAwait(false);
-			var runnableProjects = solutionModel.AllProjects.Where(p => p.IsLoaded && p.IsRunnable).ToList();
-			await this.InvokeAsync(() =>
-			{
-				var runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
-				foreach (var project in runnableProjects)
-				{
-					var runMenuItem = _runMenuItemScene.Instantiate<RunMenuItem>();
-					runMenuItem.Project = project;
-					runMenuPopupVbox.AddChild(runMenuItem);
-				}
-				_runMenuButton.Disabled = false;
 			});
 		});
 	}
