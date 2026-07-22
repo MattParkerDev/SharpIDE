@@ -34,8 +34,8 @@ public partial class IdeRoot : Control
 	private SearchAllFilesWindow _searchAllFilesWindow = null!;
 	private CodeEditorPanel _codeEditorPanel = null!;
 	private InvertedVSplitContainer _invertedVSplitContainer = null!;
-	private Button _runMenuButton = null!;
-	private Popup _runMenuPopup = null!;
+	private StartupProject _startupProject = null!;
+
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private TaskCompletionSource _nodeReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -71,13 +71,12 @@ public partial class IdeRoot : Control
 		_cleanSlnButton = GetNode<Button>("%CleanSlnButton");
 		_restoreSlnButton = GetNode<Button>("%RestoreSlnButton");
 		_cancelMsBuildActionButton = GetNode<TextureButton>("%CancelMsBuildActionButton");
-		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");
-		_runMenuButton = GetNode<Button>("%RunMenuButton");
 		_codeEditorPanel = GetNode<CodeEditorPanel>("%CodeEditorPanel");
 		_searchWindow = GetNode<SearchWindow>("%SearchWindow");
 		_searchAllFilesWindow = GetNode<SearchAllFilesWindow>("%SearchAllFilesWindow");
 		_invertedVSplitContainer = GetNode<InvertedVSplitContainer>("%InvertedVSplitContainer");
-		_runMenuButton.Pressed += OnRunMenuButtonPressed;
+		_startupProject = GetNode<StartupProject>("%StartupProject");
+
 		GodotGlobalEvents.Instance.FileSelected.Subscribe(OnSolutionExplorerPanelOnFileSelected);
 		_openSlnButton.Pressed += () => IdeWindow.PickSolution();
 		_buildSlnButton.Pressed += OnBuildSlnButtonPressed;
@@ -89,6 +88,7 @@ public partial class IdeRoot : Control
 		_buildService.BuildFinished.Subscribe(OnBuildFinished);
 		GetTree().GetRoot().FocusExited += OnFocusExited;
 		_nodeReadyTcs.SetResult();
+		_startupProject.ProjectChanged += OnStartupProjectChanged;
 	}
 
 	private async Task OnBuildStarted(BuildStartedFlags flags) => await OnBuildRunningStateChanged(true, flags);
@@ -113,14 +113,6 @@ public partial class IdeRoot : Control
 		{
 			_ = Task.GodotRun(async () => await _openTabsFileManager.SaveAllOpenFilesAsync());
 		}
-	}
-
-	private void OnRunMenuButtonPressed()
-	{
-		var popupMenuPosition = _runMenuButton.GlobalPosition;
-		const int buttonHeight = 37;
-		_runMenuPopup.Position = new Vector2I((int)popupMenuPosition.X, (int)popupMenuPosition.Y + buttonHeight);
-		_runMenuPopup.Popup();
 	}
 
 	private void OnBuildSlnButtonPressed() => MsBuild(BuildType.Build);
@@ -192,19 +184,34 @@ public partial class IdeRoot : Control
 
 			var tasks = solutionModel.AllProjects.Select(p => p.MsBuildEvaluationProjectTask).ToList();
 			await Task.WhenAll(tasks).ConfigureAwait(false);
+
 			var runnableProjects = solutionModel.AllProjects.Where(p => p.IsLoaded && p.IsRunnable).ToList();
+			// Startup Project
+			var cproj = Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.LastStartupProject;
+
 			await this.InvokeAsync(() =>
 			{
-				var runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
 				foreach (var project in runnableProjects)
 				{
-					var runMenuItem = _runMenuItemScene.Instantiate<RunMenuItem>();
-					runMenuItem.Project = project;
-					runMenuPopupVbox.AddChild(runMenuItem);
+					_startupProject.ProjectList.AddOption(project);
+					if (project.FilePath == cproj)
+						_startupProject.ProjectList.SelectOption(project);
 				}
-				_runMenuButton.Disabled = false;
 			});
+
+			if (_startupProject.ProjectList.CurrentRunOption == null)
+				_startupProject.ProjectList.SelectOption(0);
 		});
+	}
+
+	private void OnStartupProjectChanged()
+	{
+		var solutionModel = _sharpIdeSolutionAccessor.SolutionModel;
+		var runnableProjects = solutionModel.AllProjects.Where(p => p.IsRunnable).ToList();
+		var cproj = _startupProject.ProjectList.CurrentRunOption.Model;
+		if (!runnableProjects.Contains(cproj)) return;
+
+		Singletons.AppState.RecentSlns.Single(s => s.FilePath == solutionModel.FilePath).IdeSolutionState.LastStartupProject = cproj.FilePath;
 	}
 
 	public override void _UnhandledKeyInput(InputEvent @event)
