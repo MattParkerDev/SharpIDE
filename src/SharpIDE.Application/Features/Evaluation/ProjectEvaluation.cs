@@ -175,7 +175,7 @@ public static class ProjectEvaluation
 	{
 		Guard.Against.Null(projectModel, nameof(projectModel));
 
-		var project = _projectCollection.GetLoadedProjects(projectModel.FilePath).Single();
+		var project = _projectCollection.GetLoadedProjects(projectModel.FilePath).Single(project => project.GlobalProperties.ContainsKey("TargetFramework") is false);
 		var projectRootElement = project.Xml;
 		var userSecretsId = project.GetPropertyValue("UserSecretsId");
 		if (string.IsNullOrWhiteSpace(userSecretsId))
