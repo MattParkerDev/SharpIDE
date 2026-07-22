@@ -1,4 +1,5 @@
 using Godot;
+using R3;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
@@ -13,7 +14,7 @@ public partial class RunMenuItem : HBoxContainer
     private Button _stopButton = null!;
     private Control _animatedTextureParentControl = null!;
     private AnimationPlayer _buildAnimationPlayer = null!;
-    
+
     [Inject] private readonly RunService _runService = null!;
     public override void _Ready()
     {
@@ -30,6 +31,14 @@ public partial class RunMenuItem : HBoxContainer
         Project.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
         Project.ProjectStoppedRunning.Subscribe(OnProjectStoppedRunning);
         Project.ProjectRunFailed.Subscribe(OnProjectRunFailed);
+        Project.Name.Skip(1).Subscribe(name => _label.Text = name).AddTo(this);
+    }
+
+    public override void _ExitTree()
+    {
+        Project.ProjectStartedRunning.Unsubscribe(OnProjectStartedRunning);
+        Project.ProjectStoppedRunning.Unsubscribe(OnProjectStoppedRunning);
+        Project.ProjectRunFailed.Unsubscribe(OnProjectRunFailed);
     }
 
     private async Task OnProjectRunFailed()
@@ -77,7 +86,7 @@ public partial class RunMenuItem : HBoxContainer
         SetAttemptingRunState();
         await _runService.RunProject(Project).ConfigureAwait(false);
     }
-    
+
     private async void OnDebugButtonPressed()
     {
         var debuggerExecutableInfo = new DebuggerExecutableInfo
@@ -88,7 +97,7 @@ public partial class RunMenuItem : HBoxContainer
         SetAttemptingRunState();
         await _runService.RunProject(Project, true, debuggerExecutableInfo).ConfigureAwait(false);
     }
-    
+
     private void SetAttemptingRunState()
     {
         _runButton.Visible = false;

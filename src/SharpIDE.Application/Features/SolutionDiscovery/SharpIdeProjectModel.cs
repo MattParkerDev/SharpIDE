@@ -37,8 +37,8 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
 		Folder = sharpIdeRootFolder.GetFolderForProject(projectModel.FullFilePath);
 		ActiveMsBuildProjectLoadState = new ReactiveProperty<MsBuildProjectLoadState>(Evaluation.MsBuildProjectLoadState.Loading);
+		ActiveMsBuildEvaluationProjectReactive = new ReactiveProperty<Project?>(null);
 		MsBuildEvaluationProjectTask = LoadOrReloadProjectInMsBuild();
-		ActiveMsBuildEvaluationProject = null!;
 		allProjects.Add(this);
 	}
 
@@ -79,11 +79,15 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	{
 		get
 		{
-			if (MsBuildEvaluationProjectTask.IsCompletedSuccessfully is false) throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
-			return field;
+			return field ?? throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
 		}
-		set;
+		set
+		{
+			field = value;
+			ActiveMsBuildEvaluationProjectReactive.Value = value;
+		}
 	}
+	public ReactiveProperty<Project?> ActiveMsBuildEvaluationProjectReactive { get; set; }
 
 	public bool IsLoading => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loading;
 	public bool IsLoaded => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded;
