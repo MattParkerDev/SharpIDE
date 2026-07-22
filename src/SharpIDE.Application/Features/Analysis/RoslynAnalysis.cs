@@ -1242,36 +1242,39 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(fileModel, nameof(fileModel));
 		Guard.Against.NullOrEmpty(newContent, nameof(newContent));
 
-		var documentIdsWithFilePath = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(fileModel.Path);
-		var documentId = documentIdsWithFilePath.FirstOrDefault(); // Linked files should take care of the rest of the documents with the same path
-		if (documentId is null)
-		{
-			_logger.LogTrace("UpdateDocument failed: Document '{DocumentPath}' not found in workspace", fileModel.Path);
-			return false;
-		}
+		var updatedSolution = _workspace!.CurrentSolution;
 
-		var newText = SourceText.From(newContent, Encoding.UTF8);
+		var documentIdsWithFilePath = updatedSolution.GetDocumentIdsWithFilePath(fileModel.Path);
+		bool? updatedAnything = null;
+		foreach (var documentId in documentIdsWithFilePath)
+		{
+			var textDocument = updatedSolution.GetDocument(documentId)
+			                   ?? updatedSolution.GetAdditionalDocument(documentId)
+			                   ?? updatedSolution.GetAnalyzerConfigDocument(documentId);
 
-		// We don't blow up if the document is not in the workspace - this would happen e.g. for files that are excluded.
-		// Roslyn implementations seem to handle this with a Misc Files workspace. TODO: Investigate
-		var currentSolution = _workspace!.CurrentSolution;
-		if (currentSolution.ContainsDocument(documentId))
-		{
-			_workspace.OnDocumentTextChanged(documentId, newText, PreservationMode.PreserveIdentity, requireDocumentPresent: false);
+			if (textDocument is null)
+			{
+				_logger.LogTrace("Could not find document with path '{FilePath}' in the workspace.", fileModel.Path);
+				continue;
+			}
+
+			var newText = SourceText.From(newContent, Encoding.UTF8);
+			updatedSolution = textDocument switch
+			{
+				Document document => document.WithText(newText).Project.Solution,
+				AdditionalDocument ad => updatedSolution.WithAdditionalDocumentText(textDocument.Id, newText, PreservationMode.PreserveIdentity),
+				AnalyzerConfigDocument acd => updatedSolution.WithAnalyzerConfigDocumentText(textDocument.Id, newText, PreservationMode.PreserveIdentity),
+				_ => throw new ArgumentOutOfRangeException($"Unexpected text document type: {textDocument.GetType().Name}"),
+			};
+			updatedAnything ??= true;
 		}
-		else if (currentSolution.ContainsAdditionalDocument(documentId))
+		updatedAnything ??= false;
+		if (updatedAnything is true)
 		{
-			_workspace.OnAdditionalDocumentTextChanged(documentId, newText, PreservationMode.PreserveIdentity);
+			_workspace.SetCurrentSolution(updatedSolution);
+			return true;
 		}
-		else if (currentSolution.ContainsAnalyzerConfigDocument(documentId))
-		{
-			_workspace.OnAnalyzerConfigDocumentTextChanged(documentId, newText, PreservationMode.PreserveIdentity);
-		}
-		else
-		{
-			return false;
-		}
-		return true;
+		return false;
 	}
 
 	public async Task<bool> AddDocument(SharpIdeFile fileModel, string content)
