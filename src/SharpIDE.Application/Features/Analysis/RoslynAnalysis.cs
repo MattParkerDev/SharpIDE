@@ -1353,32 +1353,34 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	public async Task<bool> RemoveDocument(SharpIdeFile fileModel)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(AddDocument)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(RemoveDocument)}");
 		await _solutionLoadedTcs.Task;
 		Guard.Against.Null(fileModel, nameof(fileModel));
 
-		var documentIdsWithFilePath = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(fileModel.Path);
-		var documentId = documentIdsWithFilePath switch
-		{
-			{Length: 1} => documentIdsWithFilePath[0],
-			{Length: > 1} => documentIdsWithFilePath.SingleOrDefault(d => d.ProjectId == GetProjectForSharpIdeFile(fileModel).Id),
-			_ => null
-		};
-		if (documentId is null)
+		var oldSolution = _workspace!.CurrentSolution;
+		var documentIdsWithFilePath = oldSolution.GetDocumentIdsWithFilePath(fileModel.Path);
+
+		var documentIds = documentIdsWithFilePath.Where(id => oldSolution.GetDocument(id) is not null).ToImmutableArray();
+		var additionalDocumentIds = documentIdsWithFilePath.Where(id => oldSolution.GetAdditionalDocument(id) is not null).ToImmutableArray();
+		var analyzerConfigDocumentIds = documentIdsWithFilePath.Where(id => oldSolution.GetAnalyzerConfigDocument(id) is not null).ToImmutableArray();
+
+		var removedAnything =
+			documentIds.IsEmpty is false ||
+			additionalDocumentIds.IsEmpty is false ||
+			analyzerConfigDocumentIds.IsEmpty is false;
+
+		if (removedAnything is false)
 		{
 			_logger.LogWarning("RemoveDocument failed: Document '{DocumentPath}' not found in workspace", fileModel.Path);
 			return false;
 		}
-		var documentKind = _workspace.CurrentSolution.GetDocumentKind(documentId);
-		Guard.Against.Null(documentKind);
 
-		switch (documentKind)
-		{
-			case TextDocumentKind.Document: _workspace.OnDocumentRemoved(documentId); break;
-			case TextDocumentKind.AdditionalDocument: _workspace.OnAdditionalDocumentRemoved(documentId); break;
-			case TextDocumentKind.AnalyzerConfigDocument: _workspace.OnAnalyzerConfigDocumentRemoved(documentId); break;
-			default: throw new ArgumentOutOfRangeException(nameof(documentKind));
-		}
+		var updatedSolution = oldSolution
+			.RemoveDocuments(documentIds)
+			.RemoveAdditionalDocuments(additionalDocumentIds)
+			.RemoveAnalyzerConfigDocuments(analyzerConfigDocumentIds);
+
+		_workspace.SetCurrentSolution(updatedSolution);
 		return true;
 	}
 
