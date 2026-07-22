@@ -107,28 +107,40 @@ public static class ProjectEvaluation
 				if (desiredTargetFrameworks.Contains(targetFramework) is false || innerProjectsByTargetFramework.TryAdd(targetFramework, innerProject) is false)
 				{
 					_projectCollection.UnloadProject(innerProject);
-					continue;
 				}
-
-				innerProject.ReevaluateIfNecessary();
 			}
 
 			var tfmSpecificLoadResults = new List<MsBuildProjectInstanceLoadResult>(targetFrameworks.Count);
 			foreach (var targetFramework in targetFrameworks)
 			{
-				if (innerProjectsByTargetFramework.TryGetValue(targetFramework, out var innerProject) is false)
+				try
 				{
-					innerProject = _projectCollection.LoadProject(projectFilePath, new Dictionary<string, string>
+					if (innerProjectsByTargetFramework.TryGetValue(targetFramework, out var innerProject))
 					{
-						["TargetFramework"] = targetFramework
-					}, toolsVersion: null);
-				}
+						innerProject.ReevaluateIfNecessary();
+					}
+					else
+					{
+						innerProject = _projectCollection.LoadProject(projectFilePath, new Dictionary<string, string>
+						{
+							["TargetFramework"] = targetFramework
+						}, toolsVersion: null);
+					}
 
-				tfmSpecificLoadResults.Add(new MsBuildProjectInstanceLoadResult
+					tfmSpecificLoadResults.Add(new MsBuildProjectInstanceLoadResult
+					{
+						LoadState = MsBuildProjectLoadState.Loaded,
+						Project = innerProject
+					});
+				}
+				catch (InvalidProjectFileException ex)
 				{
-					LoadState = MsBuildProjectLoadState.Loaded,
-					Project = innerProject
-				});
+					tfmSpecificLoadResults.Add(new MsBuildProjectInstanceLoadResult
+					{
+						LoadState = MsBuildProjectLoadState.Invalid,
+						Diagnostic = ex.ToDiagnostic()
+					});
+				}
 			}
 
 			return new MsBuildProjectLoadResult
