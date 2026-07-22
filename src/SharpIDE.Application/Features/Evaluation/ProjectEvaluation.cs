@@ -195,7 +195,7 @@ public static class ProjectEvaluation
 
 		var projects = projectModels.Select(s =>
 		{
-			var proj = _projectCollection.GetLoadedProjects(s.FilePath).Single();
+			var proj = s.ActiveMsBuildEvaluationProject;
 			var assetsPath = proj.GetPropertyValue("ProjectAssetsFile");
 
 			if (File.Exists(assetsPath) is false)
@@ -219,8 +219,10 @@ public static class ProjectEvaluation
 		{
 			var dependencyMap = NugetDependencyGraph.GetPackageDependencyMap(assetsFile);
 
-			// We currently do not handle multi-targeted projects
-			var target = assetsFile.Targets.SingleOrDefault(t => t.RuntimeIdentifier == null);
+			var activeTargetFramework = project.ActiveMsBuildEvaluationProject.GetPropertyValue("TargetFramework");
+			var target = assetsFile.Targets.FirstOrDefault(t =>
+				t.RuntimeIdentifier == null &&
+				t.TargetFramework.GetShortFolderName().Equals(activeTargetFramework, StringComparison.OrdinalIgnoreCase));
 			if (target == null) continue;
 
 			var tfm = target.TargetFramework.GetShortFolderName();
