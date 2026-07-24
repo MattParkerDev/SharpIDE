@@ -46,10 +46,25 @@ content_margin_left = 10.0
 content_margin_top = 4.0
 content_margin_right = 10.0
 content_margin_bottom = 4.0
-bg_color = Color(0.1, 0.1, 0.1, 0.6)
-border_width_bottom = 2
+bg_color = Color(0.19215687, 0.19607843, 0.19607843, 1)
 border_color = Color(1, 1, 1, 0.75)
-corner_detail = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ml8q5"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.105882354, 0.10980392, 0.11372549, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5oigc"]
 bg_color = Color(0.11764706, 0.11764706, 0.11764706, 1)
@@ -237,6 +252,7 @@ CodeEdit/styles/read_only = SubResource("StyleBoxFlat_82udi")
 CodeEditorTabContainer/base_type = &"TabContainer"
 CodeEditorTabContainer/styles/panel = SubResource("StyleBoxFlat_21uq4")
 CodeEditorTabContainer/styles/tab_selected = SubResource("StyleBoxFlat_ua1vr")
+CodeEditorTabContainer/styles/tab_unselected = SubResource("StyleBoxFlat_ml8q5")
 CodeEditorTabContainer/styles/tabbar_background = SubResource("StyleBoxFlat_5oigc")
 EditorHoverPopupPanelContainer/base_type = &"PanelContainer"
 EditorHoverPopupPanelContainer/styles/panel = SubResource("StyleBoxFlat_dvhtt")
