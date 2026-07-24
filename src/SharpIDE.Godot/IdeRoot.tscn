@@ -46,6 +46,8 @@ grow_vertical = 2
 [node name="Panel" type="MarginContainer" parent="VBoxContainer" unique_id=731109392]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Panel" unique_id=1265935116]
 layout_mode = 2

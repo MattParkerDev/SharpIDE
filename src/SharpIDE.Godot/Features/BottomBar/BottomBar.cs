@@ -2,7 +2,7 @@ using Godot;
 
 namespace SharpIDE.Godot.Features.BottomBar;
 
-public partial class BottomBar : PanelContainer
+public partial class BottomBar : MarginContainer
 {
-    
+
 }
