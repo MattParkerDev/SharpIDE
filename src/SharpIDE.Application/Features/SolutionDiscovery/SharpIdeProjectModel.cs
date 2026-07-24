@@ -26,6 +26,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public bool Running { get; set; }
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
 	public ReactiveProperty<MsBuildProjectInstanceLoadResult> ActiveMsBuildProjectLoadResult { get; }
+	public ReactiveProperty<IReadOnlyList<MsBuildProjectInstanceLoadResult>> TfmSpecificLoadResults { get; }
 	public required Task<MsBuildProjectLoadResult> MsBuildEvaluationProjectTask { get; set; }
 
 	[SetsRequiredMembers]
@@ -40,12 +41,14 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		{
 			LoadState = MsBuildProjectLoadState.Loading
 		});
+		TfmSpecificLoadResults = new ReactiveProperty<IReadOnlyList<MsBuildProjectInstanceLoadResult>>([]);
 		MsBuildEvaluationProjectTask = LoadOrReloadProjectInMsBuild();
 		allProjects.Add(this);
 	}
 
 	public async Task<MsBuildProjectLoadResult> LoadOrReloadProjectInMsBuild()
 	{
+		TfmSpecificLoadResults.Value = [];
 		ActiveMsBuildProjectLoadResult.Value = new MsBuildProjectInstanceLoadResult
 		{
 			LoadState = MsBuildProjectLoadState.Loading
@@ -74,6 +77,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 				Diagnostics.Add(result.DefaultActiveProjectLoadResult.Diagnostic);
 			}
 
+			TfmSpecificLoadResults.Value = result.TfmSpecificLoadResults;
 			ActiveMsBuildProjectLoadResult.Value = result.DefaultActiveProjectLoadResult;
 			return result;
 		});

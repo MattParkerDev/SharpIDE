@@ -31,6 +31,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	public SharpIdeSolutionModel? Solution { get; set; }
 	public SharpIdeFile SharpIdeFile => _currentFile;
 	private SharpIdeFile _currentFile = null!;
+	private SharpIdeProjectModel? _project;
 
 	private CustomHighlighter _syntaxHighlighter = new();
 	private PopupMenu _popupMenu = null!;
@@ -41,6 +42,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private Window _methodSignatureHelpWindow = null!;
 	private RichTextLabel _completionDescriptionLabel = null!;
 	private FindReplaceBar _findReplaceBar = null!;
+	private OptionButton _tfmOptionButton = null!;
 
 	private ImmutableArray<SharpIdeDiagnostic> _fileDiagnostics = [];
 	private ImmutableArray<SharpIdeDiagnostic> _fileAnalyzerDiagnostics = [];
@@ -80,6 +82,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_popupMenu = GetNode<PopupMenu>("CodeFixesMenu");
 		_aboveCanvasItem = GetNode<CanvasItem>("%AboveCanvasItem");
 		_aboveCanvasItemRid = _aboveCanvasItem.GetCanvasItem();
+		_tfmOptionButton = GetNode<OptionButton>("%TfmOptionButton");
+		_tfmOptionButton.ItemSelected += OnTargetFrameworkSelected;
 		_completionDescriptionWindow = GetNode<Window>("%CompletionDescriptionWindow");
 		_methodSignatureHelpWindow = GetNode<Window>("%MethodSignatureHelpWindow");
 		_completionDescriptionLabel = _completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
@@ -215,6 +219,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(SetCodeFoldingAsync);
+		_tfmOptionButton.ItemSelected -= OnTargetFrameworkSelected;
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
 	}
 
@@ -358,12 +363,18 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_currentFile.FileDeleted.Subscribe(OnFileDeleted);
 		if (_currentFile.GetContainingProjectFolder() is {} containingProjectFolder && Solution!.GetProjectForContainingFolderPath(containingProjectFolder) is {} project)
 		{
+			_project = project;
 			_projectDiagnosticsObserveDisposable = project.Diagnostics.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
 				.SubscribeAwait(async (innerEvent, ct) =>
 				{
 					var projectDiagnosticsForFile = project.Diagnostics.Where(s => s.FilePath == _currentFile.Path).ToImmutableArray();
 					await this.InvokeAsync(() => SetProjectDiagnostics(projectDiagnosticsForFile));
 				}, configureAwait: false);
+
+			project.TfmSpecificLoadResults.SubscribeOnThreadPool().ObserveOnThreadPool()
+				.SubscribeAwait(async (_, ct) => await this.InvokeAsync(UpdateTargetFrameworkOptions), configureAwait: false).AddToDeferred(this);
+			project.ActiveMsBuildProjectLoadResult.SubscribeOnThreadPool().ObserveOnThreadPool()
+				.SubscribeAwait(async (_, ct) => await this.InvokeAsync(UpdateSelectedTargetFramework), configureAwait: false).AddToDeferred(this);
 		}
 
 		var syntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);

@@ -33,6 +33,22 @@ auto_brace_completion_enabled = true
 auto_brace_completion_highlight_matching = true
 script = ExtResource("2_kp2fd")
 
+[node name="TfmOptionButton" type="OptionButton" parent="SharpIdeCodeEdit" unique_id=944795982]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 20.0
+grow_horizontal = 0
+offset_transform_enabled = true
+offset_transform_position = Vector2(-15, 5)
+offset_transform_visual_only = false
+theme_override_font_sizes/font_size = 14
+fit_to_longest_item = false
+
 [node name="CodeFixesMenu" type="PopupMenu" parent="SharpIdeCodeEdit" unique_id=54277800]
 size = Vector2i(217, 100)
 item_count = 1
