@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://b060t4eywvbk3" path="res://Resources/caret-down.svg" id="2_8p0e0"]
 [ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="3_p3s3k"]
 [ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="4_k3crf"]
+[ext_resource type="Texture2D" uid="uid://da8cx83rohk50" path="res://Features/ToolPanes/Resources/ButtonIcons/Build.svg" id="5_build"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8p0e0"]
 content_margin_left = 8.0
@@ -54,6 +55,44 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="Animation" id="Animation_building"]
+resource_name = "BuildingAnimation"
+length = 0.8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BuildAnimationTextureRect:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.8),
+"transitions": PackedFloat32Array(2, -1.4, -1.4),
+"update": 0,
+"values": [0.34906584, 0.87266463, 0.34906584]
+}
+
+[sub_resource type="Animation" id="Animation_build_reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BuildAnimationTextureRect:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.87266463]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_build"]
+_data = {
+&"BuildingAnimation": SubResource("Animation_building"),
+&"RESET": SubResource("Animation_build_reset")
+}
+
 [node name="RunProjectsComponent" type="MarginContainer" unique_id=1780495061]
 size_flags_vertical = 4
 script = ExtResource("1_pce8v")
@@ -94,6 +133,25 @@ theme_override_constants/margin_bottom = 5
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/ProjectListMenuButton/RunMenuPopup/MarginContainer" unique_id=782752797]
 layout_mode = 2
 
+[node name="AnimatedTextureParentControl" type="Control" parent="HBoxContainer" unique_id=1016714896]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BuildAnimationTextureRect" type="TextureRect" parent="HBoxContainer/AnimatedTextureParentControl" unique_id=1162156299]
+layout_mode = 0
+offset_left = -3.0
+offset_top = 2.0
+offset_right = 22.0
+offset_bottom = 27.0
+rotation = 0.87266463
+pivot_offset = Vector2(11.83, 19.69)
+texture = ExtResource("5_build")
+expand_mode = 5
+stretch_mode = 5
+
 [node name="RunButton" type="Button" parent="HBoxContainer" unique_id=1639602407]
 unique_name_in_owner = true
 layout_mode = 2
@@ -118,3 +176,7 @@ size_flags_vertical = 4
 disabled = true
 icon = ExtResource("4_k3crf")
 icon_alignment = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1670390882]
+root_node = NodePath("../HBoxContainer/AnimatedTextureParentControl")
+libraries/ = SubResource("AnimationLibrary_build")

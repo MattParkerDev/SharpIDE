@@ -9,6 +9,8 @@ public partial class RunMenuItem : HBoxContainer
 {
     public SharpIdeProjectModel Project { get; set; } = null!;
     public event Action<RunMenuItem>? Selected;
+    public event Action<RunMenuItem>? BuildingStateChanged;
+    public bool IsBuilding { get; private set; }
     private Button _selectProjectButton = null!;
     private Button _runButton = null!;
     private Button _debugButton = null!;
@@ -52,6 +54,7 @@ public partial class RunMenuItem : HBoxContainer
             _runButton.Visible = true;
             _animatedTextureParentControl.Visible = false;
             _buildAnimationPlayer.Stop();
+            SetBuildingState(false);
         });
     }
 
@@ -74,6 +77,7 @@ public partial class RunMenuItem : HBoxContainer
             _stopButton.Visible = true;
             _animatedTextureParentControl.Visible = false;
             _buildAnimationPlayer.Stop();
+            SetBuildingState(false);
         });
     }
 
@@ -121,5 +125,13 @@ public partial class RunMenuItem : HBoxContainer
         _debugButton.Visible = false;
         _animatedTextureParentControl.Visible = true;
         _buildAnimationPlayer.Play(_buildAnimationName);
+        SetBuildingState(true);
+    }
+
+    private void SetBuildingState(bool isBuilding)
+    {
+        if (IsBuilding == isBuilding) return;
+        IsBuilding = isBuilding;
+        BuildingStateChanged?.Invoke(this);
     }
 }

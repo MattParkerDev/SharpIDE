@@ -12,6 +12,8 @@ public partial class RunProjectsComponent : MarginContainer
 	private Button _runButton = null!;
 	private Button _debugButton = null!;
 	private Button _stopButton = null!;
+	private Control _animatedTextureParentControl = null!;
+	private AnimationPlayer _buildAnimationPlayer = null!;
 	private Popup _runMenuPopup = null!;
 	private VBoxContainer _runMenuPopupVbox = null!;
 	private readonly List<RunMenuItemContainer> _runMenuItemContainers = [];
@@ -19,6 +21,7 @@ public partial class RunProjectsComponent : MarginContainer
 	private IDisposable? _activeProjectNameSubscription;
 
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
+	private readonly StringName _buildAnimationName = "BuildingAnimation";
 
     [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
 	public override void _Ready()
@@ -28,6 +31,8 @@ public partial class RunProjectsComponent : MarginContainer
 		_runButton = GetNode<Button>("%RunButton");
 		_debugButton = GetNode<Button>("%DebugButton");
 		_stopButton = GetNode<Button>("%StopButton");
+		_animatedTextureParentControl = GetNode<Control>("%AnimatedTextureParentControl");
+		_buildAnimationPlayer = GetNode<AnimationPlayer>("AnimationPlayer");
 		_runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
 		_runMenuPopupVbox.MinimumSizeChanged += OnRunMenuMinimumSizeChanged;
 		_runMenuPopup.PopupHide += OnRunMenuPopupHidden;
@@ -45,6 +50,7 @@ public partial class RunProjectsComponent : MarginContainer
 		foreach (var container in _runMenuItemContainers)
 		{
 			container.ProjectSubscription?.Dispose();
+			if (container.MenuItem is { } menuItem) menuItem.BuildingStateChanged -= OnRunMenuItemBuildingStateChanged;
 		}
 		_runMenuItemContainers.Clear();
 	}
@@ -98,6 +104,7 @@ public partial class RunProjectsComponent : MarginContainer
 				var runMenuItem = _runMenuItemScene.Instantiate<RunMenuItem>();
 				runMenuItem.Project = project;
 				runMenuItem.Selected += OnRunMenuItemSelected;
+				runMenuItem.BuildingStateChanged += OnRunMenuItemBuildingStateChanged;
 				_runMenuPopupVbox.AddChild(runMenuItem);
 				runMenuItemContainer.MenuItem = runMenuItem;
 				if (_activeRunMenuItemContainer is null) SetActiveRunMenuItem(runMenuItemContainer);
@@ -110,6 +117,7 @@ public partial class RunProjectsComponent : MarginContainer
 			{
 				SetActiveRunMenuItem(GetFirstAvailableRunMenuItem(runMenuItemContainer));
 			}
+			runMenuItemContainer.MenuItem.BuildingStateChanged -= OnRunMenuItemBuildingStateChanged;
 			runMenuItemContainer.MenuItem.QueueFree();
 			runMenuItemContainer.MenuItem = null;
 		}
@@ -123,7 +131,11 @@ public partial class RunProjectsComponent : MarginContainer
 		runMenuItemContainer.ProjectSubscription?.Dispose();
 		if (_activeRunMenuItemContainer == runMenuItemContainer)
 			SetActiveRunMenuItem(GetFirstAvailableRunMenuItem(runMenuItemContainer));
-		runMenuItemContainer.MenuItem?.QueueFree();
+		if (runMenuItemContainer.MenuItem is { } menuItem)
+		{
+			menuItem.BuildingStateChanged -= OnRunMenuItemBuildingStateChanged;
+			menuItem.QueueFree();
+		}
 		_runMenuItemContainers.Remove(runMenuItemContainer);
 		UpdateRunMenuButton();
 	}
@@ -190,15 +202,28 @@ public partial class RunProjectsComponent : MarginContainer
 	}
 
 	[RequiresGodotUiThread]
+	private void OnRunMenuItemBuildingStateChanged(RunMenuItem runMenuItem)
+	{
+		if (_activeRunMenuItemContainer?.MenuItem == runMenuItem)
+			UpdateRunMenuButton();
+	}
+
+	[RequiresGodotUiThread]
 	private void UpdateRunMenuButton()
 	{
 		_projectListMenuButton.Disabled = _runMenuItemContainers.All(s => s.MenuItem is null);
 		var activeProject = _activeRunMenuItemContainer?.MenuItem?.Project;
 		var hasActiveProject = activeProject is not null;
 		var isRunning = activeProject?.Running is true;
-		_runButton.Visible = !isRunning;
-		_debugButton.Visible = !isRunning;
+		var isBuilding = _activeRunMenuItemContainer?.MenuItem?.IsBuilding is true;
+		_runButton.Visible = !isRunning && !isBuilding;
+		_debugButton.Visible = !isRunning && !isBuilding;
 		_stopButton.Visible = isRunning;
+		_animatedTextureParentControl.Visible = isBuilding;
+		if (isBuilding)
+			_buildAnimationPlayer.Play(_buildAnimationName);
+		else
+			_buildAnimationPlayer.Stop();
 		_runButton.Disabled = !hasActiveProject;
 		_debugButton.Disabled = !hasActiveProject;
 		_stopButton.Disabled = !isRunning;
