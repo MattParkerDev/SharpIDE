@@ -8,7 +8,7 @@ public static class SetThemeExtensions
     private static readonly Theme LightTheme = ResourceLoader.Load<Theme>("uid://dc7l6bjhn61i5");
     private static readonly Color LightThemeClearColor = new Color("fdfdfd");
     private static readonly Theme DarkTheme = ResourceLoader.Load<Theme>("uid://epmt8kq6efrs");
-    private static readonly Color DarkThemeClearColor = new Color("4d4d4d");
+    private static readonly Color DarkThemeClearColor = new Color("121314");
 
     public static Font EditorDefaultFont { get; set; } = null!;
     public static int EditorDefaultFontSize { get; set; } = -1;
@@ -29,7 +29,7 @@ public static class SetThemeExtensions
             rootWindow.Theme = DarkTheme;
         }
     }
-    
+
     public static void ThemeSetCodeEditFont(this Node node, Font font)
     {
         DarkTheme.SetFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit, font);
@@ -41,14 +41,14 @@ public static class SetThemeExtensions
         LightTheme.SetFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit, fontSize);
         DarkTheme.SetFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit, fontSize);
     }
-    
+
     public static void ThemeSetTerminalFont(this Node node, Font font)
     {
         DarkTheme.SetFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal, font);
         DarkTheme.SetFont(ThemeStringNames.Terminal.BoldFont, GodotNodeStringNames.Terminal, font);
         DarkTheme.SetFont(ThemeStringNames.Terminal.ItalicsFont, GodotNodeStringNames.Terminal, font);
         DarkTheme.SetFont(ThemeStringNames.Terminal.BoldItalicsFont, GodotNodeStringNames.Terminal, font);
-        
+
         LightTheme.SetFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal, font);
         LightTheme.SetFont(ThemeStringNames.Terminal.BoldFont, GodotNodeStringNames.Terminal, font);
         LightTheme.SetFont(ThemeStringNames.Terminal.ItalicsFont, GodotNodeStringNames.Terminal, font);
