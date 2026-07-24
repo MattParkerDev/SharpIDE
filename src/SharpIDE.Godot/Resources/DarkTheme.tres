@@ -53,6 +53,7 @@ corner_detail = 1
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5oigc"]
 bg_color = Color(0.11764706, 0.11764706, 0.11764706, 1)
+draw_center = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dvhtt"]
 content_margin_left = 12.0
