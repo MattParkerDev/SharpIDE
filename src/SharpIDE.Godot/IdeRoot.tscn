@@ -119,7 +119,7 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 8
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_woo5i")
 split_offsets = PackedInt32Array(370)
@@ -130,7 +130,7 @@ metadata/_custom_type_script = "uid://kvnhndc3l6ih"
 [node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer" unique_id=41909034]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 8
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_7ptyn")
 split_offsets = PackedInt32Array(400)
