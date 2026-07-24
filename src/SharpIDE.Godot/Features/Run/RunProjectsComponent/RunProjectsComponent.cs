@@ -29,6 +29,7 @@ public partial class RunProjectsComponent : MarginContainer
 		_debugButton = GetNode<Button>("%DebugButton");
 		_stopButton = GetNode<Button>("%StopButton");
 		_runMenuPopupVbox = _runMenuPopup.GetNode<VBoxContainer>("MarginContainer/VBoxContainer");
+		_runMenuPopupVbox.MinimumSizeChanged += OnRunMenuMinimumSizeChanged;
 		_runMenuPopup.PopupHide += OnRunMenuPopupHidden;
 		_projectListMenuButton.Pressed += OnProjectListMenuButtonPressed;
 		_runButton.Pressed += OnRunButtonPressed;
@@ -223,6 +224,11 @@ public partial class RunProjectsComponent : MarginContainer
 		// A click on the toggle will turn it off on mouse-up. Other dismissals need to update the toggle state
 		if (!_projectListMenuButton.GetGlobalRect().HasPoint(GetGlobalMousePosition()))
 			_projectListMenuButton.ButtonPressed = false;
+	}
+
+	private void OnRunMenuMinimumSizeChanged()
+	{
+		Callable.From(_runMenuPopup.ResetSize).CallDeferred();
 	}
 
 	private async void OnRunButtonPressed()
