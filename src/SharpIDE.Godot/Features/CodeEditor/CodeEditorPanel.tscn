@@ -17,6 +17,7 @@ CsFileTexture = ExtResource("2_dbtmr")
 layout_mode = 2
 theme_type_variation = &"CodeEditorTabContainer"
 theme_override_constants/side_margin = 0
+theme_override_constants/tab_separation = 4
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 15
 current_tab = 0
