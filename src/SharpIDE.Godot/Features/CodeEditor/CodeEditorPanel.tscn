@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://cinaqbdghcvoi" path="res://Features/CodeEditor/SharpIdeCodeEdit.tscn" id="1_y4okr"]
 [ext_resource type="Texture2D" uid="uid://do0edciarrnp0" path="res://Features/SolutionExplorer/Resources/CsharpFile.svg" id="2_dbtmr"]
 
-[node name="CodeEditorPanel" type="MarginContainer" unique_id=154728753]
+[node name="CodeEditorPanel" type="PanelContainer" unique_id=587321290]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

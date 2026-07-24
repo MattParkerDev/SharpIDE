@@ -15,7 +15,7 @@ using SharpIDE.Godot.Features.SolutionExplorer;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
-public partial class CodeEditorPanel : MarginContainer
+public partial class CodeEditorPanel : PanelContainer
 {
 	[Export]
 	public Texture2D CsFileTexture { get; set; } = null!;
@@ -23,7 +23,7 @@ public partial class CodeEditorPanel : MarginContainer
 	private PackedScene _sharpIdeCodeEditScene = GD.Load<PackedScene>("res://Features/CodeEditor/SharpIdeCodeEdit.tscn");
 	private TabContainer _tabContainer = null!;
 	private ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
-	
+
 	[Inject] private readonly RunService _runService = null!;
 	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
 	public override void _Ready()
@@ -50,7 +50,7 @@ public partial class CodeEditorPanel : MarginContainer
 			AdjustCodeEditorUiScale(false);
 		}
 	}
-	
+
 	public SharpIdeCodeEdit? GetCurrentCodeEdit() => _tabContainer.GetChildOrNull<SharpIdeCodeEditContainer>(_tabContainer.CurrentTab)?.CodeEdit;
 
 	private void AdjustCodeEditorUiScale(bool increase)
@@ -127,7 +127,7 @@ public partial class CodeEditorPanel : MarginContainer
 		var currentTab = (SharpIdeCodeEditContainer?)_tabContainer.GetCurrentTabControl();
 		var closingCurrentTab = currentTab is not null && tabsToClose.Contains(currentTab);
 		if (closingCurrentTab) RecordNavigationToNextSelectedTab(allTabs, tabsToClose, currentTab!);
-		
+
 		foreach (var tab in tabsToClose) _tabContainer.RemoveChildAndQueueFree(tab);
 	}
 
@@ -141,7 +141,7 @@ public partial class CodeEditorPanel : MarginContainer
 			var currentTabIndexInTempList = remainingTabsIncludingCurrentTab.IndexOf(currentTabToBeClosed);
 			if (currentTabIndexInTempList is -1) throw new UnreachableException("Current tab to be closed should be in the list of remaining tabs including current tab");
 			var tabToBeSelected = currentTabIndexInTempList is 0 ? remainingTabsIncludingCurrentTab[1] : remainingTabsIncludingCurrentTab[currentTabIndexInTempList - 1];
-			
+
 			var tabToBeSelectedCodeEdit = tabToBeSelected.CodeEdit;
 			var sharpIdeFile = tabToBeSelectedCodeEdit.SharpIdeFile;
 			var caretLinePosition = new SharpIdeFileLinePosition(tabToBeSelectedCodeEdit.GetCaretLine(), tabToBeSelectedCodeEdit.GetCaretColumn());
@@ -182,7 +182,7 @@ public partial class CodeEditorPanel : MarginContainer
 					CloseTabs([newTab]);
 				});
 			});
-			
+
 			var nameChanged = file.Name.Skip(1).Select(name => (name, file.IsDirty.Value));
 			var dirtyChanged = file.IsDirty.Skip(1).Select(isDirty => (file.Name.Value, isDirty));
 
@@ -194,7 +194,7 @@ public partial class CodeEditorPanel : MarginContainer
 				}, configureAwait: false)
 				.AddTo(newTab); // needs to be on ui thread
 		});
-		
+
 		await newTab.CodeEdit.SetSharpIdeFile(file, fileLinePosition);
 	}
 
@@ -206,12 +206,12 @@ public partial class CodeEditorPanel : MarginContainer
 			_tabContainer.SetTabTitle(tabIndex, title);
 		});
 	}
-	
+
 	private static readonly Color ExecutingLineColor = new Color("665001");
 	private async Task OnDebuggerExecutionStopped(ExecutionStopInfo executionStopInfo)
 	{
 		Guard.Against.Null(Solution, nameof(Solution));
-		
+
 		var startLine = executionStopInfo.StartLine - 1; // Debugging is 1-indexed, Godot is 0-indexed
 		var endLine = executionStopInfo.EndLine - 1;
 		var startColumn = executionStopInfo.StartColumn - 1;
@@ -236,10 +236,10 @@ public partial class CodeEditorPanel : MarginContainer
 		var fileLinePosition = new SharpIdeFileLinePosition(startLine, startColumn);
 		// Although the file may already be the selected tab, we need to also move the caret
 		await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, fileLinePosition).ConfigureAwait(false);
-		
+
 		if (_debuggerExecutionStopInfoByProject.TryGetValue(executionStopInfo.Project, out _)) throw new InvalidOperationException("Debugger is already stopped for this project.");
 		_debuggerExecutionStopInfoByProject[executionStopInfo.Project] = executionStopInfo;
-		
+
 		await this.InvokeAsync(() =>
 		{
 			var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
@@ -247,7 +247,7 @@ public partial class CodeEditorPanel : MarginContainer
 			tabForStopInfo.SetLineAsExecuting(startLine, true);
 		});
 	}
-	
+
 	private enum DebuggerStepAction { StepOver, StepIn, StepOut, Continue }
 	[RequiresGodotUiThread]
 	private void SendDebuggerStepCommand(DebuggerStepAction debuggerStepAction)
@@ -276,7 +276,7 @@ public partial class CodeEditorPanel : MarginContainer
 			await task;
 		});
 	}
-	
+
 	private async Task OnProjectStoppedDebugging(SharpIdeProjectModel project)
 	{
 		if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
@@ -298,7 +298,7 @@ file static class TabContainerExtensions
 		{
 			var (icon, overlayIcon) = FileIconHelper.GetIconForFileExtension(file.Extension);
 			tabContainer.SetTabIcon(newTabIndex, icon);
-			
+
 			// Unfortunately TabContainer doesn't have a SetTabIconOverlay method
 			//tabContainer.SetIconOverlay(0, overlayIcon);
 		}
