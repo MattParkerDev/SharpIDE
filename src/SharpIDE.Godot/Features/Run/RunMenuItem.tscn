@@ -6,6 +6,19 @@
 [ext_resource type="Texture2D" uid="uid://c7cmou8hipsvc" path="res://Features/Run/Resources/Debug.svg" id="3_cd138"]
 [ext_resource type="Texture2D" uid="uid://debdmtqgw5dhf" path="res://Features/Run/Resources/Stop.svg" id="3_hxkig"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8lles"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1, 0.1, 0.1, 0.6)
+draw_center = false
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="Animation" id="Animation_8lles"]
 resource_name = "BuildingAnimation"
 length = 0.8
@@ -45,19 +58,23 @@ _data = {
 }
 
 [node name="RunMenuItem" type="HBoxContainer" unique_id=1305347884]
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
 script = ExtResource("1_syj0f")
 
-[node name="Label" type="Label" parent="." unique_id=1727711838]
-layout_mode = 2
-mouse_filter = 1
-text = "Project Name"
-
-[node name="Spacer" type="Control" parent="." unique_id=1831433607]
+[node name="SelectProjectButton" type="Button" parent="." unique_id=262253668]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 1
+theme_override_styles/normal = SubResource("StyleBoxFlat_8lles")
+text = "Project Name"
+alignment = 0
 
 [node name="AnimatedTextureParentControl" type="Control" parent="." unique_id=1016714895]
 unique_name_in_owner = true

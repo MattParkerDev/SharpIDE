@@ -9,7 +9,7 @@ public partial class RunMenuItem : HBoxContainer
 {
     public SharpIdeProjectModel Project { get; set; } = null!;
     public event Action<RunMenuItem>? Selected;
-    private Label _label = null!;
+    private Button _selectProjectButton = null!;
     private Button _runButton = null!;
     private Button _debugButton = null!;
     private Button _stopButton = null!;
@@ -19,8 +19,9 @@ public partial class RunMenuItem : HBoxContainer
     [Inject] private readonly RunService _runService = null!;
     public override void _Ready()
     {
-        _label = GetNode<Label>("Label");
-        _label.Text = Project.Name.Value;
+        _selectProjectButton = GetNode<Button>("%SelectProjectButton");
+        _selectProjectButton.Text = Project.Name.Value;
+        _selectProjectButton.Pressed += () => Selected?.Invoke(this);
         _runButton = GetNode<Button>("RunButton");
         _runButton.Pressed += OnRunButtonPressed;
         _stopButton = GetNode<Button>("StopButton");
@@ -32,7 +33,7 @@ public partial class RunMenuItem : HBoxContainer
         Project.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
         Project.ProjectStoppedRunning.Subscribe(OnProjectStoppedRunning);
         Project.ProjectRunFailed.Subscribe(OnProjectRunFailed);
-        Project.Name.Skip(1).Subscribe(name => _label.Text = name).AddTo(this);
+        Project.Name.Skip(1).Subscribe(name => _selectProjectButton.Text = name).AddTo(this);
     }
 
     public override void _ExitTree()
@@ -112,12 +113,6 @@ public partial class RunMenuItem : HBoxContainer
         };
         SetAttemptingRunState();
         await _runService.RunProject(Project, true, debuggerExecutableInfo).ConfigureAwait(false);
-    }
-
-    public override void _GuiInput(InputEvent @event)
-    {
-        if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-            Selected?.Invoke(this);
     }
 
     private void SetAttemptingRunState()

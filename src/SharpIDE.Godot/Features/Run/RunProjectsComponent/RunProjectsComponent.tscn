@@ -21,6 +21,7 @@ disabled = true
 toggle_mode = true
 text = "Loading...                  "
 icon = ExtResource("2_8p0e0")
+alignment = 0
 icon_alignment = 2
 
 [node name="RunMenuPopup" type="Popup" parent="HBoxContainer/ProjectListMenuButton" unique_id=795203495]
