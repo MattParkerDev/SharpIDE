@@ -50,6 +50,6 @@ public partial class SharpIdeCodeEdit
 		var selectedIndex = _project.TfmSpecificLoadResults.Value
 			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Project: not null })
 			.IndexOf(_project.ActiveMsBuildProjectLoadResult.Value);
-		if (selectedIndex >= 0) _tfmOptionButton.Select(selectedIndex);
+		if (selectedIndex >= 0 && selectedIndex < _tfmOptionButton.ItemCount) _tfmOptionButton.Select(selectedIndex);
 	}
 }
