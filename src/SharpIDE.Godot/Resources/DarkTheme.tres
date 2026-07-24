@@ -290,6 +290,7 @@ Gray700Label/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
 Gray800Label/base_type = &"Label"
 Gray800Label/colors/font_color = Color(0.9137255, 0.9137255, 0.9137255, 1)
 IdeSidebarButton/base_type = &"Button"
+IdeSidebarButton/colors/font_color = Color(0.54901963, 0.54901963, 0.54901963, 1)
 IdeSidebarButton/styles/normal = SubResource("StyleBoxFlat_dsk6k")
 IdeSidebarButton/styles/pressed = SubResource("StyleBoxFlat_njudc")
 NavigationArrowButton/base_type = &"Button"
