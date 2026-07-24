@@ -2,7 +2,6 @@ using System.Collections.Specialized;
 using Godot;
 using ObservableCollections;
 using R3;
-using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Godot.Features.Run.RunProjectsComponent;
@@ -82,16 +81,16 @@ public partial class RunProjectsComponent : MarginContainer
 	private void BindProject(SharpIdeProjectModel project, RunMenuItemContainer runMenuItemContainer)
 	{
 		_runMenuItemContainers.Add(runMenuItemContainer);
-		runMenuItemContainer.ProjectSubscription = project.ActiveMsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool()
-			.SubscribeAwait(async (loadState, ct) => await this.InvokeAsync(() => UpdateProjectDisplay(project, runMenuItemContainer, loadState)), configureAwait: false);
+		runMenuItemContainer.ProjectSubscription = project.ActiveMsBuildProjectLoadResult.SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (_, ct) => await this.InvokeAsync(() => UpdateProjectDisplay(project, runMenuItemContainer)), configureAwait: false);
 	}
 
 	[RequiresGodotUiThread]
-	private void UpdateProjectDisplay(SharpIdeProjectModel project, RunMenuItemContainer runMenuItemContainer, MsBuildProjectLoadState loadState)
+	private void UpdateProjectDisplay(SharpIdeProjectModel project, RunMenuItemContainer runMenuItemContainer)
 	{
 		if (!_runMenuItemContainers.Contains(runMenuItemContainer)) return;
 
-		if (loadState is MsBuildProjectLoadState.Loaded && project.IsRunnable)
+		if (project.IsLoaded && project.IsRunnable)
 		{
 			if (runMenuItemContainer.MenuItem is null)
 			{

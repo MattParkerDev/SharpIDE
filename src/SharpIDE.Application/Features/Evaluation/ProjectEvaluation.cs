@@ -31,7 +31,7 @@ public sealed record MsBuildProjectLoadResult
 
 public sealed record MsBuildProjectInstanceLoadResult
 {
-	public MsBuildProjectLoadState LoadState { get; set; }
+	public MsBuildProjectLoadState LoadState { get; init; }
 	public Project? Project { get; init; }
 	public SharpIdeDiagnostic? Diagnostic { get; init; }
 }

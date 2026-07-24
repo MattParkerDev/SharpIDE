@@ -25,7 +25,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public required IExpandableSharpIdeNode Parent { get; set; }
 	public bool Running { get; set; }
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
-	public ReactiveProperty<MsBuildProjectLoadState> ActiveMsBuildProjectLoadState { get; set; }
+	public ReactiveProperty<MsBuildProjectInstanceLoadResult> ActiveMsBuildProjectLoadResult { get; }
 	public required Task<MsBuildProjectLoadResult> MsBuildEvaluationProjectTask { get; set; }
 
 	[SetsRequiredMembers]
@@ -36,62 +36,55 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		FilePath = projectModel.FullFilePath;
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
 		Folder = sharpIdeRootFolder.GetFolderForProject(projectModel.FullFilePath);
-		ActiveMsBuildProjectLoadState = new ReactiveProperty<MsBuildProjectLoadState>(Evaluation.MsBuildProjectLoadState.Loading);
-		ActiveMsBuildEvaluationProjectReactive = new ReactiveProperty<Project?>(null);
+		ActiveMsBuildProjectLoadResult = new ReactiveProperty<MsBuildProjectInstanceLoadResult>(new MsBuildProjectInstanceLoadResult
+		{
+			LoadState = MsBuildProjectLoadState.Loading
+		});
 		MsBuildEvaluationProjectTask = LoadOrReloadProjectInMsBuild();
 		allProjects.Add(this);
 	}
 
 	public async Task<MsBuildProjectLoadResult> LoadOrReloadProjectInMsBuild()
 	{
-		ActiveMsBuildEvaluationProject = null!;
+		ActiveMsBuildProjectLoadResult.Value = new MsBuildProjectInstanceLoadResult
+		{
+			LoadState = MsBuildProjectLoadState.Loading
+		};
 		return await Task.Run(async () =>
 		{
 			if (Folder is null)
 			{
-				ActiveMsBuildProjectLoadState.Value = MsBuildProjectLoadState.Missing;
+				var missingResult = new MsBuildProjectInstanceLoadResult
+				{
+					LoadState = MsBuildProjectLoadState.Missing
+				};
+				ActiveMsBuildProjectLoadResult.Value = missingResult;
 				return new MsBuildProjectLoadResult
 				{
-					OuterProjectLoadResult = new MsBuildProjectInstanceLoadResult
-					{
-						LoadState = Evaluation.MsBuildProjectLoadState.Missing,
-						Project = null
-					},
-					DefaultActiveProjectLoadResult = null!,
+					OuterProjectLoadResult = missingResult,
+					DefaultActiveProjectLoadResult = missingResult,
 					TfmSpecificLoadResults = []
 				};
 			}
 			var result = await ProjectEvaluation.LoadOrReloadProject(FilePath);
 			Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
-			if (result.DefaultActiveProjectLoadResult.LoadState is Evaluation.MsBuildProjectLoadState.Invalid)
+			if (result.DefaultActiveProjectLoadResult.LoadState is MsBuildProjectLoadState.Invalid)
 			{
 				Guard.Against.Null(result.DefaultActiveProjectLoadResult.Diagnostic);
 				Diagnostics.Add(result.DefaultActiveProjectLoadResult.Diagnostic);
 			}
 
-			ActiveMsBuildEvaluationProject = result.DefaultActiveProjectLoadResult.Project!;
-			ActiveMsBuildProjectLoadState.Value = result.DefaultActiveProjectLoadResult.LoadState;
+			ActiveMsBuildProjectLoadResult.Value = result.DefaultActiveProjectLoadResult;
 			return result;
 		});
 	}
 
-	public Project ActiveMsBuildEvaluationProject
-	{
-		get
-		{
-			return field ?? throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
-		}
-		set
-		{
-			field = value;
-			ActiveMsBuildEvaluationProjectReactive.Value = value;
-		}
-	}
-	public ReactiveProperty<Project?> ActiveMsBuildEvaluationProjectReactive { get; set; }
+	public Project ActiveMsBuildEvaluationProject => ActiveMsBuildProjectLoadResult.Value.Project
+		?? throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
 
-	public bool IsLoading => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loading;
-	public bool IsLoaded => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Loaded;
-	public bool IsInvalid => ActiveMsBuildProjectLoadState.Value is Evaluation.MsBuildProjectLoadState.Invalid or Evaluation.MsBuildProjectLoadState.Missing;
+	public bool IsLoading => ActiveMsBuildProjectLoadResult.Value.LoadState is MsBuildProjectLoadState.Loading;
+	public bool IsLoaded => ActiveMsBuildProjectLoadResult.Value.LoadState is MsBuildProjectLoadState.Loaded;
+	public bool IsInvalid => ActiveMsBuildProjectLoadResult.Value.LoadState is MsBuildProjectLoadState.Invalid or MsBuildProjectLoadState.Missing;
 	public bool IsRunnable => ActiveMsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
 	public bool IsBlazorProject => ActiveMsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
 	public bool IsGodotProject => ActiveMsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");

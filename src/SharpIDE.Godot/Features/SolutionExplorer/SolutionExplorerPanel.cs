@@ -304,18 +304,18 @@ public partial class SolutionExplorerPanel : MarginContainer
 
         var disposableBuilder = new DisposableBuilder();
 
-		projectModel.ActiveMsBuildProjectLoadState.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadState, ct) =>
+		projectModel.ActiveMsBuildProjectLoadResult.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadResult, ct) =>
 		{
-			var newIcon = loadState switch
+			var newIcon = loadResult.LoadState switch
 			{
 				MsBuildProjectLoadState.Loading => LoadingProjectIcon,
 				MsBuildProjectLoadState.Loaded => CsprojIcon,
 				MsBuildProjectLoadState.Invalid => UnloadedProjectIcon,
 				MsBuildProjectLoadState.Missing => UnloadedProjectIcon,
 				MsBuildProjectLoadState.Unloaded => UnloadedProjectIcon,
-				_ => throw new ArgumentOutOfRangeException(nameof(loadState), loadState, null)
+				_ => throw new ArgumentOutOfRangeException(nameof(loadResult), loadResult.LoadState, null)
 			};
-			var suffix = loadState is MsBuildProjectLoadState.Invalid ? " ·  load failed" : string.Empty;
+			var suffix = loadResult.LoadState is MsBuildProjectLoadState.Invalid ? " ·  load failed" : string.Empty;
 			await this.InvokeAsync(() =>
 			{
 				projectItem.SetIcon(0, newIcon);

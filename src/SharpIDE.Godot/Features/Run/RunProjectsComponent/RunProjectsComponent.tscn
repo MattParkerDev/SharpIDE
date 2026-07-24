@@ -25,7 +25,7 @@ icon_alignment = 2
 
 [node name="RunMenuPopup" type="Popup" parent="HBoxContainer/ProjectListMenuButton" unique_id=795203495]
 unique_name_in_owner = true
-size = Vector2i(151, 100)
+size = Vector2i(151, 25)
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/ProjectListMenuButton/RunMenuPopup" unique_id=1923799845]
 anchors_preset = 15
