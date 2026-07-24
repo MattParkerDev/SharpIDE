@@ -213,9 +213,16 @@ public partial class RunProjectsComponent : MarginContainer
 			_runMenuPopup.Hide();
 			return;
 		}
-		var popupMenuPosition = _projectListMenuButton.GlobalPosition;
+
+		var buttonPosition = GlobalPosition;
+		var buttonSize = Size;
+		var popupSize = _runMenuPopup.GetContentsMinimumSize();
 		const int buttonHeight = 37;
-		_runMenuPopup.Position = new Vector2I((int)popupMenuPosition.X, (int)popupMenuPosition.Y + buttonHeight);
+
+		_runMenuPopup.Position = new Vector2I(
+			(int)(buttonPosition.X + buttonSize.X - popupSize.X + 4),
+			(int)buttonPosition.Y + buttonHeight
+		);
 		_runMenuPopup.Popup();
 	}
 
