@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" uid="uid://bdu08nd7si641" path="res://Features/Debug_/Tab/SubTabs/ThreadsVariablesSubTab.tscn" id="2_e6ax5"]
 [ext_resource type="PackedScene" uid="uid://beo6fg8r0ogxc" path="res://Features/TerminalBase/SharpIdeTerminal.tscn" id="4_utxf4"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_utxf4"]
+
 [node name="DebugPanelTab" type="Control" unique_id=819928667]
 layout_mode = 3
 anchors_preset = 15
@@ -20,6 +22,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_type_variation = &"CodeEditorTabContainer"
+theme_override_constants/tab_separation = 4
+theme_override_styles/panel = SubResource("StyleBoxEmpty_utxf4")
 current_tab = 0
 
 [node name="Threads & Variables" type="Control" parent="TabContainer" unique_id=18221529]

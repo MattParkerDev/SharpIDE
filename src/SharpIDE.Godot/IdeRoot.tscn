@@ -42,55 +42,53 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
 
-[node name="Panel" type="Panel" parent="VBoxContainer" unique_id=1061211858]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=731109392]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/Panel" unique_id=1265935116]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 5.0
-offset_right = -5.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="ForwardBackwardButtonContainer" parent="VBoxContainer/Panel/HBoxContainer" unique_id=2052350713 instance=ExtResource("3_ptnvy")]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer" unique_id=1265935116]
 layout_mode = 2
 
-[node name="OpenSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1738341873]
+[node name="ForwardBackwardButtonContainer" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=2052350713 instance=ExtResource("3_ptnvy")]
+layout_mode = 2
+
+[node name="OpenSlnButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=1738341873]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Open Sln"
 
-[node name="BuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1008449804]
+[node name="BuildSlnButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=1008449804]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Build"
 
-[node name="RebuildSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=81218066]
+[node name="RebuildSlnButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=81218066]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Rebuild"
 
-[node name="CleanSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=286020562]
+[node name="CleanSlnButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=286020562]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Clean"
 
-[node name="RestoreSlnButton" type="Button" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1772904772]
+[node name="RestoreSlnButton" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=1772904772]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 text = "Restore"
 
-[node name="CancelMsBuildActionButton" type="TextureButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=850281836]
+[node name="CancelMsBuildActionButton" type="TextureButton" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=850281836]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(21, 18)
 layout_mode = 2
@@ -103,19 +101,20 @@ texture_disabled = ExtResource("5_qo7tr")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="Spacer" type="Control" parent="VBoxContainer/Panel/HBoxContainer" unique_id=484162762]
+[node name="Spacer" type="Control" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=484162762]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RunProjectsComponent" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1780495061 instance=ExtResource("8_ptnvy")]
+[node name="RunProjectsComponent" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=1780495061 instance=ExtResource("8_ptnvy")]
 layout_mode = 2
 
-[node name="SettingsButton" parent="VBoxContainer/Panel/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
+[node name="SettingsButton" parent="VBoxContainer/MarginContainer/HBoxContainer" unique_id=1946991037 instance=ExtResource("5_pm5al")]
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=643519049]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 0
 
 [node name="LeftSideBar" parent="VBoxContainer/HBoxContainer" unique_id=266709518 instance=ExtResource("3_f60gr")]
 layout_mode = 2
@@ -124,18 +123,18 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 8
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_woo5i")
-split_offsets = PackedInt32Array(370)
-split_offset = 370
+split_offsets = PackedInt32Array(372)
+split_offset = 372
 script = ExtResource("3_0ybuf")
 metadata/_custom_type_script = "uid://kvnhndc3l6ih"
 
 [node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer" unique_id=41909034]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 4
+theme_override_constants/separation = 8
 theme_override_constants/minimum_grab_thickness = 10
 theme_override_icons/grabber = SubResource("PlaceholderTexture2D_7ptyn")
 split_offsets = PackedInt32Array(400)
@@ -152,6 +151,10 @@ layout_mode = 2
 [node name="ToolPaneContainer" parent="VBoxContainer/HBoxContainer/InvertedVSplitContainer" unique_id=872736651 groups=["ToolPaneContainers"] instance=ExtResource("13_tmssf")]
 layout_mode = 2
 Location = 3
+
+[node name="Spacer" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=1595296022]
+custom_minimum_size = Vector2(10, 0)
+layout_mode = 2
 
 [node name="BottomBar" parent="VBoxContainer" unique_id=2024105566 instance=ExtResource("18_gyy5s")]
 layout_mode = 2

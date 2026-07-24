@@ -13,66 +13,57 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_e3p3b")
 
-[node name="HSplitContainer" type="HSplitContainer" parent="." unique_id=1028287240]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1510891503]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="HSplitContainer" type="HSplitContainer" parent="MarginContainer" unique_id=1028287240]
+layout_mode = 2
+theme_override_constants/separation = 8
 split_offsets = PackedInt32Array(775)
 split_offset = 775
 
-[node name="HSplitContainer" type="HSplitContainer" parent="HSplitContainer" unique_id=483446595]
+[node name="HSplitContainer" type="HSplitContainer" parent="MarginContainer/HSplitContainer" unique_id=483446595]
 layout_mode = 2
+theme_override_constants/separation = 8
 split_offsets = PackedInt32Array(370)
 split_offset = 370
 
-[node name="ThreadsPanel" type="Panel" parent="HSplitContainer/HSplitContainer" unique_id=1163437978]
-unique_name_in_owner = true
+[node name="ThreadsPanelContainer" type="PanelContainer" parent="MarginContainer/HSplitContainer/HSplitContainer" unique_id=464546699]
 layout_mode = 2
 
-[node name="ThreadsTree" type="Tree" parent="HSplitContainer/HSplitContainer/ThreadsPanel" unique_id=1418994359]
+[node name="ThreadsTree" type="Tree" parent="MarginContainer/HSplitContainer/HSplitContainer/ThreadsPanelContainer" unique_id=1418994359]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
 hide_root = true
 
-[node name="StackFramesPanel" type="Panel" parent="HSplitContainer/HSplitContainer" unique_id=52162020]
-unique_name_in_owner = true
+[node name="StackFramesPanelContainer" type="PanelContainer" parent="MarginContainer/HSplitContainer/HSplitContainer" unique_id=1976981024]
 layout_mode = 2
 
-[node name="StackFramesTree" type="Tree" parent="HSplitContainer/HSplitContainer/StackFramesPanel" unique_id=1005959886]
+[node name="StackFramesTree" type="Tree" parent="MarginContainer/HSplitContainer/HSplitContainer/StackFramesPanelContainer" unique_id=1005959886]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
 hide_root = true
 
-[node name="VariablesPanel" type="Panel" parent="HSplitContainer" unique_id=760942911]
-unique_name_in_owner = true
+[node name="VariablesPanelContainer" type="PanelContainer" parent="MarginContainer/HSplitContainer" unique_id=1032844519]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/VariablesPanel" unique_id=871515171]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HSplitContainer/VariablesPanelContainer" unique_id=871515171]
+layout_mode = 2
 
-[node name="VariablesTree" type="Tree" parent="HSplitContainer/VariablesPanel/VBoxContainer" unique_id=1453500091]
+[node name="VariablesTree" type="Tree" parent="MarginContainer/HSplitContainer/VariablesPanelContainer/VBoxContainer" unique_id=1453500091]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -82,7 +73,7 @@ theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
 hide_root = true
 
-[node name="EvaluateExpressionLineEdit" type="LineEdit" parent="HSplitContainer/VariablesPanel/VBoxContainer" unique_id=1193248699]
+[node name="EvaluateExpressionLineEdit" type="LineEdit" parent="MarginContainer/HSplitContainer/VariablesPanelContainer/VBoxContainer" unique_id=1193248699]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
