@@ -204,6 +204,24 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4dj27"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.03137255)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.101960786)
+border_blend = true
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ch0dy"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -247,8 +265,7 @@ border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.16470589, 0.16862746, 0.17254902, 1)
-anti_aliasing = false
+border_color = Color(1, 1, 1, 0.101960786)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6e8is"]
 content_margin_left = 0.0
@@ -265,7 +282,6 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amw38"]
 bg_color = Color(0.1764706, 0.1764706, 0.1764706, 1)
@@ -387,6 +403,7 @@ IdeSidebarButton/colors/icon_normal_color = Color(0.54901963, 0.54901963, 0.5490
 IdeSidebarButton/colors/icon_pressed_color = Color(0.7490196, 0.7490196, 0.7490196, 1)
 IdeSidebarButton/styles/normal = SubResource("StyleBoxFlat_dsk6k")
 IdeSidebarButton/styles/pressed = SubResource("StyleBoxFlat_njudc")
+LineEdit/styles/normal = SubResource("StyleBoxFlat_4dj27")
 NavigationArrowButton/base_type = &"Button"
 NavigationArrowButton/colors/icon_disabled_color = Color(0.45064795, 0.45064837, 0.45064825, 1)
 NavigationArrowButton/colors/icon_hover_color = Color(0.74509805, 0.74509805, 0.74509805, 1)
