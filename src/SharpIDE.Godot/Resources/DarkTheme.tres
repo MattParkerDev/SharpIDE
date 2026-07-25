@@ -143,7 +143,7 @@ content_margin_left = 4.0
 content_margin_top = 4.0
 content_margin_right = 4.0
 content_margin_bottom = 4.0
-bg_color = Color(0.11764706, 0.11764706, 0.11764706, 1)
+bg_color = Color(0, 0, 0, 0)
 draw_center = false
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dvhtt"]
