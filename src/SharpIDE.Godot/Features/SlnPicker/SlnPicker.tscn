@@ -58,16 +58,11 @@ split_offsets = PackedInt32Array(245)
 dragging_enabled = false
 split_offset = 245
 
-[node name="Panel2" type="Panel" parent="VBoxContainer/VSplitContainer" unique_id=1464802782]
+[node name="Panel2" type="PanelContainer" parent="VBoxContainer/VSplitContainer" unique_id=1815577995]
 layout_mode = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/VSplitContainer/Panel2" unique_id=636951501]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
@@ -107,16 +102,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "About"
 
-[node name="Panel" type="Panel" parent="VBoxContainer/VSplitContainer" unique_id=663586740]
+[node name="Panel" type="PanelContainer" parent="VBoxContainer/VSplitContainer" unique_id=969735285]
 layout_mode = 2
 
 [node name="MarginContainer2" type="MarginContainer" parent="VBoxContainer/VSplitContainer/Panel" unique_id=248912974]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
