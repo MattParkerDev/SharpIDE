@@ -5,6 +5,24 @@
 [ext_resource type="FontVariation" uid="uid://vmgmcu8gc6nt" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="2_21uq4"]
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="2_amw38"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dwjdr"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.0627451)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.22, 0.22, 0.22, 0.6509804)
+border_blend = true
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kyxro"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -273,6 +291,7 @@ corner_detail = 5
 
 [resource]
 default_font = ExtResource("2_amw38")
+Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
 Button/styles/normal = SubResource("StyleBoxFlat_kyxro")
 CodeEdit/colors/completion_background_color = Color(1, 1, 1, 0)
 CodeEdit/colors/completion_selected_color = Color(0.18039216, 0.2627451, 0.43137255, 1)
