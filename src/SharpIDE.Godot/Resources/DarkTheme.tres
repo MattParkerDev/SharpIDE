@@ -41,6 +41,24 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5v2og"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0.19607843)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.22, 0.22, 0.22, 0.6509804)
+border_blend = true
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_38n5o"]
 bg_color = Color(0.16862746, 0.1764706, 0.1882353, 1)
 border_width_left = 1
@@ -293,6 +311,7 @@ corner_detail = 5
 default_font = ExtResource("2_amw38")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
 Button/styles/normal = SubResource("StyleBoxFlat_kyxro")
+Button/styles/pressed = SubResource("StyleBoxFlat_5v2og")
 CodeEdit/colors/completion_background_color = Color(1, 1, 1, 0)
 CodeEdit/colors/completion_selected_color = Color(0.18039216, 0.2627451, 0.43137255, 1)
 CodeEdit/colors/current_line_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
