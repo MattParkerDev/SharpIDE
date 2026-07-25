@@ -307,6 +307,38 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_enfp6"]
+content_margin_left = 10.0
+content_margin_top = 28.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.14767182, 0.14767182, 0.14767176, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+expand_margin_left = 8.0
+expand_margin_top = 32.0
+expand_margin_right = 8.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kta15"]
+content_margin_left = 10.0
+content_margin_top = 28.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.10747979, 0.107479714, 0.10747973, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+expand_margin_left = 8.0
+expand_margin_top = 32.0
+expand_margin_right = 8.0
+expand_margin_bottom = 6.0
+
 [resource]
 default_font = ExtResource("2_amw38")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
@@ -399,3 +431,5 @@ Terminal/styles/focus = SubResource("StyleBoxFlat_bk23l")
 Terminal/styles/normal = SubResource("StyleBoxFlat_5srvn")
 ThemeInfo/constants/IsLight1OrDark2 = 2
 Tree/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+Window/styles/embedded_border = SubResource("StyleBoxFlat_enfp6")
+Window/styles/embedded_unfocused_border = SubResource("StyleBoxFlat_kta15")
