@@ -114,6 +114,7 @@ layout_mode = 2
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=643519049]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 0
 
 [node name="LeftSideBar" parent="VBoxContainer/HBoxContainer" unique_id=266709518 instance=ExtResource("3_f60gr")]
 layout_mode = 2
@@ -152,7 +153,7 @@ layout_mode = 2
 Location = 3
 
 [node name="Spacer" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=1595296022]
-custom_minimum_size = Vector2(6, 0)
+custom_minimum_size = Vector2(10, 0)
 layout_mode = 2
 
 [node name="BottomBar" parent="VBoxContainer" unique_id=2024105566 instance=ExtResource("18_gyy5s")]
