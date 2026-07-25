@@ -5,7 +5,7 @@
 [node name="ToolPaneButton" type="Button" unique_id=1617682628]
 custom_minimum_size = Vector2(0, 50)
 theme_type_variation = &"IdeSidebarButton"
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 toggle_mode = true
 button_pressed = true
 text = "Replace"

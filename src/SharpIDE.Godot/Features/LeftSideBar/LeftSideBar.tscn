@@ -9,7 +9,7 @@ allow_unpress = true
 allow_unpress = true
 
 [node name="LeftSideBar" type="MarginContainer" unique_id=1904145153]
-custom_minimum_size = Vector2(80, 0)
+custom_minimum_size = Vector2(50, 0)
 anchors_preset = 13
 anchor_left = 0.5
 anchor_right = 0.5
