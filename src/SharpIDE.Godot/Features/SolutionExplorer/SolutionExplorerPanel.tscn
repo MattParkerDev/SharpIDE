@@ -33,9 +33,11 @@ SlnIcon = ExtResource("6_idvpu")
 [node name="Tree" type="Tree" parent="." unique_id=1327553265]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/v_separation = 1
+theme_override_constants/v_separation = 2
 theme_override_constants/inner_item_margin_left = 2
+theme_override_constants/icon_max_width = 20
 theme_override_constants/draw_guides = 0
+theme_override_font_sizes/font_size = 14
 theme_override_styles/panel = SubResource("StyleBoxEmpty_idvpu")
 allow_rmb_select = true
 select_mode = 2
