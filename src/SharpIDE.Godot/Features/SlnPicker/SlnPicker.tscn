@@ -109,6 +109,16 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "About"
 
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=170646960]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AutoOpenLastSlnButton" type="CheckBox" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1583726483]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Auto-open last sln"
+script = ExtResource("4_qs47j")
+
 [node name="PanelContainer2" type="PanelContainer" parent="MarginContainer/VBoxContainer/VSplitContainer" unique_id=969735285]
 layout_mode = 2
 
@@ -152,15 +162,6 @@ size_flags_vertical = 3
 
 [node name="PreviousSlnEntry" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/ScrollContainer/PreviousSlnsVBoxContainer" unique_id=856915469 instance=ExtResource("2_t7l5q")]
 layout_mode = 2
-
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2" unique_id=793983144]
-layout_mode = 2
-
-[node name="AutoOpenLastSlnButton" type="CheckBox" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/HBoxContainer2" unique_id=1583726483]
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "Auto-open last sln"
-script = ExtResource("4_qs47j")
 
 [node name="FileDialog" type="FileDialog" parent="." unique_id=1788677420]
 unique_name_in_owner = true
