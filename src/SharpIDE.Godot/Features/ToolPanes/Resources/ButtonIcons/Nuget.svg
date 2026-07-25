@@ -60,7 +60,7 @@
            id="Fill-12"
            fill="#004880"
            fill-rule="evenodd"
-           style="stroke-width:0.923105;fill:#c0c0c0;fill-opacity:1" />
+           style="stroke-width:0.923105;fill:#ffffff;fill-opacity:1" />
         <mask
            id="mask-2"
            fill="#ffffff">
@@ -79,7 +79,7 @@
            fill-rule="evenodd"
            mask="url(#mask-2)"
            transform="matrix(0.92310506,0,0,0.92310506,5.2647815,5.3992344)"
-           style="fill:#c0c0c0;fill-opacity:1" />
+           style="fill:#ffffff;fill-opacity:1" />
       </g>
     </g>
   </g>
