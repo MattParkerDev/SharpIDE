@@ -180,6 +180,18 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_njudc"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.15540645, 0.15904477, 0.16268319, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dsk6k"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -187,22 +199,10 @@ content_margin_right = 4.0
 content_margin_bottom = 4.0
 bg_color = Color(0.1, 0.1, 0.1, 0.6)
 draw_center = false
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_njudc"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.15540645, 0.15904477, 0.16268319, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4dj27"]
@@ -461,6 +461,7 @@ IdeSidebarButton/colors/icon_hover_color = Color(0.54901963, 0.54901963, 0.54901
 IdeSidebarButton/colors/icon_hover_pressed_color = Color(0.7490196, 0.7490196, 0.7490196, 1)
 IdeSidebarButton/colors/icon_normal_color = Color(0.54901963, 0.54901963, 0.54901963, 1)
 IdeSidebarButton/colors/icon_pressed_color = Color(0.7490196, 0.7490196, 0.7490196, 1)
+IdeSidebarButton/styles/hover = SubResource("StyleBoxFlat_njudc")
 IdeSidebarButton/styles/normal = SubResource("StyleBoxFlat_dsk6k")
 IdeSidebarButton/styles/pressed = SubResource("StyleBoxFlat_njudc")
 LineEdit/styles/normal = SubResource("StyleBoxFlat_4dj27")
