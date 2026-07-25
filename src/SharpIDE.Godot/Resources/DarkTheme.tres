@@ -323,6 +323,42 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_un4ka"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.1254902)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vru7m"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.2509804)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2wjv5"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.1882353)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_enfp6"]
 content_margin_left = 10.0
 content_margin_top = 28.0
@@ -448,5 +484,8 @@ Terminal/fonts/normal_font = ExtResource("2_21uq4")
 Terminal/styles/focus = SubResource("StyleBoxFlat_bk23l")
 Terminal/styles/normal = SubResource("StyleBoxFlat_5srvn")
 ThemeInfo/constants/IsLight1OrDark2 = 2
+VScrollBar/styles/grabber = SubResource("StyleBoxFlat_un4ka")
+VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_vru7m")
+VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_2wjv5")
 Window/styles/embedded_border = SubResource("StyleBoxFlat_enfp6")
 Window/styles/embedded_unfocused_border = SubResource("StyleBoxFlat_kta15")
