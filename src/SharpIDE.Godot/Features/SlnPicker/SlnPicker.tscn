@@ -65,98 +65,98 @@ split_offsets = PackedInt32Array(245)
 dragging_enabled = false
 split_offset = 245
 
-[node name="Panel2" type="PanelContainer" parent="MarginContainer/VBoxContainer/VSplitContainer" unique_id=1815577995]
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/VBoxContainer/VSplitContainer" unique_id=1815577995]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2" unique_id=636951501]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer" unique_id=636951501]
 layout_mode = 2
 theme_override_constants/margin_left = 30
 theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 30
 theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer" unique_id=351628223]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer" unique_id=351628223]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer" unique_id=307759588]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=307759588]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1015968762]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1015968762]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 texture = ExtResource("2_qs47j")
 expand_mode = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1495719358]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=1495719358]
 layout_mode = 2
 theme_override_constants/separation = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1995323828]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=1995323828]
 layout_mode = 2
 text = "SharpIDE"
 
-[node name="VersionLabel" type="Label" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=474176672]
+[node name="VersionLabel" type="Label" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer/VBoxContainer" unique_id=474176672]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "v0.1.2"
 
-[node name="AboutButton" type="Button" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel2/MarginContainer/VBoxContainer" unique_id=719403798]
+[node name="AboutButton" type="Button" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=719403798]
 unique_name_in_owner = true
 layout_mode = 2
 text = "About"
 
-[node name="Panel" type="PanelContainer" parent="MarginContainer/VBoxContainer/VSplitContainer" unique_id=969735285]
+[node name="PanelContainer2" type="PanelContainer" parent="MarginContainer/VBoxContainer/VSplitContainer" unique_id=969735285]
 layout_mode = 2
 
-[node name="MarginContainer2" type="MarginContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel" unique_id=248912974]
+[node name="MarginContainer2" type="MarginContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2" unique_id=248912974]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2" unique_id=124388338]
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2" unique_id=124388338]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2" unique_id=1290356322]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2" unique_id=1290356322]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2/HBoxContainer" unique_id=1512494346]
+[node name="LineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/HBoxContainer" unique_id=1512494346]
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Search recent projects"
 
-[node name="OpenSlnButton" type="Button" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2/HBoxContainer" unique_id=61072105]
+[node name="OpenSlnButton" type="Button" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/HBoxContainer" unique_id=61072105]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Open Sln File"
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2" unique_id=152730300]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2" unique_id=152730300]
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2" unique_id=147061402]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2" unique_id=147061402]
 layout_mode = 2
 size_flags_vertical = 3
 follow_focus = true
 
-[node name="PreviousSlnsVBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2/ScrollContainer" unique_id=1427769445]
+[node name="PreviousSlnsVBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/ScrollContainer" unique_id=1427769445]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="PreviousSlnEntry" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2/ScrollContainer/PreviousSlnsVBoxContainer" unique_id=856915469 instance=ExtResource("2_t7l5q")]
+[node name="PreviousSlnEntry" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/ScrollContainer/PreviousSlnsVBoxContainer" unique_id=856915469 instance=ExtResource("2_t7l5q")]
 layout_mode = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2" unique_id=793983144]
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2" unique_id=793983144]
 layout_mode = 2
 
-[node name="AutoOpenLastSlnButton" type="CheckBox" parent="MarginContainer/VBoxContainer/VSplitContainer/Panel/MarginContainer2/VBoxContainer2/HBoxContainer2" unique_id=1583726483]
+[node name="AutoOpenLastSlnButton" type="CheckBox" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/HBoxContainer2" unique_id=1583726483]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Auto-open last sln"
