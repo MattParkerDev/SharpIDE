@@ -461,15 +461,17 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public void DrawLineBackgroundColorCustom(int line, Color color, bool includeLeftGutter = true)
 	{
-		var startRect = GetRectAtLineColumn(line, 0);
-		if (startRect.Position.X < 0) return; // line is off-screen
+		var lineHeight = GetLineHeight();
+		var vScroll = GetVScroll();
+		var wholeVScroll = Math.Floor(vScroll);
+		var styleBoxName = Editable ? "normal" : "read_only";
+		var topMargin = GetThemeStylebox(styleBoxName, GodotNodeStringNames.CodeEdit).GetMargin(Side.Top);
+		var y = topMargin
+			+ (float)(GetScrollPosForLine(line) - wholeVScroll) * lineHeight
+			- Mathf.Round((float)(vScroll - wholeVScroll) * lineHeight);
+		if (y + lineHeight <= 0 || y >= Size.Y) return;
 		var x = includeLeftGutter ? 0 : GetTotalGutterWidth();
-		var rect = new Rect2(
-			x,
-			startRect.Position.Y,
-			Size.X - (MinimapDraw ? MinimapWidth : 0),
-			GetLineHeight()
-		);
+		var rect = new Rect2(x, y, Size.X - (MinimapDraw ? MinimapWidth : 0), lineHeight);
 		RenderingServer.Singleton.CanvasItemAddRect(_canvasItemRid, rect, color);
 	}
 	public override void _Draw()
