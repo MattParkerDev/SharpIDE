@@ -34,478 +34,536 @@ public static partial class ThemeGenerator
         theme.SetTypeVariation("IdeSidebarButton", "Button");
         theme.SetTypeVariation("NavigationArrowButton", "Button");
 
-        var styleBox0 = new StyleBoxFlat();
-        styleBox0.ResourceSceneUniqueId = "StyleBoxFlat_dwjdr";
-        styleBox0.ContentMarginLeft = 4.0f;
-        styleBox0.ContentMarginTop = 4.0f;
-        styleBox0.ContentMarginRight = 4.0f;
-        styleBox0.ContentMarginBottom = 4.0f;
-        styleBox0.BgColor = whiteAt6Percent;
-        styleBox0.BorderWidthLeft = 1;
-        styleBox0.BorderWidthTop = 1;
-        styleBox0.BorderWidthRight = 1;
-        styleBox0.BorderWidthBottom = 1;
-        styleBox0.BorderColor = whiteAt12Percent;
-        styleBox0.BorderBlend = true;
-        styleBox0.CornerRadiusTopLeft = 3;
-        styleBox0.CornerRadiusTopRight = 3;
-        styleBox0.CornerRadiusBottomRight = 3;
-        styleBox0.CornerRadiusBottomLeft = 3;
-        styleBox0.CornerDetail = 5;
+        var styleBox0 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_dwjdr",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt6Percent,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt12Percent,
+	        BorderBlend = true,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("hover", "Button", styleBox0);
 
-        var styleBox1 = new StyleBoxFlat();
-        styleBox1.ResourceSceneUniqueId = "StyleBoxFlat_kyxro";
-        styleBox1.ContentMarginLeft = 4.0f;
-        styleBox1.ContentMarginTop = 4.0f;
-        styleBox1.ContentMarginRight = 4.0f;
-        styleBox1.ContentMarginBottom = 4.0f;
-        styleBox1.BgColor = whiteAt3Percent;
-        styleBox1.BorderWidthLeft = 1;
-        styleBox1.BorderWidthTop = 1;
-        styleBox1.BorderWidthRight = 1;
-        styleBox1.BorderWidthBottom = 1;
-        styleBox1.BorderColor = whiteAt10Percent;
-        styleBox1.BorderBlend = true;
-        styleBox1.CornerRadiusTopLeft = 3;
-        styleBox1.CornerRadiusTopRight = 3;
-        styleBox1.CornerRadiusBottomRight = 3;
-        styleBox1.CornerRadiusBottomLeft = 3;
-        styleBox1.CornerDetail = 5;
+        var styleBox1 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_kyxro",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt3Percent,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt10Percent,
+	        BorderBlend = true,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("normal", "Button", styleBox1);
 
-        var styleBox2 = new StyleBoxFlat();
-        styleBox2.ResourceSceneUniqueId = "StyleBoxFlat_5v2og";
-        styleBox2.ContentMarginLeft = 4.0f;
-        styleBox2.ContentMarginTop = 4.0f;
-        styleBox2.ContentMarginRight = 4.0f;
-        styleBox2.ContentMarginBottom = 4.0f;
-        styleBox2.BgColor = new Color(0f, 0f, 0f, 0.19607843f);
-        styleBox2.BorderWidthLeft = 1;
-        styleBox2.BorderWidthTop = 1;
-        styleBox2.BorderWidthRight = 1;
-        styleBox2.BorderWidthBottom = 1;
-        styleBox2.BorderColor = whiteAt6Percent;
-        styleBox2.BorderBlend = true;
-        styleBox2.CornerRadiusTopLeft = 3;
-        styleBox2.CornerRadiusTopRight = 3;
-        styleBox2.CornerRadiusBottomRight = 3;
-        styleBox2.CornerRadiusBottomLeft = 3;
-        styleBox2.CornerDetail = 5;
+        var styleBox2 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_5v2og",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(0f, 0f, 0f, 0.19607843f),
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt6Percent,
+	        BorderBlend = true,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("pressed", "Button", styleBox2);
 
-        var styleBox3 = new StyleBoxFlat();
-        styleBox3.ResourceSceneUniqueId = "StyleBoxFlat_38n5o";
-        styleBox3.BgColor = popupBackground;
-        styleBox3.BorderWidthLeft = 1;
-        styleBox3.BorderWidthTop = 1;
-        styleBox3.BorderWidthRight = 1;
-        styleBox3.BorderWidthBottom = 1;
-        styleBox3.BorderColor = popupBorder;
-        styleBox3.CornerRadiusTopLeft = 4;
-        styleBox3.CornerRadiusTopRight = 4;
-        styleBox3.CornerRadiusBottomRight = 4;
-        styleBox3.CornerRadiusBottomLeft = 4;
-        styleBox3.ExpandMarginLeft = -2.0f;
-        styleBox3.ExpandMarginTop = -2.0f;
-        styleBox3.ExpandMarginRight = -2.0f;
-        styleBox3.ExpandMarginBottom = -2.0f;
-        styleBox3.ShadowColor = new Color(0f, 0f, 0f, 0.5f);
-        styleBox3.ShadowSize = 2;
+        var styleBox3 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_38n5o",
+	        BgColor = popupBackground,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = popupBorder,
+	        CornerRadiusTopLeft = 4,
+	        CornerRadiusTopRight = 4,
+	        CornerRadiusBottomRight = 4,
+	        CornerRadiusBottomLeft = 4,
+	        ExpandMarginLeft = -2.0f,
+	        ExpandMarginTop = -2.0f,
+	        ExpandMarginRight = -2.0f,
+	        ExpandMarginBottom = -2.0f,
+	        ShadowColor = new Color(0f, 0f, 0f, 0.5f),
+	        ShadowSize = 2
+        };
         theme.SetStylebox("completion", "CodeEdit", styleBox3);
 
-        var styleBox4 = new StyleBoxFlat();
-        styleBox4.ResourceSceneUniqueId = "StyleBoxFlat_82udi";
-        styleBox4.ContentMarginLeft = 4.0f;
-        styleBox4.ContentMarginTop = 4.0f;
-        styleBox4.ContentMarginRight = 4.0f;
-        styleBox4.ContentMarginBottom = 4.0f;
-        styleBox4.BgColor = new Color(0.117647f, 0.117647f, 0.117647f, 1f);
-        styleBox4.DrawCenter = false;
-        styleBox4.BorderColor = codeEditBorder;
-        styleBox4.CornerRadiusTopLeft = 8;
-        styleBox4.CornerRadiusTopRight = 8;
-        styleBox4.CornerRadiusBottomRight = 8;
-        styleBox4.CornerRadiusBottomLeft = 8;
-        styleBox4.CornerDetail = 5;
+        var styleBox4 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_82udi",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(0.117647f, 0.117647f, 0.117647f, 1f),
+	        DrawCenter = false,
+	        BorderColor = codeEditBorder,
+	        CornerRadiusTopLeft = 8,
+	        CornerRadiusTopRight = 8,
+	        CornerRadiusBottomRight = 8,
+	        CornerRadiusBottomLeft = 8,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("normal", "CodeEdit", styleBox4);
         theme.SetStylebox("read_only", "CodeEdit", styleBox4);
 
-        var styleBox5 = new StyleBoxFlat();
-        styleBox5.ResourceSceneUniqueId = "StyleBoxFlat_21uq4";
-        styleBox5.ContentMarginLeft = 1.0f;
-        styleBox5.ContentMarginTop = 0.0f;
-        styleBox5.ContentMarginRight = 1.0f;
-        styleBox5.ContentMarginBottom = 1.0f;
-        styleBox5.DrawCenter = false;
-        styleBox5.BorderColor = codeEditBorder;
+        var styleBox5 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_21uq4",
+	        ContentMarginLeft = 1.0f,
+	        ContentMarginTop = 0.0f,
+	        ContentMarginRight = 1.0f,
+	        ContentMarginBottom = 1.0f,
+	        DrawCenter = false,
+	        BorderColor = codeEditBorder
+        };
         theme.SetStylebox("panel", "CodeEditorTabContainer", styleBox5);
 
-        var styleBox6 = new StyleBoxFlat();
-        styleBox6.ResourceSceneUniqueId = "StyleBoxFlat_an00s";
-        styleBox6.ContentMarginLeft = 10.0f;
-        styleBox6.ContentMarginTop = 4.0f;
-        styleBox6.ContentMarginRight = 10.0f;
-        styleBox6.ContentMarginBottom = 4.0f;
-        styleBox6.BgColor = whiteAt12Percent;
-        styleBox6.BorderColor = whiteAt75Percent;
-        styleBox6.CornerRadiusTopLeft = 6;
-        styleBox6.CornerRadiusTopRight = 6;
-        styleBox6.CornerRadiusBottomRight = 6;
-        styleBox6.CornerRadiusBottomLeft = 6;
-        styleBox6.CornerDetail = 5;
+        var styleBox6 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_an00s",
+	        ContentMarginLeft = 10.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 10.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt12Percent,
+	        BorderColor = whiteAt75Percent,
+	        CornerRadiusTopLeft = 6,
+	        CornerRadiusTopRight = 6,
+	        CornerRadiusBottomRight = 6,
+	        CornerRadiusBottomLeft = 6,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("tab_hovered", "CodeEditorTabContainer", styleBox6);
 
-        var styleBox7 = new StyleBoxFlat();
-        styleBox7.ResourceSceneUniqueId = "StyleBoxFlat_ua1vr";
-        styleBox7.ContentMarginLeft = 10.0f;
-        styleBox7.ContentMarginTop = 4.0f;
-        styleBox7.ContentMarginRight = 10.0f;
-        styleBox7.ContentMarginBottom = 4.0f;
-        styleBox7.BgColor = whiteAt12Percent;
-        styleBox7.BorderColor = whiteAt75Percent;
-        styleBox7.CornerRadiusTopLeft = 6;
-        styleBox7.CornerRadiusTopRight = 6;
-        styleBox7.CornerRadiusBottomRight = 6;
-        styleBox7.CornerRadiusBottomLeft = 6;
-        styleBox7.CornerDetail = 5;
+        var styleBox7 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_ua1vr",
+	        ContentMarginLeft = 10.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 10.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt12Percent,
+	        BorderColor = whiteAt75Percent,
+	        CornerRadiusTopLeft = 6,
+	        CornerRadiusTopRight = 6,
+	        CornerRadiusBottomRight = 6,
+	        CornerRadiusBottomLeft = 6,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("tab_selected", "CodeEditorTabContainer", styleBox7);
 
-        var styleBox8 = new StyleBoxFlat();
-        styleBox8.ResourceSceneUniqueId = "StyleBoxFlat_ml8q5";
-        styleBox8.ContentMarginLeft = 10.0f;
-        styleBox8.ContentMarginTop = 4.0f;
-        styleBox8.ContentMarginRight = 10.0f;
-        styleBox8.ContentMarginBottom = 4.0f;
-        styleBox8.BgColor = transparent;
-        styleBox8.DrawCenter = false;
-        styleBox8.CornerRadiusTopLeft = 6;
-        styleBox8.CornerRadiusTopRight = 6;
-        styleBox8.CornerRadiusBottomRight = 6;
-        styleBox8.CornerRadiusBottomLeft = 6;
-        styleBox8.CornerDetail = 5;
+        var styleBox8 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_ml8q5",
+	        ContentMarginLeft = 10.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 10.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = transparent,
+	        DrawCenter = false,
+	        CornerRadiusTopLeft = 6,
+	        CornerRadiusTopRight = 6,
+	        CornerRadiusBottomRight = 6,
+	        CornerRadiusBottomLeft = 6,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("tab_unselected", "CodeEditorTabContainer", styleBox8);
 
-        var styleBox9 = new StyleBoxFlat();
-        styleBox9.ResourceSceneUniqueId = "StyleBoxFlat_5oigc";
-        styleBox9.ContentMarginLeft = 4.0f;
-        styleBox9.ContentMarginTop = 4.0f;
-        styleBox9.ContentMarginRight = 4.0f;
-        styleBox9.ContentMarginBottom = 4.0f;
-        styleBox9.BgColor = transparent;
-        styleBox9.DrawCenter = false;
+        var styleBox9 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_5oigc",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = transparent,
+	        DrawCenter = false
+        };
         theme.SetStylebox("tabbar_background", "CodeEditorTabContainer", styleBox9);
 
-        var styleBox10 = new StyleBoxFlat();
-        styleBox10.ResourceSceneUniqueId = "StyleBoxFlat_dvhtt";
-        styleBox10.ContentMarginLeft = 12.0f;
-        styleBox10.ContentMarginTop = 10.0f;
-        styleBox10.ContentMarginRight = 12.0f;
-        styleBox10.ContentMarginBottom = 10.0f;
-        styleBox10.BgColor = popupBackground;
-        styleBox10.BorderWidthLeft = 1;
-        styleBox10.BorderWidthTop = 1;
-        styleBox10.BorderWidthRight = 1;
-        styleBox10.BorderWidthBottom = 1;
-        styleBox10.BorderColor = popupBorder;
-        styleBox10.CornerRadiusTopLeft = 4;
-        styleBox10.CornerRadiusTopRight = 4;
-        styleBox10.CornerRadiusBottomRight = 4;
-        styleBox10.CornerRadiusBottomLeft = 4;
-        styleBox10.ExpandMarginLeft = -2.0f;
-        styleBox10.ExpandMarginTop = -2.0f;
-        styleBox10.ExpandMarginRight = -2.0f;
-        styleBox10.ExpandMarginBottom = -2.0f;
-        styleBox10.ShadowColor = new Color(0f, 0f, 0f, 0.5019608f);
-        styleBox10.ShadowSize = 2;
+        var styleBox10 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_dvhtt",
+	        ContentMarginLeft = 12.0f,
+	        ContentMarginTop = 10.0f,
+	        ContentMarginRight = 12.0f,
+	        ContentMarginBottom = 10.0f,
+	        BgColor = popupBackground,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = popupBorder,
+	        CornerRadiusTopLeft = 4,
+	        CornerRadiusTopRight = 4,
+	        CornerRadiusBottomRight = 4,
+	        CornerRadiusBottomLeft = 4,
+	        ExpandMarginLeft = -2.0f,
+	        ExpandMarginTop = -2.0f,
+	        ExpandMarginRight = -2.0f,
+	        ExpandMarginBottom = -2.0f,
+	        ShadowColor = new Color(0f, 0f, 0f, 0.5019608f),
+	        ShadowSize = 2
+        };
         theme.SetStylebox("panel", "EditorHoverPopupPanelContainer", styleBox10);
 
-        var styleBox11 = new StyleBoxFlat();
-        styleBox11.ResourceSceneUniqueId = "StyleBoxFlat_hrgw7";
-        styleBox11.ContentMarginLeft = 4.0f;
-        styleBox11.ContentMarginTop = 4.0f;
-        styleBox11.ContentMarginRight = 4.0f;
-        styleBox11.ContentMarginBottom = 4.0f;
-        styleBox11.BgColor = translucentDarkBackground;
-        styleBox11.CornerRadiusTopLeft = 3;
-        styleBox11.CornerRadiusTopRight = 3;
-        styleBox11.CornerRadiusBottomRight = 3;
-        styleBox11.CornerRadiusBottomLeft = 3;
-        styleBox11.CornerDetail = 5;
+        var styleBox11 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_hrgw7",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = translucentDarkBackground,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("title_collapsed_panel", "FoldableContainer", styleBox11);
 
-        var styleBox12 = new StyleBoxFlat();
-        styleBox12.ResourceSceneUniqueId = "StyleBoxFlat_njudc";
-        styleBox12.ContentMarginLeft = 4.0f;
-        styleBox12.ContentMarginTop = 4.0f;
-        styleBox12.ContentMarginRight = 4.0f;
-        styleBox12.ContentMarginBottom = 4.0f;
-        styleBox12.BgColor = new Color(0.15540645f, 0.15904477f, 0.16268319f, 1f);
-        styleBox12.CornerRadiusTopLeft = 6;
-        styleBox12.CornerRadiusTopRight = 6;
-        styleBox12.CornerRadiusBottomRight = 6;
-        styleBox12.CornerRadiusBottomLeft = 6;
-        styleBox12.CornerDetail = 5;
+        var styleBox12 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_njudc",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(0.15540645f, 0.15904477f, 0.16268319f, 1f),
+	        CornerRadiusTopLeft = 6,
+	        CornerRadiusTopRight = 6,
+	        CornerRadiusBottomRight = 6,
+	        CornerRadiusBottomLeft = 6,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("hover", "IdeSidebarButton", styleBox12);
 
-        var styleBox13 = new StyleBoxFlat();
-        styleBox13.ResourceSceneUniqueId = "StyleBoxFlat_dsk6k";
-        styleBox13.ContentMarginLeft = 4.0f;
-        styleBox13.ContentMarginTop = 4.0f;
-        styleBox13.ContentMarginRight = 4.0f;
-        styleBox13.ContentMarginBottom = 4.0f;
-        styleBox13.BgColor = translucentDarkBackground;
-        styleBox13.DrawCenter = false;
-        styleBox13.CornerRadiusTopLeft = 6;
-        styleBox13.CornerRadiusTopRight = 6;
-        styleBox13.CornerRadiusBottomRight = 6;
-        styleBox13.CornerRadiusBottomLeft = 6;
-        styleBox13.CornerDetail = 5;
+        var styleBox13 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_dsk6k",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = translucentDarkBackground,
+	        DrawCenter = false,
+	        CornerRadiusTopLeft = 6,
+	        CornerRadiusTopRight = 6,
+	        CornerRadiusBottomRight = 6,
+	        CornerRadiusBottomLeft = 6,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("normal", "IdeSidebarButton", styleBox13);
         theme.SetStylebox("pressed", "IdeSidebarButton", styleBox12);
 
-        var styleBox14 = new StyleBoxFlat();
-        styleBox14.ResourceSceneUniqueId = "StyleBoxFlat_4dj27";
-        styleBox14.ContentMarginLeft = 4.0f;
-        styleBox14.ContentMarginTop = 4.0f;
-        styleBox14.ContentMarginRight = 4.0f;
-        styleBox14.ContentMarginBottom = 4.0f;
-        styleBox14.BgColor = new Color(1f, 1f, 1f, 0.03137255f);
-        styleBox14.BorderWidthLeft = 1;
-        styleBox14.BorderWidthTop = 1;
-        styleBox14.BorderWidthRight = 1;
-        styleBox14.BorderWidthBottom = 1;
-        styleBox14.BorderColor = whiteAt10Percent;
-        styleBox14.BorderBlend = true;
-        styleBox14.CornerRadiusTopLeft = 3;
-        styleBox14.CornerRadiusTopRight = 3;
-        styleBox14.CornerRadiusBottomRight = 3;
-        styleBox14.CornerRadiusBottomLeft = 3;
-        styleBox14.CornerDetail = 5;
+        var styleBox14 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_4dj27",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(1f, 1f, 1f, 0.03137255f),
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt10Percent,
+	        BorderBlend = true,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("normal", "LineEdit", styleBox14);
 
-        var styleBox15 = new StyleBoxFlat();
-        styleBox15.ResourceSceneUniqueId = "StyleBoxFlat_ch0dy";
-        styleBox15.ContentMarginLeft = 4.0f;
-        styleBox15.ContentMarginTop = 4.0f;
-        styleBox15.ContentMarginRight = 4.0f;
-        styleBox15.ContentMarginBottom = 4.0f;
-        styleBox15.BgColor = new Color(0.5609549f, 0.5609549f, 0.56095487f, 0.6f);
-        styleBox15.DrawCenter = false;
-        styleBox15.CornerRadiusTopLeft = 3;
-        styleBox15.CornerRadiusTopRight = 3;
-        styleBox15.CornerRadiusBottomRight = 3;
-        styleBox15.CornerRadiusBottomLeft = 3;
-        styleBox15.CornerDetail = 5;
+        var styleBox15 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_ch0dy",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(0.5609549f, 0.5609549f, 0.56095487f, 0.6f),
+	        DrawCenter = false,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("disabled", "NavigationArrowButton", styleBox15);
 
-        var styleBox16 = new StyleBoxFlat();
-        styleBox16.ResourceSceneUniqueId = "StyleBoxFlat_al7qp";
-        styleBox16.ContentMarginLeft = 4.0f;
-        styleBox16.ContentMarginTop = 4.0f;
-        styleBox16.ContentMarginRight = 4.0f;
-        styleBox16.ContentMarginBottom = 4.0f;
-        styleBox16.BgColor = new Color(0.28235295f, 0.28235295f, 0.28235295f, 0.6f);
-        styleBox16.CornerRadiusTopLeft = 3;
-        styleBox16.CornerRadiusTopRight = 3;
-        styleBox16.CornerRadiusBottomRight = 3;
-        styleBox16.CornerRadiusBottomLeft = 3;
-        styleBox16.CornerDetail = 5;
+        var styleBox16 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_al7qp",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(0.28235295f, 0.28235295f, 0.28235295f, 0.6f),
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("hover", "NavigationArrowButton", styleBox16);
         theme.SetStylebox("normal", "NavigationArrowButton", styleBox15);
 
-        var styleBox17 = new StyleBoxFlat();
-        styleBox17.ResourceSceneUniqueId = "StyleBoxFlat_qn0n3";
-        styleBox17.ContentMarginLeft = 4.0f;
-        styleBox17.ContentMarginTop = 4.0f;
-        styleBox17.ContentMarginRight = 4.0f;
-        styleBox17.ContentMarginBottom = 4.0f;
-        styleBox17.BgColor = new Color(0.09411765f, 0.09411765f, 0.09411765f, 0.6f);
-        styleBox17.CornerRadiusTopLeft = 3;
-        styleBox17.CornerRadiusTopRight = 3;
-        styleBox17.CornerRadiusBottomRight = 3;
-        styleBox17.CornerRadiusBottomLeft = 3;
-        styleBox17.CornerDetail = 5;
+        var styleBox17 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_qn0n3",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(0.09411765f, 0.09411765f, 0.09411765f, 0.6f),
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("pressed", "NavigationArrowButton", styleBox17);
 
-        var styleBox18 = new StyleBoxFlat();
-        styleBox18.ResourceSceneUniqueId = "StyleBoxFlat_6t7l7";
-        styleBox18.BgColor = whiteAt3Percent;
-        styleBox18.BorderWidthLeft = 1;
-        styleBox18.BorderWidthTop = 1;
-        styleBox18.BorderWidthRight = 1;
-        styleBox18.BorderWidthBottom = 1;
-        styleBox18.BorderColor = whiteAt10Percent;
+        var styleBox18 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_6t7l7",
+	        BgColor = whiteAt3Percent,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt10Percent
+        };
         theme.SetStylebox("panel", "Panel", styleBox18);
 
-        var styleBox19 = new StyleBoxFlat();
-        styleBox19.ResourceSceneUniqueId = "StyleBoxFlat_6e8is";
-        styleBox19.ContentMarginLeft = 0.0f;
-        styleBox19.ContentMarginTop = 0.0f;
-        styleBox19.ContentMarginRight = 0.0f;
-        styleBox19.ContentMarginBottom = 0.0f;
-        styleBox19.BgColor = whiteAt3Percent;
-        styleBox19.BorderWidthLeft = 1;
-        styleBox19.BorderWidthTop = 1;
-        styleBox19.BorderWidthRight = 1;
-        styleBox19.BorderWidthBottom = 1;
-        styleBox19.BorderColor = whiteAt10Percent;
-        styleBox19.CornerRadiusTopLeft = 8;
-        styleBox19.CornerRadiusTopRight = 8;
-        styleBox19.CornerRadiusBottomRight = 8;
-        styleBox19.CornerRadiusBottomLeft = 8;
+        var styleBox19 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_6e8is",
+	        ContentMarginLeft = 0.0f,
+	        ContentMarginTop = 0.0f,
+	        ContentMarginRight = 0.0f,
+	        ContentMarginBottom = 0.0f,
+	        BgColor = whiteAt3Percent,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt10Percent,
+	        CornerRadiusTopLeft = 8,
+	        CornerRadiusTopRight = 8,
+	        CornerRadiusBottomRight = 8,
+	        CornerRadiusBottomLeft = 8
+        };
         theme.SetStylebox("panel", "PanelContainer", styleBox19);
 
-        var styleBox20 = new StyleBoxFlat();
-        styleBox20.ResourceSceneUniqueId = "StyleBoxFlat_amw38";
-        styleBox20.BgColor = new Color(0.1764706f, 0.1764706f, 0.1764706f, 1f);
-        styleBox20.CornerRadiusTopLeft = 5;
-        styleBox20.CornerRadiusTopRight = 5;
-        styleBox20.CornerRadiusBottomRight = 5;
-        styleBox20.CornerRadiusBottomLeft = 5;
-        styleBox20.ShadowColor = new Color(0f, 0f, 0f, 0.11764706f);
-        styleBox20.ShadowSize = 4;
+        var styleBox20 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_amw38",
+	        BgColor = new Color(0.1764706f, 0.1764706f, 0.1764706f, 1f),
+	        CornerRadiusTopLeft = 5,
+	        CornerRadiusTopRight = 5,
+	        CornerRadiusBottomRight = 5,
+	        CornerRadiusBottomLeft = 5,
+	        ShadowColor = new Color(0f, 0f, 0f, 0.11764706f),
+	        ShadowSize = 4
+        };
         theme.SetStylebox("panel", "PopupPanel", styleBox20);
         theme.SetStylebox("tab_hovered", "TabBar", styleBox6);
         theme.SetStylebox("tab_selected", "TabBar", styleBox7);
         theme.SetStylebox("tab_unselected", "TabBar", styleBox8);
 
-        var styleBox21 = new StyleBoxFlat();
-        styleBox21.ResourceSceneUniqueId = "StyleBoxFlat_bk23l";
-        styleBox21.ContentMarginLeft = 4.0f;
-        styleBox21.ContentMarginTop = 4.0f;
-        styleBox21.ContentMarginRight = 4.0f;
-        styleBox21.ContentMarginBottom = 4.0f;
-        styleBox21.BgColor = whiteAt75Percent;
-        styleBox21.DrawCenter = false;
-        styleBox21.CornerRadiusTopLeft = 3;
-        styleBox21.CornerRadiusTopRight = 3;
-        styleBox21.CornerRadiusBottomRight = 3;
-        styleBox21.CornerRadiusBottomLeft = 3;
-        styleBox21.CornerDetail = 5;
-        styleBox21.ExpandMarginLeft = 2.0f;
-        styleBox21.ExpandMarginTop = 2.0f;
-        styleBox21.ExpandMarginRight = 2.0f;
-        styleBox21.ExpandMarginBottom = 2.0f;
+        var styleBox21 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_bk23l",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt75Percent,
+	        DrawCenter = false,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5,
+	        ExpandMarginLeft = 2.0f,
+	        ExpandMarginTop = 2.0f,
+	        ExpandMarginRight = 2.0f,
+	        ExpandMarginBottom = 2.0f
+        };
         theme.SetStylebox("focus", "Terminal", styleBox21);
 
-        var styleBox22 = new StyleBoxFlat();
-        styleBox22.ResourceSceneUniqueId = "StyleBoxFlat_5srvn";
-        styleBox22.ContentMarginLeft = 4.0f;
-        styleBox22.ContentMarginTop = 4.0f;
-        styleBox22.ContentMarginRight = 4.0f;
-        styleBox22.ContentMarginBottom = 4.0f;
-        styleBox22.BgColor = translucentDarkBackground;
-        styleBox22.DrawCenter = false;
-        styleBox22.BorderColor = new Color(0f, 0f, 0f, 0.6f);
-        styleBox22.CornerRadiusTopLeft = 3;
-        styleBox22.CornerRadiusTopRight = 3;
-        styleBox22.CornerRadiusBottomRight = 3;
-        styleBox22.CornerRadiusBottomLeft = 3;
-        styleBox22.CornerDetail = 5;
+        var styleBox22 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_5srvn",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = translucentDarkBackground,
+	        DrawCenter = false,
+	        BorderColor = new Color(0f, 0f, 0f, 0.6f),
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
         theme.SetStylebox("normal", "Terminal", styleBox22);
 
-        var styleBox23 = new StyleBoxFlat();
-        styleBox23.ResourceSceneUniqueId = "StyleBoxFlat_yqdk6";
-        styleBox23.ContentMarginLeft = 4.0f;
-        styleBox23.ContentMarginTop = 4.0f;
-        styleBox23.ContentMarginRight = 4.0f;
-        styleBox23.ContentMarginBottom = 4.0f;
-        styleBox23.BgColor = new Color(1f, 1f, 1f, 0.72156864f);
-        styleBox23.DrawCenter = false;
-        styleBox23.BorderWidthLeft = 1;
-        styleBox23.BorderWidthTop = 1;
-        styleBox23.BorderWidthRight = 1;
-        styleBox23.BorderWidthBottom = 1;
-        styleBox23.BorderColor = new Color(1f, 1f, 1f, 0.5686275f);
-        styleBox23.CornerRadiusTopLeft = 3;
-        styleBox23.CornerRadiusTopRight = 3;
-        styleBox23.CornerRadiusBottomRight = 3;
-        styleBox23.CornerRadiusBottomLeft = 3;
-        styleBox23.CornerDetail = 5;
-        styleBox23.ExpandMarginLeft = 1.0f;
-        styleBox23.ExpandMarginTop = 1.0f;
-        styleBox23.ExpandMarginRight = 1.0f;
-        styleBox23.ExpandMarginBottom = 1.0f;
+        var styleBox23 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_yqdk6",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(1f, 1f, 1f, 0.72156864f),
+	        DrawCenter = false,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = new Color(1f, 1f, 1f, 0.5686275f),
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5,
+	        ExpandMarginLeft = 1.0f,
+	        ExpandMarginTop = 1.0f,
+	        ExpandMarginRight = 1.0f,
+	        ExpandMarginBottom = 1.0f
+        };
         theme.SetStylebox("cursor", "Tree", styleBox23);
         theme.SetStylebox("cursor_unfocused", "Tree", styleBox23);
 
-        var styleBox24 = new StyleBoxFlat();
-        styleBox24.ResourceSceneUniqueId = "StyleBoxFlat_un4ka";
-        styleBox24.ContentMarginLeft = 4.0f;
-        styleBox24.ContentMarginTop = 4.0f;
-        styleBox24.ContentMarginRight = 4.0f;
-        styleBox24.ContentMarginBottom = 4.0f;
-        styleBox24.BgColor = whiteAt12Percent;
-        styleBox24.CornerRadiusTopLeft = 10;
-        styleBox24.CornerRadiusTopRight = 10;
-        styleBox24.CornerRadiusBottomRight = 10;
-        styleBox24.CornerRadiusBottomLeft = 10;
-        styleBox24.CornerDetail = 6;
+        var styleBox24 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_un4ka",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt12Percent,
+	        CornerRadiusTopLeft = 10,
+	        CornerRadiusTopRight = 10,
+	        CornerRadiusBottomRight = 10,
+	        CornerRadiusBottomLeft = 10,
+	        CornerDetail = 6
+        };
         theme.SetStylebox("grabber", "VScrollBar", styleBox24);
 
-        var styleBox25 = new StyleBoxFlat();
-        styleBox25.ResourceSceneUniqueId = "StyleBoxFlat_vru7m";
-        styleBox25.ContentMarginLeft = 4.0f;
-        styleBox25.ContentMarginTop = 4.0f;
-        styleBox25.ContentMarginRight = 4.0f;
-        styleBox25.ContentMarginBottom = 4.0f;
-        styleBox25.BgColor = new Color(1f, 1f, 1f, 0.2509804f);
-        styleBox25.CornerRadiusTopLeft = 10;
-        styleBox25.CornerRadiusTopRight = 10;
-        styleBox25.CornerRadiusBottomRight = 10;
-        styleBox25.CornerRadiusBottomLeft = 10;
-        styleBox25.CornerDetail = 6;
+        var styleBox25 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_vru7m",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(1f, 1f, 1f, 0.2509804f),
+	        CornerRadiusTopLeft = 10,
+	        CornerRadiusTopRight = 10,
+	        CornerRadiusBottomRight = 10,
+	        CornerRadiusBottomLeft = 10,
+	        CornerDetail = 6
+        };
         theme.SetStylebox("grabber_highlight", "VScrollBar", styleBox25);
 
-        var styleBox26 = new StyleBoxFlat();
-        styleBox26.ResourceSceneUniqueId = "StyleBoxFlat_2wjv5";
-        styleBox26.ContentMarginLeft = 4.0f;
-        styleBox26.ContentMarginTop = 4.0f;
-        styleBox26.ContentMarginRight = 4.0f;
-        styleBox26.ContentMarginBottom = 4.0f;
-        styleBox26.BgColor = new Color(1f, 1f, 1f, 0.1882353f);
-        styleBox26.CornerRadiusTopLeft = 10;
-        styleBox26.CornerRadiusTopRight = 10;
-        styleBox26.CornerRadiusBottomRight = 10;
-        styleBox26.CornerRadiusBottomLeft = 10;
-        styleBox26.CornerDetail = 6;
+        var styleBox26 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_2wjv5",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = new Color(1f, 1f, 1f, 0.1882353f),
+	        CornerRadiusTopLeft = 10,
+	        CornerRadiusTopRight = 10,
+	        CornerRadiusBottomRight = 10,
+	        CornerRadiusBottomLeft = 10,
+	        CornerDetail = 6
+        };
         theme.SetStylebox("grabber_pressed", "VScrollBar", styleBox26);
 
-        var styleBox27 = new StyleBoxFlat();
-        styleBox27.ResourceSceneUniqueId = "StyleBoxFlat_enfp6";
-        styleBox27.ContentMarginLeft = 10.0f;
-        styleBox27.ContentMarginTop = 28.0f;
-        styleBox27.ContentMarginRight = 10.0f;
-        styleBox27.ContentMarginBottom = 8.0f;
-        styleBox27.BgColor = new Color(0.14767182f, 0.14767182f, 0.14767176f, 1f);
-        styleBox27.CornerRadiusTopLeft = 3;
-        styleBox27.CornerRadiusTopRight = 3;
-        styleBox27.CornerRadiusBottomRight = 3;
-        styleBox27.CornerRadiusBottomLeft = 3;
-        styleBox27.CornerDetail = 5;
-        styleBox27.ExpandMarginLeft = 8.0f;
-        styleBox27.ExpandMarginTop = 32.0f;
-        styleBox27.ExpandMarginRight = 8.0f;
-        styleBox27.ExpandMarginBottom = 6.0f;
+        var styleBox27 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_enfp6",
+	        ContentMarginLeft = 10.0f,
+	        ContentMarginTop = 28.0f,
+	        ContentMarginRight = 10.0f,
+	        ContentMarginBottom = 8.0f,
+	        BgColor = new Color(0.14767182f, 0.14767182f, 0.14767176f, 1f),
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5,
+	        ExpandMarginLeft = 8.0f,
+	        ExpandMarginTop = 32.0f,
+	        ExpandMarginRight = 8.0f,
+	        ExpandMarginBottom = 6.0f
+        };
         theme.SetStylebox("embedded_border", "Window", styleBox27);
 
-        var styleBox28 = new StyleBoxFlat();
-        styleBox28.ResourceSceneUniqueId = "StyleBoxFlat_kta15";
-        styleBox28.ContentMarginLeft = 10.0f;
-        styleBox28.ContentMarginTop = 28.0f;
-        styleBox28.ContentMarginRight = 10.0f;
-        styleBox28.ContentMarginBottom = 8.0f;
-        styleBox28.BgColor = new Color(0.10747979f, 0.107479714f, 0.10747973f, 1f);
-        styleBox28.CornerRadiusTopLeft = 3;
-        styleBox28.CornerRadiusTopRight = 3;
-        styleBox28.CornerRadiusBottomRight = 3;
-        styleBox28.CornerRadiusBottomLeft = 3;
-        styleBox28.CornerDetail = 5;
-        styleBox28.ExpandMarginLeft = 8.0f;
-        styleBox28.ExpandMarginTop = 32.0f;
-        styleBox28.ExpandMarginRight = 8.0f;
-        styleBox28.ExpandMarginBottom = 6.0f;
+        var styleBox28 = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_kta15",
+	        ContentMarginLeft = 10.0f,
+	        ContentMarginTop = 28.0f,
+	        ContentMarginRight = 10.0f,
+	        ContentMarginBottom = 8.0f,
+	        BgColor = new Color(0.10747979f, 0.107479714f, 0.10747973f, 1f),
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5,
+	        ExpandMarginLeft = 8.0f,
+	        ExpandMarginTop = 32.0f,
+	        ExpandMarginRight = 8.0f,
+	        ExpandMarginBottom = 6.0f
+        };
         theme.SetStylebox("embedded_unfocused_border", "Window", styleBox28);
         theme.SetColor("completion_background_color", "CodeEdit", new Color(1f, 1f, 1f, 0f));
         theme.SetColor("completion_selected_color", "CodeEdit", new Color(0.18039216f, 0.2627451f, 0.43137255f, 1f));
