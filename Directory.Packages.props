@@ -17,8 +17,8 @@
     <PackageVersion Include="ICSharpCode.Decompiler" Version="10.1.1.8388" />
     <PackageVersion Include="Krafs.Publicizer" Version="2.3.0" />
     <PackageVersion Include="LibGit2Sharp" Version="0.32.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Build.Locator" Version="1.10.12" />
 
     <PackageVersion Include="Microsoft.Build" Version="18.9.0-preview-26325-102" />
@@ -43,10 +43,10 @@
 
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.661903" />
     <PackageVersion Include="Microsoft.DotNet.Arcade.Sdk" Version="9.0.0-beta.24372.7" />
-    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="10.0.10" />
     <PackageVersion Include="Microsoft.TemplateEngine.IDE" Version="10.0.300" />
     <PackageVersion Include="Microsoft.TemplateSearch.Common" Version="10.0.300" />
     <PackageVersion Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" Version="18.0.10427.1" />
@@ -76,7 +76,7 @@
   </ItemGroup>
   <ItemGroup Label="Pinned Transitive Dependencies">
     <PackageVersion Include="Microsoft.CodeAnalysis.Remote.ServiceHub" Version="5.9.0-1.26325.102" />
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.8" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
     <PackageVersion Include="MessagePack" Version="2.5.302" />
   </ItemGroup>
 </Project>
