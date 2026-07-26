@@ -29,7 +29,7 @@ public partial class IdeWindow : Control
     {
         GD.Print("IdeWindow _Ready called");
         //this.DiffTheme();
-        //this.GenerateDarkTheme();
+        //this.GenerateThemes();
         ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
         ResourceLoader.LoadThreadedRequest(IdeRootScenePath);
         SetMaxFpsForMonitor();
