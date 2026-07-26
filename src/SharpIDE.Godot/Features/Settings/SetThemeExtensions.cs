@@ -6,7 +6,7 @@ namespace SharpIDE.Godot.Features.Settings;
 public static class SetThemeExtensions
 {
     public static readonly Theme LightTheme = ResourceLoader.Load<Theme>("uid://dc7l6bjhn61i5");
-    public static readonly Color LightThemeClearColor = new Color("fdfdfd");
+    public static readonly Color LightThemeClearColor = new Color("ffffff");
     public static readonly Theme DarkTheme = ResourceLoader.Load<Theme>("uid://epmt8kq6efrs");
     public static readonly Color DarkThemeClearColor = new Color("121314");
 
