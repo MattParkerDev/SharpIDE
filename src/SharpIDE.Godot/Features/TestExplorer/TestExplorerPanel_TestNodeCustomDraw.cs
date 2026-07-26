@@ -18,6 +18,7 @@ public partial class TestExplorerPanel
 
 		var displayName = testNode.LocationMethod;
 		var executionState = testNode.ExecutionState;
+		Guard.Against.Null(executionState);
 
 		const float padding = 4.0f;
 		const float spacing = 6.0f;
