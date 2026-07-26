@@ -3,6 +3,7 @@ using Godot;
 using Microsoft.Extensions.Hosting;
 using NuGet.Versioning;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Godot.Features.Common;
 using SharpIDE.Godot.Features.IdeSettings;
 using SharpIDE.Godot.Features.Settings;
 using SharpIDE.Godot.Features.SlnPicker;
@@ -23,10 +24,11 @@ public partial class IdeWindow : Control
 
     private IdeRoot? _ideRoot;
     private SlnPicker? _slnPicker;
-    
+
     public override void _Ready()
     {
         GD.Print("IdeWindow _Ready called");
+        //this.DiffTheme();
         ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
         ResourceLoader.LoadThreadedRequest(IdeRootScenePath);
         SetMaxFpsForMonitor();
@@ -43,7 +45,7 @@ public partial class IdeWindow : Control
         //GetWindow().SetMinSize(new Vector2I(1152, 648));
         Callable.From(() => PickSolution(true)).CallDeferred();
     }
-    
+
     public override void _ExitTree()
     {
         AppStateLoader.SaveAppStateToConfigFile(Singletons.AppState);
@@ -64,7 +66,7 @@ public partial class IdeWindow : Control
         GD.Print($"Detected display refresh rate: {refreshRate} Hz, setting max FPS to {refreshRateBelowCapRoundedDownToInt} Hz");
         Engine.MaxFps = refreshRateBelowCapRoundedDownToInt;
     }
-    
+
     private void UpdateGlobalThemesFromAppState()
     {
         SetThemeExtensions.EditorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
@@ -90,7 +92,7 @@ public partial class IdeWindow : Control
         var theme = Singletons.AppState.IdeSettings.Theme;
         this.SetIdeTheme(theme);
     }
-    
+
     public void PickSolution(bool fullscreen = false)
     {
         if (_slnPicker is not null) throw new InvalidOperationException("Solution picker is already active");
@@ -135,7 +137,7 @@ public partial class IdeWindow : Control
             }
             recentSln ??= new RecentSln { FilePath = slnPath, Name = Path.GetFileName(slnPath)};
             Singletons.AppState.RecentSlns.Add(recentSln);
-            
+
             await this.InvokeAsync(() =>
             {
                 if (fullscreen is false) _slnPicker.GetParent<Window>().Hide();
@@ -148,7 +150,7 @@ public partial class IdeWindow : Control
                     _ideRoot.QueueFree();
                 }
                 else
-                { 
+                {
                     GetWindow().Mode = Window.ModeEnum.Maximized;
                 }
                 _ideRoot = ideRoot; // This has no DI services, until it is added to the scene tree

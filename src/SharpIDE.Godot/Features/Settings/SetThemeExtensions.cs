@@ -5,10 +5,10 @@ namespace SharpIDE.Godot.Features.Settings;
 
 public static class SetThemeExtensions
 {
-    private static readonly Theme LightTheme = ResourceLoader.Load<Theme>("uid://dc7l6bjhn61i5");
-    private static readonly Color LightThemeClearColor = new Color("fdfdfd");
-    private static readonly Theme DarkTheme = ResourceLoader.Load<Theme>("uid://epmt8kq6efrs");
-    private static readonly Color DarkThemeClearColor = new Color("121314");
+    public static readonly Theme LightTheme = ResourceLoader.Load<Theme>("uid://dc7l6bjhn61i5");
+    public static readonly Color LightThemeClearColor = new Color("fdfdfd");
+    public static readonly Theme DarkTheme = ResourceLoader.Load<Theme>("uid://epmt8kq6efrs");
+    public static readonly Color DarkThemeClearColor = new Color("121314");
 
     public static Font EditorDefaultFont { get; set; } = null!;
     public static int EditorDefaultFontSize { get; set; } = -1;
