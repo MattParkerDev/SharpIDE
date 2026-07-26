@@ -28,7 +28,7 @@ content_margin_left = 4.0
 content_margin_top = 4.0
 content_margin_right = 4.0
 content_margin_bottom = 4.0
-bg_color = Color(1, 1, 1, 0.030000001)
+bg_color = Color(1, 1, 1, 0.03137255)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -180,6 +180,54 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_un4ka"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.1254902)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vru7m"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.2509804)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2wjv5"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.1882353)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_en7mt"]
+content_margin_left = 0.0
+content_margin_top = 4.0
+content_margin_right = 0.0
+content_margin_bottom = 4.0
+draw_center = false
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 6
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_njudc"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -261,7 +309,7 @@ corner_radius_bottom_left = 3
 corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6t7l7"]
-bg_color = Color(1, 1, 1, 0.030000001)
+bg_color = Color(1, 1, 1, 0.03137255)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -273,7 +321,7 @@ content_margin_left = 0.0
 content_margin_top = 0.0
 content_margin_right = 0.0
 content_margin_bottom = 0.0
-bg_color = Color(1, 1, 1, 0.030000001)
+bg_color = Color(1, 1, 1, 0.03137255)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -346,36 +394,12 @@ expand_margin_top = 1.0
 expand_margin_right = 1.0
 expand_margin_bottom = 1.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_un4ka"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xvfqr"]
 content_margin_left = 4.0
-content_margin_top = 4.0
+content_margin_top = 0.0
 content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(1, 1, 1, 0.1254902)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-corner_detail = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vru7m"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(1, 1, 1, 0.2509804)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-corner_detail = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2wjv5"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(1, 1, 1, 0.1882353)
+content_margin_bottom = 0.0
+draw_center = false
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
@@ -451,6 +475,10 @@ Gray700Label/base_type = &"Label"
 Gray700Label/colors/font_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
 Gray800Label/base_type = &"Label"
 Gray800Label/colors/font_color = Color(0.9137255, 0.9137255, 0.9137255, 1)
+HScrollBar/styles/grabber = SubResource("StyleBoxFlat_un4ka")
+HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_vru7m")
+HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_2wjv5")
+HScrollBar/styles/scroll = SubResource("StyleBoxFlat_en7mt")
 IdeSidebarButton/base_type = &"Button"
 IdeSidebarButton/colors/font_color = Color(0.54901963, 0.54901963, 0.54901963, 1)
 IdeSidebarButton/colors/font_focus_color = Color(0.7490196, 0.7490196, 0.7490196, 1)
@@ -513,5 +541,6 @@ Tree/styles/cursor_unfocused = SubResource("StyleBoxFlat_yqdk6")
 VScrollBar/styles/grabber = SubResource("StyleBoxFlat_un4ka")
 VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_vru7m")
 VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_2wjv5")
+VScrollBar/styles/scroll = SubResource("StyleBoxFlat_xvfqr")
 Window/styles/embedded_border = SubResource("StyleBoxFlat_enfp6")
 Window/styles/embedded_unfocused_border = SubResource("StyleBoxFlat_kta15")

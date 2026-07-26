@@ -23,6 +23,8 @@ public static partial class ThemeGenerator
         var navigationIconColor = colors.NavigationIcon;
         var white = colors.White;
 
+        var isLightTheme = lightOrDark is 1;
+
         var theme = new Theme();
         theme.DefaultFont = ResourceLoader.Load<Font>("uid://38igu11xwba6");
         theme.SetTypeVariation("CodeEditorTabContainer", "TabContainer");
@@ -90,7 +92,7 @@ public static partial class ThemeGenerator
 	        BorderWidthTop = 1,
 	        BorderWidthRight = 1,
 	        BorderWidthBottom = 1,
-	        BorderColor = whiteAt6Percent,
+	        BorderColor = colors.ButtonPressedBorder,
 	        BorderBlend = true,
 	        CornerRadiusTopLeft = 3,
 	        CornerRadiusTopRight = 3,
@@ -485,7 +487,7 @@ public static partial class ThemeGenerator
 	        ContentMarginTop = 4.0f,
 	        ContentMarginRight = 4.0f,
 	        ContentMarginBottom = 4.0f,
-	        BgColor = whiteAt12Percent,
+	        BgColor = colors.HighContrastBackground,
 	        CornerRadiusTopLeft = 10,
 	        CornerRadiusTopRight = 10,
 	        CornerRadiusBottomRight = 10,
@@ -493,6 +495,7 @@ public static partial class ThemeGenerator
 	        CornerDetail = 6
         };
         theme.SetStylebox("grabber", "VScrollBar", vScrollBar_Grabber);
+        theme.SetStylebox("grabber", "HScrollBar", vScrollBar_Grabber);
 
         var vScrollBar_GrabberHighlight = new StyleBoxFlat
         {
@@ -509,6 +512,7 @@ public static partial class ThemeGenerator
 	        CornerDetail = 6
         };
         theme.SetStylebox("grabber_highlight", "VScrollBar", vScrollBar_GrabberHighlight);
+        theme.SetStylebox("grabber_highlight", "HScrollBar", vScrollBar_GrabberHighlight);
 
         var vScrollBar_GrabberPressed = new StyleBoxFlat
         {
@@ -525,6 +529,39 @@ public static partial class ThemeGenerator
 	        CornerDetail = 6
         };
         theme.SetStylebox("grabber_pressed", "VScrollBar", vScrollBar_GrabberPressed);
+        theme.SetStylebox("grabber_pressed", "HScrollBar", vScrollBar_GrabberPressed);
+
+        var vScrollBar_ScrollBackground = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_xvfqr",
+	        DrawCenter = false,
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 0f,
+	        CornerRadiusTopLeft = 10,
+	        CornerRadiusTopRight = 10,
+	        CornerRadiusBottomRight = 10,
+	        CornerRadiusBottomLeft = 10,
+	        CornerDetail = 6
+        };
+        theme.SetStylebox("scroll", "VScrollBar", vScrollBar_ScrollBackground);
+
+        var hScrollBar_ScrollBackground = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_en7mt",
+	        DrawCenter = false,
+	        ContentMarginLeft = 0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 0f,
+	        ContentMarginBottom = 4.0f,
+	        CornerRadiusTopLeft = 10,
+	        CornerRadiusTopRight = 10,
+	        CornerRadiusBottomRight = 10,
+	        CornerRadiusBottomLeft = 10,
+	        CornerDetail = 6
+        };
+        theme.SetStylebox("scroll", "HScrollBar", hScrollBar_ScrollBackground);
 
         var window_EmbeddedBorder = new StyleBoxFlat
         {
@@ -533,7 +570,7 @@ public static partial class ThemeGenerator
 	        ContentMarginTop = 28.0f,
 	        ContentMarginRight = 10.0f,
 	        ContentMarginBottom = 8.0f,
-	        BgColor = colors.WindowBackground,
+	        BgColor = colors.WindowFrame,
 	        CornerRadiusTopLeft = 3,
 	        CornerRadiusTopRight = 3,
 	        CornerRadiusBottomRight = 3,
@@ -553,7 +590,7 @@ public static partial class ThemeGenerator
 	        ContentMarginTop = 28.0f,
 	        ContentMarginRight = 10.0f,
 	        ContentMarginBottom = 8.0f,
-	        BgColor = colors.WindowUnfocusedBackground,
+	        BgColor = colors.WindowUnfocusedFrame,
 	        CornerRadiusTopLeft = 3,
 	        CornerRadiusTopRight = 3,
 	        CornerRadiusBottomRight = 3,
@@ -614,12 +651,75 @@ public static partial class ThemeGenerator
         theme.SetColor("ansi_9_color", "Terminal", colors.Ansi9);
         theme.SetColor("background_color", "Terminal", transparent);
         theme.SetColor("foreground_color", "Terminal", colors.TerminalForeground);
+        //theme.SetColor("selection_color", "Terminal", );
+        //theme.SetColor("selected_text_color", "Terminal", );
         theme.SetFont("bold_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
         theme.SetFont("bold_italics_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
         theme.SetFont("italics_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
         theme.SetFont("normal_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
         theme.SetFontSize("font_size", "Terminal", 16);
         theme.SetConstant("IsLight1OrDark2", "ThemeInfo", lightOrDark);
+
+        if (isLightTheme)
+        {
+			theme.SetColor("caret_color", "Control", colors.ControlFont);
+			theme.SetColor("font_hover_color", "Control", colors.ControlFont);
+			theme.SetColor("font_pressed_color", "Control", colors.ControlFont);
+			theme.SetColor("font_selected_color", "Control", colors.ControlFont);
+			theme.SetColor("font_unselected_color", "Control", colors.ControlFont);
+			theme.SetColor("font_placeholder_color", "Control", colors.Gray500);
+			theme.SetColor("font_disabled_color", "Control", colors.Gray500);
+			theme.SetColor("font_hovered_color", "Control", colors.ControlFont);
+			theme.SetColor("font_hovered_selected_color", "Tree", colors.ControlFont);
+			theme.SetColor("title_color", "Window", colors.ControlFont);
+
+            var tree_Selected = new StyleBoxFlat
+            {
+	            ResourceSceneUniqueId = "StyleBoxFlat_a8yiy",
+                BgColor = colors.TreeSelectedBackground,
+                CornerRadiusTopLeft = 3,
+                CornerRadiusTopRight = 3,
+                CornerRadiusBottomRight = 3,
+                CornerRadiusBottomLeft = 3,
+                CornerDetail = 5
+            };
+            theme.SetStylebox("selected", "Tree", tree_Selected);
+            theme.SetStylebox("hovered_selected", "Tree", tree_Selected);
+
+            var tree_Hovered = new StyleBoxFlat
+            {
+	            ResourceSceneUniqueId = "StyleBoxFlat_1icbt",
+                BgColor = colors.TreeHoveredBackground,
+                CornerRadiusTopLeft = 3,
+                CornerRadiusTopRight = 3,
+                CornerRadiusBottomRight = 3,
+                CornerRadiusBottomLeft = 3,
+                CornerDetail = 5
+            };
+            theme.SetStylebox("hovered", "Tree", tree_Hovered);
+
+            var button_Disabled = new StyleBoxFlat
+            {
+	            ResourceSceneUniqueId = "StyleBoxFlat_guqd5",
+	            ContentMarginLeft = 4.0f,
+	            ContentMarginTop = 4.0f,
+	            ContentMarginRight = 4.0f,
+	            ContentMarginBottom = 4.0f,
+	            BgColor = whiteAt3Percent,
+	            BorderWidthLeft = 1,
+	            BorderWidthTop = 1,
+	            BorderWidthRight = 1,
+	            BorderWidthBottom = 1,
+	            BorderColor = whiteAt6Percent,
+	            BorderBlend = true,
+	            CornerRadiusTopLeft = 3,
+	            CornerRadiusTopRight = 3,
+	            CornerRadiusBottomRight = 3,
+	            CornerRadiusBottomLeft = 3,
+	            CornerDetail = 5
+            };
+            theme.SetStylebox("disabled", "Button", button_Disabled);
+        }
 
         return theme;
     }
