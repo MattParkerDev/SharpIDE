@@ -34,7 +34,7 @@ public static partial class ThemeGenerator
         theme.SetTypeVariation("IdeSidebarButton", "Button");
         theme.SetTypeVariation("NavigationArrowButton", "Button");
 
-        var styleBox0 = new StyleBoxFlat
+        var button_Hover = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_dwjdr",
 	        ContentMarginLeft = 4.0f,
@@ -54,9 +54,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("hover", "Button", styleBox0);
+        theme.SetStylebox("hover", "Button", button_Hover);
 
-        var styleBox1 = new StyleBoxFlat
+        var button_Normal = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_kyxro",
 	        ContentMarginLeft = 4.0f,
@@ -76,9 +76,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("normal", "Button", styleBox1);
+        theme.SetStylebox("normal", "Button", button_Normal);
 
-        var styleBox2 = new StyleBoxFlat
+        var button_Pressed = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_5v2og",
 	        ContentMarginLeft = 4.0f,
@@ -98,9 +98,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("pressed", "Button", styleBox2);
+        theme.SetStylebox("pressed", "Button", button_Pressed);
 
-        var styleBox3 = new StyleBoxFlat
+        var codeEdit_Completion = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_38n5o",
 	        BgColor = popupBackground,
@@ -120,9 +120,9 @@ public static partial class ThemeGenerator
 	        ShadowColor = new Color(0f, 0f, 0f, 0.5f),
 	        ShadowSize = 2
         };
-        theme.SetStylebox("completion", "CodeEdit", styleBox3);
+        theme.SetStylebox("completion", "CodeEdit", codeEdit_Completion);
 
-        var styleBox4 = new StyleBoxFlat
+        var codeEdit_NormalAndReadOnly = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_82udi",
 	        ContentMarginLeft = 4.0f,
@@ -138,10 +138,10 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 8,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("normal", "CodeEdit", styleBox4);
-        theme.SetStylebox("read_only", "CodeEdit", styleBox4);
+        theme.SetStylebox("normal", "CodeEdit", codeEdit_NormalAndReadOnly);
+        theme.SetStylebox("read_only", "CodeEdit", codeEdit_NormalAndReadOnly);
 
-        var styleBox5 = new StyleBoxFlat
+        var codeEditorTabContainer_Panel = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_21uq4",
 	        ContentMarginLeft = 1.0f,
@@ -151,9 +151,9 @@ public static partial class ThemeGenerator
 	        DrawCenter = false,
 	        BorderColor = codeEditBorder
         };
-        theme.SetStylebox("panel", "CodeEditorTabContainer", styleBox5);
+        theme.SetStylebox("panel", "CodeEditorTabContainer", codeEditorTabContainer_Panel);
 
-        var styleBox6 = new StyleBoxFlat
+        var tab_Hovered = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_an00s",
 	        ContentMarginLeft = 10.0f,
@@ -168,9 +168,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 6,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("tab_hovered", "CodeEditorTabContainer", styleBox6);
+        theme.SetStylebox("tab_hovered", "CodeEditorTabContainer", tab_Hovered);
 
-        var styleBox7 = new StyleBoxFlat
+        var tab_Selected = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_ua1vr",
 	        ContentMarginLeft = 10.0f,
@@ -185,9 +185,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 6,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("tab_selected", "CodeEditorTabContainer", styleBox7);
+        theme.SetStylebox("tab_selected", "CodeEditorTabContainer", tab_Selected);
 
-        var styleBox8 = new StyleBoxFlat
+        var tab_Unselected = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_ml8q5",
 	        ContentMarginLeft = 10.0f,
@@ -202,9 +202,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 6,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("tab_unselected", "CodeEditorTabContainer", styleBox8);
+        theme.SetStylebox("tab_unselected", "CodeEditorTabContainer", tab_Unselected);
 
-        var styleBox9 = new StyleBoxFlat
+        var codeEditorTabContainer_TabBarBackground = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_5oigc",
 	        ContentMarginLeft = 4.0f,
@@ -214,9 +214,9 @@ public static partial class ThemeGenerator
 	        BgColor = transparent,
 	        DrawCenter = false
         };
-        theme.SetStylebox("tabbar_background", "CodeEditorTabContainer", styleBox9);
+        theme.SetStylebox("tabbar_background", "CodeEditorTabContainer", codeEditorTabContainer_TabBarBackground);
 
-        var styleBox10 = new StyleBoxFlat
+        var editorHoverPopupPanelContainer_Panel = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_dvhtt",
 	        ContentMarginLeft = 12.0f,
@@ -240,9 +240,9 @@ public static partial class ThemeGenerator
 	        ShadowColor = new Color(0f, 0f, 0f, 0.5019608f),
 	        ShadowSize = 2
         };
-        theme.SetStylebox("panel", "EditorHoverPopupPanelContainer", styleBox10);
+        theme.SetStylebox("panel", "EditorHoverPopupPanelContainer", editorHoverPopupPanelContainer_Panel);
 
-        var styleBox11 = new StyleBoxFlat
+        var foldableContainer_TitleCollapsedPanel = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_hrgw7",
 	        ContentMarginLeft = 4.0f,
@@ -256,9 +256,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("title_collapsed_panel", "FoldableContainer", styleBox11);
+        theme.SetStylebox("title_collapsed_panel", "FoldableContainer", foldableContainer_TitleCollapsedPanel);
 
-        var styleBox12 = new StyleBoxFlat
+        var ideSidebarButton_HoverAndPressed = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_njudc",
 	        ContentMarginLeft = 4.0f,
@@ -272,9 +272,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 6,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("hover", "IdeSidebarButton", styleBox12);
+        theme.SetStylebox("hover", "IdeSidebarButton", ideSidebarButton_HoverAndPressed);
 
-        var styleBox13 = new StyleBoxFlat
+        var ideSidebarButton_Normal = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_dsk6k",
 	        ContentMarginLeft = 4.0f,
@@ -289,10 +289,10 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 6,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("normal", "IdeSidebarButton", styleBox13);
-        theme.SetStylebox("pressed", "IdeSidebarButton", styleBox12);
+        theme.SetStylebox("normal", "IdeSidebarButton", ideSidebarButton_Normal);
+        theme.SetStylebox("pressed", "IdeSidebarButton", ideSidebarButton_HoverAndPressed);
 
-        var styleBox14 = new StyleBoxFlat
+        var lineEdit_Normal = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_4dj27",
 	        ContentMarginLeft = 4.0f,
@@ -312,9 +312,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("normal", "LineEdit", styleBox14);
+        theme.SetStylebox("normal", "LineEdit", lineEdit_Normal);
 
-        var styleBox15 = new StyleBoxFlat
+        var navigationArrowButton_DisabledAndNormal = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_ch0dy",
 	        ContentMarginLeft = 4.0f,
@@ -329,9 +329,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("disabled", "NavigationArrowButton", styleBox15);
+        theme.SetStylebox("disabled", "NavigationArrowButton", navigationArrowButton_DisabledAndNormal);
 
-        var styleBox16 = new StyleBoxFlat
+        var navigationArrowButton_Hover = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_al7qp",
 	        ContentMarginLeft = 4.0f,
@@ -345,10 +345,10 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("hover", "NavigationArrowButton", styleBox16);
-        theme.SetStylebox("normal", "NavigationArrowButton", styleBox15);
+        theme.SetStylebox("hover", "NavigationArrowButton", navigationArrowButton_Hover);
+        theme.SetStylebox("normal", "NavigationArrowButton", navigationArrowButton_DisabledAndNormal);
 
-        var styleBox17 = new StyleBoxFlat
+        var navigationArrowButton_Pressed = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_qn0n3",
 	        ContentMarginLeft = 4.0f,
@@ -362,9 +362,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("pressed", "NavigationArrowButton", styleBox17);
+        theme.SetStylebox("pressed", "NavigationArrowButton", navigationArrowButton_Pressed);
 
-        var styleBox18 = new StyleBoxFlat
+        var panel_Panel = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_6t7l7",
 	        BgColor = whiteAt3Percent,
@@ -374,9 +374,9 @@ public static partial class ThemeGenerator
 	        BorderWidthBottom = 1,
 	        BorderColor = whiteAt10Percent
         };
-        theme.SetStylebox("panel", "Panel", styleBox18);
+        theme.SetStylebox("panel", "Panel", panel_Panel);
 
-        var styleBox19 = new StyleBoxFlat
+        var panelContainer_Panel = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_6e8is",
 	        ContentMarginLeft = 0.0f,
@@ -394,9 +394,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomRight = 8,
 	        CornerRadiusBottomLeft = 8
         };
-        theme.SetStylebox("panel", "PanelContainer", styleBox19);
+        theme.SetStylebox("panel", "PanelContainer", panelContainer_Panel);
 
-        var styleBox20 = new StyleBoxFlat
+        var popupPanel_Panel = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_amw38",
 	        BgColor = new Color(0.1764706f, 0.1764706f, 0.1764706f, 1f),
@@ -407,12 +407,12 @@ public static partial class ThemeGenerator
 	        ShadowColor = new Color(0f, 0f, 0f, 0.11764706f),
 	        ShadowSize = 4
         };
-        theme.SetStylebox("panel", "PopupPanel", styleBox20);
-        theme.SetStylebox("tab_hovered", "TabBar", styleBox6);
-        theme.SetStylebox("tab_selected", "TabBar", styleBox7);
-        theme.SetStylebox("tab_unselected", "TabBar", styleBox8);
+        theme.SetStylebox("panel", "PopupPanel", popupPanel_Panel);
+        theme.SetStylebox("tab_hovered", "TabBar", tab_Hovered);
+        theme.SetStylebox("tab_selected", "TabBar", tab_Selected);
+        theme.SetStylebox("tab_unselected", "TabBar", tab_Unselected);
 
-        var styleBox21 = new StyleBoxFlat
+        var terminal_Focus = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_bk23l",
 	        ContentMarginLeft = 4.0f,
@@ -431,9 +431,9 @@ public static partial class ThemeGenerator
 	        ExpandMarginRight = 2.0f,
 	        ExpandMarginBottom = 2.0f
         };
-        theme.SetStylebox("focus", "Terminal", styleBox21);
+        theme.SetStylebox("focus", "Terminal", terminal_Focus);
 
-        var styleBox22 = new StyleBoxFlat
+        var terminal_Normal = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_5srvn",
 	        ContentMarginLeft = 4.0f,
@@ -449,9 +449,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 3,
 	        CornerDetail = 5
         };
-        theme.SetStylebox("normal", "Terminal", styleBox22);
+        theme.SetStylebox("normal", "Terminal", terminal_Normal);
 
-        var styleBox23 = new StyleBoxFlat
+        var tree_CursorAndCursorUnfocused = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_yqdk6",
 	        ContentMarginLeft = 4.0f,
@@ -475,10 +475,10 @@ public static partial class ThemeGenerator
 	        ExpandMarginRight = 1.0f,
 	        ExpandMarginBottom = 1.0f
         };
-        theme.SetStylebox("cursor", "Tree", styleBox23);
-        theme.SetStylebox("cursor_unfocused", "Tree", styleBox23);
+        theme.SetStylebox("cursor", "Tree", tree_CursorAndCursorUnfocused);
+        theme.SetStylebox("cursor_unfocused", "Tree", tree_CursorAndCursorUnfocused);
 
-        var styleBox24 = new StyleBoxFlat
+        var vScrollBar_Grabber = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_un4ka",
 	        ContentMarginLeft = 4.0f,
@@ -492,9 +492,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 10,
 	        CornerDetail = 6
         };
-        theme.SetStylebox("grabber", "VScrollBar", styleBox24);
+        theme.SetStylebox("grabber", "VScrollBar", vScrollBar_Grabber);
 
-        var styleBox25 = new StyleBoxFlat
+        var vScrollBar_GrabberHighlight = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_vru7m",
 	        ContentMarginLeft = 4.0f,
@@ -508,9 +508,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 10,
 	        CornerDetail = 6
         };
-        theme.SetStylebox("grabber_highlight", "VScrollBar", styleBox25);
+        theme.SetStylebox("grabber_highlight", "VScrollBar", vScrollBar_GrabberHighlight);
 
-        var styleBox26 = new StyleBoxFlat
+        var vScrollBar_GrabberPressed = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_2wjv5",
 	        ContentMarginLeft = 4.0f,
@@ -524,9 +524,9 @@ public static partial class ThemeGenerator
 	        CornerRadiusBottomLeft = 10,
 	        CornerDetail = 6
         };
-        theme.SetStylebox("grabber_pressed", "VScrollBar", styleBox26);
+        theme.SetStylebox("grabber_pressed", "VScrollBar", vScrollBar_GrabberPressed);
 
-        var styleBox27 = new StyleBoxFlat
+        var window_EmbeddedBorder = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_enfp6",
 	        ContentMarginLeft = 10.0f,
@@ -544,9 +544,9 @@ public static partial class ThemeGenerator
 	        ExpandMarginRight = 8.0f,
 	        ExpandMarginBottom = 6.0f
         };
-        theme.SetStylebox("embedded_border", "Window", styleBox27);
+        theme.SetStylebox("embedded_border", "Window", window_EmbeddedBorder);
 
-        var styleBox28 = new StyleBoxFlat
+        var window_EmbeddedUnfocusedBorder = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_kta15",
 	        ContentMarginLeft = 10.0f,
@@ -564,7 +564,7 @@ public static partial class ThemeGenerator
 	        ExpandMarginRight = 8.0f,
 	        ExpandMarginBottom = 6.0f
         };
-        theme.SetStylebox("embedded_unfocused_border", "Window", styleBox28);
+        theme.SetStylebox("embedded_unfocused_border", "Window", window_EmbeddedUnfocusedBorder);
         theme.SetColor("completion_background_color", "CodeEdit", new Color(1f, 1f, 1f, 0f));
         theme.SetColor("completion_selected_color", "CodeEdit", new Color(0.18039216f, 0.2627451f, 0.43137255f, 1f));
         theme.SetColor("current_line_color", "CodeEdit", new Color(0.05882353f, 0.05882353f, 0.05882353f, 1f));
