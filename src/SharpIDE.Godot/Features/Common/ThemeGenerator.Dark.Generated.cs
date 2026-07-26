@@ -6,6 +6,23 @@ public static partial class ThemeGenerator
 {
     private static Theme CreateDarkTheme()
     {
+        var whiteAt3Percent = new Color(1f, 1f, 1f, 0.030000001f);
+        var whiteAt6Percent = new Color(1f, 1f, 1f, 0.0627451f);
+        var whiteAt10Percent = new Color(1f, 1f, 1f, 0.101960786f);
+        var whiteAt12Percent = new Color(1f, 1f, 1f, 0.1254902f);
+        var whiteAt75Percent = new Color(1f, 1f, 1f, 0.75f);
+        var transparent = new Color(0f, 0f, 0f, 0f);
+        var translucentDarkBackground = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+        var popupBackground = new Color(0.16862746f, 0.1764706f, 0.1882353f, 1f);
+        var popupBorder = new Color(0.24313726f, 0.2509804f, 0.27058825f, 1f);
+        var codeEditBorder = new Color(0.16470589f, 0.16862746f, 0.17254902f, 1f);
+        var selectionColor = new Color(0.14117648f, 0.35686275f, 0.50980395f, 1f);
+        var lightLabelColor = new Color(0.83137256f, 0.83137256f, 0.83137256f, 1f);
+        var sidebarColor = new Color(0.54901963f, 0.54901963f, 0.54901963f, 1f);
+        var sidebarActiveColor = new Color(0.7490196f, 0.7490196f, 0.7490196f, 1f);
+        var navigationIconColor = new Color(0.74509805f, 0.74509805f, 0.74509805f, 1f);
+        var white = new Color(1f, 1f, 1f, 1f);
+
         var theme = new Theme();
         theme.DefaultFont = ResourceLoader.Load<Font>("uid://38igu11xwba6");
         theme.SetTypeVariation("CodeEditorTabContainer", "TabContainer");
@@ -23,12 +40,12 @@ public static partial class ThemeGenerator
         styleBox0.ContentMarginTop = 4.0f;
         styleBox0.ContentMarginRight = 4.0f;
         styleBox0.ContentMarginBottom = 4.0f;
-        styleBox0.BgColor = new Color(1f, 1f, 1f, 0.0627451f);
+        styleBox0.BgColor = whiteAt6Percent;
         styleBox0.BorderWidthLeft = 1;
         styleBox0.BorderWidthTop = 1;
         styleBox0.BorderWidthRight = 1;
         styleBox0.BorderWidthBottom = 1;
-        styleBox0.BorderColor = new Color(1f, 1f, 1f, 0.1254902f);
+        styleBox0.BorderColor = whiteAt12Percent;
         styleBox0.BorderBlend = true;
         styleBox0.CornerRadiusTopLeft = 3;
         styleBox0.CornerRadiusTopRight = 3;
@@ -43,12 +60,12 @@ public static partial class ThemeGenerator
         styleBox1.ContentMarginTop = 4.0f;
         styleBox1.ContentMarginRight = 4.0f;
         styleBox1.ContentMarginBottom = 4.0f;
-        styleBox1.BgColor = new Color(1f, 1f, 1f, 0.030000001f);
+        styleBox1.BgColor = whiteAt3Percent;
         styleBox1.BorderWidthLeft = 1;
         styleBox1.BorderWidthTop = 1;
         styleBox1.BorderWidthRight = 1;
         styleBox1.BorderWidthBottom = 1;
-        styleBox1.BorderColor = new Color(1f, 1f, 1f, 0.101960786f);
+        styleBox1.BorderColor = whiteAt10Percent;
         styleBox1.BorderBlend = true;
         styleBox1.CornerRadiusTopLeft = 3;
         styleBox1.CornerRadiusTopRight = 3;
@@ -68,7 +85,7 @@ public static partial class ThemeGenerator
         styleBox2.BorderWidthTop = 1;
         styleBox2.BorderWidthRight = 1;
         styleBox2.BorderWidthBottom = 1;
-        styleBox2.BorderColor = new Color(1f, 1f, 1f, 0.0627451f);
+        styleBox2.BorderColor = whiteAt6Percent;
         styleBox2.BorderBlend = true;
         styleBox2.CornerRadiusTopLeft = 3;
         styleBox2.CornerRadiusTopRight = 3;
@@ -79,12 +96,12 @@ public static partial class ThemeGenerator
 
         var styleBox3 = new StyleBoxFlat();
         styleBox3.ResourceSceneUniqueId = "StyleBoxFlat_38n5o";
-        styleBox3.BgColor = new Color(0.16862746f, 0.1764706f, 0.1882353f, 1f);
+        styleBox3.BgColor = popupBackground;
         styleBox3.BorderWidthLeft = 1;
         styleBox3.BorderWidthTop = 1;
         styleBox3.BorderWidthRight = 1;
         styleBox3.BorderWidthBottom = 1;
-        styleBox3.BorderColor = new Color(0.24313726f, 0.2509804f, 0.27058825f, 1f);
+        styleBox3.BorderColor = popupBorder;
         styleBox3.CornerRadiusTopLeft = 4;
         styleBox3.CornerRadiusTopRight = 4;
         styleBox3.CornerRadiusBottomRight = 4;
@@ -105,7 +122,7 @@ public static partial class ThemeGenerator
         styleBox4.ContentMarginBottom = 4.0f;
         styleBox4.BgColor = new Color(0.117647f, 0.117647f, 0.117647f, 1f);
         styleBox4.DrawCenter = false;
-        styleBox4.BorderColor = new Color(0.16470589f, 0.16862746f, 0.17254902f, 1f);
+        styleBox4.BorderColor = codeEditBorder;
         styleBox4.CornerRadiusTopLeft = 8;
         styleBox4.CornerRadiusTopRight = 8;
         styleBox4.CornerRadiusBottomRight = 8;
@@ -121,7 +138,7 @@ public static partial class ThemeGenerator
         styleBox5.ContentMarginRight = 1.0f;
         styleBox5.ContentMarginBottom = 1.0f;
         styleBox5.DrawCenter = false;
-        styleBox5.BorderColor = new Color(0.16470589f, 0.16862746f, 0.17254902f, 1f);
+        styleBox5.BorderColor = codeEditBorder;
         theme.SetStylebox("panel", "CodeEditorTabContainer", styleBox5);
 
         var styleBox6 = new StyleBoxFlat();
@@ -130,8 +147,8 @@ public static partial class ThemeGenerator
         styleBox6.ContentMarginTop = 4.0f;
         styleBox6.ContentMarginRight = 10.0f;
         styleBox6.ContentMarginBottom = 4.0f;
-        styleBox6.BgColor = new Color(1f, 1f, 1f, 0.1254902f);
-        styleBox6.BorderColor = new Color(1f, 1f, 1f, 0.75f);
+        styleBox6.BgColor = whiteAt12Percent;
+        styleBox6.BorderColor = whiteAt75Percent;
         styleBox6.CornerRadiusTopLeft = 6;
         styleBox6.CornerRadiusTopRight = 6;
         styleBox6.CornerRadiusBottomRight = 6;
@@ -145,8 +162,8 @@ public static partial class ThemeGenerator
         styleBox7.ContentMarginTop = 4.0f;
         styleBox7.ContentMarginRight = 10.0f;
         styleBox7.ContentMarginBottom = 4.0f;
-        styleBox7.BgColor = new Color(1f, 1f, 1f, 0.1254902f);
-        styleBox7.BorderColor = new Color(1f, 1f, 1f, 0.75f);
+        styleBox7.BgColor = whiteAt12Percent;
+        styleBox7.BorderColor = whiteAt75Percent;
         styleBox7.CornerRadiusTopLeft = 6;
         styleBox7.CornerRadiusTopRight = 6;
         styleBox7.CornerRadiusBottomRight = 6;
@@ -160,7 +177,7 @@ public static partial class ThemeGenerator
         styleBox8.ContentMarginTop = 4.0f;
         styleBox8.ContentMarginRight = 10.0f;
         styleBox8.ContentMarginBottom = 4.0f;
-        styleBox8.BgColor = new Color(0f, 0f, 0f, 0f);
+        styleBox8.BgColor = transparent;
         styleBox8.DrawCenter = false;
         styleBox8.CornerRadiusTopLeft = 6;
         styleBox8.CornerRadiusTopRight = 6;
@@ -175,7 +192,7 @@ public static partial class ThemeGenerator
         styleBox9.ContentMarginTop = 4.0f;
         styleBox9.ContentMarginRight = 4.0f;
         styleBox9.ContentMarginBottom = 4.0f;
-        styleBox9.BgColor = new Color(0f, 0f, 0f, 0f);
+        styleBox9.BgColor = transparent;
         styleBox9.DrawCenter = false;
         theme.SetStylebox("tabbar_background", "CodeEditorTabContainer", styleBox9);
 
@@ -185,12 +202,12 @@ public static partial class ThemeGenerator
         styleBox10.ContentMarginTop = 10.0f;
         styleBox10.ContentMarginRight = 12.0f;
         styleBox10.ContentMarginBottom = 10.0f;
-        styleBox10.BgColor = new Color(0.16862746f, 0.1764706f, 0.1882353f, 1f);
+        styleBox10.BgColor = popupBackground;
         styleBox10.BorderWidthLeft = 1;
         styleBox10.BorderWidthTop = 1;
         styleBox10.BorderWidthRight = 1;
         styleBox10.BorderWidthBottom = 1;
-        styleBox10.BorderColor = new Color(0.24313726f, 0.2509804f, 0.27058825f, 1f);
+        styleBox10.BorderColor = popupBorder;
         styleBox10.CornerRadiusTopLeft = 4;
         styleBox10.CornerRadiusTopRight = 4;
         styleBox10.CornerRadiusBottomRight = 4;
@@ -209,7 +226,7 @@ public static partial class ThemeGenerator
         styleBox11.ContentMarginTop = 4.0f;
         styleBox11.ContentMarginRight = 4.0f;
         styleBox11.ContentMarginBottom = 4.0f;
-        styleBox11.BgColor = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+        styleBox11.BgColor = translucentDarkBackground;
         styleBox11.CornerRadiusTopLeft = 3;
         styleBox11.CornerRadiusTopRight = 3;
         styleBox11.CornerRadiusBottomRight = 3;
@@ -237,7 +254,7 @@ public static partial class ThemeGenerator
         styleBox13.ContentMarginTop = 4.0f;
         styleBox13.ContentMarginRight = 4.0f;
         styleBox13.ContentMarginBottom = 4.0f;
-        styleBox13.BgColor = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+        styleBox13.BgColor = translucentDarkBackground;
         styleBox13.DrawCenter = false;
         styleBox13.CornerRadiusTopLeft = 6;
         styleBox13.CornerRadiusTopRight = 6;
@@ -258,7 +275,7 @@ public static partial class ThemeGenerator
         styleBox14.BorderWidthTop = 1;
         styleBox14.BorderWidthRight = 1;
         styleBox14.BorderWidthBottom = 1;
-        styleBox14.BorderColor = new Color(1f, 1f, 1f, 0.101960786f);
+        styleBox14.BorderColor = whiteAt10Percent;
         styleBox14.BorderBlend = true;
         styleBox14.CornerRadiusTopLeft = 3;
         styleBox14.CornerRadiusTopRight = 3;
@@ -313,12 +330,12 @@ public static partial class ThemeGenerator
 
         var styleBox18 = new StyleBoxFlat();
         styleBox18.ResourceSceneUniqueId = "StyleBoxFlat_6t7l7";
-        styleBox18.BgColor = new Color(1f, 1f, 1f, 0.030000001f);
+        styleBox18.BgColor = whiteAt3Percent;
         styleBox18.BorderWidthLeft = 1;
         styleBox18.BorderWidthTop = 1;
         styleBox18.BorderWidthRight = 1;
         styleBox18.BorderWidthBottom = 1;
-        styleBox18.BorderColor = new Color(1f, 1f, 1f, 0.101960786f);
+        styleBox18.BorderColor = whiteAt10Percent;
         theme.SetStylebox("panel", "Panel", styleBox18);
 
         var styleBox19 = new StyleBoxFlat();
@@ -327,12 +344,12 @@ public static partial class ThemeGenerator
         styleBox19.ContentMarginTop = 0.0f;
         styleBox19.ContentMarginRight = 0.0f;
         styleBox19.ContentMarginBottom = 0.0f;
-        styleBox19.BgColor = new Color(1f, 1f, 1f, 0.030000001f);
+        styleBox19.BgColor = whiteAt3Percent;
         styleBox19.BorderWidthLeft = 1;
         styleBox19.BorderWidthTop = 1;
         styleBox19.BorderWidthRight = 1;
         styleBox19.BorderWidthBottom = 1;
-        styleBox19.BorderColor = new Color(1f, 1f, 1f, 0.101960786f);
+        styleBox19.BorderColor = whiteAt10Percent;
         styleBox19.CornerRadiusTopLeft = 8;
         styleBox19.CornerRadiusTopRight = 8;
         styleBox19.CornerRadiusBottomRight = 8;
@@ -359,7 +376,7 @@ public static partial class ThemeGenerator
         styleBox21.ContentMarginTop = 4.0f;
         styleBox21.ContentMarginRight = 4.0f;
         styleBox21.ContentMarginBottom = 4.0f;
-        styleBox21.BgColor = new Color(1f, 1f, 1f, 0.75f);
+        styleBox21.BgColor = whiteAt75Percent;
         styleBox21.DrawCenter = false;
         styleBox21.CornerRadiusTopLeft = 3;
         styleBox21.CornerRadiusTopRight = 3;
@@ -378,7 +395,7 @@ public static partial class ThemeGenerator
         styleBox22.ContentMarginTop = 4.0f;
         styleBox22.ContentMarginRight = 4.0f;
         styleBox22.ContentMarginBottom = 4.0f;
-        styleBox22.BgColor = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+        styleBox22.BgColor = translucentDarkBackground;
         styleBox22.DrawCenter = false;
         styleBox22.BorderColor = new Color(0f, 0f, 0f, 0.6f);
         styleBox22.CornerRadiusTopLeft = 3;
@@ -419,7 +436,7 @@ public static partial class ThemeGenerator
         styleBox24.ContentMarginTop = 4.0f;
         styleBox24.ContentMarginRight = 4.0f;
         styleBox24.ContentMarginBottom = 4.0f;
-        styleBox24.BgColor = new Color(1f, 1f, 1f, 0.1254902f);
+        styleBox24.BgColor = whiteAt12Percent;
         styleBox24.CornerRadiusTopLeft = 10;
         styleBox24.CornerRadiusTopRight = 10;
         styleBox24.CornerRadiusBottomRight = 10;
@@ -493,33 +510,33 @@ public static partial class ThemeGenerator
         theme.SetColor("completion_background_color", "CodeEdit", new Color(1f, 1f, 1f, 0f));
         theme.SetColor("completion_selected_color", "CodeEdit", new Color(0.18039216f, 0.2627451f, 0.43137255f, 1f));
         theme.SetColor("current_line_color", "CodeEdit", new Color(0.05882353f, 0.05882353f, 0.05882353f, 1f));
-        theme.SetColor("font_readonly_color", "CodeEdit", new Color(1f, 1f, 1f, 1f));
-        theme.SetColor("search_result_border_color", "CodeEdit", new Color(0.14117648f, 0.35686275f, 0.50980395f, 1f));
+        theme.SetColor("font_readonly_color", "CodeEdit", white);
+        theme.SetColor("search_result_border_color", "CodeEdit", selectionColor);
         theme.SetColor("search_result_color", "CodeEdit", new Color(0.3f, 0.3f, 0.3f, 0.4117647f));
-        theme.SetColor("selection_color", "CodeEdit", new Color(0.14117648f, 0.35686275f, 0.50980395f, 1f));
+        theme.SetColor("selection_color", "CodeEdit", selectionColor);
         theme.SetFont("font", "CodeEdit", ResourceLoader.Load<Font>("uid://cctwlwcoycek7"));
         theme.SetFontSize("font_size", "CodeEdit", 18);
         theme.SetColor("font_color", "Control", new Color(0.98039216f, 1f, 1f, 0.77254903f));
-        theme.SetColor("collapsed_font_color", "FoldableContainer", new Color(0.83137256f, 0.83137256f, 0.83137256f, 1f));
-        theme.SetColor("font_color", "FoldableContainer", new Color(0.83137256f, 0.83137256f, 0.83137256f, 1f));
+        theme.SetColor("collapsed_font_color", "FoldableContainer", lightLabelColor);
+        theme.SetColor("font_color", "FoldableContainer", lightLabelColor);
         theme.SetColor("font_color", "Gray500Label", new Color(0.5137255f, 0.5137255f, 0.5137255f, 1f));
         theme.SetColor("font_color", "Gray600Label", new Color(0.67058825f, 0.67058825f, 0.67058825f, 1f));
-        theme.SetColor("font_color", "Gray700Label", new Color(0.83137256f, 0.83137256f, 0.83137256f, 1f));
+        theme.SetColor("font_color", "Gray700Label", lightLabelColor);
         theme.SetColor("font_color", "Gray800Label", new Color(0.9137255f, 0.9137255f, 0.9137255f, 1f));
-        theme.SetColor("font_color", "IdeSidebarButton", new Color(0.54901963f, 0.54901963f, 0.54901963f, 1f));
-        theme.SetColor("font_focus_color", "IdeSidebarButton", new Color(0.7490196f, 0.7490196f, 0.7490196f, 1f));
-        theme.SetColor("font_hover_color", "IdeSidebarButton", new Color(0.54901963f, 0.54901963f, 0.54901963f, 1f));
-        theme.SetColor("font_hover_pressed_color", "IdeSidebarButton", new Color(0.7490196f, 0.7490196f, 0.7490196f, 1f));
-        theme.SetColor("font_pressed_color", "IdeSidebarButton", new Color(0.7490196f, 0.7490196f, 0.7490196f, 1f));
-        theme.SetColor("icon_hover_color", "IdeSidebarButton", new Color(0.54901963f, 0.54901963f, 0.54901963f, 1f));
-        theme.SetColor("icon_hover_pressed_color", "IdeSidebarButton", new Color(0.7490196f, 0.7490196f, 0.7490196f, 1f));
-        theme.SetColor("icon_normal_color", "IdeSidebarButton", new Color(0.54901963f, 0.54901963f, 0.54901963f, 1f));
-        theme.SetColor("icon_pressed_color", "IdeSidebarButton", new Color(0.7490196f, 0.7490196f, 0.7490196f, 1f));
+        theme.SetColor("font_color", "IdeSidebarButton", sidebarColor);
+        theme.SetColor("font_focus_color", "IdeSidebarButton", sidebarActiveColor);
+        theme.SetColor("font_hover_color", "IdeSidebarButton", sidebarColor);
+        theme.SetColor("font_hover_pressed_color", "IdeSidebarButton", sidebarActiveColor);
+        theme.SetColor("font_pressed_color", "IdeSidebarButton", sidebarActiveColor);
+        theme.SetColor("icon_hover_color", "IdeSidebarButton", sidebarColor);
+        theme.SetColor("icon_hover_pressed_color", "IdeSidebarButton", sidebarActiveColor);
+        theme.SetColor("icon_normal_color", "IdeSidebarButton", sidebarColor);
+        theme.SetColor("icon_pressed_color", "IdeSidebarButton", sidebarActiveColor);
         theme.SetColor("icon_disabled_color", "NavigationArrowButton", new Color(0.45064795f, 0.45064837f, 0.45064825f, 1f));
-        theme.SetColor("icon_hover_color", "NavigationArrowButton", new Color(0.74509805f, 0.74509805f, 0.74509805f, 1f));
-        theme.SetColor("icon_hover_pressed_color", "NavigationArrowButton", new Color(0.74509805f, 0.74509805f, 0.74509805f, 1f));
-        theme.SetColor("icon_normal_color", "NavigationArrowButton", new Color(0.74509805f, 0.74509805f, 0.74509805f, 1f));
-        theme.SetColor("icon_pressed_color", "NavigationArrowButton", new Color(0.74509805f, 0.74509805f, 0.74509805f, 1f));
+        theme.SetColor("icon_hover_color", "NavigationArrowButton", navigationIconColor);
+        theme.SetColor("icon_hover_pressed_color", "NavigationArrowButton", navigationIconColor);
+        theme.SetColor("icon_normal_color", "NavigationArrowButton", navigationIconColor);
+        theme.SetColor("icon_pressed_color", "NavigationArrowButton", navigationIconColor);
         theme.SetIcon("close", "TabBar", ResourceLoader.Load<Texture2D>("uid://d0wy2vggrfgdh"));
         theme.SetColor("ansi_0_color", "Terminal", new Color(0f, 0f, 0f, 1f));
         theme.SetColor("ansi_10_color", "Terminal", new Color(0f, 1f, 0f, 1f));
@@ -527,7 +544,7 @@ public static partial class ThemeGenerator
         theme.SetColor("ansi_12_color", "Terminal", new Color(0.360784f, 0.360784f, 1f, 1f));
         theme.SetColor("ansi_13_color", "Terminal", new Color(1f, 0f, 1f, 1f));
         theme.SetColor("ansi_14_color", "Terminal", new Color(0f, 1f, 1f, 1f));
-        theme.SetColor("ansi_15_color", "Terminal", new Color(1f, 1f, 1f, 1f));
+        theme.SetColor("ansi_15_color", "Terminal", white);
         theme.SetColor("ansi_1_color", "Terminal", new Color(0.803922f, 0f, 0f, 1f));
         theme.SetColor("ansi_2_color", "Terminal", new Color(0f, 0.803922f, 0f, 1f));
         theme.SetColor("ansi_3_color", "Terminal", new Color(0.803922f, 0.803922f, 0f, 1f));
@@ -537,7 +554,7 @@ public static partial class ThemeGenerator
         theme.SetColor("ansi_7_color", "Terminal", new Color(0.898039f, 0.898039f, 0.898039f, 1f));
         theme.SetColor("ansi_8_color", "Terminal", new Color(0.498039f, 0.498039f, 0.498039f, 1f));
         theme.SetColor("ansi_9_color", "Terminal", new Color(1f, 0f, 0f, 1f));
-        theme.SetColor("background_color", "Terminal", new Color(0f, 0f, 0f, 0f));
+        theme.SetColor("background_color", "Terminal", transparent);
         theme.SetColor("foreground_color", "Terminal", new Color(0.875f, 0.875f, 0.875f, 1f));
         theme.SetFont("bold_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
         theme.SetFont("bold_italics_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
