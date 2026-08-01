@@ -17,7 +17,7 @@ public partial class ThreadsVariablesSubTab : Control
 	private readonly Texture2D _staticMembersIcon = ResourceLoader.Load<Texture2D>("uid://dudntp20myuxb");
 	private readonly Texture2D _arrayElementIcon = ResourceLoader.Load<Texture2D>("uid://cppysddplcd6d");
 	private readonly Texture2D _exceptionIcon = ResourceLoader.Load<Texture2D>("uid://c3upo3lxmgtls");
-	
+
 	private Tree _threadsTree = null!;
 	private Tree _stackFramesTree = null!;
 	private Tree _variablesTree = null!;
@@ -25,9 +25,9 @@ public partial class ThreadsVariablesSubTab : Control
 	
 	public SharpIdeProjectModel Project { get; set; } = null!;
 	// private ThreadModel? _selectedThread = null!; // null when not at a stop point
-	
+
     [Inject] private readonly RunService _runService = null!;
-    
+
     private Callable? _debuggerVariableCustomDrawCallable;
     private readonly Dictionary<TreeItem, Variable> _variableReferenceLookup = []; // primarily used for DebuggerVariableCustomDraw
 
@@ -87,6 +87,7 @@ public partial class ThreadsVariablesSubTab : Control
 		Project.ProjectStoppedRunning.Unsubscribe(ClearAllTrees);
 	}
 
+	// TODO: this should check which project was continued, like OnDebuggerExecutionStopped
 	private async Task ClearAllTrees()
 	{
 		await this.InvokeAsync(() =>
@@ -129,7 +130,7 @@ public partial class ThreadsVariablesSubTab : Control
 			}
 		});
 	}
-	
+
 	private async void OnStackFrameSelected()
 	{
 		var selectedItem = _stackFramesTree.GetSelected();
@@ -147,12 +148,12 @@ public partial class ThreadsVariablesSubTab : Control
 			}
 		});
 	}
-	
+
 	private void AddVariableToTreeItem(TreeItem parentItem, Variable variable)
 	{
 		var variableItem = _variablesTree.CreateItem(parentItem);
 		_variableReferenceLookup[variableItem] = variable;
-		
+
 		variableItem.SetMetadata(0, new Vector2I(0, variable.VariablesReference));
 		if (variable.Name is "Static members" or "Raw View")
 		{
@@ -177,6 +178,8 @@ public partial class ThreadsVariablesSubTab : Control
 
 	private async Task OnDebuggerExecutionStopped(ExecutionStopInfo stopInfo)
 	{
+		if (stopInfo.Project != Project) return;
+
 		var threads = await _runService.GetThreadsAtStopPoint();
 		await this.InvokeAsync(() =>
 		{
