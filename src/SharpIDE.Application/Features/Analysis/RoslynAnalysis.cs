@@ -653,6 +653,16 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			return [];
 		}
 
+		var allDiagnostics = speculativeSemanticModel.GetDiagnostics(null, cancellationToken);
+		var diagnostics = allDiagnostics
+			.Where(d => d.Severity is not DiagnosticSeverity.Hidden && d.Location.IsInSource)
+			.Select(d =>
+			{
+				var mappedFileLinePositionSpan = d.Location.SourceTree!.GetMappedLineSpan(d.Location.SourceSpan);
+				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
+			})
+			.ToImmutableArray();
+
 		var classifiedSpans = Classifier.GetClassifiedSpans(_workspace!.Services.SolutionServices, project, speculativeSemanticModel, new TextSpan(0, text.Length), ClassificationOptions.Default, cancellationToken);
 
 		var expressionSourceText = SourceText.From(text);
