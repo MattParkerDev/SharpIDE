@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.Completion;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.DecompiledSource;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -623,6 +624,43 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		//var classifiedSpans = await ClassifierHelper.GetClassifiedSpansAsync(document, root.FullSpan, ClassificationOptions.Default, true, cancellationToken);
 		var result = classifiedSpans.Select(s => new SharpIdeClassifiedSpan(syntaxTree.GetMappedLineSpan(s.TextSpan).Span, s)).ToImmutableArray();
 		return result;
+	}
+
+	// TODO: Untested
+	public async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetDebuggerExpression_SyntaxHighlighting(string text, SharpIdeFile fileModel, LinePosition debuggerStoppedPosition, CancellationToken cancellationToken = default)
+	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDebuggerExpression_SyntaxHighlighting)}");
+		await _solutionLoadedTcs.Task;
+		if (fileModel.IsCsharpFile is false)
+		{
+			return [];
+		}
+
+		var project = GetProjectForSharpIdeFile(fileModel);
+		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		Guard.Against.Null(document);
+
+		var sourceText = await document.GetTextAsync(cancellationToken);
+		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
+		Guard.Against.Null(semanticModel);
+
+		var stoppedPosition = sourceText.Lines.GetPosition(debuggerStoppedPosition);
+
+		var statement = SyntaxFactory.ParseStatement(text);
+
+		if (semanticModel.TryGetSpeculativeSemanticModel(stoppedPosition, statement, out var speculativeSemanticModel) is false)
+		{
+			return [];
+		}
+
+		var classifiedSpans = Classifier.GetClassifiedSpans(_workspace!.Services.SolutionServices, project, speculativeSemanticModel, new TextSpan(0, text.Length), ClassificationOptions.Default, cancellationToken);
+
+		var expressionSourceText = SourceText.From(text);
+
+		return classifiedSpans
+		   .Where(s => s.TextSpan.Start >= 0 && s.TextSpan.End <= text.Length)
+		   .Select(s => new SharpIdeClassifiedSpan(expressionSourceText.GetLinePositionSpan(s.TextSpan), s))
+		   .ToImmutableArray();
 	}
 
 	// We store the document here, so that we have the correct version of the document when we compute completions
