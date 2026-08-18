@@ -12,8 +12,8 @@ jobs:
   execute-parallel-pipeline:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
       - name: Determine If Release Necessary
         id: determine-if-release-necessary
         run: |
