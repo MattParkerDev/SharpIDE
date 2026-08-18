@@ -33,6 +33,7 @@ public partial class IdeWindow : Control
         ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
         ResourceLoader.LoadThreadedRequest(IdeRootScenePath);
         SetMaxFpsForMonitor();
+        Environment.SetEnvironmentVariable("DOTNET_DefaultDiagnosticPortSuspend", null); // Processes SharpIDE starts should not inherit this env var. (Would be present e.g. when SharpIDE is debugged from SharpIDE)
         // Godot doesn't have an easy equivalent of launchsettings.json, and we also want this to be set for published builds
         Environment.SetEnvironmentVariable("MSBUILD_PARSE_SLN_WITH_SOLUTIONPERSISTENCE", "1");
         GD.Print($"SharpIDE running on '{RuntimeInformation.FrameworkDescription}' Runtime");
