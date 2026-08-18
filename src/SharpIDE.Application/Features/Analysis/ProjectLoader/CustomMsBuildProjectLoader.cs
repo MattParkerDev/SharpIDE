@@ -38,7 +38,7 @@ public partial class CustomMsBuildProjectLoader
 		_diagnosticReporter = diagnosticReporter;
 		_loggerFactory = new Microsoft.Extensions.Logging.LoggerFactory([new DiagnosticReporterLoggerProvider(_diagnosticReporter)]);
 		_pathResolver = new PathResolver(_diagnosticReporter);
-		_projectFileExtensionRegistry = new ProjectFileExtensionRegistry(diagnosticReporter);
+		_projectFileExtensionRegistry = new ProjectFileExtensionRegistry(diagnosticReporter, null);
 
 		Properties = ImmutableDictionary.Create<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -251,6 +251,7 @@ public partial class CustomMsBuildProjectLoader
 		await using var _ = buildHostProcessManager.ConfigureAwait(false);
 
 		var projectFileInfoProvider = new BuildHostProjectFileInfoProvider(
+			_solutionServices,
 			buildHostProcessManager,
 			_projectFileExtensionRegistry,
 			_diagnosticReporter,
@@ -277,6 +278,7 @@ public partial class CustomMsBuildProjectLoader
 		await using var _ = buildHostProcessManager.ConfigureAwait(false);
 
 		var projectFileProvider = new BuildHostProjectFileInfoProvider(
+			_solutionServices,
 			buildHostProcessManager,
 			_projectFileExtensionRegistry,
 			_diagnosticReporter,
