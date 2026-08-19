@@ -79,38 +79,8 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 					debugProtocolHost.SendRequestSync(continueRequest);
 					return;
 				}
-				var additionalProperties = @event.AdditionalProperties;
-
-				string? filePath = null;
-				int? line = null;
-				int? column = null;
-				int? endLine = null;
-				int? endColumn = null;
-				DecompiledSourceInfo? decompiledSourceInfo = null;
-
-				var hasAdditionalProperties = additionalProperties?.Count is > 0;
-				if (hasAdditionalProperties)
-				{
-					filePath = additionalProperties!["source"]?["path"]!.Value<string>()!;
-					line = (additionalProperties["line"]?.Value<int>()!).Value;
-					column = (additionalProperties["column"]?.Value<int>()!).Value;
-					endLine = additionalProperties.GetValueOrDefault("endLine")?.Value<int>();
-					endColumn = additionalProperties.GetValueOrDefault("endColumn")?.Value<int>();
-					decompiledSourceInfo = additionalProperties.GetValueOrDefault("decompiledSourceInfo")?.ToObject<DecompiledSourceInfo>();
-				}
-				if (hasAdditionalProperties is false || endLine is null || endColumn is null)
-				{
-					// we need to get the top stack frame to find out where we are
-					var stackTraceRequest = new StackTraceRequest { ThreadId = @event.ThreadId!.Value, StartFrame = 0, Levels = 1 };
-					var stackTraceResponse = debugProtocolHost.SendRequestSync(stackTraceRequest);
-					var topFrame = stackTraceResponse.StackFrames.Single();
-					filePath ??= topFrame.Source.Path;
-					line ??= topFrame.Line;
-					column ??= topFrame.Column;
-					endLine ??= topFrame.EndLine;
-					endColumn ??= topFrame.EndColumn;
-				}
-				var executionStopInfo = new ExecutionStopInfo { FilePath = filePath!, StartLine = line!.Value, EndLine = endLine!.Value, StartColumn = column!.Value, EndColumn = endColumn!.Value, ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
+				var decompiledSourceInfo = @event.AdditionalProperties?.GetValueOrDefault("decompiledSourceInfo")?.ToObject<DecompiledSourceInfo>();
+				var executionStopInfo = new ExecutionStopInfo { ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
 				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 			catch (Exception e)
@@ -285,13 +255,15 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		var stackTraceResponse = debugProtocolHost.SendRequestSync(stackTraceRequest);
 		var stackFrames = stackTraceResponse.StackFrames;
 
-		var mappedStackFrames = stackFrames!.Select(frame =>
+		var mappedStackFrames = stackFrames!.Select((frame, index) =>
 		{
 			var isExternalCode = frame.Name == "[External Code]";
 			ManagedStackFrameInfo? managedStackFrameInfo = isExternalCode ? null : ParseStackFrameName(frame.Name);
 			return new StackFrameModel
 			{
 				Id = frame.Id,
+				ThreadId = threadId,
+				IsTopFrame = index is 0,
 				Name = frame.Name,
 				Line = frame.Line,
 				Column = frame.Column,

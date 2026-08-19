@@ -237,11 +237,10 @@ public partial class CodeEditorPanel : PanelContainer
 			ownsSelectionSemaphore = true;
 			_debuggerExecutionStopInfoByProject.TryGetValue(project, out var stopInfo);
 			SharpIdeFile? file;
-			if (stopInfo is { DecompiledSourceInfo: { } decompiledSourceInfo } && stopInfo.StartLine == stackFrame.Line)
+			if (stopInfo is { DecompiledSourceInfo: { } decompiledSourceInfo } && stopInfo.ThreadId == stackFrame.ThreadId && stackFrame.IsTopFrame)
 			{
 				file = await _sharpIdeMetadataAsSourceService.CreateSharpIdeFileForMetadataAsSourceForTypeFromDebuggingAsync(decompiledSourceInfo.TypeFullName, decompiledSourceInfo.Assembly.AssemblyPath, decompiledSourceInfo.Assembly.Mvid, decompiledSourceInfo.CallingUserCodeAssemblyPath, cancellationToken);
 				if (file is null) throw new InvalidOperationException($"Failed to create file for metadata as source for type {decompiledSourceInfo.TypeFullName} in assembly {decompiledSourceInfo.Assembly.AssemblyPath}.");
-				stopInfo.FilePath = file.Path;
 			}
 			else
 			{
@@ -259,9 +258,8 @@ public partial class CodeEditorPanel : PanelContainer
 				if (cancellationToken.IsCancellationRequested) return;
 				ClearExecutingLine();
 				var codeEdit = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile == file).CodeEdit;
-				var isTopStackFrame = stopInfo is not null && stopInfo.StartLine == stackFrame.Line;
-				var endLine = stackFrame.EndLine ?? (isTopStackFrame ? stopInfo!.EndLine : stackFrame.Line.Value);
-				var endColumn = stackFrame.EndColumn ?? (isTopStackFrame ? stopInfo!.EndColumn : stackFrame.Column.Value);
+				var endLine = stackFrame.EndLine ?? stackFrame.Line.Value;
+				var endColumn = stackFrame.EndColumn ?? stackFrame.Column.Value;
 				var endPosition = new LinePosition(Math.Max(line, endLine - 1), Math.Max(0, endColumn - 1));
 				codeEdit.SetExecutingTextSpanInfo(new LinePositionSpan(new LinePosition(line, column), endPosition));
 				codeEdit.SetLineAsExecuting(line, true);

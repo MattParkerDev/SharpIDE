@@ -3,6 +3,8 @@
 public class StackFrameModel
 {
 	public required int Id { get; set; }
+	public required int ThreadId { get; set; }
+	public required bool IsTopFrame { get; set; }
 	public required string Name { get; set; }
 	public required int? Line { get; set; }
 	public required int? Column { get; set; }
