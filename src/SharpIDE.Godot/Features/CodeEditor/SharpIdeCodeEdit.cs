@@ -90,6 +90,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_canvasItemRid = GetCanvasItem();
 		_cachedCurrentCaretLineColor = GetThemeColor(ThemeStringNames.CodeEdit.CurrentLineColor, GodotNodeStringNames.CodeEdit);
 		RenderingServer.Singleton.CanvasItemSetParent(_aboveCanvasItemRid.Value, _canvasItemRid);
+		InitializeCompletionPopup();
+		_symbolHoverPopup = new SymbolHoverPopup(this);
 		_findReplaceBar = GetNode<FindReplaceBar>("%FindReplaceBar");
 		_findReplaceBar.SetTextEdit(this);
 		_popupMenu.IdPressed += OnCodeFixSelected;
@@ -221,6 +223,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(SetCodeFoldingAsync);
 		_tfmOptionButton.ItemSelected -= OnTargetFrameworkSelected;
 		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
+		_completionPopup.Dispose();
+		_symbolHoverPopup.Close();
 	}
 
 	private void OnFocusEntered()
@@ -273,8 +277,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		_findReplaceBar.NeedsToCountResults = true;
 		var text = Text;
-		var pendingCompletionTrigger = _pendingCompletionTrigger;
-		_pendingCompletionTrigger = null;
+		var pendingCompletionTrigger = _completionPopup.TakePendingCompletionTrigger();
+		var pendingCompletionFilterReason = _completionPopup.TakePendingFilterReason();
 		var cursorPosition = GetCaretPosition();
 		_ = Task.GodotRun(async () =>
 		{
@@ -292,11 +296,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 					await OnCodeCompletionRequested(_completionTrigger.Value, text, cursorPosition);
 				}
 			}
-			else if (_pendingCompletionFilterReason is not null)
+			else if (pendingCompletionFilterReason is not null)
 			{
-				var filterReason = _pendingCompletionFilterReason.Value;
-				_pendingCompletionFilterReason = null;
-				await CustomFilterCodeCompletionCandidates(filterReason);
+				await CustomFilterCodeCompletionCandidates(pendingCompletionFilterReason.Value);
 			}
 			__?.Dispose();
 		});
@@ -590,23 +592,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 		if (@event.IsActionPressed(InputStringNames.Copy))
 		{
-			if (_symbolInfoRichTextLabel is not null && _symbolInfoRichTextLabel.GetSelectionFrom() is not -1)
+			if (_symbolHoverPopup.TryCopySelectedText())
 			{
-				var selectedText = _symbolInfoRichTextLabel.GetSelectedText();
-				if (!string.IsNullOrEmpty(selectedText))
-				{
-					AcceptEvent();
-					DisplayServer.ClipboardSet(selectedText);
-				}
-			}
-			else if (_diagnosticInfoRichTextLabel is not null && _diagnosticInfoRichTextLabel.GetSelectionFrom() is not -1)
-			{
-				var selectedText = _diagnosticInfoRichTextLabel.GetSelectedText();
-				if (!string.IsNullOrEmpty(selectedText))
-				{
-					AcceptEvent();
-					DisplayServer.ClipboardSet(selectedText);
-				}
+				AcceptEvent();
 			}
 		}
 		if (@event.IsActionPressed(InputStringNames.CodeEditorRemoveLine))
