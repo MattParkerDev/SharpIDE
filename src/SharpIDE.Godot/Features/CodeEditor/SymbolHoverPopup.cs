@@ -9,11 +9,16 @@ namespace SharpIDE.Godot.Features.CodeEditor;
 public sealed class SymbolHoverPopup
 {
 	private readonly CodeEdit _codeEdit;
+	private readonly bool _preferAbove;
 	private Timer? _closeTimer;
 	private RichTextLabel? _symbolInfoLabel;
 	private RichTextLabel? _diagnosticInfoLabel;
 
-	public SymbolHoverPopup(CodeEdit codeEdit) => _codeEdit = codeEdit;
+	public SymbolHoverPopup(CodeEdit codeEdit, bool preferAbove = false)
+	{
+		_codeEdit = codeEdit;
+		_preferAbove = preferAbove;
+	}
 
 	public void Show(ISymbol? symbol, LinePositionSpan? symbolSpan, SharpIdeDiagnostic? diagnostic, LinePosition hoveredPosition)
 	{
@@ -91,9 +96,13 @@ public sealed class SymbolHoverPopup
 		var rightEdge = _codeEdit.GetViewport().GetVisibleRect().Size.X;
 		content.CustomMaximumSize = new Vector2(Math.Max(0, rightEdge - globalMousePosition.X - 20), -1);
 		tooltipWindow.AddChild(content);
-		tooltipWindow.ChildControlsChanged();
 		_codeEdit.AddChild(tooltipWindow);
-		tooltipWindow.Position = new Vector2I((int)globalMousePosition.X, (int)anchorGlobalPosition.Y + lineHeight);
+		tooltipWindow.ChildControlsChanged();
+		tooltipWindow.ResetSize();
+		var tooltipY = _preferAbove
+			? (int)anchorGlobalPosition.Y - tooltipWindow.Size.Y
+			: (int)anchorGlobalPosition.Y + lineHeight;
+		tooltipWindow.Position = new Vector2I((int)globalMousePosition.X, tooltipY);
 		hoverBridgeWindow.Popup();
 		tooltipWindow.Popup();
 		hoverBridgeWindow.UpdateMouseCursorState();

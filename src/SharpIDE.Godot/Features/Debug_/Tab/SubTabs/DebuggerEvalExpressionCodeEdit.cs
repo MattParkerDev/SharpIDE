@@ -52,7 +52,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		var completionDescriptionLabel = completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
 		_completionPopup = new CodeCompletionPopup(this, _aboveCanvasItemRid, completionDescriptionWindow, completionDescriptionLabel, _syntaxHighlighter, GetCompletionDescriptionAsync,
 			trigger => QueueCompletionRequest(trigger, checkTrigger: false), ApplyCompletion, preferAbove: true);
-		_symbolHoverPopup = new SymbolHoverPopup(this);
+		_symbolHoverPopup = new SymbolHoverPopup(this, preferAbove: true);
 		TextChanged += OnTextChanged;
 		SymbolHovered += (symbol, line, column) => _ = Task.GodotRun(() => OnSymbolHovered(symbol, line, column));
 		SymbolValidate += _ => SetSymbolLookupWordAsValid(true);
