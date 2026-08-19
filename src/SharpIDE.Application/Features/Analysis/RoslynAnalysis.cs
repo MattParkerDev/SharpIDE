@@ -626,51 +626,22 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return result;
 	}
 
-	// TODO: Untested
-	public async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetDebuggerExpression_SyntaxHighlighting(string text, SharpIdeFile fileModel, LinePosition debuggerStoppedPosition, CancellationToken cancellationToken = default)
+	public async Task<DebuggerExpressionIntelliSenseSession?> CreateDebuggerExpressionIntelliSenseSessionAsync(
+		SharpIdeFile fileModel,
+		LinePosition debuggerStoppedPosition,
+		CancellationToken cancellationToken = default)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDebuggerExpression_SyntaxHighlighting)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(CreateDebuggerExpressionIntelliSenseSessionAsync)}");
 		await _solutionLoadedTcs.Task;
 		if (fileModel.IsCsharpFile is false)
 		{
-			return [];
+			return null;
 		}
 
 		var project = GetProjectForSharpIdeFile(fileModel);
 		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
 		Guard.Against.Null(document);
-
-		var sourceText = await document.GetTextAsync(cancellationToken);
-		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-		Guard.Against.Null(semanticModel);
-
-		var stoppedPosition = sourceText.Lines.GetPosition(debuggerStoppedPosition);
-
-		var statement = SyntaxFactory.ParseStatement(text);
-
-		if (semanticModel.TryGetSpeculativeSemanticModel(stoppedPosition, statement, out var speculativeSemanticModel) is false)
-		{
-			return [];
-		}
-
-		var allDiagnostics = speculativeSemanticModel.GetDiagnostics(null, cancellationToken);
-		var diagnostics = allDiagnostics
-			.Where(d => d.Severity is not DiagnosticSeverity.Hidden && d.Location.IsInSource)
-			.Select(d =>
-			{
-				var mappedFileLinePositionSpan = d.Location.SourceTree!.GetMappedLineSpan(d.Location.SourceSpan);
-				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
-			})
-			.ToImmutableArray();
-
-		var classifiedSpans = Classifier.GetClassifiedSpans(_workspace!.Services.SolutionServices, project, speculativeSemanticModel, new TextSpan(0, text.Length), ClassificationOptions.Default, cancellationToken);
-
-		var expressionSourceText = SourceText.From(text);
-
-		return classifiedSpans
-		   .Where(s => s.TextSpan.Start >= 0 && s.TextSpan.End <= text.Length)
-		   .Select(s => new SharpIdeClassifiedSpan(expressionSourceText.GetLinePositionSpan(s.TextSpan), s))
-		   .ToImmutableArray();
+		return await DebuggerExpressionIntelliSenseSession.CreateAsync(document, debuggerStoppedPosition, cancellationToken);
 	}
 
 	// We store the document here, so that we have the correct version of the document when we compute completions
@@ -689,13 +660,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return new IdeCompletionListResult(document, completions, triggerLinePosition);
 	}
 
-	public async Task<CompletionDescription> GetCompletionDescription(SharpIdeFile file, CompletionItem completionItem, CancellationToken cancellationToken = default)
+	public static async Task<CompletionDescription> GetCompletionDescription(Document document, CompletionItem completionItem, CancellationToken cancellationToken = default)
 	{
-		await _solutionLoadedTcs.Task;
-		var document = await GetDocumentForSharpIdeFile(file, cancellationToken);
-		var completionService = CompletionService.GetService(document);
-		var description = await completionService!.GetDescriptionAsync(document, completionItem, cancellationToken);
-		return description!;
+		var completionService = CompletionService.GetService(document) ?? throw new InvalidOperationException("Completion service is not available for the document.");
+		return (await completionService.GetDescriptionAsync(document, completionItem, cancellationToken))!;
 	}
 
 	public async Task<SharpIdeSignatureHelpItems?> GetMethodSignatureInfo(SharpIdeFile file, LinePosition linePosition, CancellationToken cancellationToken = default)
@@ -876,15 +844,27 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return shouldTrigger;
 	}
 
-	public static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(SharpIdeFile file, string documentText, LinePosition linePosition, CompletionList completionList, CompletionTrigger completionTrigger, CompletionFilterReason filterReason)
+	public static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(string documentText, LinePosition linePosition, CompletionList completionList, CompletionTrigger completionTrigger, CompletionFilterReason filterReason)
 	{
 		var sourceText = SourceText.From(documentText, Encoding.UTF8);
-		var position = sourceText.Lines.GetPosition(linePosition);
+		return FilterCompletions(sourceText, sourceText.Lines.GetPosition(linePosition), completionList.Span.Start, completionList, completionTrigger, filterReason);
+	}
 
-		var filterSpanLength = position - completionList.Span.Start;
-		// user has backspaced past the trigger span
-		if (filterSpanLength < 0) return [];
-		var filterSpan = new TextSpan(completionList.Span.Start, length: filterSpanLength);
+	internal static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(
+		SourceText sourceText,
+		int position,
+		int completionSpanStart,
+		CompletionList completionList,
+		CompletionTrigger completionTrigger,
+		CompletionFilterReason filterReason)
+	{
+		if (completionSpanStart < 0 || completionSpanStart > sourceText.Length || position < completionSpanStart || position > sourceText.Length)
+		{
+			return [];
+		}
+
+		var filterSpanLength = position - completionSpanStart;
+		var filterSpan = new TextSpan(completionSpanStart, length: filterSpanLength);
 
 		var filteredCompletionItems = FilterCompletionList(completionList, filterSpan, completionTrigger, filterReason, sourceText);
 		return filteredCompletionItems;
