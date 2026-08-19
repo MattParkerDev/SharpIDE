@@ -11,12 +11,12 @@ public partial class ThreadsVariablesSubTab
     private static readonly Color VariableNameColor = new Color("f0ac81");
     private static readonly Color VariableWhiteColor = new Color("d4d4d4");
     private static readonly Color VariableTypeColor = new Color("70737a");
-    
+
     private void DebuggerVariableCustomDraw(TreeItem treeItem, Rect2 rect)
     {
         var variable = _variableReferenceLookup.GetValueOrDefault(treeItem);
         if (variable is null) return;
-        
+
         const int iconSize = 18;
         var icon = variable.PresentationHint?.Kind switch
         {
@@ -55,7 +55,8 @@ public partial class ThreadsVariablesSubTab
         _variablesTree.DrawTextureRect(icon, iconRect, false);
         currentX += iconSize + padding;
 
-        _variablesTree.DrawString(font, new Vector2(currentX, textYPos), variable.Name, HorizontalAlignment.Left, -1, fontSize, VariableNameColor);
+        var variableNameColor = variable.Name is "$result" ? TextEditorDotnetColoursDark.KeywordBlue : VariableNameColor;
+        _variablesTree.DrawString(font, new Vector2(currentX, textYPos), variable.Name, HorizontalAlignment.Left, -1, fontSize, variableNameColor);
         var variableNameDrawnWidth = font.GetStringSize(variable.Name, HorizontalAlignment.Left, -1, fontSize).X;
         currentX += variableNameDrawnWidth + padding;
         const string equalsString = "=";
@@ -74,7 +75,7 @@ public partial class ThreadsVariablesSubTab
         var variableValueDisplayString = isObjectType ? GetObjectNameWithoutNamespace(variable.Type) : variable.Value;
         _variablesTree.DrawString(font, new Vector2(currentX, textYPos), variableValueDisplayString, HorizontalAlignment.Left, -1, fontSize, variableValueDisplayColour);
     }
-    
+
     private static string GetObjectNameWithoutNamespace(string fullTypeName)
     {
         var test = SyntaxFactory.ParseTypeName(fullTypeName);
@@ -83,7 +84,7 @@ public partial class ThreadsVariablesSubTab
         var displayString = stringBuilder.ToString();
         return displayString;
     }
-    
+
     // ChatGPT
     private static void WriteType(TypeSyntax type, StringBuilder sb)
     {
