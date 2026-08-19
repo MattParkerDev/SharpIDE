@@ -53,6 +53,13 @@ public sealed class DebuggerExpressionIntelliSenseSession : IDisposable
 		var syntaxRoot = await sourceDocument.GetRequiredSyntaxRootAsync(cancellationToken);
 		var contextPosition = GetClampedPosition(sourceText, sourceContextPosition);
 		var (insertionPosition, separator) = GetInsertionPoint(syntaxRoot, sourceText, contextPosition);
+
+		// If we ever wanted to show private members in completions. Note that reference assemblies complicate this, as they don't have private members, so we would have to resolve the implementation assemblies and replace them
+		// var sourceCompilationOptions = sourceDocument.Project.CompilationOptions as CSharpCompilationOptions ?? throw new InvalidOperationException("The debugger expression document does not have C# compilation options.");
+		// var compilationOptions = sourceCompilationOptions
+		// 	.WithMetadataImportOptions(MetadataImportOptions.All)
+		// 	.WithTopLevelBinderFlags(sourceCompilationOptions.TopLevelBinderFlags | BinderFlags.IgnoreAccessibility);
+		// var solution = sourceDocument.Project.Solution.WithProjectCompilationOptions(sourceDocument.Project.Id, compilationOptions);
 		var workspace = new DebuggerIntelliSenseWorkspace(sourceDocument.Project.Solution);
 
 		return new DebuggerExpressionIntelliSenseSession(
