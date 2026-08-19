@@ -142,7 +142,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 				_historyIndex = _history.Count;
 				_storedEvalTextWhileNavigatingHistory = string.Empty;
 				ExpressionSubmitted?.Invoke(expression);
-				SetText(string.Empty);
+				ReplaceText(string.Empty);
 			}
 
 			AcceptEvent();
@@ -176,7 +176,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		}
 
 		var historyText = _historyIndex == _history.Count ? _storedEvalTextWhileNavigatingHistory : _history[_historyIndex];
-		SetText(historyText);
+		ReplaceText(historyText);
 		SetCaretLine(0);
 		SetCaretColumn(historyText.Length);
 		return true;
@@ -208,7 +208,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 						return;
 					}
 
-					SetText(change.Text);
+					ReplaceText(change.Text);
 					SetCaretLine(change.CaretPosition.Line);
 					SetCaretColumn(change.CaretPosition.Character);
 				});
@@ -249,7 +249,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 				caretColumn += GetLine(line).Length;
 			}
 
-			SetText(Text.Replace("\n", ""));
+			ReplaceText(Text.Replace("\n", ""));
 			SetCaretLine(0);
 			SetCaretColumn(caretColumn);
 			return;
@@ -266,6 +266,26 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		{
 			QueueCompletionFilter(filterReason.Value);
 		}
+	}
+
+	// Syntax highlighting is a pain - using SetText doesn't update the highlighting...
+	private void ReplaceText(string text)
+	{
+		BeginComplexOperation();
+		var lastLine = GetLineCount() - 1;
+		var lastColumn = GetLine(lastLine).Length;
+		if (lastLine > 0 || lastColumn > 0)
+		{
+			RemoveText(0, 0, lastLine, lastColumn);
+		}
+
+		SetCaretLine(0);
+		SetCaretColumn(0);
+		if (text.Length > 0)
+		{
+			InsertTextAtCaret(text);
+		}
+		EndComplexOperation();
 	}
 
 	private void QueueAnalysis()
@@ -426,6 +446,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 	private void SetSyntaxHighlighting(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)
 	{
 		_syntaxHighlighter.SetHighlightingData(classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan>.Empty);
+		_syntaxHighlighter.UpdateCache();
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _syntaxHighlighter;
 	}
