@@ -330,6 +330,17 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		return variablesResponse.Variables;
 	}
 
+	public async Task<EvaluateResponse> EvaluateExpression(DebuggerSessionId debuggerSessionId, int frameId, string expression)
+	{
+		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
+		var evaluateRequest = new EvaluateRequest(expression)
+		{
+			FrameId = frameId,
+			Context = EvaluateArguments.ContextValue.Watch,
+		};
+		return debugProtocolHost.SendRequestSync(evaluateRequest);
+	}
+
 	// netcoredbg does not provide the stack frame name in this format, so don't use this if using netcoredbg
 	private static ManagedStackFrameInfo? ParseStackFrameName(string name)
 	{

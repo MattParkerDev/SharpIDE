@@ -15,6 +15,8 @@ namespace SharpIDE.Godot.Features.Debug_.Tab.SubTabs;
 // 🤖
 public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 {
+	public event Action<string>? ExpressionSubmitted;
+
 	private readonly CustomHighlighter _syntaxHighlighter = new();
 	private readonly Lock _requestLock = new();
 	private CanvasItem _aboveCanvasItem = null!;
@@ -121,8 +123,14 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 			return;
 		}
 
-		if (@event is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter })
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter } keyEvent)
 		{
+			if (keyEvent.Echo is false && string.IsNullOrWhiteSpace(Text) is false)
+			{
+				ExpressionSubmitted?.Invoke(Text);
+				SetText(string.Empty);
+			}
+
 			AcceptEvent();
 			return;
 		}

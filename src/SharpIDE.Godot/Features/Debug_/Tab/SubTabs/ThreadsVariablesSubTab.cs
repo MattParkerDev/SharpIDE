@@ -1,6 +1,7 @@
 using Ardalis.GuardClauses;
 using Godot;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Events;
@@ -24,6 +25,8 @@ public partial class ThreadsVariablesSubTab : Control
 	private Tree _variablesTree = null!;
 	private DebuggerEvalExpressionCodeEdit _evaluateExpressionCodeEdit = null!;
 	private Dictionary<int, StackFrameModel> _stackFramesById = [];
+	private TreeItem? _evaluationResultItem;
+	private int _evaluationVersion;
 
 	public SharpIdeProjectModel Project { get; set; } = null!;
 	// private ThreadModel? _selectedThread = null!; // null when not at a stop point
@@ -46,6 +49,7 @@ public partial class ThreadsVariablesSubTab : Control
 		_threadsTree.ItemSelected += OnThreadSelected;
 		_stackFramesTree.ItemSelected += OnStackFrameSelected;
 		_variablesTree.ItemCollapsed += OnVariablesItemExpandedOrCollapsed;
+		_evaluateExpressionCodeEdit.ExpressionSubmitted += OnExpressionSubmitted;
 		Project.ProjectStoppedRunning.Subscribe(ClearAllTrees);
 	}
 
@@ -82,6 +86,7 @@ public partial class ThreadsVariablesSubTab : Control
 		GlobalEvents.Instance.DebuggerExecutionStopped.Unsubscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.DebuggerExecutionContinued.Unsubscribe(ClearAllTrees);
 		Project.ProjectStoppedRunning.Unsubscribe(ClearAllTrees);
+		_evaluateExpressionCodeEdit.ExpressionSubmitted -= OnExpressionSubmitted;
 	}
 
 	// TODO: this should check which project was continued, like OnDebuggerExecutionStopped
@@ -89,9 +94,11 @@ public partial class ThreadsVariablesSubTab : Control
 	{
 		await this.InvokeAsync(() =>
 		{
+			_evaluationVersion++;
 			_threadsTree.Clear();
 			_stackFramesTree.Clear();
 			_variablesTree.Clear();
+			_evaluationResultItem = null;
 			_variableReferenceLookup.Clear();
 			_stackFramesById.Clear();
 			_evaluateExpressionCodeEdit.ClearContext();
@@ -108,7 +115,10 @@ public partial class ThreadsVariablesSubTab : Control
 		_stackFramesById = stackFrames.ToDictionary(frame => frame.Id);
 		await this.InvokeAsync(() =>
 		{
+			_evaluationVersion++;
 			_variablesTree.Clear(); // If we select a thread that does not have stack frames, the variables would not be cleared otherwise
+			_evaluationResultItem = null;
+			_variableReferenceLookup.Clear();
 			_stackFramesTree.Clear();
 			var root = _stackFramesTree.CreateItem();
 			foreach (var (index, s) in stackFrames.Index())
@@ -147,7 +157,10 @@ public partial class ThreadsVariablesSubTab : Control
 		var variables = await variablesTask;
 		await this.InvokeAsync(() =>
 		{
+			_evaluationVersion++;
 			_variablesTree.Clear();
+			_evaluationResultItem = null;
+			_variableReferenceLookup.Clear();
 			var root = _variablesTree.CreateItem();
 			foreach (var variable in variables)
 			{
@@ -156,9 +169,9 @@ public partial class ThreadsVariablesSubTab : Control
 		});
 	}
 
-	private void AddVariableToTreeItem(TreeItem parentItem, Variable variable)
+	private TreeItem AddVariableToTreeItem(TreeItem parentItem, Variable variable, int index = -1)
 	{
-		var variableItem = _variablesTree.CreateItem(parentItem);
+		var variableItem = _variablesTree.CreateItem(parentItem, index);
 		_variableReferenceLookup[variableItem] = variable;
 
 		variableItem.SetMetadata(0, new Vector2I(0, variable.VariablesReference));
@@ -180,6 +193,70 @@ public partial class ThreadsVariablesSubTab : Control
 			placeHolderItem.SetText(0, "Loading...");
 			variableItem.Collapsed = true;
 		}
+
+		return variableItem;
+	}
+
+	private void OnExpressionSubmitted(string expression)
+	{
+		var selectedFrameItem = _stackFramesTree.GetSelected();
+		if (selectedFrameItem is null)
+		{
+			return;
+		}
+
+		var frameId = selectedFrameItem.GetMetadata(0).AsInt32();
+		var evaluationVersion = ++_evaluationVersion;
+		_ = Task.GodotRun(async () =>
+		{
+			Variable resultVariable;
+			try
+			{
+				var response = await _runService.EvaluateExpression(frameId, expression);
+				resultVariable = new Variable("$result", response.Result, response.VariablesReference)
+				{
+					Type = response.Type,
+					PresentationHint = response.PresentationHint,
+					EvaluateName = expression,
+					NamedVariables = response.NamedVariables,
+					IndexedVariables = response.IndexedVariables,
+					MemoryReference = response.MemoryReference,
+				};
+			}
+			catch (ProtocolException exception)
+			{
+				resultVariable = new Variable("$result", exception.Message, 0)
+				{
+					PresentationHint = new VariablePresentationHint
+					{
+						Attributes = VariablePresentationHint.AttributesValue.FailedEvaluation,
+					},
+				};
+			}
+
+			await this.InvokeAsync(() =>
+			{
+				var currentFrameItem = _stackFramesTree.GetSelected();
+				if (evaluationVersion != _evaluationVersion || currentFrameItem is null || currentFrameItem.GetMetadata(0).AsInt32() != frameId)
+				{
+					return;
+				}
+
+				var root = _variablesTree.GetRoot();
+				if (root is null)
+				{
+					return;
+				}
+
+				if (_evaluationResultItem is not null)
+				{
+					_variableReferenceLookup.Remove(_evaluationResultItem);
+					_evaluationResultItem.Free();
+				}
+
+				_evaluationResultItem = AddVariableToTreeItem(root, resultVariable, 0);
+			});
+		});
 	}
 
 

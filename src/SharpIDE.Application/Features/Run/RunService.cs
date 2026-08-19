@@ -193,6 +193,10 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 	{
 		return await _debuggingService!.GetVariablesForVariablesReference(_debuggerSessionId!.Value, variablesReferenceId);
 	}
+	public async Task<EvaluateResponse> EvaluateExpression(int frameId, string expression)
+	{
+		return await _debuggingService!.EvaluateExpression(_debuggerSessionId!.Value, frameId, expression);
+	}
 
 	private async Task<List<string>> GetRunArguments(SharpIdeProjectModel project)
 	{

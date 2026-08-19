@@ -62,9 +62,9 @@ public partial class ThreadsVariablesSubTab
         _variablesTree.DrawString(font, new Vector2(currentX, textYPos), equalsString, HorizontalAlignment.Left, -1, fontSize, VariableWhiteColor);
         var equalsWidth = font.GetStringSize(equalsString, HorizontalAlignment.Left, -1, fontSize).X;
         currentX += equalsWidth + padding;
-        var variableTypeDisplayString = $$"""{{{variable.Type}}}""";
-        var isObjectType = variable.Value == variableTypeDisplayString; // e.g. classes value will be the class name wrapped in {}
-        if (isObjectType is false)
+        var variableTypeDisplayString = string.IsNullOrEmpty(variable.Type) ? null : $$"""{{{variable.Type}}}""";
+        var isObjectType = variableTypeDisplayString is not null && variable.Value == variableTypeDisplayString; // e.g. classes value will be the class name wrapped in {}
+        if (variableTypeDisplayString is not null && isObjectType is false)
         {
             variableTypeDisplayString = $$"""{{{GetObjectNameWithoutNamespace(variable.Type)}}}""";
             _variablesTree.DrawString(font, new Vector2(currentX, textYPos), variableTypeDisplayString, HorizontalAlignment.Left, -1, fontSize, VariableTypeColor);
