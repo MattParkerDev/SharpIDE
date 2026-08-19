@@ -6,6 +6,8 @@ public class StackFrameModel
 	public required string Name { get; set; }
 	public required int? Line { get; set; }
 	public required int? Column { get; set; }
+	public required int? EndLine { get; set; }
+	public required int? EndColumn { get; set; }
 	public required string? Source { get; set; }
 	public required bool IsExternalCode { get; set; }
 	public required ManagedStackFrameInfo? ManagedInfo { get; set; }

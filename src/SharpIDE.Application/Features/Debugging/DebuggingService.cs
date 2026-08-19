@@ -295,6 +295,8 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 				Name = frame.Name,
 				Line = frame.Line,
 				Column = frame.Column,
+				EndLine = frame.EndLine,
+				EndColumn = frame.EndColumn,
 				Source = frame.Source?.Path,
 				IsExternalCode =  isExternalCode,
 				ManagedInfo = managedStackFrameInfo,

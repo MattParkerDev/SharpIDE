@@ -259,9 +259,10 @@ public partial class CodeEditorPanel : PanelContainer
 				if (cancellationToken.IsCancellationRequested) return;
 				ClearExecutingLine();
 				var codeEdit = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile == file).CodeEdit;
-				var endPosition = stopInfo is not null && stopInfo.StartLine == stackFrame.Line
-					? new LinePosition(Math.Max(line, stopInfo.EndLine - 1), Math.Max(0, stopInfo.EndColumn - 1))
-					: new LinePosition(line, column);
+				var isTopStackFrame = stopInfo is not null && stopInfo.StartLine == stackFrame.Line;
+				var endLine = stackFrame.EndLine ?? (isTopStackFrame ? stopInfo!.EndLine : stackFrame.Line.Value);
+				var endColumn = stackFrame.EndColumn ?? (isTopStackFrame ? stopInfo!.EndColumn : stackFrame.Column.Value);
+				var endPosition = new LinePosition(Math.Max(line, endLine - 1), Math.Max(0, endColumn - 1));
 				codeEdit.SetExecutingTextSpanInfo(new LinePositionSpan(new LinePosition(line, column), endPosition));
 				codeEdit.SetLineAsExecuting(line, true);
 				_executingCodeEdit = codeEdit;
