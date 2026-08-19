@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.0.2">
+<Project Sdk="Aspire.AppHost.Sdk/13.5.0">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -6,8 +6,10 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<IsAspireHost>true</IsAspireHost>
+		<AspireUseCliBundle>true</AspireUseCliBundle>
 		<UserSecretsId>c8b6b3c2-8acc-412d-9d58-38b990d2f79f</UserSecretsId>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <NoWarn>$(NoWarn);ASPIRETERMINAL001</NoWarn>
   </PropertyGroup>
 
 </Project>
