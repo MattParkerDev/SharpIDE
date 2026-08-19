@@ -56,8 +56,8 @@ public sealed partial class CodeCompletionPopup
 		var totalHeight = 50 + _completionRect.Size.Y;
 		var canFitAbove = caretPosition.Y - rowHeight > totalHeight;
 		var canFitBelow = caretPosition.Y + rowHeight + totalHeight <= _codeEdit.Size.Y;
-		var placeAbove = canFitBelow is false && canFitAbove;
-		if (canFitBelow is false && canFitAbove is false)
+		var placeAbove = _preferAbove || canFitBelow is false && canFitAbove;
+		if (_preferAbove is false && canFitBelow is false && canFitAbove is false)
 		{
 			var spaceAbove = caretPosition.Y - rowHeight;
 			var spaceBelow = _codeEdit.Size.Y - caretPosition.Y;
@@ -69,7 +69,7 @@ public sealed partial class CodeCompletionPopup
 		}
 
 		var y = placeAbove
-			? (int)(caretPosition.Y - totalHeight - rowHeight + 2)
+			? (int)(caretPosition.Y - totalHeight + rowHeight / 2.0f + 2)
 			: (int)(caretPosition.Y + 1);
 		var scrollWidth = availableCompletions > MaxLines ? scrollWidthWithOverflow : 0;
 		var desiredX = _triggerPosition.Value.X - iconOffset;

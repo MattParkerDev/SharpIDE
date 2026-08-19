@@ -23,6 +23,7 @@ public sealed partial class CodeCompletionPopup : IDisposable
 	private readonly Func<CompletionItem, CancellationToken, Task<CompletionDescription>> _getDescriptionAsync;
 	private readonly Action<CompletionTrigger> _requestCompletion;
 	private readonly Action<CompletionItem> _applyCompletion;
+	private readonly bool _preferAbove;
 	private readonly Texture2D _csharpMethodIcon = ResourceLoader.Load<Texture2D>("uid://b17p18ijhvsep");
 	private readonly Texture2D _csharpClassIcon = ResourceLoader.Load<Texture2D>("uid://b027uufaewitj");
 	private readonly Texture2D _csharpInterfaceIcon = ResourceLoader.Load<Texture2D>("uid://bdwmkdweqvowt");
@@ -54,7 +55,8 @@ public sealed partial class CodeCompletionPopup : IDisposable
 		CustomHighlighter syntaxHighlighter,
 		Func<CompletionItem, CancellationToken, Task<CompletionDescription>> getDescriptionAsync,
 		Action<CompletionTrigger> requestCompletion,
-		Action<CompletionItem> applyCompletion)
+		Action<CompletionItem> applyCompletion,
+		bool preferAbove = false)
 	{
 		_codeEdit = codeEdit;
 		_canvasItemRid = canvasItemRid;
@@ -64,6 +66,7 @@ public sealed partial class CodeCompletionPopup : IDisposable
 		_getDescriptionAsync = getDescriptionAsync;
 		_requestCompletion = requestCompletion;
 		_applyCompletion = applyCompletion;
+		_preferAbove = preferAbove;
 	}
 
 	public bool IsOpen => _options.IsDefaultOrEmpty is false;
