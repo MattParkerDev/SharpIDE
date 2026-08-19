@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bdu08nd7si641"]
 
 [ext_resource type="Script" uid="uid://dpc4fvj40e5il" path="res://Features/Debug_/Tab/SubTabs/ThreadsVariablesSubTab.cs" id="1_e3p3b"]
+[ext_resource type="PackedScene" uid="uid://dd8udwndu06kd" path="res://Features/Debug_/Tab/SubTabs/DebuggerEvalExpressionCodeEdit.tscn" id="2_e3p3b"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hwpe6"]
 
@@ -73,8 +74,6 @@ theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_hwpe6")
 hide_root = true
 
-[node name="EvaluateExpressionLineEdit" type="LineEdit" parent="MarginContainer/HSplitContainer/VariablesPanelContainer/VBoxContainer" unique_id=1193248699]
+[node name="DebuggerEvalExpressionCodeEdit" parent="MarginContainer/HSplitContainer/VariablesPanelContainer/VBoxContainer" unique_id=1551094015 instance=ExtResource("2_e3p3b")]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
-placeholder_text = "> Evaluate Expression"

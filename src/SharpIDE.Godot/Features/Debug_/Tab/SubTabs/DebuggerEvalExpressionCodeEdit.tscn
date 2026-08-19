@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://dd8udwndu06kd"]
+
+[ext_resource type="Script" uid="uid://nqym63ikb7s0" path="res://Features/Debug_/Tab/SubTabs/DebuggerEvalExpressionCodeEdit.cs" id="1_8j0qc"]
+
+[node name="DebuggerEvalExpressionCodeEdit" type="CodeEdit" unique_id=411545015]
+custom_minimum_size = Vector2(0, 200)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+placeholder_text = "> Evaluate Expression"
+highlight_all_occurrences = true
+symbol_tooltip_on_hover = true
+code_completion_prefixes = Array[String]([".", " "])
+script = ExtResource("1_8j0qc")
+
+[node name="AboveCanvasItem" type="Control" parent="." unique_id=145249413]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+mouse_filter = 2
+
+[node name="CompletionDescriptionWindow" type="Window" parent="." unique_id=1936311455]
+unique_name_in_owner = true
+transparent_bg = true
+oversampling_override = 1.0
+visible = false
+wrap_controls = true
+borderless = true
+transparent = true
+unfocusable = true
+popup_window = true
+
+[node name="PanelContainer" type="PanelContainer" parent="CompletionDescriptionWindow" unique_id=189764852]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"EditorHoverPopupPanelContainer"
+
+[node name="RichTextLabel" type="RichTextLabel" parent="CompletionDescriptionWindow/PanelContainer" unique_id=976363764]
+layout_mode = 2
+fit_content = true
+autowrap_mode = 0

@@ -1,5 +1,6 @@
 using Ardalis.GuardClauses;
 using Godot;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Events;
@@ -21,12 +22,14 @@ public partial class ThreadsVariablesSubTab : Control
 	private Tree _threadsTree = null!;
 	private Tree _stackFramesTree = null!;
 	private Tree _variablesTree = null!;
-	private LineEdit _evaluateExpressionLineEdit = null!;
-	
+	private DebuggerEvalExpressionCodeEdit _evaluateExpressionCodeEdit = null!;
+	private Dictionary<int, StackFrameModel> _stackFramesById = [];
+
 	public SharpIdeProjectModel Project { get; set; } = null!;
 	// private ThreadModel? _selectedThread = null!; // null when not at a stop point
 
     [Inject] private readonly RunService _runService = null!;
+    [Inject] private readonly SharpIdeSolutionAccessor _solutionAccessor = null!;
 
     private Callable? _debuggerVariableCustomDrawCallable;
     private readonly Dictionary<TreeItem, Variable> _variableReferenceLookup = []; // primarily used for DebuggerVariableCustomDraw
@@ -36,20 +39,14 @@ public partial class ThreadsVariablesSubTab : Control
 		_threadsTree = GetNode<Tree>("%ThreadsTree");
 		_stackFramesTree = GetNode<Tree>("%StackFramesTree");
 		_variablesTree = GetNode<Tree>("%VariablesTree");
-		_evaluateExpressionLineEdit = GetNode<LineEdit>("%EvaluateExpressionLineEdit");
+		_evaluateExpressionCodeEdit = GetNode<DebuggerEvalExpressionCodeEdit>("%DebuggerEvalExpressionCodeEdit");
 		_debuggerVariableCustomDrawCallable = new Callable(this, MethodName.DebuggerVariableCustomDraw);
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.DebuggerExecutionContinued.Subscribe(ClearAllTrees);
 		_threadsTree.ItemSelected += OnThreadSelected;
 		_stackFramesTree.ItemSelected += OnStackFrameSelected;
 		_variablesTree.ItemCollapsed += OnVariablesItemExpandedOrCollapsed;
-		_evaluateExpressionLineEdit.TextSubmitted += EvaluateExpression;
 		Project.ProjectStoppedRunning.Subscribe(ClearAllTrees);
-	}
-
-	private void EvaluateExpression(string newText)
-	{
-		
 	}
 
 	private void OnVariablesItemExpandedOrCollapsed(TreeItem item)
@@ -96,6 +93,8 @@ public partial class ThreadsVariablesSubTab : Control
 			_stackFramesTree.Clear();
 			_variablesTree.Clear();
 			_variableReferenceLookup.Clear();
+			_stackFramesById.Clear();
+			_evaluateExpressionCodeEdit.ClearContext();
 		});
 	}
 
@@ -106,6 +105,7 @@ public partial class ThreadsVariablesSubTab : Control
 		var threadId = selectedItem.GetMetadata(0).AsInt32();
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var stackFrames = await _runService.GetStackFrames(threadId);
+		_stackFramesById = stackFrames.ToDictionary(frame => frame.Id);
 		await this.InvokeAsync(() =>
 		{
 			_variablesTree.Clear(); // If we select a thread that does not have stack frames, the variables would not be cleared otherwise
@@ -136,8 +136,15 @@ public partial class ThreadsVariablesSubTab : Control
 		var selectedItem = _stackFramesTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var frameId = selectedItem.GetMetadata(0).AsInt32();
+		if (_stackFramesById.TryGetValue(frameId, out var stackFrame) is false)
+		{
+			return;
+		}
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var variables = await _runService.GetVariablesForStackFrame(frameId);
+		var variablesTask = _runService.GetVariablesForStackFrame(frameId);
+		var expressionContextTask = SetExpressionContextAsync(stackFrame);
+		await Task.WhenAll(variablesTask, expressionContextTask);
+		var variables = await variablesTask;
 		await this.InvokeAsync(() =>
 		{
 			_variablesTree.Clear();
@@ -193,5 +200,27 @@ public partial class ThreadsVariablesSubTab : Control
 				if (thread.Id == stopInfo.ThreadId) _threadsTree.SetSelected(threadItem, 0);
 			}
 		});
+	}
+
+	private async Task SetExpressionContextAsync(StackFrameModel stackFrame)
+	{
+		if (stackFrame is { IsExternalCode: true } or { Source: null } or { Line: null } or { Column: null })
+		{
+			await this.InvokeAsync(_evaluateExpressionCodeEdit.ClearContext);
+			return;
+		}
+
+		var solution = _solutionAccessor.SolutionModel;
+		var file = solution.AllFiles.GetValueOrDefault(stackFrame.Source);
+		if (file is null || file.IsCsharpFile is false)
+		{
+			await this.InvokeAsync(_evaluateExpressionCodeEdit.ClearContext);
+			return;
+		}
+
+		var sourceContextPosition = new LinePosition(
+			Math.Max(0, stackFrame.Line.Value - 1),
+			Math.Max(0, stackFrame.Column.Value - 1));
+		await _evaluateExpressionCodeEdit.SetContextAsync(file, sourceContextPosition);
 	}
 }
