@@ -121,6 +121,12 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 			return;
 		}
 
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.Enter or Key.KpEnter })
+		{
+			AcceptEvent();
+			return;
+		}
+
 		if (@event.IsActionPressed(InputStringNames.Copy) && _symbolHoverPopup.TryCopySelectedText())
 		{
 			AcceptEvent();
@@ -186,6 +192,20 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 
 	private void OnTextChanged()
 	{
+		if (GetLineCount() > 1)
+		{
+			var caretColumn = GetCaretColumn();
+			for (var line = 0; line < GetCaretLine(); line++)
+			{
+				caretColumn += GetLine(line).Length;
+			}
+
+			SetText(Text.Replace("\n", ""));
+			SetCaretLine(0);
+			SetCaretColumn(caretColumn);
+			return;
+		}
+
 		var completionTrigger = _completionPopup.TakePendingCompletionTrigger();
 		var filterReason = _completionPopup.TakePendingFilterReason();
 		QueueAnalysis();
