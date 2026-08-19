@@ -301,7 +301,7 @@ public sealed partial class CodeCompletionPopup : IDisposable
 
 	private Texture2D? GetIcon(CompletionItem completionItem)
 	{
-		var symbolKindValue = CollectionExtensions.GetValueOrDefault(completionItem.Properties, "SymbolKind");
+		var symbolKindValue = completionItem.Properties.GetValueOrDefault("SymbolKind");
 		var symbolKind = symbolKindValue is null ? null : (SymbolKind?)int.Parse(symbolKindValue);
 		var typeKind = Enum.TryParse<TypeKind>(completionItem.Tags.ElementAtOrDefault(0), out var parsedTypeKind) ? parsedTypeKind : (TypeKind?)null;
 		var accessibility = Enum.TryParse<Accessibility>(completionItem.Tags.Skip(1).FirstOrDefault(), out var parsedAccessibility) ? parsedAccessibility : (Accessibility?)null;

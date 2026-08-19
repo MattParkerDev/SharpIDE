@@ -18,7 +18,7 @@ public partial class SharpIdeCodeEdit
 		var linePosition = new LinePosition((int)line, (int)column);
 		var (roslynSymbol, symbolSpan) = await _roslynAnalysis.LookupSymbol(_currentFile, linePosition);
 		var diagnostic = _fileDiagnostics
-			.AsEnumerable()
+			.AsValueEnumerable()
 			.Concat(_fileAnalyzerDiagnostics)
 			.Concat(_projectDiagnosticsForFile)
 			.FirstOrDefault(candidate => linePosition >= candidate.Span.Start && linePosition <= candidate.Span.End);
