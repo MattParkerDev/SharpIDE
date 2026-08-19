@@ -64,4 +64,9 @@ public partial class DebugPanelTab : Control
     {
         _terminal.ClearTerminal();
     }
+
+    public void ShowSelectedStackFrame()
+    {
+        _threadsVariablesSubTab.ShowSelectedStackFrame();
+    }
 }

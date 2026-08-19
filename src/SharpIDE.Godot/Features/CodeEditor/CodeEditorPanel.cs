@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Ardalis.GuardClauses;
 using Godot;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Threading;
 using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Debugging;
@@ -22,7 +23,12 @@ public partial class CodeEditorPanel : PanelContainer
 	public SharpIdeSolutionModel Solution { get; set; } = null!;
 	private PackedScene _sharpIdeCodeEditScene = GD.Load<PackedScene>("res://Features/CodeEditor/SharpIdeCodeEdit.tscn");
 	private TabContainer _tabContainer = null!;
-	private ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
+	private readonly ConcurrentDictionary<SharpIdeProjectModel, ExecutionStopInfo> _debuggerExecutionStopInfoByProject = [];
+	private SharpIdeProjectModel? _selectedDebuggerProject;
+	private SharpIdeCodeEdit? _executingCodeEdit;
+	private int? _executingLine;
+	private readonly CancellationSeries _debuggerSelectionCancellationSeries = new();
+	private readonly SemaphoreSlim _debuggerSelectionSemaphore = new(1, 1);
 
 	[Inject] private readonly RunService _runService = null!;
 	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
@@ -37,6 +43,7 @@ public partial class CodeEditorPanel : PanelContainer
 		tabBar.TabRmbClicked += OnTabRmbClicked;
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
 		GlobalEvents.Instance.ProjectStoppedDebugging.Subscribe(OnProjectStoppedDebugging);
+		GodotGlobalEvents.Instance.DebuggerStackFrameSelected.Subscribe(OnDebuggerStackFrameSelected);
 	}
 
 	public override void _GuiInput(InputEvent @event)
@@ -68,6 +75,7 @@ public partial class CodeEditorPanel : PanelContainer
 
 	public override void _ExitTree()
 	{
+		_debuggerSelectionCancellationSeries.CreateNext();
 		var selectedTabIndex = _tabContainer.CurrentTab;
 		var thisSolution = Singletons.AppState.RecentSlns.Single(s => s.FilePath == Solution.FilePath);
 		thisSolution.IdeSolutionState.OpenTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>()
@@ -207,61 +215,90 @@ public partial class CodeEditorPanel : PanelContainer
 		});
 	}
 
-	private static readonly Color ExecutingLineColor = new Color("665001");
-	private async Task OnDebuggerExecutionStopped(ExecutionStopInfo executionStopInfo)
+	private Task OnDebuggerExecutionStopped(ExecutionStopInfo executionStopInfo)
 	{
 		Guard.Against.Null(Solution, nameof(Solution));
-
-		var startLine = executionStopInfo.StartLine - 1; // Debugging is 1-indexed, Godot is 0-indexed
-		var endLine = executionStopInfo.EndLine - 1;
-		var startColumn = executionStopInfo.StartColumn - 1;
-		var endColumn = executionStopInfo.EndColumn - 1;
-		Guard.Against.Negative(startLine);
-		Guard.Against.Negative(endLine);
-		Guard.Against.Negative(startColumn);
-		Guard.Against.Negative(endColumn);
-
-		SharpIdeFile file;
-		if (executionStopInfo.DecompiledSourceInfo is { } decompiledSourceInfo)
-		{
-			var fileFromMetadataAsSource = await _sharpIdeMetadataAsSourceService.CreateSharpIdeFileForMetadataAsSourceForTypeFromDebuggingAsync(decompiledSourceInfo.TypeFullName, decompiledSourceInfo.Assembly.AssemblyPath, decompiledSourceInfo.Assembly.Mvid, decompiledSourceInfo.CallingUserCodeAssemblyPath);
-			file = fileFromMetadataAsSource ?? throw new InvalidOperationException($"Failed to create file for metadata as source for type {decompiledSourceInfo.TypeFullName} in assembly {decompiledSourceInfo.Assembly.AssemblyPath}.");
-			executionStopInfo.FilePath = file.Path;
-		}
-		else
-		{
-			file = Solution.AllFiles[executionStopInfo.FilePath];
-		}
-
-		var fileLinePosition = new SharpIdeFileLinePosition(startLine, startColumn);
-		// Although the file may already be the selected tab, we need to also move the caret
-		await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, fileLinePosition).ConfigureAwait(false);
-
 		if (_debuggerExecutionStopInfoByProject.TryGetValue(executionStopInfo.Project, out _)) throw new InvalidOperationException("Debugger is already stopped for this project.");
 		_debuggerExecutionStopInfoByProject[executionStopInfo.Project] = executionStopInfo;
+		return Task.CompletedTask;
+	}
 
-		await this.InvokeAsync(() =>
+	private async Task OnDebuggerStackFrameSelected(SharpIdeProjectModel project, StackFrameModel? stackFrame)
+	{
+		var cancellationToken = _debuggerSelectionCancellationSeries.CreateNext();
+		_selectedDebuggerProject = project;
+		await this.InvokeAsync(ClearExecutingLine);
+		if (stackFrame is null or { IsExternalCode: true } || stackFrame.Source is null || stackFrame.Line is null || stackFrame.Column is null) return;
+
+		var ownsSelectionSemaphore = false;
+		try
 		{
-			var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
-			tabForStopInfo.SetExecutingTextSpanInfo(new LinePositionSpan(new LinePosition(startLine, startColumn), new LinePosition(endLine, endColumn)));
-			tabForStopInfo.SetLineAsExecuting(startLine, true);
-		});
+			await _debuggerSelectionSemaphore.WaitAsync(cancellationToken);
+			ownsSelectionSemaphore = true;
+			_debuggerExecutionStopInfoByProject.TryGetValue(project, out var stopInfo);
+			SharpIdeFile? file;
+			if (stopInfo is { DecompiledSourceInfo: { } decompiledSourceInfo } && stopInfo.StartLine == stackFrame.Line)
+			{
+				file = await _sharpIdeMetadataAsSourceService.CreateSharpIdeFileForMetadataAsSourceForTypeFromDebuggingAsync(decompiledSourceInfo.TypeFullName, decompiledSourceInfo.Assembly.AssemblyPath, decompiledSourceInfo.Assembly.Mvid, decompiledSourceInfo.CallingUserCodeAssemblyPath, cancellationToken);
+				if (file is null) throw new InvalidOperationException($"Failed to create file for metadata as source for type {decompiledSourceInfo.TypeFullName} in assembly {decompiledSourceInfo.Assembly.AssemblyPath}.");
+				stopInfo.FilePath = file.Path;
+			}
+			else
+			{
+				file = Solution.AllFiles.GetValueOrDefault(stackFrame.Source);
+			}
+			if (file is null || cancellationToken.IsCancellationRequested) return;
+
+			var line = Math.Max(0, stackFrame.Line.Value - 1);
+			var column = Math.Max(0, stackFrame.Column.Value - 1);
+			await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, new SharpIdeFileLinePosition(line, column)).ConfigureAwait(false);
+			if (cancellationToken.IsCancellationRequested) return;
+
+			await this.InvokeAsync(() =>
+			{
+				if (cancellationToken.IsCancellationRequested) return;
+				ClearExecutingLine();
+				var codeEdit = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile == file).CodeEdit;
+				var endPosition = stopInfo is not null && stopInfo.StartLine == stackFrame.Line
+					? new LinePosition(Math.Max(line, stopInfo.EndLine - 1), Math.Max(0, stopInfo.EndColumn - 1))
+					: new LinePosition(line, column);
+				codeEdit.SetExecutingTextSpanInfo(new LinePositionSpan(new LinePosition(line, column), endPosition));
+				codeEdit.SetLineAsExecuting(line, true);
+				_executingCodeEdit = codeEdit;
+				_executingLine = line;
+			});
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// A newer stack-frame selection superseded this one.
+		}
+		finally
+		{
+			if (ownsSelectionSemaphore) _debuggerSelectionSemaphore.Release();
+		}
+	}
+
+	[RequiresGodotUiThread]
+	private void ClearExecutingLine()
+	{
+		if (_executingCodeEdit is not null && _executingLine is { } executingLine && IsInstanceValid(_executingCodeEdit))
+		{
+			_executingCodeEdit.SetLineAsExecuting(executingLine, false);
+			_executingCodeEdit.SetExecutingTextSpanInfo(null);
+		}
+		_executingCodeEdit = null;
+		_executingLine = null;
 	}
 
 	private enum DebuggerStepAction { StepOver, StepIn, StepOut, Continue }
 	[RequiresGodotUiThread]
 	private void SendDebuggerStepCommand(DebuggerStepAction debuggerStepAction)
 	{
-		// TODO: Debugging needs a rework - debugging commands should be scoped to a debug session, ie the debug panel sub-tabs
-		// For now, just use the first project that is currently stopped
-		var stoppedProjects = _debuggerExecutionStopInfoByProject.Keys.ToList();
-		if (stoppedProjects.Count == 0) return; // ie not currently stopped anywhere
-		var project = stoppedProjects[0];
+		var project = _selectedDebuggerProject;
+		if (project is null) return;
 		if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
-		var godotLine = executionStopInfo.StartLine - 1;
-		var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
-		tabForStopInfo.SetLineAsExecuting(godotLine, false);
-		tabForStopInfo.SetExecutingTextSpanInfo(null);
+		_debuggerSelectionCancellationSeries.CreateNext();
+		ClearExecutingLine();
 		var threadId = executionStopInfo.ThreadId;
 		_ = Task.GodotRun(async () =>
 		{
@@ -279,14 +316,11 @@ public partial class CodeEditorPanel : PanelContainer
 
 	private async Task OnProjectStoppedDebugging(SharpIdeProjectModel project)
 	{
-		if (!_debuggerExecutionStopInfoByProject.TryRemove(project, out var executionStopInfo)) return;
-		await this.InvokeAsync(() =>
-		{
-			var godotLine = executionStopInfo.StartLine - 1;
-			var tabForStopInfo = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Single(t => t.CodeEdit.SharpIdeFile.Path == executionStopInfo.FilePath).CodeEdit;
-			tabForStopInfo.SetLineAsExecuting(godotLine, false);
-			tabForStopInfo.SetExecutingTextSpanInfo(null);
-		});
+		_debuggerExecutionStopInfoByProject.TryRemove(project, out _);
+		if (_selectedDebuggerProject != project) return;
+		_selectedDebuggerProject = null;
+		_debuggerSelectionCancellationSeries.CreateNext();
+		await this.InvokeAsync(ClearExecutingLine);
 	}
 }
 

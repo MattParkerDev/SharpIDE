@@ -42,6 +42,7 @@ public partial class DebugPanel : Control
 
 		var tab = children.Single(t => t.TabBarTab == idx);
 		tab.Visible = true;
+		tab.ShowSelectedStackFrame();
 	}
 
 	public void ProjectStartedDebugging(SharpIdeProjectModel projectModel)

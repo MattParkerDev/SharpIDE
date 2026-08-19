@@ -156,6 +156,10 @@ public partial class ThreadsVariablesSubTab : Control
 		{
 			return;
 		}
+		if (IsVisibleInTree())
+		{
+			GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
+		}
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
 		var expressionContextTask = SetExpressionContextAsync(stackFrame);
@@ -173,6 +177,15 @@ public partial class ThreadsVariablesSubTab : Control
 				AddVariableToTreeItem(root, variable);
 			}
 		});
+	}
+
+	public void ShowSelectedStackFrame()
+	{
+		var selectedItem = _stackFramesTree.GetSelected();
+		var stackFrame = selectedItem is not null && _stackFramesById.TryGetValue(selectedItem.GetMetadata(0).AsInt32(), out var selectedStackFrame)
+			? selectedStackFrame
+			: null;
+		GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
 	}
 
 	private TreeItem AddVariableToTreeItem(TreeItem parentItem, Variable variable, int index = -1)
