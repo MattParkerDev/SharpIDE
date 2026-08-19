@@ -96,6 +96,9 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		Editable = false;
 		_completionPopup.Reset();
 		SetSyntaxHighlighting([]);
+		_historyIndex = _history.Count;
+		_storedEvalTextWhileNavigatingHistory = string.Empty;
+		ReplaceText(string.Empty);
 		QueueRedraw();
 	}
 

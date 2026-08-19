@@ -50,6 +50,7 @@ public partial class ThreadsVariablesSubTab : Control
 		_stackFramesTree.ItemSelected += OnStackFrameSelected;
 		_variablesTree.ItemCollapsed += OnVariablesItemExpandedOrCollapsed;
 		_evaluateExpressionCodeEdit.ExpressionSubmitted += OnExpressionSubmitted;
+		_evaluateExpressionCodeEdit.Hide();
 		Project.ProjectStoppedRunning.Subscribe(ClearAllTrees);
 	}
 
@@ -102,6 +103,7 @@ public partial class ThreadsVariablesSubTab : Control
 			_variableReferenceLookup.Clear();
 			_stackFramesById.Clear();
 			_evaluateExpressionCodeEdit.ClearContext();
+			_evaluateExpressionCodeEdit.Hide();
 		});
 	}
 
@@ -267,6 +269,7 @@ public partial class ThreadsVariablesSubTab : Control
 		var threads = await _runService.GetThreadsAtStopPoint();
 		await this.InvokeAsync(() =>
 		{
+			_evaluateExpressionCodeEdit.Show();
 			_threadsTree.Clear();
 			var root = _threadsTree.CreateItem();
 			foreach (var thread in threads)
