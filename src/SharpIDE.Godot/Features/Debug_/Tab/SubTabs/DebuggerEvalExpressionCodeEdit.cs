@@ -15,10 +15,13 @@ namespace SharpIDE.Godot.Features.Debug_.Tab.SubTabs;
 // 🤖
 public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 {
+	private const int MaxHistoryCount = 100;
+
 	public event Action<string>? ExpressionSubmitted;
 
 	private readonly CustomHighlighter _syntaxHighlighter = new();
 	private readonly Lock _requestLock = new();
+	private readonly List<string> _history = [];
 	private CanvasItem _aboveCanvasItem = null!;
 	private Rid _aboveCanvasItemRid;
 	private DebuggerExpressionIntelliSenseSession? _session;
@@ -30,6 +33,8 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 	private CancellationTokenSource? _symbolCancellationTokenSource;
 	private CodeCompletionPopup _completionPopup = null!;
 	private SymbolHoverPopup _symbolHoverPopup = null!;
+	private string _storedEvalTextWhileNavigatingHistory = string.Empty;
+	private int _historyIndex;
 	private int _contextVersion;
 
 	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
@@ -127,10 +132,25 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		{
 			if (keyEvent.Echo is false && string.IsNullOrWhiteSpace(Text) is false)
 			{
-				ExpressionSubmitted?.Invoke(Text);
+				var expression = Text;
+				_history.Add(expression);
+				if (_history.Count > MaxHistoryCount)
+				{
+					_history.RemoveAt(0);
+				}
+
+				_historyIndex = _history.Count;
+				_storedEvalTextWhileNavigatingHistory = string.Empty;
+				ExpressionSubmitted?.Invoke(expression);
 				SetText(string.Empty);
 			}
 
+			AcceptEvent();
+			return;
+		}
+
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.Up or Key.Down } historyKeyEvent && TryNavigateHistory(historyKeyEvent.Keycode is Key.Up ? -1 : 1))
+		{
 			AcceptEvent();
 			return;
 		}
@@ -139,6 +159,27 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		{
 			AcceptEvent();
 		}
+	}
+
+	private bool TryNavigateHistory(int direction)
+	{
+		if (_history.Count is 0) return false;
+		if (direction < 0)
+		{
+			if (_historyIndex == _history.Count) _storedEvalTextWhileNavigatingHistory = Text;
+			_historyIndex = Math.Max(0, _historyIndex - 1);
+		}
+		else
+		{
+			if (_historyIndex == _history.Count) return false;
+			_historyIndex++;
+		}
+
+		var historyText = _historyIndex == _history.Count ? _storedEvalTextWhileNavigatingHistory : _history[_historyIndex];
+		SetText(historyText);
+		SetCaretLine(0);
+		SetCaretColumn(historyText.Length);
+		return true;
 	}
 
 	private void ApplyCompletion(CompletionItem completionItem)
