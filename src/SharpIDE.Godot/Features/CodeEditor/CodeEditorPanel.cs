@@ -267,10 +267,10 @@ public partial class CodeEditorPanel : PanelContainer
 		{
 			var task = debuggerStepAction switch
 			{
-				DebuggerStepAction.StepOver => _runService.SendDebuggerStepOver(threadId),
-				DebuggerStepAction.StepIn => _runService.SendDebuggerStepInto(threadId),
-				DebuggerStepAction.StepOut => _runService.SendDebuggerStepOut(threadId),
-				DebuggerStepAction.Continue => _runService.SendDebuggerContinue(threadId),
+				DebuggerStepAction.StepOver => _runService.SendDebuggerStepOver(project, threadId),
+				DebuggerStepAction.StepIn => _runService.SendDebuggerStepInto(project, threadId),
+				DebuggerStepAction.StepOut => _runService.SendDebuggerStepOut(project, threadId),
+				DebuggerStepAction.Continue => _runService.SendDebuggerContinue(project, threadId),
 				_ => throw new ArgumentOutOfRangeException(nameof(debuggerStepAction), debuggerStepAction, null)
 			};
 			await task;

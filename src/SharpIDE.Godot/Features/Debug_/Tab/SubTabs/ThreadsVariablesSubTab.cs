@@ -45,7 +45,7 @@ public partial class ThreadsVariablesSubTab : Control
 		_evaluateExpressionCodeEdit = GetNode<DebuggerEvalExpressionCodeEdit>("%DebuggerEvalExpressionCodeEdit");
 		_debuggerVariableCustomDrawCallable = new Callable(this, MethodName.DebuggerVariableCustomDraw);
 		GlobalEvents.Instance.DebuggerExecutionStopped.Subscribe(OnDebuggerExecutionStopped);
-		GlobalEvents.Instance.DebuggerExecutionContinued.Subscribe(ClearAllTrees);
+		GlobalEvents.Instance.DebuggerExecutionContinued.Subscribe(OnDebuggerExecutionContinued);
 		_threadsTree.ItemSelected += OnThreadSelected;
 		_stackFramesTree.ItemSelected += OnStackFrameSelected;
 		_variablesTree.ItemCollapsed += OnVariablesItemExpandedOrCollapsed;
@@ -65,7 +65,7 @@ public partial class ThreadsVariablesSubTab : Control
 			var variablesReferenceId = metadata.Y;
 			_ = Task.GodotRun(async () =>
 			{
-				var variables = await _runService.GetVariablesForVariablesReference(variablesReferenceId);
+				var variables = await _runService.GetVariablesForVariablesReference(Project, variablesReferenceId);
 				await this.InvokeAsync(() =>
 				{
 					var placeholderLoadingChild = item.GetFirstChild();
@@ -85,12 +85,16 @@ public partial class ThreadsVariablesSubTab : Control
 	public override void _ExitTree()
 	{
 		GlobalEvents.Instance.DebuggerExecutionStopped.Unsubscribe(OnDebuggerExecutionStopped);
-		GlobalEvents.Instance.DebuggerExecutionContinued.Unsubscribe(ClearAllTrees);
+		GlobalEvents.Instance.DebuggerExecutionContinued.Unsubscribe(OnDebuggerExecutionContinued);
 		Project.ProjectStoppedRunning.Unsubscribe(ClearAllTrees);
 		_evaluateExpressionCodeEdit.ExpressionSubmitted -= OnExpressionSubmitted;
 	}
 
-	// TODO: this should check which project was continued, like OnDebuggerExecutionStopped
+	private Task OnDebuggerExecutionContinued(SharpIdeProjectModel project)
+	{
+		return project == Project ? ClearAllTrees() : Task.CompletedTask;
+	}
+
 	private async Task ClearAllTrees()
 	{
 		await this.InvokeAsync(() =>
@@ -113,7 +117,7 @@ public partial class ThreadsVariablesSubTab : Control
 		Guard.Against.Null(selectedItem);
 		var threadId = selectedItem.GetMetadata(0).AsInt32();
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var stackFrames = await _runService.GetStackFrames(threadId);
+		var stackFrames = await _runService.GetStackFrames(Project, threadId);
 		_stackFramesById = stackFrames.ToDictionary(frame => frame.Id);
 		await this.InvokeAsync(() =>
 		{
@@ -153,7 +157,7 @@ public partial class ThreadsVariablesSubTab : Control
 			return;
 		}
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var variablesTask = _runService.GetVariablesForStackFrame(frameId);
+		var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
 		var expressionContextTask = SetExpressionContextAsync(stackFrame);
 		await Task.WhenAll(variablesTask, expressionContextTask);
 		var variables = await variablesTask;
@@ -214,7 +218,7 @@ public partial class ThreadsVariablesSubTab : Control
 			Variable resultVariable;
 			try
 			{
-				var response = await _runService.EvaluateExpression(frameId, expression);
+				var response = await _runService.EvaluateExpression(Project, frameId, expression);
 				resultVariable = new Variable("$result", response.Result, response.VariablesReference)
 				{
 					Type = response.Type,
@@ -266,7 +270,7 @@ public partial class ThreadsVariablesSubTab : Control
 	{
 		if (stopInfo.Project != Project) return;
 
-		var threads = await _runService.GetThreadsAtStopPoint();
+		var threads = await _runService.GetThreadsAtStopPoint(Project);
 		await this.InvokeAsync(() =>
 		{
 			_evaluateExpressionCodeEdit.Show();

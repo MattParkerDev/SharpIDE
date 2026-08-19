@@ -15,10 +15,8 @@ public partial class RunService
 		var breakpoints = Breakpoints.GetOrAdd(file, []);
 		var breakpoint = new Breakpoint { Line = line };
 		breakpoints.Add(breakpoint);
-		if (_debuggerSessionId is not null)
-		{
-			await _debuggingService.SetBreakpointsForFile(_debuggerSessionId!.Value, file, breakpoints);
-		}
+		await Task.WhenAll(_projectDebuggerSessionIds.Values.Select(debuggerSessionId =>
+			_debuggingService.SetBreakpointsForFile(debuggerSessionId, file, breakpoints)));
 	}
 
 	public async Task RemoveBreakpointForFile(SharpIdeFile file, int line)
@@ -27,9 +25,7 @@ public partial class RunService
 		var breakpoints = Breakpoints.GetOrAdd(file, []);
 		var breakpoint = breakpoints.Single(b => b.Line == line);
 		breakpoints.Remove(breakpoint);
-		if (_debuggerSessionId is not null)
-		{
-			await _debuggingService.SetBreakpointsForFile(_debuggerSessionId!.Value, file, breakpoints);
-		}
+		await Task.WhenAll(_projectDebuggerSessionIds.Values.Select(debuggerSessionId =>
+			_debuggingService.SetBreakpointsForFile(debuggerSessionId, file, breakpoints)));
 	}
 }

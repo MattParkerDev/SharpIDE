@@ -242,7 +242,6 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
 		var nextRequest = new NextRequest(threadId);
 		debugProtocolHost.SendRequestSync(nextRequest);
-		GlobalEvents.Instance.DebuggerExecutionContinued.InvokeParallelFireAndForget();
 	}
 	public async Task StepInto(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
@@ -250,7 +249,6 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
 		var stepInRequest = new StepInRequest(threadId);
 		debugProtocolHost.SendRequestSync(stepInRequest);
-		GlobalEvents.Instance.DebuggerExecutionContinued.InvokeParallelFireAndForget();
 	}
 	public async Task StepOut(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
@@ -258,7 +256,6 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
 		var stepOutRequest = new StepOutRequest(threadId);
 		debugProtocolHost.SendRequestSync(stepOutRequest);
-		GlobalEvents.Instance.DebuggerExecutionContinued.InvokeParallelFireAndForget();
 	}
 	public async Task Continue(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
@@ -266,7 +263,6 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
 		var continueRequest = new ContinueRequest(threadId);
 		debugProtocolHost.SendRequestSync(continueRequest);
-		GlobalEvents.Instance.DebuggerExecutionContinued.InvokeParallelFireAndForget();
 	}
 
 	public async Task<List<ThreadModel>> GetThreadsAtStopPoint(DebuggerSessionId debuggerSessionId)
