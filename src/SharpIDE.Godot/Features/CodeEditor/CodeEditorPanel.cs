@@ -235,9 +235,8 @@ public partial class CodeEditorPanel : PanelContainer
 		{
 			await _debuggerSelectionSemaphore.WaitAsync(cancellationToken);
 			ownsSelectionSemaphore = true;
-			_debuggerExecutionStopInfoByProject.TryGetValue(project, out var stopInfo);
 			SharpIdeFile? file;
-			if (stopInfo is { DecompiledSourceInfo: { } decompiledSourceInfo } && stopInfo.ThreadId == stackFrame.ThreadId && stackFrame.IsTopFrame)
+			if (stackFrame.DecompiledSourceInfo is { } decompiledSourceInfo)
 			{
 				file = await _sharpIdeMetadataAsSourceService.CreateSharpIdeFileForMetadataAsSourceForTypeFromDebuggingAsync(decompiledSourceInfo.TypeFullName, decompiledSourceInfo.Assembly.AssemblyPath, decompiledSourceInfo.Assembly.Mvid, decompiledSourceInfo.CallingUserCodeAssemblyPath, cancellationToken);
 				if (file is null) throw new InvalidOperationException($"Failed to create file for metadata as source for type {decompiledSourceInfo.TypeFullName} in assembly {decompiledSourceInfo.Assembly.AssemblyPath}.");

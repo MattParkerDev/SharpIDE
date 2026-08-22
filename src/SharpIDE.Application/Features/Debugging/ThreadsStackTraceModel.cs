@@ -1,10 +1,11 @@
-﻿namespace SharpIDE.Application.Features.Debugging;
+﻿using SharpDbg.Infrastructure.Debugger;
+
+namespace SharpIDE.Application.Features.Debugging;
 
 public class StackFrameModel
 {
 	public required int Id { get; set; }
 	public required int ThreadId { get; set; }
-	public required bool IsTopFrame { get; set; }
 	public required string Name { get; set; }
 	public required int? Line { get; set; }
 	public required int? Column { get; set; }
@@ -12,6 +13,8 @@ public class StackFrameModel
 	public required int? EndColumn { get; set; }
 	public required string? Source { get; set; }
 	public required bool IsExternalCode { get; set; }
+	public required bool IsResolved { get; set; }
+	public required DecompiledSourceInfo? DecompiledSourceInfo { get; set; }
 	public required ManagedStackFrameInfo? ManagedInfo { get; set; }
 }
 

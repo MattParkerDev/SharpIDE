@@ -215,6 +215,10 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 	{
 		return await _debuggingService.GetStackFramesForThread(GetDebuggerSessionId(project), threadId);
 	}
+	public async Task<StackFrameModel> ResolveStackFrame(SharpIdeProjectModel project, StackFrameModel stackFrame)
+	{
+		return await _debuggingService.ResolveStackFrame(GetDebuggerSessionId(project), stackFrame);
+	}
 	public async Task<List<Variable>> GetVariablesForStackFrame(SharpIdeProjectModel project, int frameId)
 	{
 		return await _debuggingService.GetVariablesForStackFrame(GetDebuggerSessionId(project), frameId);

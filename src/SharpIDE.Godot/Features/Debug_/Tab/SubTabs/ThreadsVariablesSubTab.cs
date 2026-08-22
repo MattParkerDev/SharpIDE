@@ -27,6 +27,7 @@ public partial class ThreadsVariablesSubTab : Control
 	private Dictionary<int, StackFrameModel> _stackFramesById = [];
 	private TreeItem? _evaluationResultItem;
 	private int _evaluationVersion;
+	private int _stackFrameSelectionVersion;
 
 	public SharpIdeProjectModel Project { get; set; } = null!;
 	// private ThreadModel? _selectedThread = null!; // null when not at a stop point
@@ -100,6 +101,7 @@ public partial class ThreadsVariablesSubTab : Control
 		await this.InvokeAsync(() =>
 		{
 			_evaluationVersion++;
+			_stackFrameSelectionVersion++;
 			_threadsTree.Clear();
 			_stackFramesTree.Clear();
 			_variablesTree.Clear();
@@ -113,6 +115,7 @@ public partial class ThreadsVariablesSubTab : Control
 
 	private async void OnThreadSelected()
 	{
+		_stackFrameSelectionVersion++;
 		var selectedItem = _threadsTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var threadId = selectedItem.GetMetadata(0).AsInt32();
@@ -149,6 +152,7 @@ public partial class ThreadsVariablesSubTab : Control
 
 	private async void OnStackFrameSelected()
 	{
+		var selectionVersion = ++_stackFrameSelectionVersion;
 		var selectedItem = _stackFramesTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var frameId = selectedItem.GetMetadata(0).AsInt32();
@@ -156,7 +160,13 @@ public partial class ThreadsVariablesSubTab : Control
 		{
 			return;
 		}
-		if (IsVisibleInTree())
+		var isVisibleInTree = IsVisibleInTree();
+		if (stackFrame.IsResolved is false)
+		{
+			stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
+			if (selectionVersion != _stackFrameSelectionVersion) return;
+		}
+		if (isVisibleInTree)
 		{
 			GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
 		}
@@ -164,6 +174,7 @@ public partial class ThreadsVariablesSubTab : Control
 		var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
 		var expressionContextTask = SetExpressionContextAsync(stackFrame);
 		await Task.WhenAll(variablesTask, expressionContextTask);
+		if (selectionVersion != _stackFrameSelectionVersion) return;
 		var variables = await variablesTask;
 		await this.InvokeAsync(() =>
 		{
@@ -179,13 +190,25 @@ public partial class ThreadsVariablesSubTab : Control
 		});
 	}
 
-	public void ShowSelectedStackFrame()
+	public async void ShowSelectedStackFrame()
 	{
 		var selectedItem = _stackFramesTree.GetSelected();
 		var stackFrame = selectedItem is not null && _stackFramesById.TryGetValue(selectedItem.GetMetadata(0).AsInt32(), out var selectedStackFrame)
 			? selectedStackFrame
 			: null;
+		if (stackFrame is { IsResolved: false })
+		{
+			stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
+		}
 		GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
+	}
+
+	private async Task<StackFrameModel> ResolveAndReplaceStackFrame(StackFrameModel stackFrame)
+	{
+		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+		stackFrame = await _runService.ResolveStackFrame(Project, stackFrame);
+		_stackFramesById[stackFrame.Id] = stackFrame;
+		return stackFrame;
 	}
 
 	private TreeItem AddVariableToTreeItem(TreeItem parentItem, Variable variable, int index = -1)

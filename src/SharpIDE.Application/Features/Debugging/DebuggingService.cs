@@ -4,22 +4,15 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SharpDbg.Application.Protocol;
 using SharpIDE.Application.Features.Debugging.Signing;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.Debugging;
-
-// TODO: get from SharpDbg
-public class DecompiledSourceInfo
-{
-	public required string TypeFullName { get; init; }
-	public required AssemblyPathAndMvid Assembly { get; init; }
-	public required string CallingUserCodeAssemblyPath { get; init; }
-}
-public record struct AssemblyPathAndMvid(string AssemblyPath, Guid Mvid);
 
 #pragma warning disable VSTHRD101
 public class DebuggingService(ILogger<DebuggingService> logger)
@@ -79,8 +72,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 					debugProtocolHost.SendRequestSync(continueRequest);
 					return;
 				}
-				var decompiledSourceInfo = @event.AdditionalProperties?.GetValueOrDefault("decompiledSourceInfo")?.ToObject<DecompiledSourceInfo>();
-				var executionStopInfo = new ExecutionStopInfo { ThreadId = @event.ThreadId!.Value, Project = project, DecompiledSourceInfo = decompiledSourceInfo };
+				var executionStopInfo = new ExecutionStopInfo { ThreadId = @event.ThreadId!.Value, Project = project };
 				GlobalEvents.Instance.DebuggerExecutionStopped.InvokeParallelFireAndForget(executionStopInfo);
 			}
 			catch (Exception e)
@@ -255,26 +247,15 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		var stackTraceResponse = debugProtocolHost.SendRequestSync(stackTraceRequest);
 		var stackFrames = stackTraceResponse.StackFrames;
 
-		var mappedStackFrames = stackFrames!.Select((frame, index) =>
-		{
-			var isExternalCode = frame.Name == "[External Code]";
-			ManagedStackFrameInfo? managedStackFrameInfo = isExternalCode ? null : ParseStackFrameName(frame.Name);
-			return new StackFrameModel
-			{
-				Id = frame.Id,
-				ThreadId = threadId,
-				IsTopFrame = index is 0,
-				Name = frame.Name,
-				Line = frame.Line,
-				Column = frame.Column,
-				EndLine = frame.EndLine,
-				EndColumn = frame.EndColumn,
-				Source = frame.Source?.Path,
-				IsExternalCode =  isExternalCode,
-				ManagedInfo = managedStackFrameInfo,
-			};
-		}).ToList();
+		var mappedStackFrames = stackFrames!.Select(frame => MapStackFrame(frame, threadId)).ToList();
 		return mappedStackFrames;
+	}
+
+	public async Task<StackFrameModel> ResolveStackFrame(DebuggerSessionId debuggerSessionId, StackFrameModel stackFrame)
+	{
+		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
+		var response = debugProtocolHost.SendRequestSync(new ResolveStackFrameRequest(stackFrame.Id));
+		return MapStackFrame(response.StackFrame, stackFrame.ThreadId);
 	}
 
 	public async Task<List<Variable>> GetVariablesForStackFrame(DebuggerSessionId debuggerSessionId, int frameId)
@@ -309,6 +290,26 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 			Context = EvaluateArguments.ContextValue.Watch,
 		};
 		return debugProtocolHost.SendRequestSync(evaluateRequest);
+	}
+
+	private static StackFrameModel MapStackFrame(StackFrame frame, int threadId)
+	{
+		var isExternalCode = frame.Name == "[External Code]";
+		return new StackFrameModel
+		{
+			Id = frame.Id,
+			ThreadId = threadId,
+			Name = frame.Name,
+			Line = frame.Line,
+			Column = frame.Column,
+			EndLine = frame.EndLine,
+			EndColumn = frame.EndColumn,
+			Source = frame.Source?.Path,
+			IsExternalCode = isExternalCode,
+			IsResolved = frame.IsResolved ?? true,
+			DecompiledSourceInfo = frame.DecompiledSourceInfo,
+			ManagedInfo = isExternalCode ? null : ParseStackFrameName(frame.Name),
+		};
 	}
 
 	// netcoredbg does not provide the stack frame name in this format, so don't use this if using netcoredbg

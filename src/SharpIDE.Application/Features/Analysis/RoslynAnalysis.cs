@@ -1028,46 +1028,43 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return changedFilesWithText;
 	}
 
-	public async Task<string?> GetMetadataAsSourceFromDebuggingAssemblyAndType(string typeName, string assemblyName, Guid mvid, string userCodeCallingAssemblyPath, CancellationToken cancellationToken = default)
+	public async Task<string?> GetMetadataAsSourceFromDebuggingAssemblyAndType(string typeName, string assemblyPath, Guid mvid, string userCodeCallingAssemblyPath, CancellationToken cancellationToken = default)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(FindAllSymbolReferences)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetMetadataAsSourceFromDebuggingAssemblyAndType)}");
 		await _solutionLoadedTcs.Task;
 
 		var callingProject = _workspace!.CurrentSolution.Projects.SingleOrDefault(p => p.OutputFilePath == userCodeCallingAssemblyPath);
 		if (callingProject is null) return null;
 
+		var runtimeReference = MetadataReference.CreateFromFile(assemblyPath);
+		if (runtimeReference.GetMetadata() is not AssemblyMetadata runtimeMetadata || runtimeMetadata.GetMvid() != mvid) return null;
+
+		// Read the full identity from the exact runtime assembly before adding it to the calling project's compilation.
+		var identityCompilation = CSharpCompilation.Create(assemblyName: null, references: [runtimeReference], options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+		if (identityCompilation.GetAssemblyOrModuleSymbol(runtimeReference) is not IAssemblySymbol runtimeAssemblyForIdentity) return null;
+
 		var compilation = await callingProject.GetRequiredCompilationAsync(cancellationToken);
-		var symbols = compilation.GetTypesByMetadataName(typeName);
-
-		var symbol = symbols.SingleOrDefault(s =>
+		var conflictingReferences = callingProject.MetadataReferences
+			.Where(reference => compilation.GetAssemblyOrModuleSymbol(reference) is IAssemblySymbol assembly && assembly.Identity.Equals(runtimeAssemblyForIdentity.Identity))
+			.ToImmutableArray();
+		if (conflictingReferences.IsEmpty is false)
 		{
-			if (Path.GetFileNameWithoutExtension(s.ContainingModule.Name) != assemblyName) return false;
-
-			var containingAssembly = s.ContainingAssembly;
-			var metadataReference = compilation.GetMetadataReference(containingAssembly) as PortableExecutableReference;
-			if (metadataReference is null) return false;
-			var referenceAssemblyFilePath = metadataReference.FilePath;
-			// Runtime loads implementation assemblies, but Roslyn only has reference assemblies, so try to resolve the implementation assembly
-			if (referenceAssemblyFilePath is not null && MetadataAsSourceHelpers.IsReferenceAssembly(containingAssembly))
+			runtimeReference = runtimeReference.WithProperties(conflictingReferences[0].Properties);
+			foreach (var conflictingReference in conflictingReferences)
 			{
-				if (_implementationAssemblyLookupService.TryFindImplementationAssemblyPath(referenceAssemblyFilePath, out var implementationAssemblyLocation))
-				{
-					// TODO: Do we need to follow type forwards here?
-					// read the metadata from the implementation assembly, instead of the reference assembly, to get the correct MVID for comparison
-					metadataReference = MetadataReference.CreateFromFile(implementationAssemblyLocation);
-				}
+				callingProject = callingProject.RemoveMetadataReference(conflictingReference);
 			}
-			if (metadataReference.GetMetadata() is not AssemblyMetadata assemblyMetadata) return false;
-			return assemblyMetadata.GetMvid() == mvid;
-		});
+		}
+
+		callingProject = callingProject.AddMetadataReference(runtimeReference);
+		compilation = await callingProject.GetRequiredCompilationAsync(cancellationToken);
+		var runtimeAssembly = compilation.GetAssemblyOrModuleSymbol(runtimeReference) as IAssemblySymbol;
+		var symbol = runtimeAssembly?.GetTypeByMetadataName(typeName);
 		if (symbol is null) return null;
 
 		var options = MetadataAsSourceOptions.Default;// with { NavigateToSourceLinkAndEmbeddedSources = false };
 		var metadataAsSourceFile = await _metadataAsSourceFileService.GetGeneratedFileAsync(_workspace, callingProject, symbol, false, options, cancellationToken);
-		var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace();
-		var documentId = metadataAsSourceWorkspace!.CurrentSolution.GetDocumentIdsWithFilePath(metadataAsSourceFile.FilePath).SingleOrDefault();
-		var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId);
-		return document?.FilePath;
+		return metadataAsSourceFile.FilePath;
 	}
 
 	public async Task<string?> WriteSourceFromMetadataAsSourceWorkspaceToDisk(string filePath, CancellationToken cancellationToken = default)
