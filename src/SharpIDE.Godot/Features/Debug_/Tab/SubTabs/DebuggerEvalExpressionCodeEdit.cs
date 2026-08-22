@@ -3,6 +3,7 @@ using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Threading;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -35,7 +36,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 	private SymbolHoverPopup _symbolHoverPopup = null!;
 	private string _storedEvalTextWhileNavigatingHistory = string.Empty;
 	private int _historyIndex;
-	private int _contextVersion;
+	private readonly CancellationSeries _contextCancellationSeries = new();
 
 	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
 
@@ -63,10 +64,10 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 
 	public async Task SetContextAsync(SharpIdeFile file, LinePosition sourceContextPosition, CancellationToken cancellationToken = default)
 	{
-		var contextVersion = Interlocked.Increment(ref _contextVersion);
+		var contextCancellationToken = _contextCancellationSeries.CreateNext(cancellationToken);
 		CancelPendingRequests();
 		var newSession = await _roslynAnalysis.CreateDebuggerExpressionIntelliSenseSessionAsync(file, sourceContextPosition, cancellationToken);
-		if (contextVersion != Volatile.Read(ref _contextVersion) || cancellationToken.IsCancellationRequested)
+		if (contextCancellationToken.IsCancellationRequested)
 		{
 			newSession?.Dispose();
 			return;
@@ -86,7 +87,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 
 	public void ClearContext()
 	{
-		Interlocked.Increment(ref _contextVersion);
+		_contextCancellationSeries.CreateNext();
 		CancelPendingRequests();
 		_session?.Dispose();
 		_session = null;

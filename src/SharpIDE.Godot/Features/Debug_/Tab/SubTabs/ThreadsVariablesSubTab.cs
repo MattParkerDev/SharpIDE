@@ -1,6 +1,7 @@
 using Ardalis.GuardClauses;
 using Godot;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Threading;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol;
 using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
 using SharpIDE.Application.Features.Debugging;
@@ -26,8 +27,8 @@ public partial class ThreadsVariablesSubTab : Control
 	private DebuggerEvalExpressionCodeEdit _evaluateExpressionCodeEdit = null!;
 	private Dictionary<int, StackFrameModel> _stackFramesById = [];
 	private TreeItem? _evaluationResultItem;
-	private int _evaluationVersion;
-	private int _stackFrameSelectionVersion;
+	private readonly CancellationSeries _evaluationCancellationSeries = new();
+	private readonly CancellationSeries _stackFrameSelectionCancellationSeries = new();
 
 	public SharpIdeProjectModel Project { get; set; } = null!;
 	// private ThreadModel? _selectedThread = null!; // null when not at a stop point
@@ -100,8 +101,8 @@ public partial class ThreadsVariablesSubTab : Control
 	{
 		await this.InvokeAsync(() =>
 		{
-			_evaluationVersion++;
-			_stackFrameSelectionVersion++;
+			_evaluationCancellationSeries.CreateNext();
+			_stackFrameSelectionCancellationSeries.CreateNext();
 			_threadsTree.Clear();
 			_stackFramesTree.Clear();
 			_variablesTree.Clear();
@@ -115,7 +116,7 @@ public partial class ThreadsVariablesSubTab : Control
 
 	private void OnThreadSelected()
 	{
-		_stackFrameSelectionVersion++;
+		_stackFrameSelectionCancellationSeries.CreateNext();
 		var selectedItem = _threadsTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var threadId = selectedItem.GetMetadata(0).AsInt32();
@@ -125,7 +126,7 @@ public partial class ThreadsVariablesSubTab : Control
 			_stackFramesById = stackFrames.ToDictionary(frame => frame.Id);
 			await this.InvokeAsync(() =>
 			{
-				_evaluationVersion++;
+				_evaluationCancellationSeries.CreateNext();
 				_variablesTree.Clear(); // If we select a thread that does not have stack frames, the variables would not be cleared otherwise
 				_evaluationResultItem = null;
 				_variableReferenceLookup.Clear();
@@ -154,7 +155,7 @@ public partial class ThreadsVariablesSubTab : Control
 
 	private void OnStackFrameSelected()
 	{
-		var selectionVersion = ++_stackFrameSelectionVersion;
+		var cancellationToken = _stackFrameSelectionCancellationSeries.CreateNext();
 		var selectedItem = _stackFramesTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var frameId = selectedItem.GetMetadata(0).AsInt32();
@@ -169,7 +170,7 @@ public partial class ThreadsVariablesSubTab : Control
 			{
 				stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
 			}
-			if (selectionVersion != _stackFrameSelectionVersion) return;
+			if (cancellationToken.IsCancellationRequested) return;
 			if (isVisibleInTree)
 			{
 				GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
@@ -177,11 +178,11 @@ public partial class ThreadsVariablesSubTab : Control
 			var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
 			var expressionContextTask = SetExpressionContextAsync(stackFrame);
 			await Task.WhenAll(variablesTask, expressionContextTask);
-			if (selectionVersion != _stackFrameSelectionVersion) return;
+			if (cancellationToken.IsCancellationRequested) return;
 			var variables = await variablesTask;
 			await this.InvokeAsync(() =>
 			{
-				_evaluationVersion++;
+				_evaluationCancellationSeries.CreateNext();
 				_variablesTree.Clear();
 				_evaluationResultItem = null;
 				_variableReferenceLookup.Clear();
@@ -254,7 +255,7 @@ public partial class ThreadsVariablesSubTab : Control
 		}
 
 		var frameId = selectedFrameItem.GetMetadata(0).AsInt32();
-		var evaluationVersion = ++_evaluationVersion;
+		var cancellationToken = _evaluationCancellationSeries.CreateNext();
 		_ = Task.GodotRun(async () =>
 		{
 			Variable resultVariable;
@@ -285,7 +286,7 @@ public partial class ThreadsVariablesSubTab : Control
 			await this.InvokeAsync(() =>
 			{
 				var currentFrameItem = _stackFramesTree.GetSelected();
-				if (evaluationVersion != _evaluationVersion || currentFrameItem is null || currentFrameItem.GetMetadata(0).AsInt32() != frameId)
+				if (cancellationToken.IsCancellationRequested || currentFrameItem is null || currentFrameItem.GetMetadata(0).AsInt32() != frameId)
 				{
 					return;
 				}
