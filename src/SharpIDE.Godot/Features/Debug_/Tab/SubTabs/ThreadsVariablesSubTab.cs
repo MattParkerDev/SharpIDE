@@ -113,44 +113,46 @@ public partial class ThreadsVariablesSubTab : Control
 		});
 	}
 
-	private async void OnThreadSelected()
+	private void OnThreadSelected()
 	{
 		_stackFrameSelectionVersion++;
 		var selectedItem = _threadsTree.GetSelected();
 		Guard.Against.Null(selectedItem);
 		var threadId = selectedItem.GetMetadata(0).AsInt32();
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var stackFrames = await _runService.GetStackFrames(Project, threadId);
-		_stackFramesById = stackFrames.ToDictionary(frame => frame.Id);
-		await this.InvokeAsync(() =>
+		_ = Task.GodotRun(async () =>
 		{
-			_evaluationVersion++;
-			_variablesTree.Clear(); // If we select a thread that does not have stack frames, the variables would not be cleared otherwise
-			_evaluationResultItem = null;
-			_variableReferenceLookup.Clear();
-			_stackFramesTree.Clear();
-			var root = _stackFramesTree.CreateItem();
-			foreach (var (index, s) in stackFrames.Index())
+			var stackFrames = await _runService.GetStackFrames(Project, threadId);
+			_stackFramesById = stackFrames.ToDictionary(frame => frame.Id);
+			await this.InvokeAsync(() =>
 			{
-				var stackFrameItem = _stackFramesTree.CreateItem(root);
-				if (s.IsExternalCode)
+				_evaluationVersion++;
+				_variablesTree.Clear(); // If we select a thread that does not have stack frames, the variables would not be cleared otherwise
+				_evaluationResultItem = null;
+				_variableReferenceLookup.Clear();
+				_stackFramesTree.Clear();
+				var root = _stackFramesTree.CreateItem();
+				foreach (var (index, s) in stackFrames.Index())
 				{
-					stackFrameItem.SetText(0, "[External Code]");
+					var stackFrameItem = _stackFramesTree.CreateItem(root);
+					if (s.IsExternalCode)
+					{
+						stackFrameItem.SetText(0, "[External Code]");
+					}
+					else
+					{
+						// for now, just use the raw name
+						stackFrameItem.SetText(0, s.Name);
+						//var managedFrameInfo = s.ManagedInfo!.Value;
+						//stackFrameItem.SetText(0, $"{managedFrameInfo.ClassName}.{managedFrameInfo.MethodName}() in {managedFrameInfo.Namespace}, {managedFrameInfo.AssemblyName}");
+					}
+					stackFrameItem.SetMetadata(0, s.Id);
+					if (index is 0) _stackFramesTree.SetSelected(stackFrameItem, 0);
 				}
-				else
-				{
-					// for now, just use the raw name
-					stackFrameItem.SetText(0, s.Name);
-					//var managedFrameInfo = s.ManagedInfo!.Value;
-					//stackFrameItem.SetText(0, $"{managedFrameInfo.ClassName}.{managedFrameInfo.MethodName}() in {managedFrameInfo.Namespace}, {managedFrameInfo.AssemblyName}");
-				}
-				stackFrameItem.SetMetadata(0, s.Id);
-				if (index is 0) _stackFramesTree.SetSelected(stackFrameItem, 0);
-			}
+			});
 		});
 	}
 
-	private async void OnStackFrameSelected()
+	private void OnStackFrameSelected()
 	{
 		var selectionVersion = ++_stackFrameSelectionVersion;
 		var selectedItem = _stackFramesTree.GetSelected();
@@ -161,51 +163,55 @@ public partial class ThreadsVariablesSubTab : Control
 			return;
 		}
 		var isVisibleInTree = IsVisibleInTree();
-		if (stackFrame.IsResolved is false)
+		_ = Task.GodotRun(async () =>
 		{
-			stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
-			if (selectionVersion != _stackFrameSelectionVersion) return;
-		}
-		if (isVisibleInTree)
-		{
-			GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
-		}
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
-		var expressionContextTask = SetExpressionContextAsync(stackFrame);
-		await Task.WhenAll(variablesTask, expressionContextTask);
-		if (selectionVersion != _stackFrameSelectionVersion) return;
-		var variables = await variablesTask;
-		await this.InvokeAsync(() =>
-		{
-			_evaluationVersion++;
-			_variablesTree.Clear();
-			_evaluationResultItem = null;
-			_variableReferenceLookup.Clear();
-			var root = _variablesTree.CreateItem();
-			foreach (var variable in variables)
+			if (stackFrame.IsResolved is false)
 			{
-				AddVariableToTreeItem(root, variable);
+				stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
 			}
+			if (selectionVersion != _stackFrameSelectionVersion) return;
+			if (isVisibleInTree)
+			{
+				GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
+			}
+			var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
+			var expressionContextTask = SetExpressionContextAsync(stackFrame);
+			await Task.WhenAll(variablesTask, expressionContextTask);
+			if (selectionVersion != _stackFrameSelectionVersion) return;
+			var variables = await variablesTask;
+			await this.InvokeAsync(() =>
+			{
+				_evaluationVersion++;
+				_variablesTree.Clear();
+				_evaluationResultItem = null;
+				_variableReferenceLookup.Clear();
+				var root = _variablesTree.CreateItem();
+				foreach (var variable in variables)
+				{
+					AddVariableToTreeItem(root, variable);
+				}
+			});
 		});
 	}
 
-	public async void ShowSelectedStackFrame()
+	public void ShowSelectedStackFrame()
 	{
 		var selectedItem = _stackFramesTree.GetSelected();
 		var stackFrame = selectedItem is not null && _stackFramesById.TryGetValue(selectedItem.GetMetadata(0).AsInt32(), out var selectedStackFrame)
 			? selectedStackFrame
 			: null;
-		if (stackFrame is { IsResolved: false })
+		_ = Task.GodotRun(async () =>
 		{
-			stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
-		}
-		GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
+			if (stackFrame is { IsResolved: false })
+			{
+				stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
+			}
+			GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
+		});
 	}
 
 	private async Task<StackFrameModel> ResolveAndReplaceStackFrame(StackFrameModel stackFrame)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		stackFrame = await _runService.ResolveStackFrame(Project, stackFrame);
 		_stackFramesById[stackFrame.Id] = stackFrame;
 		return stackFrame;
