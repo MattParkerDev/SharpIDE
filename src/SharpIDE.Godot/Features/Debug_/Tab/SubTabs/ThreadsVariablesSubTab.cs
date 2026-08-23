@@ -163,7 +163,6 @@ public partial class ThreadsVariablesSubTab : Control
 		{
 			return;
 		}
-		var isVisibleInTree = IsVisibleInTree();
 		_ = Task.GodotRun(async () =>
 		{
 			if (stackFrame.IsResolved is false)
@@ -171,10 +170,7 @@ public partial class ThreadsVariablesSubTab : Control
 				stackFrame = await ResolveAndReplaceStackFrame(stackFrame);
 			}
 			if (cancellationToken.IsCancellationRequested) return;
-			if (isVisibleInTree)
-			{
-				GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
-			}
+			GodotGlobalEvents.Instance.DebuggerStackFrameSelected.InvokeParallelFireAndForget(Project, stackFrame);
 			var variablesTask = _runService.GetVariablesForStackFrame(Project, frameId);
 			var expressionContextTask = SetExpressionContextAsync(stackFrame);
 			await Task.WhenAll(variablesTask, expressionContextTask);

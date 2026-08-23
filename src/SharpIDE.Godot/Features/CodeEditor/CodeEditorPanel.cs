@@ -225,6 +225,9 @@ public partial class CodeEditorPanel : PanelContainer
 
 	private async Task OnDebuggerStackFrameSelected(SharpIdeProjectModel project, StackFrameModel? stackFrame)
 	{
+		// Stopped highlights should only be shown for the currently selected debug tab's project.
+		// Ignore events from other projects - switching to that project's debug tab will re-fire this event via ShowSelectedStackFrame.
+		if (_selectedDebuggerProject is not null && _selectedDebuggerProject != project) return;
 		var cancellationToken = _debuggerSelectionCancellationSeries.CreateNext();
 		_selectedDebuggerProject = project;
 		await this.InvokeAsync(ClearExecutingLine);
