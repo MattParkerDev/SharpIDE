@@ -23,7 +23,7 @@ jobs:
       - uses: chickensoft-games/setup-godot@v2
         if: steps.determine-if-release-necessary.outputs.should_release == 'true'
         with:
-          version: 4.7.1
+          version: 4.7.2
           use-dotnet: true
           include-templates: true
       - name: Dotnet Run Pipeline
