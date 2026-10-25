@@ -8,6 +8,7 @@ public partial class SlnPicker : Control
 {
     private FileDialog _fileDialog = null!;
     private Button _openSlnButton = null!;
+    private Button _newSlnButton = null!;
     private VBoxContainer _previousSlnsVBoxContainer = null!;
     private Label _versionLabel = null!;
     private Button _aboutButton = null!;
@@ -17,6 +18,7 @@ public partial class SlnPicker : Control
 
     private PackedScene _previousSlnEntryScene = ResourceLoader.Load<PackedScene>("res://Features/SlnPicker/PreviousSlnEntry.tscn");
     private PackedScene _aboutDialogScene = ResourceLoader.Load<PackedScene>("uid://ojk87rgonxey");
+    private PackedScene _newSolutionDialogScene = ResourceLoader.Load<PackedScene>("res://Features/SlnPicker/NewSolutionDialog.tscn");
 
     private readonly TaskCompletionSource<string?> _tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -31,8 +33,16 @@ public partial class SlnPicker : Control
         _versionLabel = GetNode<Label>("%VersionLabel");
         _fileDialog = GetNode<FileDialog>("%FileDialog");
         _openSlnButton = GetNode<Button>("%OpenSlnButton");
+        _newSlnButton = GetNode<Button>("%NewSlnButton");
         _aboutButton = GetNode<Button>("%AboutButton");
         _openSlnButton.Pressed += () => _fileDialog.PopupCentered();
+        _newSlnButton.Pressed += () =>
+        {
+            var newSolutionDialog = _newSolutionDialogScene.Instantiate<NewSolutionDialog>();
+            newSolutionDialog.SolutionCreated = path => _tcs.TrySetResult(path);
+            AddChild(newSolutionDialog);
+            newSolutionDialog.PopupCentered();
+        };
         _aboutButton.Pressed += () =>
         {
             // We are doing funky reparenting here because

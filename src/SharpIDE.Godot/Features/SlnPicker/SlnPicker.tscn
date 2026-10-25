@@ -146,6 +146,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Open Sln File"
 
+[node name="NewSlnButton" type="Button" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2/HBoxContainer" unique_id=1007382132]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New Solution"
+
 [node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/VSplitContainer/PanelContainer2/MarginContainer2/VBoxContainer2" unique_id=152730300]
 layout_mode = 2
 

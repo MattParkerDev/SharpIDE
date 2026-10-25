@@ -36,6 +36,18 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 		await _roslynAnalysis.UpdateSolutionDiagnostics(cancellationToken);
 	}
 
+	/// Creates an empty solution. The format (.sln or .slnx) is chosen by the file extension
+	public static async Task CreateSolution(string solutionFilePath, CancellationToken cancellationToken = default)
+	{
+		Guard.Against.NullOrWhiteSpace(solutionFilePath);
+		if (File.Exists(solutionFilePath)) throw new InvalidOperationException($"Solution {solutionFilePath} already exists.");
+		var solutionSerializer = SolutionSerializers.GetSerializerByMoniker(solutionFilePath);
+		Guard.Against.Null(solutionSerializer);
+
+		Directory.CreateDirectory(Path.GetDirectoryName(solutionFilePath)!);
+		await solutionSerializer.SaveAsync(solutionFilePath, new SolutionModel(), cancellationToken);
+	}
+
 	// Weird separation between ReadSolution and LoadSolution is so we can call the static ReadSolution in IdeRoot before all the UI Nodes are ready and DI services injected
 	public static async Task<(SharpIdeSolutionModel, SolutionModel, ISolutionSerializer)> ReadSolution(string solutionFilePath, SharpIdeRootFolder sharpIdeRootFolder, CancellationToken cancellationToken = default)
 	{
