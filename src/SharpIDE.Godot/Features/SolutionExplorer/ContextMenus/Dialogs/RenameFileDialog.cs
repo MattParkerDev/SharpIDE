@@ -1,6 +1,7 @@
 using Godot;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
@@ -9,8 +10,11 @@ public partial class RenameFileDialog : ConfirmationDialog
     private LineEdit _nameLineEdit = null!;
 
     public SharpIdeFile File { get; set; } = null!;
+    /// Set when the file is a solution item, so that the sln entry is renamed too
+    public SharpIdeSolutionFile? SolutionFile { get; set; }
 
     [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
+    [Inject] private readonly SharpIdeSolutionService _sharpIdeSolutionService = null!;
 
     private bool _isNameValid = true;
     private string _fileParentPath = null!;
@@ -64,7 +68,9 @@ public partial class RenameFileDialog : ConfirmationDialog
 
         _ = Task.GodotRun(async () =>
         {
+            var oldFilePath = File.Path;
             await _ideFileOperationsService.RenameFile(File, fileName);
+            if (SolutionFile is not null) await _sharpIdeSolutionService.RenameSolutionFile(oldFilePath, fileName);
         });
         QueueFree();
     }

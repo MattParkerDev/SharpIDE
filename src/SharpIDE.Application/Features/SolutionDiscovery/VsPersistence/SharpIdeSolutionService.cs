@@ -157,6 +157,34 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 	}
 
 	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
+	// Call this after the file has been renamed on disk. Updates every solution folder that references the file
+	public async Task RenameSolutionFile(string oldFilePath, string newFileName, CancellationToken cancellationToken = default)
+	{
+		Guard.Against.Null(_vsSolution);
+		Guard.Against.Null(_solutionSerializer);
+		Guard.Against.NullOrWhiteSpace(_solutionFilePath);
+		Guard.Against.NullOrWhiteSpace(oldFilePath);
+		Guard.Against.NullOrWhiteSpace(newFileName);
+
+		var solutionDirectory = Path.GetDirectoryName(_solutionFilePath)!;
+		var renamedAny = false;
+		foreach (var vsSolutionFolder in _vsSolution.SolutionFolders)
+		{
+			var vsFiles = vsSolutionFolder.Files?.Where(f => FilePathNormalizer.AreFilePathsEquivalent(Path.GetFullPath(Path.Combine(solutionDirectory, f)), oldFilePath)).ToList() ?? [];
+			foreach (var vsFile in vsFiles)
+			{
+				// Keep the existing entry's directory and separator style, only swap the file name
+				var lastSeparatorIndex = Math.Max(vsFile.LastIndexOf('/'), vsFile.LastIndexOf('\\'));
+				vsSolutionFolder.RemoveFile(vsFile);
+				vsSolutionFolder.AddFile($"{vsFile[..(lastSeparatorIndex + 1)]}{newFileName}");
+				renamedAny = true;
+			}
+		}
+		if (renamedAny is false) return;
+		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+	}
+
+	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
 	public async Task AddSolutionFolder(ISolutionOrSolutionFolder parentNode, string solutionFolderName, CancellationToken cancellationToken = default)
 	{
 		Guard.Against.Null(_vsSolution);

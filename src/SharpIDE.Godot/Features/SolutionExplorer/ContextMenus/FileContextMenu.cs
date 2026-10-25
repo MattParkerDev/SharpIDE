@@ -48,7 +48,7 @@ public partial class SolutionExplorerPanel
             }
             else if (actionId is FileContextMenuOptions.Rename)
             {
-	            OpenRenameFilePopup(file);
+	            OpenRenameFilePopup(file, solutionFile);
             }
             else if (actionId is FileContextMenuOptions.Delete)
             {
@@ -65,10 +65,11 @@ public partial class SolutionExplorerPanel
         menu.Popup();
     }
 
-    private void OpenRenameFilePopup(SharpIdeFile file)
+    private void OpenRenameFilePopup(SharpIdeFile file, SharpIdeSolutionFile? solutionFile)
     {
 	    var renameFileDialog = _renameFileDialogScene.Instantiate<RenameFileDialog>();
 	    renameFileDialog.File = file;
+	    renameFileDialog.SolutionFile = solutionFile;
 	    AddChild(renameFileDialog);
 	    renameFileDialog.PopupCentered();
     }

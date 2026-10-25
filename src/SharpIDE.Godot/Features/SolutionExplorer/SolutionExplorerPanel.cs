@@ -57,7 +57,11 @@ public partial class SolutionExplorerPanel : MarginContainer
 			var selectedTreeItem = _tree.GetSelected();
 			if (selectedTreeItem.SharpIdeNode is SharpIdeFile file)
 			{
-				OpenRenameFilePopup(file);
+				OpenRenameFilePopup(file, null);
+			}
+			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionFile { File: not null } slnFile)
+			{
+				OpenRenameFilePopup(slnFile.File, slnFile);
 			}
 			else if (selectedTreeItem.SharpIdeNode is SharpIdeFolder folder)
 			{
@@ -75,6 +79,18 @@ public partial class SolutionExplorerPanel : MarginContainer
 			else if (selectedTreeItem.SharpIdeNode is SharpIdeFolder folder)
 			{
 				OpenDeleteFolderConfirmation(folder);
+			}
+			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionFile { File: not null } slnFile)
+			{
+				OpenRemoveSolutionFileConfirmation(slnFile.File, slnFile);
+			}
+			else if (selectedTreeItem.SharpIdeNode is SharpIdeProjectModel { Folder: not null } project)
+			{
+				OpenRemoveProjectConfirmation(project);
+			}
+			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionFolder slnFolder)
+			{
+				OpenRemoveSlnFolderConfirmation(slnFolder);
 			}
 		}
 	}
