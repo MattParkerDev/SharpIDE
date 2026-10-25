@@ -16,6 +16,7 @@ file enum ProjectContextMenuOptions
     Clean = 4,
     Restore = 5,
     DotnetUserSecrets = 6,
+    Remove = 7,
 }
 
 file enum CreateNewSubmenuOptions
@@ -57,6 +58,8 @@ public partial class SolutionExplorerPanel
         menu.AddItem("Restore", (int)ProjectContextMenuOptions.Restore);
         menu.AddSeparator();
         menu.AddItem(".NET User Secrets", (int)ProjectContextMenuOptions.DotnetUserSecrets);
+        menu.AddSeparator();
+        menu.AddItem("Remove", (int)ProjectContextMenuOptions.Remove);
         menu.PopupHide += () => menu.QueueFree();
         menu.IdPressed += id =>
         {
@@ -92,12 +95,32 @@ public partial class SolutionExplorerPanel
                     OS.ShellShowInFileManager(filePath);
                 });
             }
+            else if (actionId is ProjectContextMenuOptions.Remove)
+            {
+                OpenRemoveProjectConfirmation(project);
+            }
         };
 			
         var globalMousePosition = GetGlobalMousePosition();
         menu.Position = new Vector2I((int)globalMousePosition.X, (int)globalMousePosition.Y);
         menu.Popup();
     }
+    private void OpenRemoveProjectConfirmation(SharpIdeProjectModel project)
+    {
+        Guard.Against.Null(project.Folder);
+        var projectFolderContainsSolution = ProjectFolderContainsSolution(project);
+        OpenRemoveFromSolutionConfirmation(
+            "Remove Project",
+            $"Remove project '{project.Name.Value}' from solution?",
+            "Also delete project folder and files from the file system",
+            projectFolderContainsSolution ? "The project folder contains the solution, so it cannot be deleted" : null,
+            async deleteFromFileSystem =>
+            {
+                await _sharpIdeSolutionService.RemoveProject(project);
+                if (deleteFromFileSystem) await _ideFileOperationsService.DeleteDirectory(project.Folder);
+            });
+    }
+
     private async Task MsBuildProject(SharpIdeProjectModel project, BuildType buildType)
     {
         await _buildService.MsBuildAsync(project.FilePath, buildType);

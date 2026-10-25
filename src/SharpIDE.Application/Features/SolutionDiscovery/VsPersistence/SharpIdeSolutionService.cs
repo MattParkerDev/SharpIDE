@@ -1,5 +1,6 @@
 ﻿using Ardalis.GuardClauses;
 using LibGit2Sharp;
+using Microsoft.CodeAnalysis.Razor.Utilities;
 using Microsoft.VisualStudio.SolutionPersistence;
 using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
@@ -101,6 +102,57 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 		var projectFileRelativePath = Path.GetRelativePath(Path.GetDirectoryName(_solutionFilePath)!, projectFilePath).Replace('\\', '/');
 
 		_vsSolution.AddProject(projectFileRelativePath, null, vsSolutionFolder);
+		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+	}
+
+	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
+	public async Task RemoveProject(SharpIdeProjectModel project, CancellationToken cancellationToken = default)
+	{
+		Guard.Against.Null(_vsSolution);
+		Guard.Against.Null(_solutionSerializer);
+		Guard.Against.Null(project);
+		Guard.Against.NullOrWhiteSpace(_solutionFilePath);
+
+		var solutionDirectory = Path.GetDirectoryName(_solutionFilePath)!;
+		var vsProject = _vsSolution.SolutionProjects.SingleOrDefault(p => FilePathNormalizer.AreFilePathsEquivalent(Path.GetFullPath(Path.Combine(solutionDirectory, p.FilePath)), project.FilePath));
+		Guard.Against.Null(vsProject);
+
+		_vsSolution.RemoveProject(vsProject);
+		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+	}
+
+	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
+	// This also removes all child solution folders, projects and solution items from the solution
+	public async Task RemoveSolutionFolder(SharpIdeSolutionFolder solutionFolder, CancellationToken cancellationToken = default)
+	{
+		Guard.Against.Null(_vsSolution);
+		Guard.Against.Null(_solutionSerializer);
+		Guard.Against.Null(solutionFolder);
+		Guard.Against.NullOrWhiteSpace(_solutionFilePath);
+
+		var vsSolutionFolder = _vsSolution.FindFolder(solutionFolder.VsPersistencePath);
+		Guard.Against.Null(vsSolutionFolder);
+
+		_vsSolution.RemoveFolder(vsSolutionFolder);
+		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+	}
+
+	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
+	public async Task RemoveSolutionFile(SharpIdeSolutionFile solutionFile, CancellationToken cancellationToken = default)
+	{
+		Guard.Against.Null(_vsSolution);
+		Guard.Against.Null(_solutionSerializer);
+		Guard.Against.Null(solutionFile);
+		Guard.Against.NullOrWhiteSpace(_solutionFilePath);
+		if (solutionFile.Parent is not SharpIdeSolutionFolder solutionFolder) throw new InvalidOperationException("Solution files must be in a solution folder");
+
+		var vsSolutionFolder = _vsSolution.FindFolder(solutionFolder.VsPersistencePath);
+		Guard.Against.Null(vsSolutionFolder);
+		var solutionDirectory = Path.GetDirectoryName(_solutionFilePath)!;
+		var vsFile = vsSolutionFolder.Files?.SingleOrDefault(f => FilePathNormalizer.AreFilePathsEquivalent(Path.GetFullPath(Path.Combine(solutionDirectory, f)), solutionFile.Path));
+		Guard.Against.Null(vsFile);
+
+		vsSolutionFolder.RemoveFile(vsFile);
 		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
 	}
 

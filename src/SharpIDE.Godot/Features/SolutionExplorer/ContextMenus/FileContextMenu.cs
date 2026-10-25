@@ -10,13 +10,15 @@ file enum FileContextMenuOptions
     RevealInFileExplorer = 1,
     CopyFullPath = 2,
     Rename = 3,
-    Delete = 4
+    Delete = 4,
+    RemoveFromSolution = 5
 }
 
 public partial class SolutionExplorerPanel
 {
     private readonly PackedScene _renameFileDialogScene = GD.Load<PackedScene>("uid://b775b5j4rkxxw");
-    private void OpenContextMenuFile(SharpIdeFile file)
+    /// <param name="solutionFile">Set when the file is a solution item, i.e. in a solution folder</param>
+    private void OpenContextMenuFile(SharpIdeFile file, SharpIdeSolutionFile? solutionFile = null)
     {
         var menu = new PopupMenu();
         AddChild(menu);
@@ -26,8 +28,8 @@ public partial class SolutionExplorerPanel
         menu.AddItem("Copy Full Path", (int)FileContextMenuOptions.CopyFullPath);
         menu.AddSeparator();
         menu.AddItem("Rename", (int)FileContextMenuOptions.Rename);
-        menu.AddItem("Delete", (int)FileContextMenuOptions.Delete);
-        if (file.Parent is SharpIdeSolutionFolder) menu.SetItemDisabled((int)FileContextMenuOptions.Delete, true);
+        if (solutionFile is null) menu.AddItem("Delete", (int)FileContextMenuOptions.Delete);
+        else menu.AddItem("Remove from Solution", (int)FileContextMenuOptions.RemoveFromSolution);
         menu.PopupHide += () => menu.QueueFree();
         menu.IdPressed += id =>
         {
@@ -52,6 +54,10 @@ public partial class SolutionExplorerPanel
             {
 	            OpenDeleteFileConfirmation(file);
             }
+            else if (actionId is FileContextMenuOptions.RemoveFromSolution)
+            {
+	            OpenRemoveSolutionFileConfirmation(file, solutionFile!);
+            }
         };
 
         var globalMousePosition = GetGlobalMousePosition();
@@ -65,6 +71,20 @@ public partial class SolutionExplorerPanel
 	    renameFileDialog.File = file;
 	    AddChild(renameFileDialog);
 	    renameFileDialog.PopupCentered();
+    }
+
+    private void OpenRemoveSolutionFileConfirmation(SharpIdeFile file, SharpIdeSolutionFile solutionFile)
+    {
+	    OpenRemoveFromSolutionConfirmation(
+		    "Remove Solution Item",
+		    $"Remove '{solutionFile.Name}' from solution?",
+		    "Also delete file from the file system",
+		    null,
+		    async deleteFromFileSystem =>
+		    {
+			    await _sharpIdeSolutionService.RemoveSolutionFile(solutionFile);
+			    if (deleteFromFileSystem) await _ideFileOperationsService.DeleteFile(file);
+		    });
     }
 
     private void OpenDeleteFileConfirmation(SharpIdeFile file)
