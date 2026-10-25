@@ -5,15 +5,28 @@
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_4okmj"]
 
-[node name="NewProjectContainer" type="VBoxContainer" unique_id=521232853]
+[node name="NewProjectContainer" type="MarginContainer" unique_id=1018750183]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 script = ExtResource("1_4okmj")
 
-[node name="HSplitContainer" type="HSplitContainer" parent="." unique_id=1853239867]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=2108407747]
+layout_mode = 2
+
+[node name="CatalogueStatusLabel" type="Label" parent="VBoxContainer" unique_id=1782989968]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Loading compatible templates…"
+autowrap_mode = 2
+
+[node name="HSplitContainer" type="HSplitContainer" parent="VBoxContainer" unique_id=1853239867]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 4
@@ -21,61 +34,63 @@ theme_override_icons/grabber = SubResource("PlaceholderTexture2D_4okmj")
 split_offsets = PackedInt32Array(250)
 split_offset = 250
 
-[node name="PanelContainer" type="PanelContainer" parent="HSplitContainer" unique_id=1793997063]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/HSplitContainer" unique_id=1793997063]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="HSplitContainer/PanelContainer" unique_id=320802118]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HSplitContainer/PanelContainer" unique_id=320802118]
 layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer" unique_id=170613660]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer" unique_id=170613660]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1315544045]
+[node name="SearchLineEdit" type="LineEdit" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1315544045]
+unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "Search"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1545080387]
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1545080387]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer" unique_id=1159474635]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer" unique_id=1159474635]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Label" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=777939192]
+[node name="Label" type="Label" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=777939192]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
 text = "  Project Type"
 
-[node name="MicrosoftTemplatesVBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=477491636]
+[node name="MicrosoftTemplatesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=477491636]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Label2" type="Label" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=646070953]
+[node name="CustomTemplatesLabel" type="Label" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=646070953]
+unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
 text = "  Custom Templates"
 
-[node name="CustomTemplatesVBoxContainer" type="VBoxContainer" parent="HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=2055669092]
+[node name="CustomTemplatesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/HSplitContainer/PanelContainer/MarginContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=2055669092]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="PanelContainer2" type="PanelContainer" parent="HSplitContainer" unique_id=1356528386]
+[node name="PanelContainer2" type="PanelContainer" parent="VBoxContainer/HSplitContainer" unique_id=1356528386]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="HSplitContainer/PanelContainer2" unique_id=784556769]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/HSplitContainer/PanelContainer2" unique_id=784556769]
 layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
-[node name="TemplateComponent" parent="HSplitContainer/PanelContainer2/MarginContainer" unique_id=1036909573 instance=ExtResource("2_i35ns")]
+[node name="TemplateComponent" parent="VBoxContainer/HSplitContainer/PanelContainer2/MarginContainer" unique_id=1036909573 instance=ExtResource("2_i35ns")]
 unique_name_in_owner = true
 layout_mode = 2

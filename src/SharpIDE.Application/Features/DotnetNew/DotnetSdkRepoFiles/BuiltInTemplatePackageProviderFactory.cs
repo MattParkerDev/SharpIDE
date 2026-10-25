@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.Cli.Commands.New;
 /// Factory that is loaded by TemplateEngine via <see cref="IComponentManager"/>.
 /// To create <see cref="ITemplatePackageProvider"/> which returns list of packages to be installed.
 /// </summary>
-internal class BuiltInTemplatePackageProviderFactory : ITemplatePackageProviderFactory
+internal class BuiltInTemplatePackageProviderFactory(string sdkDirectory) : ITemplatePackageProviderFactory
 {
     public static readonly Guid FactoryId = new("{4B11226E-4594-43A4-B843-EB97447B6455}");
 
@@ -21,5 +21,5 @@ internal class BuiltInTemplatePackageProviderFactory : ITemplatePackageProviderF
     public Guid Id { get => FactoryId; }
 
     public ITemplatePackageProvider CreateProvider(IEngineEnvironmentSettings settings)
-        => new BuiltInTemplatePackageProvider(this, settings);
+        => new BuiltInTemplatePackageProvider(this, sdkDirectory);
 }

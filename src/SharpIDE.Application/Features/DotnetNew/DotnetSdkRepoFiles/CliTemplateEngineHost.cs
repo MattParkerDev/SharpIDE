@@ -11,7 +11,7 @@ namespace Microsoft.TemplateEngine.Cli
 {
     public class CliTemplateEngineHost : DefaultTemplateEngineHost
     {
-	    public static CliTemplateEngineHost CreateHost(bool disableSdkTemplates, bool disableProjectContext, FileInfo? projectPath, FileInfo? outputPath, bool isInteractive, LogLevel logLevel, ILoggerFactory loggerFactory)
+	    public static CliTemplateEngineHost CreateHost(bool disableSdkTemplates, bool disableProjectContext, FileInfo? projectPath, FileInfo? outputPath, bool isInteractive, LogLevel logLevel, ILoggerFactory loggerFactory, string sdkDirectory)
 	    {
 	        var builtIns = new List<(Type InterfaceType, IIdentifiedComponent Instance)>();
 	        builtIns.AddRange(Microsoft.TemplateEngine.Orchestrator.RunnableProjects.Components.AllComponents);
@@ -20,7 +20,7 @@ namespace Microsoft.TemplateEngine.Cli
 
 	        if (!disableSdkTemplates)
 	        {
-	            builtIns.Add((typeof(ITemplatePackageProviderFactory), new BuiltInTemplatePackageProviderFactory()));
+	            builtIns.Add((typeof(ITemplatePackageProviderFactory), new BuiltInTemplatePackageProviderFactory(sdkDirectory)));
 	            //builtIns.Add((typeof(ITemplatePackageProviderFactory), new OptionalWorkloadProviderFactory()));
 	        }
 	        // if (!disableProjectContext)
@@ -49,6 +49,7 @@ namespace Microsoft.TemplateEngine.Cli
 	            "1.0.0",
 	            preferences,
 	            builtIns,
+	            fallbackHostNames: ["ide", "dotnetcli"],
 	            outputPath: outputPath?.FullName,
 	            logLevel: logLevel,
 	            loggerFactory: loggerFactory);

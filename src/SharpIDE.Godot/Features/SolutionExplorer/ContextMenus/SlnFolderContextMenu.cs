@@ -26,7 +26,6 @@ public partial class SolutionExplorerPanel
         var createNewSubmenu = new PopupMenu();
         menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)SlnFolderContextMenuOptions.Add);
         createNewSubmenu.AddItem("New Project", (int)SlnFolderAddSubmenuOptions.Project);
-        createNewSubmenu.SetItemDisabled(createNewSubmenu.GetItemIndex((int)SlnFolderAddSubmenuOptions.Project), true);
         createNewSubmenu.IdPressed += id => OnSlnFolderAddSubmenuPressed(id, slnFolder);
         
         menu.PopupHide += () => menu.QueueFree();
@@ -59,7 +58,11 @@ public partial class SolutionExplorerPanel
                 PopupWindow = true,
                 PopupWMHint = true
             };
-            popupWindow.CloseRequested += () => this.RemoveChildAndQueueFree(popupWindow);
+            popupWindow.CloseRequested += () =>
+            {
+                if (newProjectContainer.IsCreating) return;
+                this.RemoveChildAndQueueFree(popupWindow);
+            };
             popupWindow.AddChild(newProjectContainer);
             AddChild(popupWindow);
             popupWindow.PopupCenteredRatio(0.5f);

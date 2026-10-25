@@ -62,24 +62,33 @@ theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
 text = "./dir/ProjectName"
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=910945131]
+[node name="TargetFrameworkContainer" type="HBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=910945131]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=1481248591]
+[node name="FrameworkControls" type="HBoxContainer" parent="ScrollContainer/VBoxContainer/TargetFrameworkContainer" unique_id=1141119401]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="ScrollContainer/VBoxContainer/TargetFrameworkContainer/FrameworkControls" unique_id=1481248591]
 layout_mode = 2
 theme_type_variation = &"Gray700Label"
 text = "Target Framework:"
 
-[node name="TargetFrameworkOptionButton" type="OptionButton" parent="ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=383569671]
+[node name="TargetFrameworkOptionButton" type="OptionButton" parent="ScrollContainer/VBoxContainer/TargetFrameworkContainer/FrameworkControls" unique_id=383569671]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-selected = 0
-item_count = 2
-popup/item_0/text = "net10.0"
-popup/item_0/id = 0
-popup/item_1/text = "net9.0"
-popup/item_1/id = 1
+
+[node name="TemplateSdkOptionButton" type="OptionButton" parent="ScrollContainer/VBoxContainer/TargetFrameworkContainer" unique_id=1570866647]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Select the SDK variant of this template. Choices are limited to installed SDKs up to the repository's resolved SDK."
+
+[node name="TemplateSdkLabel" type="Label" parent="ScrollContainer/VBoxContainer/TargetFrameworkContainer" unique_id=1959412523]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="HBoxContainer4" type="HBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=858864051]
 layout_mode = 2
@@ -117,6 +126,10 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 230)
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="TemplateParametersVBoxContainer" type="VBoxContainer" parent="ScrollContainer/VBoxContainer" unique_id=1334468812]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="FoldableContainer" type="FoldableContainer" parent="ScrollContainer/VBoxContainer" unique_id=398105867]
 layout_mode = 2
@@ -206,6 +219,35 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray700Label"
 text = "Common; Console"
+
+[node name="AdvancedSettingsContainer" type="FoldableContainer" parent="ScrollContainer/VBoxContainer" unique_id=513028078]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/title_panel = SubResource("StyleBoxEmpty_qnbw8")
+theme_override_styles/title_hover_panel = SubResource("StyleBoxEmpty_qnbw8")
+theme_override_styles/title_collapsed_panel = SubResource("StyleBoxEmpty_qnbw8")
+theme_override_styles/title_collapsed_hover_panel = SubResource("StyleBoxEmpty_qnbw8")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_qnbw8")
+folded = true
+title = "Advanced Settings"
+
+[node name="MarginContainer" type="MarginContainer" parent="ScrollContainer/VBoxContainer/AdvancedSettingsContainer" unique_id=698808875]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+
+[node name="AdvancedParametersVBoxContainer" type="VBoxContainer" parent="ScrollContainer/VBoxContainer/AdvancedSettingsContainer/MarginContainer" unique_id=821765180]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="." unique_id=1379891984]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.90588236, 0.29803923, 0.23529412, 1)
+autowrap_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1379891985]
 layout_mode = 2
