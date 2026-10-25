@@ -66,14 +66,14 @@ public partial class SolutionExplorerPanel
     private void OpenRemoveSlnFolderConfirmation(SharpIdeSolutionFolder slnFolder)
     {
         List<SharpIdeProjectModel> projects = [];
-        List<SharpIdeSolutionFile> solutionFiles = [];
+        List<SharpIdeSolutionItemFile> solutionItemFiles = [];
         CollectSlnFolderContents(slnFolder);
 
         var projectsToDelete = projects.Where(p => p.Folder is not null && ProjectFolderContainsSolution(p) is false).ToList();
-        var filesToDelete = solutionFiles.Select(f => f.File).OfType<SharpIdeFile>().ToList();
-        var dialogText = projects.Count is 0 && solutionFiles.Count is 0
+        var filesToDelete = solutionItemFiles.Select(f => f.File).OfType<SharpIdeFile>().ToList();
+        var dialogText = projects.Count is 0 && solutionItemFiles.Count is 0
             ? $"Remove solution folder '{slnFolder.Name}' from solution?"
-            : $"Remove solution folder '{slnFolder.Name}' from solution?\nThis also removes the {projects.Count} project(s) and {solutionFiles.Count} solution item(s) it contains.";
+            : $"Remove solution folder '{slnFolder.Name}' from solution?\nThis also removes the {projects.Count} project(s) and {solutionItemFiles.Count} solution item(s) it contains.";
         string? disabledCheckBoxReason = (projectsToDelete.Count, filesToDelete.Count) switch
         {
             (0, 0) when projects.Count is not 0 => "The contained project folders contain the solution, so they cannot be deleted",
@@ -105,7 +105,7 @@ public partial class SolutionExplorerPanel
         void CollectSlnFolderContents(SharpIdeSolutionFolder folder)
         {
             projects.AddRange(folder.Projects);
-            solutionFiles.AddRange(folder.Files);
+            solutionItemFiles.AddRange(folder.Files);
             foreach (var subFolder in folder.Folders) CollectSlnFolderContents(subFolder);
         }
     }

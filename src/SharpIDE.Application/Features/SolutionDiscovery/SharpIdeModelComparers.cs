@@ -15,10 +15,10 @@ public class SharpIdeFileComparer : IComparer<SharpIdeFile>
 	}
 }
 
-public class SharpIdeSolutionFileComparer : IComparer<SharpIdeSolutionFile>
+public class SharpIdeSolutionItemFileComparer : IComparer<SharpIdeSolutionItemFile>
 {
-	public static readonly SharpIdeSolutionFileComparer Instance = new SharpIdeSolutionFileComparer();
-	public int Compare(SharpIdeSolutionFile? x, SharpIdeSolutionFile? y)
+	public static readonly SharpIdeSolutionItemFileComparer Instance = new SharpIdeSolutionItemFileComparer();
+	public int Compare(SharpIdeSolutionItemFile? x, SharpIdeSolutionItemFile? y)
 	{
 		if (ReferenceEquals(x, y)) return 0;
 		if (x is null) return -1;

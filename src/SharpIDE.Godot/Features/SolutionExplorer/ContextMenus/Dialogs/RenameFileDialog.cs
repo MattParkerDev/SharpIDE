@@ -11,7 +11,7 @@ public partial class RenameFileDialog : ConfirmationDialog
 
     public SharpIdeFile File { get; set; } = null!;
     /// Set when the file is a solution item, so that the sln entry is renamed too
-    public SharpIdeSolutionFile? SolutionFile { get; set; }
+    public SharpIdeSolutionItemFile? SolutionItemFile { get; set; }
 
     [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
     [Inject] private readonly SharpIdeSolutionService _sharpIdeSolutionService = null!;
@@ -70,7 +70,7 @@ public partial class RenameFileDialog : ConfirmationDialog
         {
             var oldFilePath = File.Path;
             await _ideFileOperationsService.RenameFile(File, fileName);
-            if (SolutionFile is not null) await _sharpIdeSolutionService.RenameSolutionFile(oldFilePath, fileName);
+            if (SolutionItemFile is not null) await _sharpIdeSolutionService.RenameSolutionItemFile(oldFilePath, fileName);
         });
         QueueFree();
     }

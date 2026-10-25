@@ -12,7 +12,7 @@ public class SharpIdeSolutionFolder : ISharpIdeNode, IExpandableSharpIdeNode, IC
 	public required string VsPersistencePath { get; set; }
 	public required ObservableList<SharpIdeSolutionFolder> Folders { get; set; }
 	public required ObservableList<SharpIdeProjectModel> Projects { get; set; }
-	public required ObservableList<SharpIdeSolutionFile> Files { get; set; }
+	public required ObservableList<SharpIdeSolutionItemFile> Files { get; set; }
 	public bool Expanded { get; set; }
 	public required IExpandableSharpIdeNode Parent { get; set; }
 
@@ -22,7 +22,7 @@ public class SharpIdeSolutionFolder : ISharpIdeNode, IExpandableSharpIdeNode, IC
 		Name = intermediateModel.Model.Name;
 		VsPersistencePath = intermediateModel.Model.Path;
 		Parent = parent;
-		Files = new ObservableList<SharpIdeSolutionFile>(intermediateModel.Files.Select(s => new SharpIdeSolutionFile(s.FullPath, s.Name, s.Extension, this, sharpIdeRootFolder)));
+		Files = new ObservableList<SharpIdeSolutionItemFile>(intermediateModel.Files.Select(s => new SharpIdeSolutionItemFile(s.FullPath, s.Name, s.Extension, this, sharpIdeRootFolder)));
 		Folders = new ObservableList<SharpIdeSolutionFolder>(intermediateModel.Folders.Select(x => new SharpIdeSolutionFolder(x, allProjects, allFiles, allFolders, this, sharpIdeRootFolder)));
 		Projects = new ObservableList<SharpIdeProjectModel>(intermediateModel.Projects.Select(x => new SharpIdeProjectModel(x, allProjects, allFiles, allFolders, this, sharpIdeRootFolder)));
 	}

@@ -25,7 +25,7 @@ public static class SharpIdeSolutionModelExtensions
 	{
 		DiffProjects(existing.Projects, updated.Projects);
 		DiffSlnFolders(existing.Folders, updated.Folders);
-		DiffSlnFiles(existing.Files, updated.Files);
+		DiffSolutionItemFiles(existing.Files, updated.Files);
 	}
 
 	private static void DiffProjects(ObservableList<SharpIdeProjectModel> existing, ObservableList<SharpIdeProjectModel> updated)
@@ -42,15 +42,15 @@ public static class SharpIdeSolutionModelExtensions
 		foreach (var s in toAdd) existing.Insert(GetInsertionPosition(existing, s), s);
 	}
 
-	private static void DiffSlnFiles(ObservableList<SharpIdeSolutionFile> existing, ObservableList<SharpIdeSolutionFile> updated)
+	private static void DiffSolutionItemFiles(ObservableList<SharpIdeSolutionItemFile> existing, ObservableList<SharpIdeSolutionItemFile> updated)
 	{
 		// Solution files whose .File null-state changed: remove old, re-add new
-		var changedExistingSlnFiles = existing
+		var changedExistingSolutionItemFiles = existing
 			.Join(updated, p => p.Path, np => np.Path, (p, np) => (Old: p, New: np))
 			.Where(pair => (pair.Old.File is null) != (pair.New.File is null))
 			.ToList();
-		List<SharpIdeSolutionFile> toRemove = [..existing.ExceptBy(updated.Select(np => np.Path), p => p.Path), ..changedExistingSlnFiles.Select(pair => pair.Old)];
-		List<SharpIdeSolutionFile> toAdd = [..updated.ExceptBy(existing.Select(p => p.Path), np => np.Path), ..changedExistingSlnFiles.Select(pair => pair.New)];
+		List<SharpIdeSolutionItemFile> toRemove = [..existing.ExceptBy(updated.Select(np => np.Path), p => p.Path), ..changedExistingSolutionItemFiles.Select(pair => pair.Old)];
+		List<SharpIdeSolutionItemFile> toAdd = [..updated.ExceptBy(existing.Select(p => p.Path), np => np.Path), ..changedExistingSolutionItemFiles.Select(pair => pair.New)];
 		foreach (var s in toRemove) existing.Remove(s);
 		foreach (var s in toAdd) existing.Insert(GetInsertionPosition(existing, s), s);
 	}
@@ -87,9 +87,9 @@ public static class SharpIdeSolutionModelExtensions
 			yield return project;
 	}
 
-	private static int GetInsertionPosition(ObservableList<SharpIdeSolutionFile> files, SharpIdeSolutionFile solutionFile)
+	private static int GetInsertionPosition(ObservableList<SharpIdeSolutionItemFile> files, SharpIdeSolutionItemFile solutionItemFile)
 	{
-		var correctInsertionPosition = files.list.BinarySearch(solutionFile, SharpIdeSolutionFileComparer.Instance);
+		var correctInsertionPosition = files.list.BinarySearch(solutionItemFile, SharpIdeSolutionItemFileComparer.Instance);
 		return GetInsertionIndexOrThrow(correctInsertionPosition);
 	}
 	private static int GetInsertionPosition(ObservableList<SharpIdeSolutionFolder> slnFolders, SharpIdeSolutionFolder slnFolder)

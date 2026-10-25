@@ -79,7 +79,7 @@
 					 }
 					 @foreach(var file in slnFolder.Files)
 					 {
-						 @GetSlnFileFragment(file)
+						 @GetSolutionItemFileFragment(file)
 					 }
 				 }
 			 </MudTreeViewItem>
@@ -123,15 +123,15 @@
 
 	</text>;
 
-	private RenderFragment GetSlnFileFragment(SharpIdeSolutionFile slnFile) =>
+	private RenderFragment GetSolutionItemFileFragment(SharpIdeSolutionItemFile solutionItemFile) =>
 		@<text>
-			 @if (slnFile.File is null)
+			 @if (solutionItemFile.File is null)
 			 {
-				 <MudTreeViewItem T="ISharpIdeNode" Icon="@Icons.Material.Filled.Warning" TextTypo="Typo.body2" Text="@slnFile.Name" Value="@slnFile"/>
+				 <MudTreeViewItem T="ISharpIdeNode" Icon="@Icons.Material.Filled.Warning" TextTypo="Typo.body2" Text="@solutionItemFile.Name" Value="@solutionItemFile"/>
 			 }
 			 else
 			 {
-				 @GetFileFragment(slnFile.File)
+				 @GetFileFragment(solutionItemFile.File)
 			 }
 	</text>;
 

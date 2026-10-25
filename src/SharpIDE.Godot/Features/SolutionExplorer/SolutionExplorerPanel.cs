@@ -59,9 +59,9 @@ public partial class SolutionExplorerPanel : MarginContainer
 			{
 				OpenRenameFilePopup(file, null);
 			}
-			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionFile { File: not null } slnFile)
+			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionItemFile { File: not null } solutionItemFile)
 			{
-				OpenRenameFilePopup(slnFile.File, slnFile);
+				OpenRenameFilePopup(solutionItemFile.File, solutionItemFile);
 			}
 			else if (selectedTreeItem.SharpIdeNode is SharpIdeFolder folder)
 			{
@@ -80,9 +80,9 @@ public partial class SolutionExplorerPanel : MarginContainer
 			{
 				OpenDeleteFolderConfirmation(folder);
 			}
-			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionFile { File: not null } slnFile)
+			else if (selectedTreeItem.SharpIdeNode is SharpIdeSolutionItemFile { File: not null } solutionItemFile)
 			{
-				OpenRemoveSolutionFileConfirmation(slnFile.File, slnFile);
+				OpenRemoveSolutionItemFileConfirmation(solutionItemFile.File, solutionItemFile);
 			}
 			else if (selectedTreeItem.SharpIdeNode is SharpIdeProjectModel { Folder: not null } project)
 			{
@@ -135,8 +135,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 		{
 			case (MouseButtonMask.Left, SharpIdeFile file): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(file, null); break;
 			case (MouseButtonMask.Right, SharpIdeFile file): OpenContextMenuFile(file); break;
-			case (MouseButtonMask.Left, SharpIdeSolutionFile { File: not null } slnFile): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(slnFile.File, null); break;
-			case (MouseButtonMask.Right, SharpIdeSolutionFile { File: not null } slnFile): OpenContextMenuFile(slnFile.File, slnFile); break;
+			case (MouseButtonMask.Left, SharpIdeSolutionItemFile { File: not null } solutionItemFile): GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(solutionItemFile.File, null); break;
+			case (MouseButtonMask.Right, SharpIdeSolutionItemFile { File: not null } solutionItemFile): OpenContextMenuFile(solutionItemFile.File, solutionItemFile); break;
 			case (MouseButtonMask.Left, SharpIdeProjectModel { IsInvalid: true }): GodotGlobalEvents.Instance.ToolPaneExternallyActivated.InvokeParallelFireAndForget(ToolPaneType.Problems); break;
 			case (MouseButtonMask.Right, SharpIdeProjectModel { Folder: not null } project): OpenContextMenuProject(project); break;
 			case (MouseButtonMask.Left, SharpIdeFolder): break;
@@ -282,11 +282,11 @@ public partial class SolutionExplorerPanel : MarginContainer
             }), configureAwait: false).AddTo(ref disposableBuilder);
 
         var filesView = slnFolder.Files.CreateView(y => new TreeItemContainer());
-        filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSolutionFileTreeItem(_tree, folderItem, s.Value));
+        filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSolutionItemFileTreeItem(_tree, folderItem, s.Value));
         filesView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
             .SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
             {
-                NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSolutionFileTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
+                NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSolutionItemFileTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
                 NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
                 _ => Task.CompletedTask
             }), configureAwait: false).AddTo(ref disposableBuilder);
@@ -415,21 +415,21 @@ public partial class SolutionExplorerPanel : MarginContainer
 	}
 
 	[RequiresGodotUiThread]
-	private TreeItem CreateSolutionFileTreeItem(Tree tree, TreeItem parent, SharpIdeSolutionFile sharpIdeSolutionFile, int newStartingIndex = -1)
+	private TreeItem CreateSolutionItemFileTreeItem(Tree tree, TreeItem parent, SharpIdeSolutionItemFile sharpIdeSolutionItemFile, int newStartingIndex = -1)
 	{
 		// We need to offset the starting index by the number of non-file items (folders/projects) in the parent
 		// because the newStartingIndex is calculated based on all children, but we are only inserting files here
 		if (newStartingIndex >= 0)
 		{
-			var sharpIdeParent = sharpIdeSolutionFile.Parent as SharpIdeSolutionFolder;
+			var sharpIdeParent = sharpIdeSolutionItemFile.Parent as SharpIdeSolutionFolder;
 			Guard.Against.Null(sharpIdeParent, nameof(sharpIdeParent));
 			var folderCount = sharpIdeParent.Folders.Count;
 			var projectsCount = sharpIdeParent.Projects.Count;
 			newStartingIndex += folderCount + projectsCount;
 		}
 		var fileItem = tree.CreateItem(parent, newStartingIndex);
-		fileItem.SetText(0, sharpIdeSolutionFile.Name);
-		if (sharpIdeSolutionFile.File is {} file)
+		fileItem.SetText(0, sharpIdeSolutionItemFile.Name);
+		if (sharpIdeSolutionItemFile.File is {} file)
 		{
 			fileItem.SetIconsForFileExtension(file);
 			if (GitColours.GetColorForGitFileStatus(file.GitStatus) is { } notnullColor) fileItem.SetCustomColor(0, notnullColor);
@@ -441,7 +441,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 			fileItem.ClearCustomColor(0);
 		}
 
-		fileItem.SharpIdeNode = sharpIdeSolutionFile;
+		fileItem.SharpIdeNode = sharpIdeSolutionItemFile;
 
 		return fileItem;
 	}

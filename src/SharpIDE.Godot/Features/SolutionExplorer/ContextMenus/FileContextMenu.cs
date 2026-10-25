@@ -17,8 +17,8 @@ file enum FileContextMenuOptions
 public partial class SolutionExplorerPanel
 {
     private readonly PackedScene _renameFileDialogScene = GD.Load<PackedScene>("uid://b775b5j4rkxxw");
-    /// <param name="solutionFile">Set when the file is a solution item, i.e. in a solution folder</param>
-    private void OpenContextMenuFile(SharpIdeFile file, SharpIdeSolutionFile? solutionFile = null)
+    /// <param name="solutionItemFile">Set when the file is a solution item, i.e. in a solution folder</param>
+    private void OpenContextMenuFile(SharpIdeFile file, SharpIdeSolutionItemFile? solutionItemFile = null)
     {
         var menu = new PopupMenu();
         AddChild(menu);
@@ -28,7 +28,7 @@ public partial class SolutionExplorerPanel
         menu.AddItem("Copy Full Path", (int)FileContextMenuOptions.CopyFullPath);
         menu.AddSeparator();
         menu.AddItem("Rename", (int)FileContextMenuOptions.Rename);
-        if (solutionFile is null) menu.AddItem("Delete", (int)FileContextMenuOptions.Delete);
+        if (solutionItemFile is null) menu.AddItem("Delete", (int)FileContextMenuOptions.Delete);
         else menu.AddItem("Remove from Solution", (int)FileContextMenuOptions.RemoveFromSolution);
         menu.PopupHide += () => menu.QueueFree();
         menu.IdPressed += id =>
@@ -48,7 +48,7 @@ public partial class SolutionExplorerPanel
             }
             else if (actionId is FileContextMenuOptions.Rename)
             {
-	            OpenRenameFilePopup(file, solutionFile);
+	            OpenRenameFilePopup(file, solutionItemFile);
             }
             else if (actionId is FileContextMenuOptions.Delete)
             {
@@ -56,7 +56,7 @@ public partial class SolutionExplorerPanel
             }
             else if (actionId is FileContextMenuOptions.RemoveFromSolution)
             {
-	            OpenRemoveSolutionFileConfirmation(file, solutionFile!);
+	            OpenRemoveSolutionItemFileConfirmation(file, solutionItemFile!);
             }
         };
 
@@ -65,25 +65,25 @@ public partial class SolutionExplorerPanel
         menu.Popup();
     }
 
-    private void OpenRenameFilePopup(SharpIdeFile file, SharpIdeSolutionFile? solutionFile)
+    private void OpenRenameFilePopup(SharpIdeFile file, SharpIdeSolutionItemFile? solutionItemFile)
     {
 	    var renameFileDialog = _renameFileDialogScene.Instantiate<RenameFileDialog>();
 	    renameFileDialog.File = file;
-	    renameFileDialog.SolutionFile = solutionFile;
+	    renameFileDialog.SolutionItemFile = solutionItemFile;
 	    AddChild(renameFileDialog);
 	    renameFileDialog.PopupCentered();
     }
 
-    private void OpenRemoveSolutionFileConfirmation(SharpIdeFile file, SharpIdeSolutionFile solutionFile)
+    private void OpenRemoveSolutionItemFileConfirmation(SharpIdeFile file, SharpIdeSolutionItemFile solutionItemFile)
     {
 	    OpenRemoveFromSolutionConfirmation(
 		    "Remove Solution Item",
-		    $"Remove '{solutionFile.Name}' from solution?",
+		    $"Remove '{solutionItemFile.Name}' from solution?",
 		    "Also delete file from the file system",
 		    null,
 		    async deleteFromFileSystem =>
 		    {
-			    await _sharpIdeSolutionService.RemoveSolutionFile(solutionFile);
+			    await _sharpIdeSolutionService.RemoveSolutionItemFile(solutionItemFile);
 			    if (deleteFromFileSystem) await _ideFileOperationsService.DeleteFile(file);
 		    });
     }

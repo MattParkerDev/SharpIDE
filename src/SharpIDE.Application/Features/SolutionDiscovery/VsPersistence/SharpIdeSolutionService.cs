@@ -138,18 +138,18 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 	}
 
 	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
-	public async Task RemoveSolutionFile(SharpIdeSolutionFile solutionFile, CancellationToken cancellationToken = default)
+	public async Task RemoveSolutionItemFile(SharpIdeSolutionItemFile solutionItemFile, CancellationToken cancellationToken = default)
 	{
 		Guard.Against.Null(_vsSolution);
 		Guard.Against.Null(_solutionSerializer);
-		Guard.Against.Null(solutionFile);
+		Guard.Against.Null(solutionItemFile);
 		Guard.Against.NullOrWhiteSpace(_solutionFilePath);
-		if (solutionFile.Parent is not SharpIdeSolutionFolder solutionFolder) throw new InvalidOperationException("Solution files must be in a solution folder");
+		if (solutionItemFile.Parent is not SharpIdeSolutionFolder solutionFolder) throw new InvalidOperationException("Solution item files must be in a solution folder");
 
 		var vsSolutionFolder = _vsSolution.FindFolder(solutionFolder.VsPersistencePath);
 		Guard.Against.Null(vsSolutionFolder);
 		var solutionDirectory = Path.GetDirectoryName(_solutionFilePath)!;
-		var vsFile = vsSolutionFolder.Files?.SingleOrDefault(f => FilePathNormalizer.AreFilePathsEquivalent(Path.GetFullPath(Path.Combine(solutionDirectory, f)), solutionFile.Path));
+		var vsFile = vsSolutionFolder.Files?.SingleOrDefault(f => FilePathNormalizer.AreFilePathsEquivalent(Path.GetFullPath(Path.Combine(solutionDirectory, f)), solutionItemFile.Path));
 		Guard.Against.Null(vsFile);
 
 		vsSolutionFolder.RemoveFile(vsFile);
@@ -158,7 +158,7 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 
 	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
 	// Call this after the file has been renamed on disk. Updates every solution folder that references the file
-	public async Task RenameSolutionFile(string oldFilePath, string newFileName, CancellationToken cancellationToken = default)
+	public async Task RenameSolutionItemFile(string oldFilePath, string newFileName, CancellationToken cancellationToken = default)
 	{
 		Guard.Against.Null(_vsSolution);
 		Guard.Against.Null(_solutionSerializer);
