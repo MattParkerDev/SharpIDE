@@ -5,6 +5,13 @@
 [ext_resource type="FontVariation" uid="uid://vmgmcu8gc6nt" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="2_21uq4"]
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="2_amw38"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acptdlg"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.09974625, 0.10354479, 0.10734332, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dwjdr"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -440,6 +447,7 @@ expand_margin_bottom = 6.0
 
 [resource]
 default_font = ExtResource("2_amw38")
+AcceptDialog/styles/panel = SubResource("StyleBoxFlat_acptdlg")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
 Button/styles/normal = SubResource("StyleBoxFlat_kyxro")
 Button/styles/pressed = SubResource("StyleBoxFlat_5v2og")

@@ -13,6 +13,8 @@ public partial class NewSolutionDialog : ConfirmationDialog
     private Label _solutionPathLabel = null!;
     private Label _errorLabel = null!;
     private FileDialog _directoryFileDialog = null!;
+    private Button _createButton = null!;
+    private Button _cancelButton = null!;
 
     private bool _isCreating;
 
@@ -29,6 +31,9 @@ public partial class NewSolutionDialog : ConfirmationDialog
         _solutionPathLabel = GetNode<Label>("%SolutionPathLabel");
         _errorLabel = GetNode<Label>("%ErrorLabel");
         _directoryFileDialog = GetNode<FileDialog>("%DirectoryFileDialog");
+        _createButton = GetOkButton();
+        _cancelButton = GetCancelButton();
+        this.RightAlignButtons();
 
         _directoryLineEdit.Text = GetDefaultSolutionParentDirectory();
         _nameLineEdit.TextChanged += _ => Validate();
@@ -44,7 +49,6 @@ public partial class NewSolutionDialog : ConfirmationDialog
         _directoryFileDialog.DirSelected += dir => _directoryLineEdit.Text = dir;
         Confirmed += OnConfirmed;
         Canceled += QueueFree;
-        CloseRequested += QueueFree;
 
         _nameLineEdit.GrabFocus();
         _nameLineEdit.SelectAll();
@@ -73,20 +77,18 @@ public partial class NewSolutionDialog : ConfirmationDialog
         else if (Path.IsPathFullyQualified(directory) is false) error = "Solution directory must be an absolute path";
         else if (File.Exists(solutionFilePath)) error = "A solution with this name already exists in this directory";
 
-        var sep = Path.DirectorySeparatorChar;
-        _solutionPathLabel.Text = _createDirectoryCheckBox.ButtonPressed
-            ? $"The solution will be created in ...{sep}{name}"
-            : "The solution will be created in the solution directory";
+        _solutionPathLabel.Text = solutionFilePath is null ? string.Empty : Path.GetDirectoryName(solutionFilePath);
         _solutionPathLabel.TooltipText = solutionFilePath ?? string.Empty;
         _errorLabel.Text = error ?? string.Empty;
         _errorLabel.Visible = error is not null;
-        GetOkButton().Disabled = error is not null || _isCreating;
+        _createButton.Disabled = error is not null || _isCreating;
+        _cancelButton.Disabled = _isCreating;
     }
 
     private void OnConfirmed()
     {
         Validate();
-        if (GetOkButton().Disabled) return;
+        if (_createButton.Disabled) return;
         var solutionFilePath = GetSolutionFilePath()!;
         _isCreating = true;
         Validate();

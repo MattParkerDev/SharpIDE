@@ -472,8 +472,16 @@ expand_margin_top = 32.0
 expand_margin_right = 8.0
 expand_margin_bottom = 6.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acptdlg"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.98039216, 0.98039216, 0.98039216, 1)
+
 [resource]
 default_font = ExtResource("4_w7sqp")
+AcceptDialog/styles/panel = SubResource("StyleBoxFlat_acptdlg")
 Button/styles/disabled = SubResource("StyleBoxFlat_guqd5")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
 Button/styles/normal = SubResource("StyleBoxFlat_kyxro")

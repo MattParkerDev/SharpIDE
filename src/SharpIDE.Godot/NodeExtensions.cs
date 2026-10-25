@@ -125,6 +125,20 @@ public static class NodeExtensions
         }
     }
 
+    extension(AcceptDialog acceptDialog)
+    {
+        // AcceptDialog has no alignment option - its buttons are separated by expanding spacers, so only let the first one expand
+        public void RightAlignButtons()
+        {
+            var buttonsHBoxContainer = acceptDialog.GetOkButton().GetParent<HBoxContainer>();
+            var spacers = buttonsHBoxContainer.GetChildren().OfType<Control>().Where(c => c is not BaseButton).ToList();
+            for (var i = 0; i < spacers.Count; i++)
+            {
+                spacers[i].SizeFlagsHorizontal = i is 0 ? Control.SizeFlags.ExpandFill : Control.SizeFlags.Fill;
+            }
+        }
+    }
+
     extension<TKey, TValue>(ConditionalWeakTable<TKey, TValue> conditionalWeakTable) where TKey : class where TValue : class
     {
         public void AddOrUpdateOrRemove(TKey key, TValue? value)

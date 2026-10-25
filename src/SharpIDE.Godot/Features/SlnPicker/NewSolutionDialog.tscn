@@ -6,47 +6,52 @@
 [node name="NewSolutionDialog" type="ConfirmationDialog" unique_id=540705257]
 oversampling_override = 1.0
 title = "New Solution"
-size = Vector2i(620, 230)
-visible = true
+size = Vector2i(640, 240)
 ok_button_text = "Create"
 dialog_hide_on_ok = false
 script = ExtResource("1_newsln")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=397071965]
-offset_left = 8.0
-offset_top = 8.0
-offset_right = 612.0
-offset_bottom = 184.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 
-[node name="GridContainer" type="GridContainer" parent="MarginContainer" unique_id=50408804]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer" unique_id=50408804]
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 8
 columns = 2
 
-[node name="NameLabel" type="Label" parent="MarginContainer/GridContainer" unique_id=174956287]
+[node name="NameLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=174956287]
 layout_mode = 2
 text = "Solution name:"
 
-[node name="NameHBoxContainer" type="HBoxContainer" parent="MarginContainer/GridContainer" unique_id=1695079902]
+[node name="NameHBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=1695079902]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 
-[node name="SolutionNameLineEdit" type="LineEdit" parent="MarginContainer/GridContainer/NameHBoxContainer" unique_id=1475577998]
+[node name="SolutionNameLineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/GridContainer/NameHBoxContainer" unique_id=1475577998]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Solution1"
 
-[node name="FormatLabel" type="Label" parent="MarginContainer/GridContainer/NameHBoxContainer" unique_id=1832508502]
+[node name="FormatLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer/NameHBoxContainer" unique_id=1832508502]
 layout_mode = 2
 text = "format"
 
-[node name="FormatOptionButton" type="OptionButton" parent="MarginContainer/GridContainer/NameHBoxContainer" unique_id=525397354]
+[node name="FormatOptionButton" type="OptionButton" parent="MarginContainer/VBoxContainer/GridContainer/NameHBoxContainer" unique_id=525397354]
 unique_name_in_owner = true
 layout_mode = 2
 flat = true
@@ -57,21 +62,21 @@ popup/item_0/id = 0
 popup/item_1/text = ".sln"
 popup/item_1/id = 1
 
-[node name="DirectoryLabel" type="Label" parent="MarginContainer/GridContainer" unique_id=1127113828]
+[node name="DirectoryLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=1127113828]
 layout_mode = 2
 text = "Solution directory:"
 
-[node name="DirectoryHBoxContainer" type="HBoxContainer" parent="MarginContainer/GridContainer" unique_id=846213906]
+[node name="DirectoryHBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=846213906]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="SolutionDirectoryLineEdit" type="LineEdit" parent="MarginContainer/GridContainer/DirectoryHBoxContainer" unique_id=2130092079]
+[node name="SolutionDirectoryLineEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/GridContainer/DirectoryHBoxContainer" unique_id=2130092079]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="BrowseButton" type="Button" parent="MarginContainer/GridContainer/DirectoryHBoxContainer" unique_id=889331554]
+[node name="BrowseButton" type="Button" parent="MarginContainer/VBoxContainer/GridContainer/DirectoryHBoxContainer" unique_id=889331554]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(32, 0)
 layout_mode = 2
@@ -81,35 +86,47 @@ flat = true
 icon_alignment = 1
 expand_icon = true
 
-[node name="Spacer1" type="Control" parent="MarginContainer/GridContainer" unique_id=2056347830]
+[node name="Spacer1" type="Control" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=2056347830]
 layout_mode = 2
 
-[node name="SolutionPathLabel" type="Label" parent="MarginContainer/GridContainer" unique_id=2108613607]
+[node name="SolutionPathHBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="SolutionPathPrefixLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer/SolutionPathHBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+theme_override_font_sizes/font_size = 14
+text = "This solution will be created in "
+
+[node name="SolutionPathLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer/SolutionPathHBoxContainer" unique_id=2108613607]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 1
-theme_type_variation = &"Gray500Label"
+theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
+text = "./dir/SolutionName"
 text_overrun_behavior = 3
 
-[node name="Spacer2" type="Control" parent="MarginContainer/GridContainer" unique_id=267353862]
+[node name="Spacer2" type="Control" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=267353862]
 layout_mode = 2
 
-[node name="CreateDirectoryCheckBox" type="CheckBox" parent="MarginContainer/GridContainer" unique_id=1710998103]
+[node name="CreateDirectoryCheckBox" type="CheckBox" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=1710998103]
 unique_name_in_owner = true
 layout_mode = 2
 button_pressed = true
 text = "Create directory for the solution"
 
-[node name="Spacer3" type="Control" parent="MarginContainer/GridContainer" unique_id=1877523349]
+[node name="Spacer3" type="Control" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=1877523349]
 layout_mode = 2
 
-[node name="ErrorLabel" type="Label" parent="MarginContainer/GridContainer" unique_id=1789147230]
+[node name="ErrorLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=1789147230]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_colors/font_color = Color(0.90588236, 0.29803923, 0.23529412, 1)
 autowrap_mode = 3
 
 [node name="DirectoryFileDialog" type="FileDialog" parent="." unique_id=1471614014]
