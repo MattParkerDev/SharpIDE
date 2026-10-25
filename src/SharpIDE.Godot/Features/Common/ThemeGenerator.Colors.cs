@@ -32,6 +32,7 @@ public static partial class ThemeGenerator
         NavigationHoverBackground = new Color(0.7413847f, 0.7413847f, 0.7413844f, 0.6f),
         NavigationPressedBackground = new Color(0.5609549f, 0.5609549f, 0.56095487f, 0.6f),
         PopupPanelBackground = new Color(0.82f, 0.82f, 0.82f, 1f),
+        DialogBackground = new Color(0.98039216f, 0.98039216f, 0.98039216f, 1f),
         TreeSelectedBackground = new Color(0f, 0f, 0f, 32f / 255f),
         TreeHoveredBackground = new Color(0f, 0f, 0f, 15f / 255f),
         TreeCursorBackground = new Color(0f, 0f, 0f, 0f),
@@ -79,6 +80,8 @@ public static partial class ThemeGenerator
         public Color NavigationHoverBackground { get; init; } = new(0.28235295f, 0.28235295f, 0.28235295f, 0.6f);
         public Color NavigationPressedBackground { get; init; } = new(0.09411765f, 0.09411765f, 0.09411765f, 0.6f);
         public Color PopupPanelBackground { get; init; } = new(0.1764706f, 0.1764706f, 0.1764706f, 1f);
+        // The clear colour (see SetThemeExtensions) with a PanelContainer's LowContrastBackground composited on top, so dialogs match windows like New Project
+        public Color DialogBackground { get; init; } = new(0.09974625f, 0.10354479f, 0.10734332f, 1f);
         public Color WindowShadow { get; init; } = new(0f, 0f, 0f, 0.11764706f);
         public Color TerminalBorder { get; init; } = new(0f, 0f, 0f, 0.6f);
         public Color TreeSelectedBackground { get; init; } = new(0.14117648f, 0.35686275f, 0.50980395f, 1f);

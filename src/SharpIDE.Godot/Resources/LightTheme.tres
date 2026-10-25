@@ -5,6 +5,13 @@
 [ext_resource type="FontVariation" uid="uid://vmgmcu8gc6nt" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="3_8xmn6"]
 [ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="4_w7sqp"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acptdlg"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.98039216, 0.98039216, 0.98039216, 1)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_guqd5"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -350,6 +357,36 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popmnhv"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0, 0, 0, 0.05882353)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popmnpn"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.82, 0.82, 0.82, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+shadow_color = Color(0, 0, 0, 0.11764706)
+shadow_size = 4
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_popmnsp"]
+color = Color(0, 0, 0, 0.101960786)
+grow_begin = -4.0
+grow_end = -4.0
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amw38"]
 bg_color = Color(0.82, 0.82, 0.82, 1)
 corner_radius_top_left = 5
@@ -472,13 +509,6 @@ expand_margin_top = 32.0
 expand_margin_right = 8.0
 expand_margin_bottom = 6.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acptdlg"]
-content_margin_left = 8.0
-content_margin_top = 8.0
-content_margin_right = 8.0
-content_margin_bottom = 8.0
-bg_color = Color(0.98039216, 0.98039216, 0.98039216, 1)
-
 [resource]
 default_font = ExtResource("4_w7sqp")
 AcceptDialog/styles/panel = SubResource("StyleBoxFlat_acptdlg")
@@ -556,6 +586,13 @@ NavigationArrowButton/styles/normal = SubResource("StyleBoxFlat_ch0dy")
 NavigationArrowButton/styles/pressed = SubResource("StyleBoxFlat_qn0n3")
 Panel/styles/panel = SubResource("StyleBoxFlat_6t7l7")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_6e8is")
+PopupMenu/colors/font_color = Color(0.17, 0.17, 0.17, 1)
+PopupMenu/colors/font_disabled_color = Color(0.49, 0.49, 0.49, 1)
+PopupMenu/colors/font_hover_color = Color(0.1111969, 0.11119682, 0.11119684, 1)
+PopupMenu/colors/font_separator_color = Color(0.49, 0.49, 0.49, 1)
+PopupMenu/styles/hover = SubResource("StyleBoxFlat_popmnhv")
+PopupMenu/styles/panel = SubResource("StyleBoxFlat_popmnpn")
+PopupMenu/styles/separator = SubResource("StyleBoxLine_popmnsp")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
 TabBar/icons/close = ExtResource("2_xvfqr")
 TabBar/styles/tab_hovered = SubResource("StyleBoxFlat_an00s")

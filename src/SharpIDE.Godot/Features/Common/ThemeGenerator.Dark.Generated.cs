@@ -410,6 +410,63 @@ public static partial class ThemeGenerator
 	        ShadowSize = 4
         };
         theme.SetStylebox("panel", "PopupPanel", popupPanel_Panel);
+
+        var popupMenu_Panel = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_popmnpn",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = colors.PopupPanelBackground,
+	        CornerRadiusTopLeft = 5,
+	        CornerRadiusTopRight = 5,
+	        CornerRadiusBottomRight = 5,
+	        CornerRadiusBottomLeft = 5,
+	        ShadowColor = colors.WindowShadow,
+	        ShadowSize = 4
+        };
+        theme.SetStylebox("panel", "PopupMenu", popupMenu_Panel);
+
+        var popupMenu_Hover = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_popmnhv",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt6Percent,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
+        theme.SetStylebox("hover", "PopupMenu", popupMenu_Hover);
+
+        var popupMenu_Separator = new StyleBoxLine
+        {
+	        ResourceSceneUniqueId = "StyleBoxLine_popmnsp",
+	        Color = whiteAt10Percent,
+	        GrowBegin = -4.0f,
+	        GrowEnd = -4.0f
+        };
+        theme.SetStylebox("separator", "PopupMenu", popupMenu_Separator);
+        theme.SetColor("font_color", "PopupMenu", colors.ControlFont);
+        theme.SetColor("font_disabled_color", "PopupMenu", colors.Gray500);
+        theme.SetColor("font_hover_color", "PopupMenu", colors.Gray800);
+        theme.SetColor("font_separator_color", "PopupMenu", colors.Gray500);
+
+        var acceptDialog_Panel = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_acptdlg",
+	        ContentMarginLeft = 8.0f,
+	        ContentMarginTop = 8.0f,
+	        ContentMarginRight = 8.0f,
+	        ContentMarginBottom = 8.0f,
+	        BgColor = colors.DialogBackground
+        };
+        theme.SetStylebox("panel", "AcceptDialog", acceptDialog_Panel);
         theme.SetStylebox("tab_hovered", "TabBar", tab_Hovered);
         theme.SetStylebox("tab_selected", "TabBar", tab_Selected);
         theme.SetStylebox("tab_unselected", "TabBar", tab_Unselected);

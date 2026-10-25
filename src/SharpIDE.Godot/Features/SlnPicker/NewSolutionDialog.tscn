@@ -21,7 +21,7 @@ theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=719178604]
 layout_mode = 2
 theme_override_constants/separation = 8
 
@@ -89,12 +89,12 @@ expand_icon = true
 [node name="Spacer1" type="Control" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=2056347830]
 layout_mode = 2
 
-[node name="SolutionPathHBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/GridContainer"]
+[node name="SolutionPathHBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/GridContainer" unique_id=1339207279]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="SolutionPathPrefixLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer/SolutionPathHBoxContainer"]
+[node name="SolutionPathPrefixLabel" type="Label" parent="MarginContainer/VBoxContainer/GridContainer/SolutionPathHBoxContainer" unique_id=252060486]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 theme_override_font_sizes/font_size = 14
