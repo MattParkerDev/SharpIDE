@@ -29,7 +29,6 @@ public partial class SolutionExplorerPanel
         menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)SolutionContextMenuOptions.Add);
         createNewSubmenu.AddItem("New Project", (int)SolutionAddSubmenuOptions.Project);
         createNewSubmenu.AddItem("New Solution Folder", (int)SolutionAddSubmenuOptions.SolutionFolder);
-        createNewSubmenu.SetItemDisabled(createNewSubmenu.GetItemIndex((int)SolutionAddSubmenuOptions.SolutionFolder), true);
         createNewSubmenu.IdPressed += id => OnSolutionAddSubmenuPressed(id, solution);
         
         menu.AddItem("Reload Solution", (int)SolutionContextMenuOptions.ReloadSolution);
@@ -58,6 +57,10 @@ public partial class SolutionExplorerPanel
         if (actionId is SolutionAddSubmenuOptions.Project)
         {
             OpenNewProjectWindow(solution);
+        }
+        else if (actionId is SolutionAddSubmenuOptions.SolutionFolder)
+        {
+            OpenNewSolutionFolderDialog(solution);
         }
     }
 }

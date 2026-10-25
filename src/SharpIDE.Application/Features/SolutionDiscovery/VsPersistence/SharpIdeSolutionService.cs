@@ -103,6 +103,21 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 		_vsSolution.AddProject(projectFileRelativePath, null, vsSolutionFolder);
 		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
 	}
+
+	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel
+	public async Task AddSolutionFolder(ISolutionOrSolutionFolder parentNode, string solutionFolderName, CancellationToken cancellationToken = default)
+	{
+		Guard.Against.Null(_vsSolution);
+		Guard.Against.Null(_solutionSerializer);
+		Guard.Against.Null(parentNode);
+		Guard.Against.NullOrWhiteSpace(_solutionFilePath);
+		Guard.Against.NullOrWhiteSpace(solutionFolderName);
+
+		// VS Persistence solution folder paths start and end with a forward slash, e.g. /Parent/Child/
+		var parentPath = parentNode is SharpIdeSolutionFolder solutionFolder ? solutionFolder.VsPersistencePath : "/";
+		_vsSolution.AddFolder($"{parentPath}{solutionFolderName}/");
+		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+	}
 }
 
 public enum GitFileStatus
