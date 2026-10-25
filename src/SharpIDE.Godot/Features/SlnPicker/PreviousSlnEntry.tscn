@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://x5lhwvh5dium"]
 
 [ext_resource type="Script" uid="uid://cnfj7yfseyikh" path="res://Features/SlnPicker/PreviousSlnEntry.cs" id="1_2ycpd"]
+[ext_resource type="Texture2D" uid="uid://d0wy2vggrfgdh" path="res://Resources/close.svg" id="2_close"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1rtjt"]
 content_margin_left = 0.0
@@ -73,3 +74,15 @@ layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "C:\\Users\\Matthew\\Documents\\Git\\BlazorCodeBreaker\\BlazorCodeBreaker.slnx"
 text_overrun_behavior = 3
+
+[node name="RemoveButton" type="Button" parent="Button/MarginContainer/PreviousSlnEntry" unique_id=802958891]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "Remove from recent solutions"
+focus_mode = 0
+theme_type_variation = &"SubtleIconButton"
+icon = ExtResource("2_close")
+icon_alignment = 1

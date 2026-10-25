@@ -85,6 +85,12 @@ public partial class SlnPicker : Control
             var node = _previousSlnEntryScene.Instantiate<PreviousSlnEntry>();
             node.RecentSln = previousSln;
             node.Clicked = path => _tcs.TrySetResult(path);
+            node.RemoveClicked = recentSln =>
+            {
+                // Persisted to the config file when the app exits, along with the rest of AppState
+                Singletons.AppState.RecentSlns.Remove(recentSln);
+                _previousSlnsVBoxContainer.RemoveChildAndQueueFree(node);
+            };
             _previousSlnsVBoxContainer.AddChild(node);
         }
     }

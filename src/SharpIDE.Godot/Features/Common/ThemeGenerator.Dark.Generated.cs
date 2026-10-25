@@ -35,6 +35,7 @@ public static partial class ThemeGenerator
         theme.SetTypeVariation("Gray800Label", "Label");
         theme.SetTypeVariation("IdeSidebarButton", "Button");
         theme.SetTypeVariation("NavigationArrowButton", "Button");
+        theme.SetTypeVariation("SubtleIconButton", "Button");
 
         var button_Hover = new StyleBoxFlat
         {
@@ -365,6 +366,46 @@ public static partial class ThemeGenerator
 	        CornerDetail = 5
         };
         theme.SetStylebox("pressed", "NavigationArrowButton", navigationArrowButton_Pressed);
+
+        // An icon button with no background until hovered, e.g. the remove button on recent solutions
+        var subtleIconButton_Empty = new StyleBoxEmpty
+        {
+	        ResourceSceneUniqueId = "StyleBoxEmpty_sbtlicn"
+        };
+        theme.SetStylebox("normal", "SubtleIconButton", subtleIconButton_Empty);
+        theme.SetStylebox("disabled", "SubtleIconButton", subtleIconButton_Empty);
+        theme.SetStylebox("focus", "SubtleIconButton", subtleIconButton_Empty);
+
+        var subtleIconButton_Hover = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_sbtlhv",
+	        BgColor = whiteAt6Percent,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
+        theme.SetStylebox("hover", "SubtleIconButton", subtleIconButton_Hover);
+
+        var subtleIconButton_Pressed = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_sbtlpr",
+	        BgColor = whiteAt12Percent,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
+        theme.SetStylebox("pressed", "SubtleIconButton", subtleIconButton_Pressed);
+        theme.SetStylebox("hover_pressed", "SubtleIconButton", subtleIconButton_Pressed);
+        // Keep the icon itself unchanged in every state, so only the background fill shows the hover/press
+        theme.SetColor("icon_normal_color", "SubtleIconButton", white);
+        theme.SetColor("icon_hover_color", "SubtleIconButton", white);
+        theme.SetColor("icon_pressed_color", "SubtleIconButton", white);
+        theme.SetColor("icon_hover_pressed_color", "SubtleIconButton", white);
+        theme.SetColor("icon_focus_color", "SubtleIconButton", white);
 
         var panel_Panel = new StyleBoxFlat
         {

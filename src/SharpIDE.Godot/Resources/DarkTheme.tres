@@ -378,6 +378,24 @@ corner_radius_bottom_left = 5
 shadow_color = Color(0, 0, 0, 0.11764706)
 shadow_size = 4
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sbtlicn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sbtlhv"]
+bg_color = Color(1, 1, 1, 0.0627451)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sbtlpr"]
+bg_color = Color(1, 1, 1, 0.1254902)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bk23l"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -551,6 +569,18 @@ PopupMenu/styles/hover = SubResource("StyleBoxFlat_popmnhv")
 PopupMenu/styles/panel = SubResource("StyleBoxFlat_popmnpn")
 PopupMenu/styles/separator = SubResource("StyleBoxLine_popmnsp")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
+SubtleIconButton/base_type = &"Button"
+SubtleIconButton/colors/icon_focus_color = Color(1, 1, 1, 1)
+SubtleIconButton/colors/icon_hover_color = Color(1, 1, 1, 1)
+SubtleIconButton/colors/icon_hover_pressed_color = Color(1, 1, 1, 1)
+SubtleIconButton/colors/icon_normal_color = Color(1, 1, 1, 1)
+SubtleIconButton/colors/icon_pressed_color = Color(1, 1, 1, 1)
+SubtleIconButton/styles/disabled = SubResource("StyleBoxEmpty_sbtlicn")
+SubtleIconButton/styles/focus = SubResource("StyleBoxEmpty_sbtlicn")
+SubtleIconButton/styles/hover = SubResource("StyleBoxFlat_sbtlhv")
+SubtleIconButton/styles/hover_pressed = SubResource("StyleBoxFlat_sbtlpr")
+SubtleIconButton/styles/normal = SubResource("StyleBoxEmpty_sbtlicn")
+SubtleIconButton/styles/pressed = SubResource("StyleBoxFlat_sbtlpr")
 TabBar/icons/close = ExtResource("2_5oigc")
 TabBar/styles/tab_hovered = SubResource("StyleBoxFlat_an00s")
 TabBar/styles/tab_selected = SubResource("StyleBoxFlat_ua1vr")
