@@ -9,7 +9,7 @@ public partial class NewProjectContainer : MarginContainer
 {
     [Inject] private readonly DotnetTemplateService _dotnetTemplateService = null!;
 
-    public SharpIdeSolutionFolder SlnFolder { get; set; } = null!;
+    public ISolutionOrSolutionFolder ParentNode { get; set; } = null!;
     public bool IsCreating => _templateComponent?.IsCreating ?? false;
 
     private Label _catalogueStatusLabel = null!;
@@ -27,8 +27,8 @@ public partial class NewProjectContainer : MarginContainer
 
     public override void _Ready()
     {
-        Guard.Against.Null(SlnFolder);
-        IExpandableSharpIdeNode root = SlnFolder;
+        Guard.Against.Null(ParentNode);
+        IExpandableSharpIdeNode root = ParentNode;
         while (root is SharpIdeSolutionFolder folder) root = folder.Parent!;
         var repositoryDirectory = ((SharpIdeSolutionModel)root).DirectoryPath;
         _catalogueStatusLabel = GetNode<Label>("%CatalogueStatusLabel");
@@ -37,7 +37,7 @@ public partial class NewProjectContainer : MarginContainer
         _customTemplatesVBoxContainer = GetNode<VBoxContainer>("%CustomTemplatesVBoxContainer");
         _customTemplatesLabel = GetNode<Label>("%CustomTemplatesLabel");
         _templateComponent = GetNode<TemplateComponent>("%TemplateComponent");
-        _templateComponent.SlnFolder = SlnFolder;
+        _templateComponent.ParentNode = ParentNode;
         _templateComponent.Visible = false;
         _customTemplatesLabel.Visible = false;
         _searchLineEdit.TextChanged += OnSearchTextChanged;

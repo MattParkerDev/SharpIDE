@@ -48,24 +48,29 @@ public partial class SolutionExplorerPanel
         var actionId = (SlnFolderAddSubmenuOptions)id;
         if (actionId is SlnFolderAddSubmenuOptions.Project)
         {
-            var newProjectContainer = _newProjectContainerScene.Instantiate<NewProjectContainer>();
-            newProjectContainer.SlnFolder = slnFolder;
-            var popupWindow = new Window
-            {
-                Title = "New Project",
-                InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen,
-                Transient = true,
-                PopupWindow = true,
-                PopupWMHint = true
-            };
-            popupWindow.CloseRequested += () =>
-            {
-                if (newProjectContainer.IsCreating) return;
-                this.RemoveChildAndQueueFree(popupWindow);
-            };
-            popupWindow.AddChild(newProjectContainer);
-            AddChild(popupWindow);
-            popupWindow.PopupCenteredRatio(0.5f);
+            OpenNewProjectWindow(slnFolder);
         }
+    }
+
+    private void OpenNewProjectWindow(ISolutionOrSolutionFolder parentNode)
+    {
+        var newProjectContainer = _newProjectContainerScene.Instantiate<NewProjectContainer>();
+        newProjectContainer.ParentNode = parentNode;
+        var popupWindow = new Window
+        {
+            Title = "New Project",
+            InitialPosition = Window.WindowInitialPosition.CenterMainWindowScreen,
+            Transient = true,
+            PopupWindow = true,
+            PopupWMHint = true
+        };
+        popupWindow.CloseRequested += () =>
+        {
+            if (newProjectContainer.IsCreating) return;
+            this.RemoveChildAndQueueFree(popupWindow);
+        };
+        popupWindow.AddChild(newProjectContainer);
+        AddChild(popupWindow);
+        popupWindow.PopupCenteredRatio(0.5f);
     }
 }

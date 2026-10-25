@@ -10,7 +10,7 @@ namespace SharpIDE.Godot.Features.NewProject;
 
 public partial class TemplateComponent : VBoxContainer
 {
-    public SharpIdeSolutionFolder SlnFolder { get; set; } = null!;
+    public ISolutionOrSolutionFolder ParentNode { get; set; } = null!;
     public bool IsCreating => _isCreating;
     public DotnetTemplateSdk RepositorySdk { get; set; } = null!;
     private SdkTemplateVariant? _selectedVariant;
@@ -193,7 +193,7 @@ public partial class TemplateComponent : VBoxContainer
 
         if (string.IsNullOrWhiteSpace(_projectDirectoryLineEdit.Text))
         {
-            _projectDirectoryLineEdit.Text = GetDefaultNewProjectParentPath(SlnFolder);
+            _projectDirectoryLineEdit.Text = GetDefaultNewProjectParentPath(ParentNode);
         }
         UpdateProjectPathLabel();
 
@@ -497,7 +497,7 @@ public partial class TemplateComponent : VBoxContainer
                 await Task.Delay(300); // Wait for the files to be added to the SharpIdeRootFolder, before reloading the sln
                 foreach (var projectFilePath in projectFilePaths)
                 {
-                    await _sharpIdeSolutionService.AddProject(SlnFolder, Path.GetFileNameWithoutExtension(projectFilePath), projectFilePath);
+                    await _sharpIdeSolutionService.AddProject(ParentNode, Path.GetFileNameWithoutExtension(projectFilePath), projectFilePath);
                 }
                 succeeded = true;
             }
@@ -549,10 +549,10 @@ public partial class TemplateComponent : VBoxContainer
         _projectDirectoryAndProjectNameLabel.Text = Path.Combine(_projectDirectoryLineEdit.Text, _projectNameLineEdit.Text);
     }
 
-    private static string GetDefaultNewProjectParentPath(SharpIdeSolutionFolder slnFolder)
+    private static string GetDefaultNewProjectParentPath(ISolutionOrSolutionFolder parentNode)
     {
         List<string> folderNames = [];
-        IExpandableSharpIdeNode node = slnFolder;
+        IExpandableSharpIdeNode node = parentNode;
         while (node is SharpIdeSolutionFolder slnFolderNode)
         {
             folderNames.Add(slnFolderNode.Name);

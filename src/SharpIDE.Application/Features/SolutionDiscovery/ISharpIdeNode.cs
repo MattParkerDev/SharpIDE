@@ -12,6 +12,7 @@ public interface ISolutionOrProject
 {
 	public string DirectoryPath { get; set; }
 }
+public interface ISolutionOrSolutionFolder : IExpandableSharpIdeNode;
 public interface IFileOrFolder : IChildSharpIdeNode
 {
 	public string Path { get; set; }

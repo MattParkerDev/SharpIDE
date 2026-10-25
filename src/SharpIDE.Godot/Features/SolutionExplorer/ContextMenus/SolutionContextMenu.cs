@@ -12,7 +12,8 @@ file enum SolutionContextMenuOptions
 
 file enum SolutionAddSubmenuOptions
 {
-    SolutionFolder = 1
+    SolutionFolder = 1,
+    Project
 }
 
 public partial class SolutionExplorerPanel
@@ -26,8 +27,9 @@ public partial class SolutionExplorerPanel
         
         var createNewSubmenu = new PopupMenu();
         menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)SolutionContextMenuOptions.Add);
-        menu.SetItemDisabled(menu.GetItemIndex((int)SolutionContextMenuOptions.Add), true);
+        createNewSubmenu.AddItem("New Project", (int)SolutionAddSubmenuOptions.Project);
         createNewSubmenu.AddItem("New Solution Folder", (int)SolutionAddSubmenuOptions.SolutionFolder);
+        createNewSubmenu.SetItemDisabled(createNewSubmenu.GetItemIndex((int)SolutionAddSubmenuOptions.SolutionFolder), true);
         createNewSubmenu.IdPressed += id => OnSolutionAddSubmenuPressed(id, solution);
         
         menu.AddItem("Reload Solution", (int)SolutionContextMenuOptions.ReloadSolution);
@@ -53,5 +55,9 @@ public partial class SolutionExplorerPanel
     private void OnSolutionAddSubmenuPressed(long id, SharpIdeSolutionModel solution)
     {
         var actionId = (SolutionAddSubmenuOptions)id;
+        if (actionId is SolutionAddSubmenuOptions.Project)
+        {
+            OpenNewProjectWindow(solution);
+        }
     }
 }
