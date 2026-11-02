@@ -27,38 +27,38 @@ Tahoe further restricted users' ability to run unsigned software. Follow these s
 if codesign is not installed, install it with `xcode-select --install`
 </details>
 
-<img width="1638" height="935" alt="image" src="https://github.com/user-attachments/assets/bce91555-a1f2-43ab-a525-8353b4c7cff2" />
+<img width="1600" height="900" alt="SharpIDE overview with the Problems pane open" src="docs/images/readme/overview.png" />
 
 ## Completions
-<img width="1778" height="973" alt="image" src="https://github.com/user-attachments/assets/92e1c9aa-dad2-4a2f-9f5b-09d97d590a02" />
+<img width="1600" height="900" alt="Code completions" src="docs/images/readme/completions.png" />
 
 ## Signature Help
-<img width="1509" height="873" alt="image" src="https://github.com/user-attachments/assets/fcc95494-dcd1-4c4a-b566-3f9bda95b3a2" />
+<img width="1600" height="900" alt="Method signature help" src="docs/images/readme/signature-help.png" />
 
 ## Code Action/Refactoring
-<img width="1636" height="852" alt="image" src="https://github.com/user-attachments/assets/1448d630-ec5d-4a32-8827-bb78fd27872a" />
+<img width="1600" height="900" alt="Code actions and refactorings menu" src="docs/images/readme/code-action.png" />
 
 ## Symbol Info
-<img width="1596" height="853" alt="image" src="https://github.com/user-attachments/assets/b5b3f2f7-0b85-4486-a7d2-9c7ed66ab288" />
+<img width="1600" height="900" alt="Symbol info tooltip" src="docs/images/readme/symbol-info.png" />
 
 ## Razor Syntax Highlighting
-<img width="1619" height="852" alt="image" src="https://github.com/user-attachments/assets/2935f3a3-a5b7-4949-96d6-06f0b5a77d33" />
+<img width="1600" height="900" alt="Razor syntax highlighting" src="docs/images/readme/razor.png" />
 
 ## Run
-<img width="1544" height="867" alt="image" src="https://github.com/user-attachments/assets/53c32fd2-959d-4e72-9e50-83edaa008d8b" />
+<img width="1600" height="900" alt="Run pane with a running project" src="docs/images/readme/run.png" />
 
 ## Debug
-<img width="1513" height="880" alt="image" src="https://github.com/user-attachments/assets/9bd75fef-4198-41a8-a029-c4eea2e53a97" />
+<img width="1600" height="900" alt="Debugger stopped at a breakpoint" src="docs/images/readme/debug.png" />
 
 
 ## Build
-<img width="1544" height="868" alt="image" src="https://github.com/user-attachments/assets/4906de77-f3a7-4dc6-8138-6a824ae3eb61" />
+<img width="1600" height="900" alt="Build pane" src="docs/images/readme/build.png" />
 
 ## NuGet (WIP)
-<img width="1651" height="1002" alt="image" src="https://github.com/user-attachments/assets/a9f9259e-f733-43ad-a99e-9a932baf6f9d" />
+<img width="1600" height="900" alt="NuGet package manager" src="docs/images/readme/nuget.png" />
 
 ## Test Explorer (WIP)
-<img width="1630" height="895" alt="image" src="https://github.com/user-attachments/assets/b76efd8e-6f57-42a4-b2dc-8fd3e907db83" />
+<img width="1600" height="900" alt="Test Explorer with test results" src="docs/images/readme/test-explorer.png" />
 
 ## Solution Picker
-<img width="842" height="498" alt="image" src="https://github.com/user-attachments/assets/044f0ed3-f679-4fbf-9c3c-c6180bfda7ab" />
+<img width="842" height="501" alt="Solution picker" src="docs/images/readme/solution-picker.png" />
