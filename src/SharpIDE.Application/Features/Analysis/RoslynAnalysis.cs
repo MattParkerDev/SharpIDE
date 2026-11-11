@@ -21,9 +21,9 @@ using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.PdbSourceDocument;
 using Microsoft.CodeAnalysis.PooledObjects;
-using Microsoft.CodeAnalysis.Razor.DocumentMapping;
 using Microsoft.CodeAnalysis.Razor.Remote;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
+using Microsoft.CodeAnalysis.Remote.Razor.DocumentMapping;
 using Microsoft.CodeAnalysis.Remote.Razor.ProjectSystem;
 using Microsoft.CodeAnalysis.Remote.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Rename;
@@ -37,7 +37,6 @@ using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.Analysis.WorkspaceServices;
 using SharpIDE.Application.Features.Build;
-using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using static Roslyn.Utilities.EnumerableExtensions;
@@ -513,7 +512,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
-		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument();
+		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument(false);
 		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 		//var razorCsharpText = razorCSharpDocument.Text.ToString();
@@ -1140,7 +1139,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
-		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument();
+		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument(false);
 		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
@@ -1198,7 +1197,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
-		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument();
+		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument(false);
 		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
 		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 

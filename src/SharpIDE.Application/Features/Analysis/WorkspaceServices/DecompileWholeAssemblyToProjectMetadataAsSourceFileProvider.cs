@@ -8,6 +8,7 @@ using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.Metadata;
 using ICSharpCode.Decompiler.TypeSystem;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.DecompiledSource;
 using Microsoft.CodeAnalysis.Debugging;
 using Microsoft.CodeAnalysis.ErrorReporting;
 using Microsoft.CodeAnalysis.Host;
@@ -260,7 +261,7 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 		return Task.Run(async () =>
 		{
 			var logger = new StringBuilder();
-			var resolver = new AssemblyResolver2(compilation, logger);
+			var resolver = new AssemblyResolver(compilation, logger);
 
 			PEFile? file = null;
 			if (metadataReference is not null)
