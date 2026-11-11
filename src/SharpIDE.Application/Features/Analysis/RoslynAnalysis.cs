@@ -100,6 +100,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(LoadSolutionInWorkspace)}");
 		_logger.LogInformation("RoslynAnalysis: Loading solution {SolutionPath}", solutionModel.FilePath);
 		_sharpIdeSolutionModel = solutionModel;
+		lock (_projectDiagnosticsCacheLock) _projectDiagnosticsCache.Clear(); // ProjectIds from a previous solution are meaningless now
 		var timer = Stopwatch.StartNew();
 
 		Guard.Against.Null(_workspace);
@@ -384,6 +385,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		if (project.IsLoaded is false) return;
 		var projectDiagnostics = await GetProjectDiagnostics(project, cancellationToken);
+		// A cache hit returns the same SharpIdeDiagnostic instances, so a reference comparison detects "nothing changed".
+		// Skipping here avoids every subscriber (open tabs, Problems panel) tearing down and rebuilding for an identical list.
+		if (project.Diagnostics.SequenceEqual(projectDiagnostics, ReferenceEqualityComparer.Instance)) return;
 		// TODO: only add and remove diffs
 		project.Diagnostics.RemoveRange(project.Diagnostics);
 		project.Diagnostics.AddRange(projectDiagnostics);
@@ -396,11 +400,61 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		await UpdateProjectDiagnostics(project, cancellationToken);
 	}
 
+	/// Everything a project's compiler diagnostics depend on:
+	/// - ProjectVersion: options, references, .editorconfig, documents added/removed
+	/// - LatestDocumentVersion: any edit to this project's own documents/additional documents, including method bodies
+	/// - DependentSemanticVersion: declaration-level (signature) changes in referenced projects. Method-body edits there don't count, as
+	///   referenced projects are compiled against as skeleton (declarations only) references, which Roslyn itself reuses while this version is unchanged
+	private readonly record struct ProjectDiagnosticsKey(VersionStamp ProjectVersion, VersionStamp LatestDocumentVersion, VersionStamp DependentSemanticVersion);
+	private sealed record ProjectDiagnosticsEntry(ProjectDiagnosticsKey Key, Task<ImmutableArray<SharpIdeDiagnostic>> Task, CancellationTokenSource Cts);
+	private readonly Dictionary<ProjectId, ProjectDiagnosticsEntry> _projectDiagnosticsCache = new();
+	private readonly Lock _projectDiagnosticsCacheLock = new();
+
+	/// Cached per project, and shared between concurrent callers (e.g. the focused tab's fast path and the batched solution-wide pass),
+	/// so a given project version is only ever computed once.
 	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetProjectDiagnostics(SharpIdeProjectModel projectModel, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetProjectDiagnostics)}");
 		await _solutionLoadedTcs.Task;
-		var project = GetProjectForSharpIdeProjectModel(projectModel);
+		while (true)
+		{
+			var project = GetProjectForSharpIdeProjectModel(projectModel);
+			var key = new ProjectDiagnosticsKey(project.Version, await project.GetLatestDocumentVersionAsync(cancellationToken), await project.GetDependentSemanticVersionAsync(cancellationToken));
+
+			ProjectDiagnosticsEntry entry;
+			ProjectDiagnosticsEntry? supersededEntry = null;
+			lock (_projectDiagnosticsCacheLock)
+			{
+				if (_projectDiagnosticsCache.TryGetValue(project.Id, out var existing) && existing.Key == key && existing.Task is not { IsCanceled: true } and not { IsFaulted: true })
+				{
+					entry = existing;
+				}
+				else
+				{
+					supersededEntry = existing;
+					// Deliberately not the caller's token: other callers may share this task. It is cancelled only when superseded by a newer version.
+					var cts = new CancellationTokenSource();
+					entry = new ProjectDiagnosticsEntry(key, Task.Run(() => ComputeProjectDiagnostics(project, projectModel.FilePath, cts.Token), CancellationToken.None), cts);
+					_projectDiagnosticsCache[project.Id] = entry;
+				}
+			}
+			// The superseded computation is for an outdated version, and nobody should receive its result - stop it wasting CPU
+			supersededEntry?.Cts.Cancel();
+
+			try
+			{
+				return await entry.Task.WaitAsync(cancellationToken);
+			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested is false)
+			{
+				// The shared computation was superseded by a newer version while we waited. Retry against the current version.
+			}
+		}
+	}
+
+	private static async Task<ImmutableArray<SharpIdeDiagnostic>> ComputeProjectDiagnostics(Project project, string projectFilePath, CancellationToken cancellationToken)
+	{
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ComputeProjectDiagnostics)}");
 		var compilation = await project.GetCompilationAsync(cancellationToken);
 		Guard.Against.Null(compilation, nameof(compilation));
 
@@ -411,7 +465,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			{
 				var mappedFileLinePositionSpan = d.Location.IsInSource
 					? d.Location.SourceTree!.GetMappedLineSpan(d.Location.SourceSpan)
-					: new FileLinePositionSpan(projectModel.FilePath, new LinePositionSpan(LinePosition.Zero, LinePosition.Zero));
+					: new FileLinePositionSpan(projectFilePath, new LinePositionSpan(LinePosition.Zero, LinePosition.Zero));
 				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
 			})
 			.ToImmutableArray();
