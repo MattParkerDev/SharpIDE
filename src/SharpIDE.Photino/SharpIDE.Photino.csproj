@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType> <!-- Doesn't actually mean Windows Exe, 'Exe' = console entrypoint, 'WinExe' = application entry point -->
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<ApplicationIcon>favicon.ico</ApplicationIcon>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>

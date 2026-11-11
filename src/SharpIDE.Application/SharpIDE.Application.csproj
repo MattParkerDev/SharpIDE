@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType> <!-- Exe output type is required for obscure Microsoft.CodeAnalysis.Workspaces.MSBuild dll copying reasons -->
     <Nullable>enable</Nullable>
