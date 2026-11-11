@@ -59,6 +59,17 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private readonly Color _breakpointLineColor = new Color("3a2323");
 	private readonly Color _executingLineColor = new Color("665001");
 	private LinePositionSpan? _executingLineInfo; // Used for drawing orange executing background highlighting
+	// Hidden tabs don't re-analyse on SolutionAltered; they set this and refresh when they become visible. Only read/written on the UI thread.
+	private bool _analysisStale;
+	// The workspace version the current highlighting/diagnostics were computed against. If unchanged, a refresh would produce identical results.
+	// Written from the thread pool by overlapping refreshes, and a nullable struct this size isn't written atomically, hence the lock.
+	private VersionStamp? _lastAnalysedVersion;
+	private readonly Lock _lastAnalysedVersionLock = new();
+	private VersionStamp? LastAnalysedVersion
+	{
+		get { lock (_lastAnalysedVersionLock) return _lastAnalysedVersion; }
+		set { lock (_lastAnalysedVersionLock) _lastAnalysedVersion = value; }
+	}
 
 	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
 	[Inject] private readonly RunService _runService = null!;
@@ -105,6 +116,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		SymbolValidate += OnSymbolValidate;
 		SymbolLookup += OnSymbolLookup;
 		LinesEditedFrom += OnLinesEditedFrom;
+		VisibilityChanged += OnVisibilityChanged;
 		GlobalEvents.Instance.SolutionAltered.Subscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Subscribe(UpdateEditorThemeAsync);
 		//AddGitGutter();
@@ -135,6 +147,14 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GuttersDrawFoldGutter = enabled;
 	}
 
+	[RequiresGodotUiThread]
+	private void OnVisibilityChanged()
+	{
+		if (_analysisStale is false || IsVisibleInTree() is false) return;
+		_analysisStale = false;
+		_ = Task.GodotRun(OnSolutionAltered);
+	}
+
 	private readonly CancellationSeries _solutionAlteredCancellationTokenSeries = new();
 	private async Task OnSolutionAltered()
 	{
@@ -143,9 +163,18 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnSolutionAltered)}");
 			if (_currentFile is null) return;
 			if (_fileDeleted) return;
+			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext(); // Also cancels any in-flight refresh, including one for a tab that has since been hidden
+			// Check visibility and mark stale in one UI-thread step, so we can't race with OnVisibilityChanged
+			var (isVisible, hasFocus) = await this.InvokeAsync(() =>
+			{
+				var visible = IsVisibleInTree();
+				if (visible is false) _analysisStale = true;
+				return (visible, HasFocus());
+			});
+			if (isVisible is false) return; // Refreshed in OnVisibilityChanged when the tab is shown
+			var analysisVersion = await _roslynAnalysis.GetFileAnalysisVersion(_currentFile, newCt);
+			if (analysisVersion is not null && analysisVersion == LastAnalysedVersion) return; // Nothing this file depends on has changed
 			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
-			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext();
-			var hasFocus = this.InvokeAsync(HasFocus);
 			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile, newCt);
 			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile, newCt);
 			await Task.WhenAll(documentSyntaxHighlighting, razorSyntaxHighlighting).WaitAsync(newCt);
@@ -160,11 +189,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (newCt.IsCancellationRequested) return;
 			await this.InvokeAsync(() => SetAnalyzerDiagnostics(documentAnalyzerDiagnostics));
 			if (newCt.IsCancellationRequested) return;
-			if (await hasFocus)
+			if (hasFocus)
 			{
 				await _roslynAnalysis.UpdateProjectDiagnosticsForFile(_currentFile, newCt);
 				if (newCt.IsCancellationRequested) return;
 			}
+			LastAnalysedVersion = analysisVersion;
 		}
 		catch (Exception e) when (e is OperationCanceledException)
 		{
@@ -379,6 +409,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				.SubscribeAwait(async (_, ct) => await this.InvokeAsync(UpdateSelectedTargetFramework), configureAwait: false).AddToDeferred(this);
 		}
 
+		// Captured before computing, so we never record a version newer than the one the results came from
+		var analysisVersion = _roslynAnalysis.GetFileAnalysisVersion(_currentFile);
 		var syntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
 		var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
 		var diagnostics = _roslynAnalysis.GetDocumentDiagnostics(_currentFile);
@@ -401,6 +433,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			await this.InvokeAsync(async () => SetDiagnostics(await diagnostics));
 			await analyzerDiagnostics;
 			await this.InvokeAsync(async () => SetAnalyzerDiagnostics(await analyzerDiagnostics));
+			LastAnalysedVersion = await analysisVersion;
 		});
 	}
 

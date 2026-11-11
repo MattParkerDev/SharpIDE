@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Composition.Hosting;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Ardalis.GuardClauses;
 using Microsoft.AspNetCore.Razor.Language;
@@ -68,6 +69,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static SignatureHelpService _signatureHelpService = null!;
 	private static HashSet<CodeRefactoringProvider> _codeRefactoringProviders = [];
 	private static HashSet<CodeFixProvider> _codeFixProviders = [];
+	private static readonly ConditionalWeakTable<Compilation, CompilationWithAnalyzers> _compilationWithAnalyzersCache = new();
 
 	// Primarily used for getting the globs for a project
 	private Dictionary<ProjectId, ProjectFileInfo> _projectFileInfoMap = new();
@@ -454,12 +456,16 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
-		var projectAnalyzers = document.Project.AnalyzerReferences
-			.OfType<IsolatedAnalyzerFileReference>()
-			.SelectMany(r => r.GetAnalyzers(document.Project.Language))
-			.ToImmutableArray();
-
-		var compilationWithAnalyzers = semanticModel.Compilation.WithAnalyzers(projectAnalyzers);
+		// Cached per Compilation: CompilationWithAnalyzers clones the compilation (losing its binding caches) and remembers which analyzers have already run on which trees.
+		// Reusing it means repeated requests against an unchanged compilation return stored results instead of re-running every analyzer from scratch.
+		var compilationWithAnalyzers = _compilationWithAnalyzersCache.GetValue(semanticModel.Compilation, compilation =>
+		{
+			var projectAnalyzers = document.Project.AnalyzerReferences
+				.OfType<IsolatedAnalyzerFileReference>()
+				.SelectMany(r => r.GetAnalyzers(document.Project.Language))
+				.ToImmutableArray();
+			return compilation.WithAnalyzers(projectAnalyzers);
+		});
 
 		var analysisResult = await compilationWithAnalyzers.GetAnalysisResultAsync(semanticModel, null, cancellationToken);
 		var diagnostics = analysisResult.GetAllDiagnostics();
@@ -472,6 +478,26 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			})
 			.ToImmutableArray();
 		return result;
+	}
+
+	/// Returns a version that changes whenever anything that could affect this file's highlighting or diagnostics changes:
+	/// any document or additional (e.g. razor) document in its project, the project itself, or any project it references.
+	/// Returns null if the file is not part of a loaded workspace project - callers should then assume it has changed.
+	public async Task<VersionStamp?> GetFileAnalysisVersion(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
+	{
+		if (fileModel.IsRoslynWorkspaceFile is false) return null;
+		await _solutionLoadedTcs.Task;
+		Project project;
+		try
+		{
+			project = GetProjectForSharpIdeFile(fileModel);
+		}
+		catch (Exception e) when (e is InvalidOperationException or ArgumentException)
+		{
+			return null;
+		}
+		// Deliberately not GetDependentSemanticVersionAsync - that only tracks top-level (signature) changes, so it would not change for method body edits
+		return await project.GetDependentVersionAsync(cancellationToken);
 	}
 
 	private async Task<Document> GetDocumentForSharpIdeFile(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
