@@ -113,6 +113,7 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 			var tempDirectory = Path.GetDirectoryName(fileInfo.TemporaryFilePath)!;
 
 			Dictionary<string, string>? decompiledFiles = null;
+			Exception? decompilationException = null;
 			if (useDecompiler)
 			{
 				try
@@ -133,7 +134,18 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 					Console.WriteLine($"Failed to decompile assembly '{symbol.ContainingAssembly.Name}': {e}");
 					useDecompiler = false;
 					decompiledFiles = null;
+					decompilationException = e;
 				}
+			}
+
+			if (decompiledFiles is null)
+			{
+				var reason = decompilationException is not null ? "decompilation threw an exception"
+					: signaturesOnly ? "signaturesOnly was requested"
+					: !options.NavigateToDecompiledSources ? "NavigateToDecompiledSources is disabled"
+					: refInfo.isReferenceAssembly ? $"'{refInfo.assemblyLocation}' is a reference assembly and no implementation assembly was found"
+					: "decompilation produced no files";
+				throw new InvalidOperationException($"Could not produce source for '{topLevelNamedType}' from assembly '{refInfo.assemblyLocation}': {reason}.", decompilationException);
 			}
 
 			// Create the project and all documents.
