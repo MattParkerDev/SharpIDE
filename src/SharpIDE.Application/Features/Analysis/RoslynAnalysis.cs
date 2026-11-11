@@ -512,17 +512,12 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
-		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument(false);
-		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
-		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
-		//var razorCsharpText = razorCSharpDocument.Text.ToString();
-		//var razorSyntaxRoot = razorCodeDocument.GetRequiredSyntaxRoot();
 
 		var razorText = await razorDocument.GetTextAsync(cancellationToken);
 
 		List<string> relevantTypes = ["razorDirective", "razorTransition", "markupTextLiteral", "markupTagDelimiter", "markupElement", "razorComponentElement", "razorComponentAttribute", "razorComment", "razorCommentTransition", "razorCommentStar", "markupOperator", "markupAttributeQuote"];
 		var ranges = new List<SemanticRange>();
-		CustomSemanticTokensVisitor.AddSemanticRanges(ranges, razorCodeDocument, generatedDocSyntaxRoot!.FullSpan, _semanticTokensLegendService!, false);
+		CustomSemanticTokensVisitor.AddSemanticRanges(ranges, razorCodeDocument, new TextSpan(0, razorText.Length), _semanticTokensLegendService!, false);
 
 		//var allTypes = ranges.Select(s => _semanticTokensLegendService!.TokenTypes.All[s.Kind]).Distinct().ToList();
 		var semanticRangeRazorSpans = ranges
@@ -557,48 +552,62 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		// 		return span;
 		// 	}).ToList();
 		//var test = _semanticTokensLegendService.TokenTypes.All;
-		var sourceMappings = razorCSharpDocument.SourceMappingsSortedByOriginal.Select(s => s.ToSharpIdeSourceMapping()).ToImmutableArray();
-		List<SharpIdeRazorClassifiedSpan> sharpIdeRazorSpans = [];
+		// Razor now emits two C# documents ("sonic"): the impl document (markup/render tree, expressions etc), and the
+		// declaration document (e.g. @code block members). Each has its own source generated document, so classify both,
+		// mirroring RazorSemanticTokensInfoService.AddCSharpSemanticRangesAsync
+		List<SharpIdeRazorMappedClassifiedSpan> roslynMappedSpans = [];
+		roslynMappedSpans.AddRange(await GetMappedClassifiedSpans(
+			razorCodeDocument.GetRequiredCSharpDocument(false),
+			await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken)));
 
-		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(generatedDocument, generatedDocSyntaxRoot!.FullSpan, cancellationToken);
-		var roslynMappedSpans = classifiedSpans.Select(s =>
+		var declCSharpDocument = razorCodeDocument.GetCSharpDocument(true);
+		var declGeneratedDocument = declCSharpDocument is null ? null : await razorProjectSnapshot.TryGetDeclGeneratedDocumentAsync(documentSnapshot, cancellationToken);
+		if (declCSharpDocument is not null && declGeneratedDocument is not null)
 		{
-			var genSpan = s.TextSpan;
-			var mapping = sourceMappings.SingleOrDefault(m => m.GeneratedSpan.AsTextSpan().IntersectsWith(genSpan));
-			if (mapping != null)
-			{
-				// Translate generated span back to Razor span
-				var offset = genSpan.Start - mapping.GeneratedSpan.AbsoluteIndex;
-				var mappedStart = mapping.OriginalSpan.AbsoluteIndex + offset;
-				var mappedSpan = new TextSpan(mappedStart, genSpan.Length);
-				var sharpIdeSpan = new SharpIdeRazorSourceSpan(
-					mapping.OriginalSpan.FilePath,
-					mappedSpan.Start,
-					razorText.Lines.GetLineFromPosition(mappedSpan.Start).LineNumber,
-					mappedSpan.Start - razorText.Lines.GetLineFromPosition(mappedSpan.Start).Start,
-					mappedSpan.Length,
-					1,
-					mappedSpan.Start - razorText.Lines.GetLineFromPosition(mappedSpan.Start).Start + mappedSpan.Length
-				);
+			roslynMappedSpans.AddRange(await GetMappedClassifiedSpans(declCSharpDocument, declGeneratedDocument));
+		}
 
-				return new SharpIdeRazorMappedClassifiedSpan(
-					sharpIdeSpan,
-					s.ClassificationType
-				);
-			}
-
-			return null;
-		}).Where(s => s is not null).ToList();
-
-		sharpIdeRazorSpans = [
-			..sharpIdeRazorSpans.Where(s => s.Kind is not SharpIdeRazorSpanKind.Code),
-			..roslynMappedSpans.Select(s => new SharpIdeRazorClassifiedSpan(s!.SourceSpanInRazor, SharpIdeRazorSpanKind.Code, s.CsharpClassificationType)),
+		List<SharpIdeRazorClassifiedSpan> sharpIdeRazorSpans = [
+			..roslynMappedSpans.Select(s => new SharpIdeRazorClassifiedSpan(s.SourceSpanInRazor, SharpIdeRazorSpanKind.Code, s.CsharpClassificationType)),
 			..semanticRangeRazorSpans
 		];
-		var result = sharpIdeRazorSpans.OrderBy(s => s.Span.AbsoluteIndex).ToImmutableArray();
+		// Remove exact duplicates, which are an artifact of mapping generated C# back to razor, e.g. a component's T="Foo"
+		// is emitted several times in the generated C#, and some spans map from both the impl and declaration documents.
+		var result = sharpIdeRazorSpans.Distinct().OrderBy(s => s.Span.AbsoluteIndex).ToImmutableArray();
 		timer.Stop();
 		_logger.LogInformation("RoslynAnalysis: Razor syntax highlighting for {FileName} took {ElapsedMilliseconds}ms", fileModel.Name.Value, timer.ElapsedMilliseconds);
 		return result;
+
+		async Task<List<SharpIdeRazorMappedClassifiedSpan>> GetMappedClassifiedSpans(RazorCSharpDocument razorCSharpDocument, SourceGeneratedDocument generatedDocument)
+		{
+			var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
+			var sourceMappings = razorCSharpDocument.SourceMappingsSortedByOriginal.Select(s => s.ToSharpIdeSourceMapping()).ToImmutableArray();
+			var classifiedSpans = await Classifier.GetClassifiedSpansAsync(generatedDocument, generatedDocSyntaxRoot!.FullSpan, cancellationToken);
+			var mappedSpans = new List<SharpIdeRazorMappedClassifiedSpan>();
+			foreach (var s in classifiedSpans)
+			{
+				var genSpan = s.TextSpan;
+				var mapping = sourceMappings.FirstOrDefault(m => m.GeneratedSpan.AsTextSpan().IntersectsWith(genSpan));
+				if (mapping is null) continue;
+
+				// Translate generated span back to Razor span
+				var offset = genSpan.Start - mapping.GeneratedSpan.AbsoluteIndex;
+				var mappedStart = mapping.OriginalSpan.AbsoluteIndex + offset;
+				var razorLine = razorText.Lines.GetLineFromPosition(mappedStart);
+				var characterIndex = mappedStart - razorLine.Start;
+				var sharpIdeSpan = new SharpIdeRazorSourceSpan(
+					mapping.OriginalSpan.FilePath,
+					mappedStart,
+					razorLine.LineNumber,
+					characterIndex,
+					genSpan.Length,
+					1,
+					characterIndex + genSpan.Length
+				);
+				mappedSpans.Add(new SharpIdeRazorMappedClassifiedSpan(sharpIdeSpan, s.ClassificationType));
+			}
+			return mappedSpans;
+		}
 	}
 
 	// This is expensive for files that have just been updated, making it suboptimal for real-time highlighting
@@ -1138,18 +1147,15 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
 
-		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
-		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument(false);
-		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
-		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
-
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
 		var razorAbsoluteIndex = razorText.Lines.GetPosition(linePosition);
-		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorAbsoluteIndex);
-		if (mappedPosition is null) return (null, null);
+		var mapped = await MapRazorPositionToGeneratedCSharp(razorProjectSnapshot, documentSnapshot, razorAbsoluteIndex, cancellationToken);
+		if (mapped is null) return (null, null);
+		var (razorCSharpDocument, generatedDocument, mappedPosition) = mapped.Value;
+		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
 		var semanticModelAsync = await generatedDocument.GetSemanticModelAsync(cancellationToken);
-		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModelAsync!, generatedDocSyntaxRoot!, mappedPosition!.Value);
+		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModelAsync!, generatedDocSyntaxRoot!, mappedPosition);
 		if (symbol is null || linePositionSpan is null) return (null, null);
 		Guard.Against.Null(linePositionSpan, nameof(linePositionSpan));
 		if (_documentMappingService!.TryMapToRazorDocumentRange(razorCSharpDocument, linePositionSpan.Value, MappingBehavior.Strict, out var mappedRazorLinePositionSpan) is false)
@@ -1196,19 +1202,17 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
 
-		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
-		var razorCSharpDocument = razorCodeDocument.GetRequiredCSharpDocument(false);
-		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
-		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
-
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
 		var razorAbsoluteIndex = razorText.Lines.GetPosition(linePosition);
-		var mappedPosition = MapRazorLinePositionToGeneratedCSharpAbsolutePosition(razorCSharpDocument, razorAbsoluteIndex);
+		var mapped = await MapRazorPositionToGeneratedCSharp(razorProjectSnapshot, documentSnapshot, razorAbsoluteIndex, cancellationToken);
+		if (mapped is null) return (null, null, null);
+		var (_, generatedDocument, mappedPosition) = mapped.Value;
+		var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
 
 		var semanticModel = await generatedDocument.GetSemanticModelAsync(cancellationToken);
-		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModel!, generatedDocSyntaxRoot!, mappedPosition!.Value);
+		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModel!, generatedDocSyntaxRoot!, mappedPosition);
 
-		var semanticInfo = await SymbolFinder.GetSemanticInfoAtPositionAsync(semanticModel!, mappedPosition.Value, generatedDocument.Project.Solution.Services, cancellationToken).ConfigureAwait(false);
+		var semanticInfo = await SymbolFinder.GetSemanticInfoAtPositionAsync(semanticModel!, mappedPosition, generatedDocument.Project.Solution.Services, cancellationToken).ConfigureAwait(false);
 		return (symbol, linePositionSpan, semanticInfo);
 	}
 
@@ -1248,13 +1252,25 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return (symbol, linePositionSpan);
 	}
 
-	private static int? MapRazorLinePositionToGeneratedCSharpAbsolutePosition(RazorCSharpDocument razorCSharpDocument, int razorAbsoluteIndex)
+	// Razor emits two C# documents - the impl document, and the declaration document (e.g. @code block members).
+	// Map the razor position into whichever one contains it, and return the matching source generated document.
+	private static async Task<(RazorCSharpDocument CSharpDocument, SourceGeneratedDocument GeneratedDocument, int CSharpIndex)?> MapRazorPositionToGeneratedCSharp(RemoteProjectSnapshot razorProjectSnapshot, RemoteDocumentSnapshot documentSnapshot, int razorAbsoluteIndex, CancellationToken cancellationToken)
 	{
-		if (_documentMappingService!.TryMapToCSharpDocumentPosition(razorCSharpDocument, razorAbsoluteIndex, out var csharpPosition, out var csharpIndex))
+		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
+		if (DocumentMappingHelper.TryMapToCSharpDocumentLinePosition(razorCodeDocument, razorAbsoluteIndex, out _, out var csharpIndex, out var inDeclDocument) is false)
 		{
-			return csharpIndex;
+			return null;
 		}
-		return null;
+
+		if (inDeclDocument)
+		{
+			var declGeneratedDocument = await razorProjectSnapshot.TryGetDeclGeneratedDocumentAsync(documentSnapshot, cancellationToken);
+			if (declGeneratedDocument is null) return null;
+			return (razorCodeDocument.GetCSharpDocument(true)!, declGeneratedDocument, csharpIndex);
+		}
+
+		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
+		return (razorCodeDocument.GetRequiredCSharpDocument(false), generatedDocument, csharpIndex);
 	}
 
 	// Returns true if the document was found and updated, otherwise false

@@ -145,21 +145,21 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
         foreach (var razorSpanGrouping in spansGroupedByFileSpan)
         {
+            // Multiple classifications can apply to the same razor span (exact duplicates are already removed in RoslynAnalysis).
+            // Prefer C# over razor markup, and ignore the additive StaticSymbol classification.
             var spans = razorSpanGrouping.ToList();
-            if (spans.Count > 2) throw new NotImplementedException("More than 2 classified spans is not supported yet.");
             if (spans.Count is not 1)
             {
                 if (spans.Any(s => s.Kind is SharpIdeRazorSpanKind.Code))
                 {
                     spans = spans.Where(s => s.Kind is SharpIdeRazorSpanKind.Code).ToList();
                 }
-                if (spans.Count is not 1)
+                if (spans.Count is not 1 && spans.Any(s => s.CodeClassificationType != ClassificationTypeNames.StaticSymbol))
                 {
-                    SharpIdeRazorClassifiedSpan? staticClassifiedSpan = spans.FirstOrDefault(s => s.CodeClassificationType == ClassificationTypeNames.StaticSymbol);
-                    if (staticClassifiedSpan is not null) spans.Remove(staticClassifiedSpan.Value);
+                    spans = spans.Where(s => s.CodeClassificationType != ClassificationTypeNames.StaticSymbol).ToList();
                 }
             }
-            var razorSpan = spans.Single();
+            var razorSpan = spans[0];
             
             int columnIndex = razorSpan.Span.CharacterIndex;
             
@@ -219,19 +219,17 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
         foreach (var (fileSpan, classifiedSpans) in spansGroupedByFileSpan)
         {
-            if (classifiedSpans.Count > 2) throw new NotImplementedException("More than 2 classified spans is not supported yet.");
-            if (classifiedSpans.Count is not 1)
-            {
-                ClassifiedSpan? staticClassifiedSpan = classifiedSpans.FirstOrDefault(s => s.ClassificationType == ClassificationTypeNames.StaticSymbol);
-                if (staticClassifiedSpan is not null) classifiedSpans.Remove(staticClassifiedSpan.Value);
-            }
+            // Ignore the additive StaticSymbol classification when there is another one for the same span
+            var classifiedSpan = classifiedSpans.Count is 1
+                ? classifiedSpans[0]
+                : classifiedSpans.FirstOrDefault(s => s.ClassificationType != ClassificationTypeNames.StaticSymbol, classifiedSpans[0]);
             // Column index of the first character in this span
             int columnIndex = fileSpan.Start.Character;
 
             // Build the highlight entry
             var highlightInfo = new Dictionary
             {
-                { ColorStringName, ClassificationToColorMapper.GetColorForClassification(ColourSetForTheme, classifiedSpans.Single().ClassificationType) }
+                { ColorStringName, ClassificationToColorMapper.GetColorForClassification(ColourSetForTheme, classifiedSpan.ClassificationType) }
             };
 
             highlights[columnIndex] = highlightInfo;
