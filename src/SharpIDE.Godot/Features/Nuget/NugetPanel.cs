@@ -60,6 +60,7 @@ public partial class NugetPanel : Control
 		_packageSearchProgressBar.Visible = false;
 		_nugetPackageDetails.Visible = false;
 		_refreshButton.Pressed += () => OnSolutionOrProjectSelected(_solutionOrProjectOptionButton.Selected);
+		_nugetPackageDetails.PackageReferencesChanged += OnPackageReferencesChanged;
 		_installedPackagesVboxContainer.QueueFreeChildren();
 		_implicitlyInstalledPackagesItemList.QueueFreeChildren();
 		_availablePackagesItemList.QueueFreeChildren();
@@ -98,6 +99,12 @@ public partial class NugetPanel : Control
 			_ = Task.GodotRun(() => PopulateInstalledPackages(slnOrProject));
 			_ = Task.GodotRun(PopulateSearchResults);
 		});
+	}
+
+	/// A project's reference was changed from the details pane - its project has been re-evaluated, so read the installed packages again
+	private async Task OnPackageReferencesChanged()
+	{
+		await this.InvokeAsync(() => OnSolutionOrProjectSelected(_solutionOrProjectOptionButton.Selected));
 	}
 
 	private async Task OnPackageSelected(IdePackageResult packageResult)
@@ -186,11 +193,9 @@ public partial class NugetPanel : Control
 		if (_selectedPackageResult is not null)
 		{
 			var updatedPackageResult = idePackageResult.SingleOrDefault(p => p.PackageId.Equals(_selectedPackageResult.PackageId, StringComparison.OrdinalIgnoreCase));
-			if (updatedPackageResult is not null)
-			{
-				_selectedPackageResult = updatedPackageResult;
-				await OnPackageSelected(_selectedPackageResult);
-			}
+			// No longer installed anywhere (it was just removed) - still show it, as installed nowhere
+			_selectedPackageResult = updatedPackageResult ?? _selectedPackageResult with { InstalledNugetPackageInfo = null };
+			await OnPackageSelected(_selectedPackageResult);
 		}
 		await this.InvokeAsync(() =>
 		{

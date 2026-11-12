@@ -17,6 +17,10 @@ public partial class NugetPackageDetails : VBoxContainer
 	private VBoxContainer _projectsVBoxContainer = null!;
 
 	private IdePackageResult? _package;
+	private NuGetVersion? _selectedVersion;
+
+	/// Raised off the UI thread once a project's reference to the package has been changed
+	public event Func<Task>? PackageReferencesChanged;
 	
 	private readonly Texture2D _defaultIconTextureRect = ResourceLoader.Load<Texture2D>("uid://b5ih61vdjv5e6");
 	private readonly Texture2D _warningIconTextureRect = ResourceLoader.Load<Texture2D>("uid://pd3h5qfjn8pb");
@@ -41,6 +45,7 @@ public partial class NugetPackageDetails : VBoxContainer
 	private void VersionSelected(long index)
 	{
 		var selectedVersion = _versionOptionButton.GetItemMetadata((int)index).As<RefCountedContainer<NuGetVersion>>();
+		_selectedVersion = selectedVersion?.Item;
 		foreach (var child in _projectsVBoxContainer.GetChildren().OfType<PackageDetailsProjectEntry>())
 		{
 			child.VersionSelectedInDetails = selectedVersion?.Item;
@@ -48,8 +53,11 @@ public partial class NugetPackageDetails : VBoxContainer
 		}
 	}
 
+	private Task OnPackageReferencesChanged() => PackageReferencesChanged?.Invoke() ?? Task.CompletedTask;
+
 	public async Task SetPackage(IdePackageResult package)
 	{
+		if (_package is null || _package.PackageId.Equals(package.PackageId, StringComparison.OrdinalIgnoreCase) is false) _selectedVersion = null;
 		_package = package;
 		var iconTask = _nugetPackageIconCacheService.GetNugetPackageIcon(_package.PackageId, _package.PackageFromSources.First().PackageSearchMetadata.IconUrl);
 		await this.InvokeAsync(() =>
@@ -81,6 +89,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		{
 			var scene = _packageDetailsProjectEntryScene.Instantiate<PackageDetailsProjectEntry>();
 			scene.ProjectModel = s;
+			scene.PackageReferencesChanged += OnPackageReferencesChanged;
 			return scene;
 		}).ToList();
 		await this.InvokeAsync(() =>
@@ -98,14 +107,16 @@ public partial class NugetPackageDetails : VBoxContainer
 		await this.InvokeAsync(() =>
 		{
 			var scenes = _projectsVBoxContainer.GetChildren().OfType<PackageDetailsProjectEntry>().ToList();
-			if (projectPackageReferences.Count is 0)
+			foreach (var scene in scenes)
 			{
-				scenes.ForEach(s => s.ClearInstallInfo());
-				return;
-			}
-			foreach (var projectPackageReference in projectPackageReferences)
-			{
-				var scene = scenes.Single(s => s.ProjectModel == projectPackageReference.Project);
+				scene.PackageId = _package?.PackageId;
+				// Each project's reference to this package - none for those that don't reference it, rather than the previous package's
+				var projectPackageReference = projectPackageReferences.SingleOrDefault(r => r.Project == scene.ProjectModel);
+				if (projectPackageReference is null)
+				{
+					scene.ClearInstallInfo();
+					continue;
+				}
 				scene.ProjectPackageReference = projectPackageReference;
 				scene.SetValues();
 			}
@@ -126,8 +137,11 @@ public partial class NugetPackageDetails : VBoxContainer
 				_versionOptionButton.SetItemMetadata(index, new RefCountedContainer<NuGetVersion>(metadata.Identity.Version));
 				//_versionOptionButton.SetItemIcon(index, _warningIconTextureRect);
 			}
-			_versionOptionButton.Selected = 0;
-			VersionSelected(0);
+			// Keep the version chosen before a refresh, e.g. after a downgrade
+			var selectedIndex = _selectedVersion is null ? -1 : results.FindIndex(m => m.Identity.Version == _selectedVersion);
+			if (selectedIndex < 0) selectedIndex = 0;
+			_versionOptionButton.Selected = selectedIndex;
+			VersionSelected(selectedIndex);
 		});
 	}
 }

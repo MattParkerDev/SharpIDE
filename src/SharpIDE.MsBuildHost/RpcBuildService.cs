@@ -12,7 +12,13 @@ public class RpcBuildService : IRpcBuildService
 	private static readonly string[] RunPropertyNames = ["RunCommand", "RunArguments", "RunWorkingDirectory", "TargetPath", "OutDir"];
 	private PipeTextWriter _buildTextWriter = new PipeTextWriter();
 	private readonly ProjectEvaluator _projectEvaluator = new ProjectEvaluator();
+	private readonly PackageReferenceEditor _packageReferenceEditor;
 	private Task? _socketWriteTask;
+
+	public RpcBuildService()
+	{
+		_packageReferenceEditor = new PackageReferenceEditor(RestoreAsync);
+	}
 	public async Task<bool> Ping()
 	{
 		return true;
@@ -35,23 +41,10 @@ public class RpcBuildService : IRpcBuildService
 
 	public async Task<RunBuildResultDto> BuildProjectForRunAsync(string projectFilePath, string? targetFramework, CancellationToken cancellationToken = default)
 	{
-		// Restore in its own build session, as -restore does, so the build evaluates the props/targets restore wrote
-		var restoreRequest = new BuildRequestData(
-			projectFullPath: projectFilePath,
-			globalProperties: new Dictionary<string, string?>
-			{
-				["MSBuildRestoreSessionId"] = Guid.NewGuid().ToString("D"),
-				["MSBuildIsRestoring"] = "true",
-				["ExcludeRestorePackageImports"] = "true",
-			},
-			toolsVersion: null,
-			targetsToBuild: ["Restore"],
-			hostServices: null,
-			flags: BuildRequestDataFlags.ClearCachesAfterBuild | BuildRequestDataFlags.SkipNonexistentTargets | BuildRequestDataFlags.IgnoreMissingEmptyAndInvalidImports);
-		var restoreResult = await BuildManager.DefaultBuildManager.BuildAsync(CreateBuildParameters(), restoreRequest, cancellationToken).ConfigureAwait(false);
-		if (restoreResult.OverallResult is not BuildResultCode.Success)
+		var (restored, restoreErrors) = await RestoreAsync(projectFilePath, cancellationToken).ConfigureAwait(false);
+		if (restored is false)
 		{
-			return new RunBuildResultDto(BuildResultDto.Failure, restoreResult.Exception?.Message, []);
+			return new RunBuildResultDto(BuildResultDto.Failure, restoreErrors.FirstOrDefault() ?? "Restore failed", []);
 		}
 
 		var globalProperties = new Dictionary<string, string?>();
@@ -84,7 +77,36 @@ public class RpcBuildService : IRpcBuildService
 
 	public Task<string> GetOrCreateUserSecretsIdAsync(string projectFilePath) => _projectEvaluator.GetOrCreateUserSecretsIdAsync(projectFilePath);
 
-	private BuildParameters CreateBuildParameters()
+	public Task<PackageReferenceChangeResultDto> AddOrUpdatePackageReferenceAsync(string projectFilePath, string packageId, string version, CancellationToken cancellationToken = default)
+		=> _packageReferenceEditor.AddOrUpdateAsync(projectFilePath, packageId, version, cancellationToken);
+
+	public Task<PackageReferenceChangeResultDto> RemovePackageReferenceAsync(string projectFilePath, string packageId, CancellationToken cancellationToken = default)
+		=> _packageReferenceEditor.RemoveAsync(projectFilePath, packageId, cancellationToken);
+
+	/// Restores the project in a build session of its own, as -restore does, so a build after it evaluates the props/targets restore wrote.
+	/// Returns the errors restore logged (NU1202, NU1605...) when it fails.
+	private async Task<(bool Success, List<string> Errors)> RestoreAsync(string projectFilePath, CancellationToken cancellationToken)
+	{
+		var restoreRequest = new BuildRequestData(
+			projectFullPath: projectFilePath,
+			globalProperties: new Dictionary<string, string?>
+			{
+				["MSBuildRestoreSessionId"] = Guid.NewGuid().ToString("D"),
+				["MSBuildIsRestoring"] = "true",
+				["ExcludeRestorePackageImports"] = "true",
+			},
+			toolsVersion: null,
+			targetsToBuild: ["Restore"],
+			hostServices: null,
+			flags: BuildRequestDataFlags.ClearCachesAfterBuild | BuildRequestDataFlags.SkipNonexistentTargets | BuildRequestDataFlags.IgnoreMissingEmptyAndInvalidImports);
+		var errorLogger = new ErrorCollectingLogger();
+		var restoreResult = await BuildManager.DefaultBuildManager.BuildAsync(CreateBuildParameters(errorLogger), restoreRequest, cancellationToken).ConfigureAwait(false);
+		var errors = errorLogger.Errors;
+		if (restoreResult.Exception is not null) errors.Add(restoreResult.Exception.Message);
+		return (restoreResult.OverallResult is BuildResultCode.Success, errors);
+	}
+
+	private BuildParameters CreateBuildParameters(params Microsoft.Build.Framework.ILogger[] additionalLoggers)
 	{
 		var terminalLogger = InternalTerminalLoggerFactory.CreateLogger(_buildTextWriter);
 		var nodesToBuildWith = GetBuildNodeCount(Environment.ProcessorCount);
@@ -97,7 +119,8 @@ public class RpcBuildService : IRpcBuildService
 			[
 				//new BinaryLogger { Parameters = "msbuild.binlog" },
 				//new ConsoleLogger(LoggerVerbosity.Minimal) {Parameters = "FORCECONSOLECOLOR"},
-				terminalLogger
+				terminalLogger,
+				..additionalLoggers
 			],
 		};
 	}

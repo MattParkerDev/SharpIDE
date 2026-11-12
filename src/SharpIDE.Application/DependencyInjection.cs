@@ -32,6 +32,7 @@ public static class DependencyInjection
 		services.AddScoped<FileChangedService>();
 		services.AddScoped<DotnetUserSecretsService>();
 		services.AddScoped<NugetClientService>();
+		services.AddScoped<PackageReferenceService>();
 		services.AddScoped<TestRunnerService>();
 		services.AddScoped<NugetPackageIconCacheService>();
 		services.AddScoped<IdeFileWatcher>();

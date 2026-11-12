@@ -25,4 +25,13 @@ public partial interface IRpcBuildService
 	Task UnloadAllProjectsAsync();
 	/// Adds a UserSecretsId property to the project file if it doesn't have one, and returns it
 	Task<string> GetOrCreateUserSecretsIdAsync(string projectFilePath);
+
+	// Package references - these write project files, then restore, so they run as a build
+
+	/// Adds the package to the project at the version, or moves it to the version, writing the version where the project's evaluation keeps it
+	/// (its PackageReference, VersionOverride, Directory.Packages.props' PackageVersion, or a property the version names), then restores.
+	/// Restore failing puts the files back.
+	Task<PackageReferenceChangeResultDto> AddOrUpdatePackageReferenceAsync(string projectFilePath, string packageId, string version, CancellationToken cancellationToken = default);
+	/// Removes the project's own PackageReference to the package, then restores. A central PackageVersion is left, as other projects may use it.
+	Task<PackageReferenceChangeResultDto> RemovePackageReferenceAsync(string projectFilePath, string packageId, CancellationToken cancellationToken = default);
 }

@@ -54,6 +54,10 @@ public partial class BuildService(ILogger<BuildService> logger) : IDisposable
 		return (MapResult(result.BuildResult), result.Properties);
 	}
 
+	/// A package reference change writes project files then restores - run as a build, so it never overlaps one, and its restore output goes to the build panel
+	internal Task<PackageReferenceChangeResultDto> ChangePackageReferenceAsync(Func<IRpcBuildService, CancellationToken, Task<PackageReferenceChangeResultDto>> change, CancellationToken cancellationToken = default)
+		=> RunBuildAsync(change, BuildStartedFlags.Internal, cancellationToken);
+
 	private async Task<T> RunBuildAsync<T>(Func<IRpcBuildService, CancellationToken, Task<T>> build, BuildStartedFlags buildStartedFlags, CancellationToken cancellationToken)
 	{
 		var rpcBuildService = await GetRpcAsync(cancellationToken);
