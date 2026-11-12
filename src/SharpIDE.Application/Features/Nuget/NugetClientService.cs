@@ -1,4 +1,6 @@
-﻿using NuGet.Common;
+﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging.Core;
 using NuGet.Protocol;
@@ -15,23 +17,98 @@ public class NugetClientService
 	private readonly bool _includePrerelease = false;
 	private readonly SourceCacheContext _sourceCacheContext = new SourceCacheContext();
 	private readonly ILogger _nugetLogger = NullLogger.Instance;
-	public async Task<List<IdePackageResult>> GetTop100Results(string directoryPath, CancellationToken cancellationToken = default)
+	/// The top 100 packages across the enabled sources, by download count, each with every source that has it. Yields a new snapshot each time it changes:
+	/// sources' searches answer at very different speeds (nuget.org's in ~2s, an Azure DevOps feed's in 20s), so results are shown as they arrive.
+	/// Whether the other sources have a package is looked up as soon as it makes the top 100 - a lookup is far faster than a slow source's search.
+	public async IAsyncEnumerable<List<IdePackageResult>> GetTop100Results(string directoryPath, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var settings = Settings.LoadDefaultSettings(root: directoryPath);
-		var packageSourceProvider = new PackageSourceProvider(settings);
-		var packageSources = packageSourceProvider.LoadPackageSources().Where(p => p.IsEnabled).ToList();
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetClientService)}.{nameof(GetTop100Results)}");
+		var packageSources = LoadEnabledPackageSources(directoryPath);
+		var sourcesResourcesTask = Task.WhenAll(packageSources.Select(source => GetSourceResources(source, cancellationToken)));
 
-		var packagesResult = new List<IdePackageResult>();
+		// By package id, each source (by its index in packageSources, so in source order) that has it, with its metadata there. Only touched by this loop
+		var found = new Dictionary<string, SortedDictionary<int, IPackageSearchMetadata>>(StringComparer.OrdinalIgnoreCase);
+		var lookedUpPackageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		foreach (var source in packageSources)
+		// Search for top packages (no search term = all), all sources at once
+		var searches = packageSources.Select(async (source, index) => (SourceIndex: index, Results: await SearchTopPackages(source, cancellationToken).ConfigureAwait(false))).ToList();
+		var lookups = new List<Task<List<(string PackageId, int SourceIndex, IPackageSearchMetadata Latest)>>>();
+		string? lastYieldedSignature = null;
+
+		while (searches.Count + lookups.Count > 0)
 		{
-			var repository = Repository.Factory.GetCoreV3(source.Source);
+			var completed = await Task.WhenAny(searches.Cast<Task>().Concat(lookups)).ConfigureAwait(false);
+			if (completed is Task<(int SourceIndex, IReadOnlyList<IPackageSearchMetadata> Results)> search && searches.Remove(search))
+			{
+				var (sourceIndex, results) = await search.ConfigureAwait(false);
+				foreach (var metadata in results) AddFound(found, metadata.Identity.Id, sourceIndex, metadata);
+			}
+			else
+			{
+				var lookup = (Task<List<(string PackageId, int SourceIndex, IPackageSearchMetadata Latest)>>)completed;
+				lookups.Remove(lookup);
+				foreach (var (packageId, sourceIndex, latest) in await lookup.ConfigureAwait(false)) AddFound(found, packageId, sourceIndex, latest);
+			}
+
+			var topPackages = GetTopPackages(found, packageSources);
+
+			// Packages new to the top 100 - find out if the sources that haven't returned them have them too
+			var toLookUp = topPackages
+				.Where(p => lookedUpPackageIds.Add(p.PackageId))
+				.Select(p => (p.PackageId, AlreadyFoundIn: found[p.PackageId].Keys.ToHashSet()))
+				.ToList();
+			if (toLookUp.Count > 0 && packageSources.Count > 1) lookups.Add(LookUpInOtherSources(toLookUp, sourcesResourcesTask, GetMaxParallel(packageSources), cancellationToken));
+
+			// A slow source's search often changes nothing (its packages have no download count, so rarely make the top 100)
+			var signature = string.Join('|', topPackages.Select(p => $"{p.PackageId}:{string.Join(',', found[p.PackageId].Keys)}"));
+			if (signature == lastYieldedSignature) continue;
+			lastYieldedSignature = signature;
+			yield return topPackages;
+		}
+	}
+
+	private static void AddFound(Dictionary<string, SortedDictionary<int, IPackageSearchMetadata>> found, string packageId, int sourceIndex, IPackageSearchMetadata metadata)
+	{
+		if (found.TryGetValue(packageId, out var bySource) is false) found[packageId] = bySource = [];
+		// A source's search result has the download count, so is kept over a lookup's
+		bySource.TryAdd(sourceIndex, metadata);
+	}
+
+	/// Ordered by download count (the highest any source reports), each package's sources in source order
+	private static List<IdePackageResult> GetTopPackages(Dictionary<string, SortedDictionary<int, IPackageSearchMetadata>> found, List<PackageSource> packageSources) =>
+		found
+			.OrderByDescending(p => p.Value.Values.Max(m => m.DownloadCount ?? 0))
+			.Take(100)
+			.Select(p => new IdePackageResult(
+				p.Value.Values.First().Identity.Id,
+				p.Value.Select(s => new IdePackageFromSourceResult(s.Value, packageSources[s.Key])).ToList(),
+				null))
+			.ToList();
+
+	private async Task<List<(string PackageId, int SourceIndex, IPackageSearchMetadata Latest)>> LookUpInOtherSources(List<(string PackageId, HashSet<int> AlreadyFoundIn)> packages, Task<SourceResources?[]> sourcesResourcesTask, int maxParallel, CancellationToken cancellationToken)
+	{
+		var sourcesResources = await sourcesResourcesTask.ConfigureAwait(false);
+		var foundInOtherSources = new ConcurrentBag<(string PackageId, int SourceIndex, IPackageSearchMetadata Latest)>();
+		await Parallel.ForEachAsync(packages, new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = cancellationToken }, async (package, ct) =>
+		{
+			await Task.WhenAll(sourcesResources.Select(async (resources, sourceIndex) =>
+			{
+				if (resources is null || package.AlreadyFoundIn.Contains(sourceIndex)) return;
+				var latest = await GetLatestPackageMetadata(resources, package.PackageId, ct).ConfigureAwait(false);
+				if (latest is not null) foundInOtherSources.Add((package.PackageId, sourceIndex, latest));
+			})).ConfigureAwait(false);
+		}).ConfigureAwait(false);
+		return foundInOtherSources.ToList();
+	}
+
+	private async Task<IReadOnlyList<IPackageSearchMetadata>> SearchTopPackages(PackageSource source, CancellationToken cancellationToken)
+	{
+		try
+		{
+			var repository = Repository.Factory.GetCoreV3(source);
 			var searchResource = await repository.GetResourceAsync<PackageSearchResource>(cancellationToken).ConfigureAwait(false);
+			if (searchResource is null) return [];
 
-			if (searchResource == null)
-				continue;
-
-			// Search for top packages (no search term = all)
 			var results = await searchResource.SearchAsync(
 				searchTerm: string.Empty,
 				filters: new SearchFilter(includePrerelease: _includePrerelease),
@@ -39,59 +116,24 @@ public class NugetClientService
 				take: 100,
 				log: _nugetLogger,
 				cancellationToken: cancellationToken).ConfigureAwait(false);
-
-			var idePackageResults = results.AsValueEnumerable().Select(s => new IdePackageResult(s.Identity.Id, [new IdePackageFromSourceResult(s, source)], null));
-			foreach (var idePackageResult in idePackageResults) packagesResult.Add(idePackageResult);
+			return results.ToList();
 		}
-
-		// Combine, group, and order by download count
-		var topPackages = packagesResult
-			.GroupBy(p => p.PackageFromSources.First().PackageSearchMetadata.Identity.Id, StringComparer.OrdinalIgnoreCase)
-			.Select(g => g.First())
-			.OrderByDescending(p => p.PackageFromSources.First().PackageSearchMetadata.DownloadCount ?? 0)
-			.Take(100)
-			.ToList();
-
-		// foreach (var package in topPackages)
-		// {
-		// 	var repository = Repository.Factory.GetCoreV3(package.PackageSources.Single());
-		// 	var packageMetadataResource = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
-		// 	var metadata = await packageMetadataResource.GetMetadataAsync(
-		// 		package.PackageSearchMetadata.Identity.Id, includePrerelease: _includePrerelease, includeUnlisted: false,
-		// 		cache, logger, cancellationToken).ConfigureAwait(false);
-		// 	;
-		// 	var packageByIdResource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken).ConfigureAwait(false);
-		// }
-
-		// we need to find out if other package sources have the package too
-		foreach (var package in topPackages)
+		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
-			foreach (var source in packageSources.Except(package.PackageFromSources.Select(s => s.Source)).ToList())
-			{
-				var repository = Repository.Factory.GetCoreV3(source.Source);
-				var searchResource = await repository.GetResourceAsync<PackageSearchResource>(cancellationToken).ConfigureAwait(false);
-
-				if (searchResource == null)
-					continue;
-
-				// TODO: Might be faster to use FindPackageByIdResource
-				var results = await searchResource.SearchAsync(
-					searchTerm: package.PackageId,
-					filters: new SearchFilter(includePrerelease: _includePrerelease),
-					skip: 0,
-					take: 2,
-					log: _nugetLogger,
-					cancellationToken: cancellationToken).ConfigureAwait(false);
-				var foundPackage = results.SingleOrDefault(r => r.Identity.Id.Equals(package.PackageId, StringComparison.OrdinalIgnoreCase));
-				if (foundPackage != null)
-				{
-					package.PackageFromSources.Add(new IdePackageFromSourceResult(foundPackage, source));
-				}
-			}
+			// A source that can't be reached is left out, rather than failing the search
+			return [];
 		}
-
-		return topPackages;
 	}
+
+	private static List<PackageSource> LoadEnabledPackageSources(string directoryPath)
+	{
+		var settings = Settings.LoadDefaultSettings(root: directoryPath);
+		var packageSourceProvider = new PackageSourceProvider(settings);
+		return packageSourceProvider.LoadPackageSources().Where(p => p.IsEnabled).ToList();
+	}
+
+	/// As dotnet list package --outdated does: be nice to HTTP sources, else bounded by the CPU
+	private static int GetMaxParallel(List<PackageSource> packageSources) => packageSources.Any(s => s.IsHttp) ? 8 : Environment.ProcessorCount + 1;
 
 	public async Task<List<IPackageSearchMetadata>> GetAllVersionsOfPackageInSource(string packageId, PackageSource source, CancellationToken cancellationToken = default)
 	{
@@ -111,17 +153,14 @@ public class NugetClientService
 	public async Task<List<IdePackageResult>> GetPackagesForInstalledPackages(string directoryPath, List<InstalledPackage> installedPackages, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetClientService)}.{nameof(GetPackagesForInstalledPackages)}");
-		var settings = Settings.LoadDefaultSettings(root: directoryPath);
-		var packageSourceProvider = new PackageSourceProvider(settings);
-		var packageSources = packageSourceProvider.LoadPackageSources().Where(p => p.IsEnabled).ToList();
+		var packageSources = LoadEnabledPackageSources(directoryPath);
 
 		// Each source's resources once, not once per package. A source that can't be reached is left out, rather than failing every package
 		var sourcesResources = (await Task.WhenAll(packageSources.Select(source => GetSourceResources(source, cancellationToken))).ConfigureAwait(false))
 			.OfType<SourceResources>()
 			.ToList();
 
-		// As dotnet list package --outdated does: be nice to HTTP sources, else bounded by the CPU
-		var maxParallel = packageSources.Any(s => s.IsHttp) ? 8 : Environment.ProcessorCount + 1;
+		var maxParallel = GetMaxParallel(packageSources);
 		var packagesResult = new IdePackageResult[installedPackages.Count];
 		await Parallel.ForEachAsync(Enumerable.Range(0, installedPackages.Count), new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = cancellationToken }, async (index, ct) =>
 		{

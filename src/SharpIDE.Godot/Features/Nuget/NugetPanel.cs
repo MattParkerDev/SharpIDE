@@ -16,6 +16,12 @@ public partial class NugetPanel : Control
 	private VBoxContainer _availablePackagesItemList = null!;
 	private OptionButton _solutionOrProjectOptionButton = null!;
 	private Button _refreshButton = null!;
+	private TabContainer _tabContainer = null!;
+	private Control _discoverTab = null!;
+	/// Whether the Discover tab's search results have been loaded (or are loading) - they're loaded when the tab is first opened, and again on refresh while it's open
+	private bool _searchResultsRequested;
+	/// Cancels the search results still arriving when a refresh starts another load
+	private CancellationTokenSource? _searchResultsCts;
 	
 	private Label _packagesToUpdateSlnOrProjectNameLabel = null!;
 	private Label _packagesToUpdateResultCountLabel = null!;
@@ -69,7 +75,15 @@ public partial class NugetPanel : Control
 		_implicitlyInstalledPackagesProgressBar.Visible = false;
 		_packageSearchProgressBar.Visible = false;
 		_nugetPackageDetails.Visible = false;
-		_refreshButton.Pressed += () => OnSolutionOrProjectSelected(_solutionOrProjectOptionButton.Selected);
+		_tabContainer = GetNode<TabContainer>("%NugetTabContainer");
+		_discoverTab = _tabContainer.GetNode<Control>("Discover");
+		_tabContainer.TabChanged += _ => LoadSearchResultsIfDiscoverOpen();
+		_refreshButton.Pressed += () =>
+		{
+			OnSolutionOrProjectSelected(_solutionOrProjectOptionButton.Selected);
+			_searchResultsRequested = false;
+			LoadSearchResultsIfDiscoverOpen();
+		};
 		_nugetPackageDetails.PackageReferencesChanged += OnPackageReferencesChanged;
 		_installedPackagesVboxContainer.QueueFreeChildren();
 		_implicitlyInstalledPackagesItemList.QueueFreeChildren();
@@ -107,8 +121,18 @@ public partial class NugetPanel : Control
 			if (_solution is null) throw new InvalidOperationException("Solution is null but should not be");
 			_ = Task.GodotRun(() => SetSolutionOrProjectNameLabels(slnOrProject));
 			_ = Task.GodotRun(() => PopulateInstalledPackages(slnOrProject));
-			_ = Task.GodotRun(PopulateSearchResults);
 		});
+	}
+
+	/// The search results don't depend on the selected solution or project, so they're only loaded once the Discover tab is opened
+	private void LoadSearchResultsIfDiscoverOpen()
+	{
+		if (_searchResultsRequested || _tabContainer.GetCurrentTabControl() != _discoverTab) return;
+		_searchResultsRequested = true;
+		_searchResultsCts?.Cancel();
+		_searchResultsCts = new CancellationTokenSource();
+		var cancellationToken = _searchResultsCts.Token;
+		_ = Task.GodotRun(() => PopulateSearchResults(cancellationToken));
 	}
 
 	/// A project's reference was changed from the details pane - its project has been re-evaluated, so read the installed packages again
@@ -150,26 +174,42 @@ public partial class NugetPanel : Control
 		});
 	}
 
-	private async Task PopulateSearchResults()
+	private async Task PopulateSearchResults(CancellationToken cancellationToken)
 	{
-		return;
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetPanel)}.{nameof(PopulateSearchResults)}");
-		var result = await _nugetClientService.GetTop100Results(_solution!.DirectoryPath);
-		using var scenes = result.AsValueEnumerable().Select(s =>
+		// The tab can be opened before the solution has loaded
+		await _sharpIdeSolutionAccessor.SolutionReadyTcs.Task;
+		try
 		{
-			var scene = _packageEntryScene.Instantiate<PackageEntry>();
-			scene.PackageResult = s;
-			scene.PackageSelected += OnPackageSelected;
-			return scene;
-		}).ToArrayPool();
-		await this.InvokeAsync(() =>
-		{
-			_availablePackagesItemList.QueueFreeChildren();
-			foreach (var scene in scenes.Span)
+			// Each update is the whole list so far - the fastest source's results first, then the other sources each has them on, then the slower sources'
+			await foreach (var result in _nugetClientService.GetTop100Results(_sharpIdeSolutionAccessor.SolutionModel!.DirectoryPath, cancellationToken))
 			{
-				_availablePackagesItemList.AddChild(scene);
+				var scenes = result.Select(s =>
+				{
+					var scene = _packageEntryScene.Instantiate<PackageEntry>();
+					scene.PackageResult = s;
+					scene.PackageSelected += OnPackageSelected;
+					return scene;
+				}).ToList();
+				await this.InvokeAsync(() =>
+				{
+					if (cancellationToken.IsCancellationRequested)
+					{
+						foreach (var scene in scenes) scene.QueueFree();
+						return;
+					}
+					_availablePackagesItemList.QueueFreeChildren();
+					foreach (var scene in scenes)
+					{
+						_availablePackagesItemList.AddChild(scene);
+					}
+				});
 			}
-		});
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// A refresh started another load
+		}
 	}
 
 	private async Task PopulateInstalledPackages(ISolutionOrProject slnOrProject)
