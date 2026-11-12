@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using R3;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
@@ -25,7 +26,8 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	public required ReactiveProperty<bool> IsDirty { get; init; }
 	public required bool SuppressDiskChangeEvents { get; set; } // probably has concurrency issues
 	public required DateTimeOffset? LastIdeWriteTime { get; set; }
-	public EventWrapper<SharpIdeFileLinePosition?, Task> FileContentsChangedExternally { get; } = new((_) => Task.CompletedTask);
+	/// Raised for open files only - their editor applies the edit, and reports the result back via FileChangedService.OpenFileTextChanged
+	public EventWrapper<SharpIdeFileEditRequest, Task> EditRequested { get; } = new((_) => Task.CompletedTask);
 	public EventWrapper<Task> FileDeleted { get; } = new(() => Task.CompletedTask);
 
 	[SetsRequiredMembers]

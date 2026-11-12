@@ -28,7 +28,6 @@ public static class DependencyInjection
 		services.AddScoped<IdeFileExternalChangeHandler>();
 		services.AddScoped<IdeCodeActionService>();
 		services.AddScoped<IdeRenameService>();
-		services.AddScoped<IdeApplyCompletionService>();
 		services.AddScoped<FileChangedService>();
 		services.AddScoped<DotnetUserSecretsService>();
 		services.AddScoped<NugetClientService>();

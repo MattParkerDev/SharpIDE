@@ -1,7 +1,11 @@
 ﻿using System.Collections.Immutable;
+using System.Text;
+using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.Razor.Utilities;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
+using Microsoft.CodeAnalysis.Text;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -10,21 +14,15 @@ using AsyncBatchingWorkQueue = Microsoft.CodeAnalysis.Threading.AsyncBatchingWor
 
 namespace SharpIDE.Application.Features.FileWatching;
 
-public enum FileChangeType
-{
-	IdeSaveToDisk, // Apply to disk
-	IdeUnsavedChange, // Apply only in memory
-	ExternalChange, // Apply to disk, as well as in memory
-	CodeActionChange, // Apply to disk, as well as in memory
-	CompletionChange // Apply only in memory, as well as notify tabs of new content
-}
-
+/// All file changes should go via this service
 public class FileChangedService
 {
 	private readonly RoslynAnalysis _roslynAnalysis;
 	private readonly SharpIdeSolutionService _sharpIdeSolutionService;
 	private readonly IdeOpenTabsFileManager _openTabsFileManager;
 	private readonly AsyncBatchingWorkQueue _updateSolutionDiagnosticsQueue;
+	// Processes one batch at a time, in order, so Roslyn always ends up with the latest text of each open file
+	private readonly Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue<(SharpIdeFile File, SourceText Text)> _openFileTextChangedQueue;
 
 	public FileChangedService(RoslynAnalysis roslynAnalysis, IdeOpenTabsFileManager openTabsFileManager, SharpIdeSolutionService sharpIdeSolutionService)
 	{
@@ -32,6 +30,7 @@ public class FileChangedService
 		_openTabsFileManager = openTabsFileManager;
 		_sharpIdeSolutionService = sharpIdeSolutionService;
 		_updateSolutionDiagnosticsQueue = new AsyncBatchingWorkQueue(TimeSpan.FromMilliseconds(200), ProcessBatchAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
+		_openFileTextChangedQueue = new(TimeSpan.Zero, ProcessOpenFileTextChangesAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
 	}
 
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
@@ -80,48 +79,84 @@ public class FileChangedService
 		_updateSolutionDiagnosticsQueue.AddWork();
 	}
 
-	// All file changes should go via this service
-	public async Task SharpIdeFileChanged(SharpIdeFile file, string newContents, FileChangeType changeType, SharpIdeFileLinePosition? linePosition = null)
+	/// Called on the UI thread by an open file's editor, whenever its text changes - including edits it was asked to make (completion, code actions, reloads from disk).
+	/// The editor owns an open file's text; this records it, and forwards it to Roslyn in order, off the UI thread.
+	/// newText should descend from the previous text via WithChanges, so Roslyn can reparse incrementally.
+	public void OpenFileTextChanged(SharpIdeFile file, SourceText newText, bool isDirty)
 	{
-		if (changeType is FileChangeType.ExternalChange)
+		if (_openTabsFileManager.TryUpdateFileTextInMemory(file, newText) is false) return;
+		file.IsDirty.Value = isDirty;
+		if (file.IsCsprojFile) return; // The project is reloaded from disk when the csproj is saved
+		_openFileTextChangedQueue.AddWork((file, newText));
+	}
+
+	private async ValueTask ProcessOpenFileTextChangesAsync(ImmutableSegmentedList<(SharpIdeFile File, SourceText Text)> changes, CancellationToken cancellationToken)
+	{
+		// Only the latest text of each file matters - Roslyn can still reparse incrementally across several WithChanges steps
+		var latestTextPerFile = new Dictionary<SharpIdeFile, SourceText>();
+		foreach (var (file, text) in changes) latestTextPerFile[file] = text;
+
+		var updatedAnything = false;
+		foreach (var (file, text) in latestTextPerFile)
 		{
-			// Disk is already up to date
-			// Update any open tabs
-			// update in memory
-			await _openTabsFileManager.UpdateFileTextInMemoryIfOpen(file, newContents);
-			file.FileContentsChangedExternally.InvokeParallelFireAndForget(linePosition);
+			updatedAnything |= await _roslynAnalysis.UpdateDocument(file, text);
 		}
-		else if (changeType is FileChangeType.CodeActionChange)
+		if (updatedAnything) OnWorkspaceAltered();
+	}
+
+	/// Saves an open file, from its editor's text. Roslyn already has that text, so only the project system may need to react.
+	public async Task SaveOpenFile(SharpIdeFile file)
+	{
+		await _openTabsFileManager.SaveFileAsync(file);
+		await HandleProjectSystemFileSaved(file);
+	}
+
+	/// The file changed on disk, outside of the IDE. Disk always wins.
+	public async Task ExternalFileChanged(SharpIdeFile file, string newContents)
+	{
+		if (_openTabsFileManager.IsOpen(file))
 		{
-			// update in memory, tabs and save to disk
-			await _openTabsFileManager.UpdateInMemoryIfOpenAndSaveAsync(file, newContents);
-			file.FileContentsChangedExternally.InvokeParallelFireAndForget(linePosition);
+			// The editor owns an open file's text, so the reload goes through it, and reaches Roslyn like any other edit
+			await file.EditRequested.InvokeParallelAsync(SharpIdeFileEditRequest.Reload(newContents));
 		}
-		else if (changeType is FileChangeType.CompletionChange)
+		else if (file.IsCsprojFile is false)
 		{
-			// update in memory, tabs
-			await _openTabsFileManager.UpdateFileTextInMemory(file, newContents);
-			file.FileContentsChangedExternally.InvokeParallelFireAndForget(linePosition);
+			// AdditionalFiles such as txt files may have changed, so we need to attempt to update the workspace regardless of extension
+			var updated = await _roslynAnalysis.UpdateDocument(file, SourceText.From(newContents, Encoding.UTF8));
+			if (updated) OnWorkspaceAltered();
 		}
-		else if (changeType is FileChangeType.IdeSaveToDisk)
+		await HandleProjectSystemFileSaved(file);
+	}
+
+	/// Applies edits computed by Roslyn, e.g. by a code action or rename. Open files are edited via their editor (and left unsaved), closed files are written to disk.
+	public async Task ApplyTextEdits(IReadOnlyList<SharpIdeFileTextEdit> edits)
+	{
+		var updatedAnything = false;
+		foreach (var edit in edits)
 		{
-			// save to disk
-			// We technically don't need to update in memory here. TODO review
-			await _openTabsFileManager.UpdateInMemoryIfOpenAndSaveAsync(file, newContents);
+			if (_openTabsFileManager.IsOpen(edit.File))
+			{
+				await edit.File.EditRequested.InvokeParallelAsync(SharpIdeFileEditRequest.ApplyChanges(edit.OldText, edit.Changes));
+				continue;
+			}
+			var newText = edit.OldText.WithChanges(edit.Changes);
+			await _openTabsFileManager.WriteClosedFileAsync(edit.File, newText);
+			updatedAnything |= await _roslynAnalysis.UpdateDocument(edit.File, newText);
 		}
-		else if (changeType is FileChangeType.IdeUnsavedChange)
-		{
-			// update in memory only
-			await _openTabsFileManager.UpdateFileTextInMemory(file, newContents);
-		}
-		var afterSaveTask = (file, changeType) switch
-		{
-			({ IsSlnFile: true }, FileChangeType.IdeSaveToDisk or FileChangeType.ExternalChange) => HandleSlnChanged(file),
-			({ IsCsprojFile: true }, FileChangeType.IdeSaveToDisk or FileChangeType.ExternalChange) => HandleCsprojChanged(file),
-			({ IsCsprojFile: true }, _) => Task.CompletedTask,
-			(_, _) => HandlePotentialWorkspaceFile_Changed(file, newContents)
-		};
-		await afterSaveTask;
+		if (updatedAnything) OnWorkspaceAltered();
+	}
+
+	private Task HandleProjectSystemFileSaved(SharpIdeFile file) => file switch
+	{
+		{ IsSlnFile: true } => HandleSlnChanged(file),
+		{ IsCsprojFile: true } => HandleCsprojChanged(file),
+		_ => Task.CompletedTask
+	};
+
+	private void OnWorkspaceAltered()
+	{
+		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
+		_updateSolutionDiagnosticsQueue.AddWork();
 	}
 
 	private async ValueTask ProcessBatchAsync(CancellationToken cancellationToken)
@@ -144,15 +179,6 @@ public class FileChangedService
 	{
 		if (FilePathNormalizer.AreFilePathsEquivalent(file.Path, SolutionModel.FilePath) is false) return;
 		await _sharpIdeSolutionService.ReloadSolution();
-	}
-
-	/// AdditionalFiles such as txt files may have changed, so we need to attempt to update the workspace regardless of extension
-	private async Task HandlePotentialWorkspaceFile_Changed(SharpIdeFile file, string newContents)
-	{
-		var fileUpdatedInWorkspace = await _roslynAnalysis.UpdateDocument(file, newContents);
-		if (fileUpdatedInWorkspace is false) return;
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
 	}
 
 	private async Task HandleWorkspaceFileAdded(SharpIdeFile file, string contents)

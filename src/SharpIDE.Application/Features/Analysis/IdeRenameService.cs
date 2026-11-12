@@ -10,10 +10,7 @@ public class IdeRenameService(RoslynAnalysis roslynAnalysis, FileChangedService 
 
 	public async Task ApplyRename(ISymbol symbol, string newName)
 	{
-		var affectedFiles = await _roslynAnalysis.GetRenameApplyChanges(symbol, newName);
-		foreach (var (affectedFile, updatedText) in affectedFiles)
-		{
-			await _fileChangedService.SharpIdeFileChanged(affectedFile, updatedText, FileChangeType.CodeActionChange);
-		}
+		var edits = await _roslynAnalysis.GetRenameApplyChanges(symbol, newName);
+		await _fileChangedService.ApplyTextEdits(edits);
 	}
 }

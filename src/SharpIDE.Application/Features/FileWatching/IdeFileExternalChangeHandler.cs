@@ -138,10 +138,7 @@ public class IdeFileExternalChangeHandler
 			}
 		}
 		_logger.LogInformation("IdeFileExternalChangeHandler: Changed - '{FilePath}'", filePath);
-		if (sharpIdeFile is not null)
-		{
-			await _fileChangedService.SharpIdeFileChanged(sharpIdeFile, await File.ReadAllTextAsync(sharpIdeFile.Path), FileChangeType.ExternalChange);
-		}
+		await _fileChangedService.ExternalFileChanged(sharpIdeFile, await File.ReadAllTextAsync(sharpIdeFile.Path));
 	}
 
 	private async Task OnAnalyzerDllsChanged(ImmutableArray<string> analyzerDllPaths)

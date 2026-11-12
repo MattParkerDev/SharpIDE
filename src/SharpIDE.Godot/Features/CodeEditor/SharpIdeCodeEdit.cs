@@ -49,8 +49,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private ImmutableArray<SharpIdeDiagnostic> _projectDiagnosticsForFile = [];
 	private ImmutableArray<CodeAction> _currentCodeActionsInPopup = [];
 	private bool _fileChangingSuppressBreakpointToggleEvent;
-	private bool _settingWholeDocumentTextSuppressLineEditsEvent; // A dodgy workaround - setting the whole document doesn't guarantee that the line count stayed the same etc. We are still going to have broken highlighting. TODO: Investigate getting minimal text change ranges, and change those ranges only
 	private bool _fileDeleted;
+	// The editor owns an open file's text. These mirror Text (UI thread only): _currentSourceText is built from successive WithChanges,
+	// so Roslyn can reparse incrementally, and so edits computed against an older text can be mapped forward.
+	private string _currentText = "";
+	private SourceText? _currentSourceText;
+	private bool _pendingReloadMarksClean; // The next text change is a reload from disk, so leaves the file not dirty
 	// Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
 	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
@@ -76,7 +80,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
 	[Inject] private readonly IdeCodeActionService _ideCodeActionService = null!;
 	[Inject] private readonly FileChangedService _fileChangedService = null!;
-	[Inject] private readonly IdeApplyCompletionService _ideApplyCompletionService = null!;
 	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
 	[Inject] private readonly EditorCaretPositionService _editorCaretPositionService = null!;
 	[Inject] private readonly SharpIdeMetadataAsSourceService _sharpIdeMetadataAsSourceService = null!;
@@ -215,7 +218,6 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void OnLinesEditedFrom(long fromLine, long toLine)
 	{
 		if (fromLine == toLine) return;
-		if (_settingWholeDocumentTextSuppressLineEditsEvent) return;
 
 		// Consume the pre-edit snapshot captured in _GuiInput (if any).
 		// Because the snapshot was taken *before* the edit, the caret position and line text
@@ -245,14 +247,19 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	public override void _ExitTree()
 	{
-		_currentFile?.FileContentsChangedExternally.Unsubscribe(OnFileChangedExternally);
+		_currentFile?.EditRequested.Unsubscribe(OnEditRequested);
 		_currentFile?.FileDeleted.Unsubscribe(OnFileDeleted);
 		_projectDiagnosticsObserveDisposable?.Dispose();
 		GlobalEvents.Instance.SolutionAltered.Unsubscribe(OnSolutionAltered);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Unsubscribe(UpdateEditorThemeAsync);
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Unsubscribe(SetCodeFoldingAsync);
 		_tfmOptionButton.ItemSelected -= OnTargetFrameworkSelected;
-		if (_currentFile is not null) _openTabsFileManager.CloseFile(_currentFile);
+		if (_currentFile is not null)
+		{
+			if (_fileDeleted is false) SyncTextFromEditor(); // Capture an edit whose text_changed hasn't been handled yet
+			// Saves unsaved changes, so Roslyn (which has the editor's text) and disk agree once the editor is gone
+			_ = _openTabsFileManager.CloseFileAsync(_currentFile, saveIfDirty: _fileDeleted is false);
+		}
 		_completionPopup.Dispose();
 		_symbolHoverPopup.Close();
 	}
@@ -306,15 +313,16 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void OnTextChanged()
 	{
 		_findReplaceBar.NeedsToCountResults = true;
-		var text = Text;
 		var pendingCompletionTrigger = _completionPopup.TakePendingCompletionTrigger();
 		var pendingCompletionFilterReason = _completionPopup.TakePendingFilterReason();
+		// May find no change, if a programmatic edit already synced it
+		SyncTextFromEditor();
+		if (pendingCompletionTrigger is null && pendingCompletionFilterReason is null) return;
+		if (_currentSourceText is not { } text) return;
 		var cursorPosition = GetCaretPosition();
 		_ = Task.GodotRun(async () =>
 		{
 			var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(OnTextChanged)}");
-			_currentFile.IsDirty.Value = true;
-			await _fileChangedService.SharpIdeFileChanged(_currentFile, text, FileChangeType.IdeUnsavedChange);
 			if (pendingCompletionTrigger is not null)
 			{
 				_completionTrigger = pendingCompletionTrigger;
@@ -347,23 +355,81 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		});
 	}
 
-	private async Task OnFileChangedExternally(SharpIdeFileLinePosition? linePosition)
+	/// Brings _currentText/_currentSourceText up to date with Text, and reports the change. Cheap when nothing changed, apart from reading Text.
+	/// Called from text_changed, and before/after programmatic edits, so they never work against a stale base.
+	/// Returns true if the text had changed.
+	[RequiresGodotUiThread]
+	private bool SyncTextFromEditor()
+	{
+		if (_currentSourceText is null) return false; // Not loaded yet
+		var text = Text;
+		if (TextDiff.GetMinimalChange(_currentText, text) is not { } change) return false;
+		_currentText = text;
+		_currentSourceText = _currentSourceText.WithChanges(change);
+		var isDirty = _pendingReloadMarksClean is false;
+		_pendingReloadMarksClean = false;
+		// Cheap and synchronous - records the text and queues the Roslyn update, which happens in order, off the UI thread
+		_fileChangedService.OpenFileTextChanged(_currentFile, _currentSourceText, isDirty);
+		return true;
+	}
+
+	private async Task OnEditRequested(SharpIdeFileEditRequest request)
 	{
 		if (_fileDeleted) return; // We have QueueFree'd this node, however it may not have been freed yet.
-		var fileContents = await _openTabsFileManager.GetFileTextAsync(_currentFile);
-		await this.InvokeAsync(() =>
+		await this.InvokeAsync(() => ApplyEditRequest(request));
+	}
+
+	[RequiresGodotUiThread]
+	private void ApplyEditRequest(SharpIdeFileEditRequest request)
+	{
+		SyncTextFromEditor();
+		if (_currentSourceText is null) return; // Not loaded yet
+		if (request.ReloadedText is { } reloadedText)
 		{
-			(int line, int col) currentCaretPosition = linePosition is null ? GetCaretPosition() : (linePosition.Value.Line, linePosition.Value.Column);
-			var vScroll = GetVScroll();
-			BeginComplexOperation();
-			_settingWholeDocumentTextSuppressLineEditsEvent = true;
-			SetText(fileContents);
-			_settingWholeDocumentTextSuppressLineEditsEvent = false;
-			SetCaretLine(currentCaretPosition.line);
-			SetCaretColumn(currentCaretPosition.col);
-			SetVScroll(vScroll);
-			EndComplexOperation();
-		});
+			// Disk wins. Applied as a minimal edit (like VS Code), so the caret, scroll position, breakpoints and undo history survive.
+			// The editor may have normalised line endings, so compare like with like.
+			if (_currentText.Contains('\r') is false) reloadedText = reloadedText.Replace("\r\n", "\n");
+			if (TextDiff.GetMinimalChange(_currentText, reloadedText) is not { } reloadChange)
+			{
+				_currentFile.IsDirty.Value = false;
+				return;
+			}
+			_pendingReloadMarksClean = true;
+			ApplyChanges(_currentSourceText, [reloadChange]);
+			return;
+		}
+
+		if (ReferenceEquals(request.BaseText, _currentSourceText) is false && request.BaseText!.ContentEquals(_currentSourceText) is false)
+		{
+			GD.PrintErr($"[{_currentFile.Name.Value}] Edit not applied - the file has changed since it was computed");
+			return;
+		}
+		ApplyChanges(_currentSourceText, request.Changes);
+	}
+
+	/// Applies changes computed against baseText, which must match the editor's current text, as one undo step.
+	/// Godot keeps carets, breakpoints, folds etc in place around the edits, unlike replacing the whole text.
+	[RequiresGodotUiThread]
+	private void ApplyChanges(SourceText baseText, IReadOnlyList<TextChange> changes, int? newCaretOffset = null)
+	{
+		BeginComplexOperation();
+		// Last to first, so each change's position in baseText is unaffected by those already applied
+		foreach (var change in changes.OrderBy(c => c.Span.Start).Reverse())
+		{
+			var span = baseText.Lines.GetLinePositionSpan(change.Span);
+			if (change.Span.IsEmpty is false) RemoveText(span.Start.Line, span.Start.Character, span.End.Line, span.End.Character);
+			if (string.IsNullOrEmpty(change.NewText) is false) InsertText(change.NewText, span.Start.Line, span.Start.Character);
+		}
+		if (newCaretOffset is { } caretOffset)
+		{
+			var caretPosition = baseText.WithChanges(changes).Lines.GetLinePosition(caretOffset);
+			RemoveSecondaryCarets();
+			SetCaretLine(caretPosition.Line);
+			SetCaretColumn(caretPosition.Character);
+		}
+		EndComplexOperation();
+		// Report the result now, rather than waiting for text_changed
+		SyncTextFromEditor();
 	}
 
 	public void SetFileLinePosition(SharpIdeFileLinePosition fileLinePosition)
@@ -391,7 +457,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetSharpIdeFile)}");
 		_currentFile = file;
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
-		_currentFile.FileContentsChangedExternally.Subscribe(OnFileChangedExternally);
+		_currentFile.EditRequested.Subscribe(OnEditRequested);
 		_currentFile.FileDeleted.Subscribe(OnFileDeleted);
 		if (_currentFile.GetContainingProjectFolder() is {} containingProjectFolder && Solution!.GetProjectForContainingFolderPath(containingProjectFolder) is {} project)
 		{
@@ -424,9 +490,13 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var setTextTask = this.InvokeAsync(async () =>
 		{
 			_fileChangingSuppressBreakpointToggleEvent = true;
-			SetText(await readFileTask);
+			SetText((await readFileTask).ToString());
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
+			// The editor now owns this file's text. Godot may normalise it (e.g. line endings), so Roslyn is given exactly what the editor holds.
+			_currentText = Text;
+			_currentSourceText = SourceText.From(_currentText);
+			_fileChangedService.OpenFileTextChanged(file, _currentSourceText, isDirty: false);
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
 			if (file.IsMetadataAsSourceFile) Editable = false;
 		});
@@ -678,10 +748,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		if (@event.IsActionPressed(InputStringNames.SaveAllFiles))
 		{
 			AcceptEvent();
-			_ = Task.GodotRun(async () =>
-			{
-				await _fileChangedService.SharpIdeFileChanged(_currentFile, Text, FileChangeType.IdeSaveToDisk);
-			});
+			SaveFile();
 		}
 		// Now we filter to only the focused tab
 		if (HasFocus() is false) return;
@@ -703,11 +770,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		else if (@event.IsActionPressed(InputStringNames.SaveFile) && @event.IsActionPressed(InputStringNames.SaveAllFiles) is false)
 		{
 			AcceptEvent();
-			_ = Task.GodotRun(async () =>
-			{
-				await _fileChangedService.SharpIdeFileChanged(_currentFile, Text, FileChangeType.IdeSaveToDisk);
-			});
+			SaveFile();
 		}
+	}
+
+	[RequiresGodotUiThread]
+	private void SaveFile()
+	{
+		SyncTextFromEditor(); // So the save includes an edit whose text_changed hasn't been handled yet
+		_ = Task.GodotRun(async () => await _fileChangedService.SaveOpenFile(_currentFile));
 	}
 
 	public void SetExecutingTextSpanInfo(LinePositionSpan? linePositionSpan)

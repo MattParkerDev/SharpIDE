@@ -10,10 +10,7 @@ public class IdeCodeActionService(RoslynAnalysis roslynAnalysis, FileChangedServ
 
 	public async Task ApplyCodeAction(CodeAction codeAction)
 	{
-		var affectedFiles = await _roslynAnalysis.GetCodeActionApplyChanges(codeAction);
-		foreach (var (affectedFile, updatedText) in affectedFiles)
-		{
-			await _fileChangedService.SharpIdeFileChanged(affectedFile, updatedText, FileChangeType.CodeActionChange);
-		}
+		var edits = await _roslynAnalysis.GetCodeActionApplyChanges(codeAction);
+		await _fileChangedService.ApplyTextEdits(edits);
 	}
 }

@@ -38,6 +38,7 @@ using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.Analysis.WorkspaceServices;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using static Roslyn.Utilities.EnumerableExtensions;
@@ -751,14 +752,15 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	// This may not be the best way to do this, but it seems to work okay. It may only be a problem because I continue to update the doc in the workspace as the user continues typing, filtering the completion
 	// I could possibly pause updating the document while the completion list is open, but that seems more complex - handling accepted vs cancelled completions etc
 	public record IdeCompletionListResult(Document Document, CompletionList CompletionList, LinePosition LinePosition);
-	public async Task<IdeCompletionListResult> GetCodeCompletionsForDocumentAtPosition(SharpIdeFile fileModel, string documentText, LinePosition linePosition, CompletionTrigger completionTrigger)
+	public async Task<IdeCompletionListResult> GetCodeCompletionsForDocumentAtPosition(SharpIdeFile fileModel, SourceText documentText, LinePosition linePosition, CompletionTrigger completionTrigger)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeCompletionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel);
 		Guard.Against.Null(document, nameof(document));
-		// The document in the workspace may have been further updated since the completion request was made, so we need to fork a document with the text at the time of the completion request
-		document = document.WithText(SourceText.From(documentText, Encoding.UTF8));
+		// The workspace may not have caught up with the editor yet (or may have moved past this text), so fork a document with the text at the time of the completion request.
+		// documentText is the editor's own SourceText, so when committing, edits typed since can be mapped forward via GetChangeRanges.
+		document = document.WithText(documentText);
 		var (completions, triggerLinePosition) = await GetCompletionsAsync(document, linePosition, completionTrigger).ConfigureAwait(false);
 		return new IdeCompletionListResult(document, completions, triggerLinePosition);
 	}
@@ -933,7 +935,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return (completions, triggerLinePosition);
 	}
 
-	public async Task<bool> ShouldTriggerCompletionAsync(SharpIdeFile file, string documentText, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
+	public async Task<bool> ShouldTriggerCompletionAsync(SharpIdeFile file, SourceText sourceText, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
 	{
 		await _solutionLoadedTcs.Task;
 		if (file.IsRoslynWorkspaceFile is false) return false;
@@ -941,15 +943,13 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var completionService = CompletionService.GetService(document);
 		if (completionService is null) throw new InvalidOperationException("Completion service is not available for the document.");
 
-		var sourceText = SourceText.From(documentText, Encoding.UTF8);
 		var position = sourceText.Lines.GetPosition(linePosition);
 		var shouldTrigger = completionService.ShouldTriggerCompletion(document.Project, document.Project.Services, sourceText, position, completionTrigger, CompletionOptions.Default, document.Project.Solution.Options ?? OptionSet.Empty);
 		return shouldTrigger;
 	}
 
-	public static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(string documentText, LinePosition linePosition, CompletionList completionList, CompletionTrigger completionTrigger, CompletionFilterReason filterReason)
+	public static ImmutableArray<SharpIdeCompletionItem> FilterCompletions(SourceText sourceText, LinePosition linePosition, CompletionList completionList, CompletionTrigger completionTrigger, CompletionFilterReason filterReason)
 	{
-		var sourceText = SourceText.From(documentText, Encoding.UTF8);
 		return FilterCompletions(sourceText, sourceText.Lines.GetPosition(linePosition), completionList.Span.Start, completionList, completionTrigger, filterReason);
 	}
 
@@ -1006,23 +1006,14 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
         return filteredList;
     }
 
-	public async Task<(string updatedText, SharpIdeFileLinePosition sharpIdeFileLinePosition)> GetCompletionApplyChanges(SharpIdeFile file, CompletionItem completionItem, Document document, CancellationToken cancellationToken = default)
+	/// The change for committing a completion item, relative to the text of <paramref name="document"/> (the document the completion list was computed for).
+	/// NewCaretPosition is in the coordinates of that text with the change applied.
+	public static async Task<(TextChange Change, int NewCaretPosition)> GetCompletionChange(CompletionItem completionItem, Document document, CancellationToken cancellationToken = default)
 	{
-		//var documentId = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(file.Path).Single();
-		//var document = SolutionExtensions.GetRequiredDocument(_workspace.CurrentSolution, documentId);
 		var completionService = CompletionService.GetService(document) ?? throw new InvalidOperationException("Completion service is not available for the document.");
 		var completionChange = await completionService.GetChangeAsync(document, completionItem, commitCharacter: '.', cancellationToken: cancellationToken);
-		var sourceText = await document.GetTextAsync(cancellationToken);
-		var newText = sourceText.WithChanges(completionChange.TextChange);
 		var newCaretPosition = completionChange.NewPosition ?? NewCaretPosition();
-		var linePosition = newText.Lines.GetLinePosition(newCaretPosition);
-		var sharpIdeFileLinePosition = new SharpIdeFileLinePosition
-		{
-			Line = linePosition.Line,
-			Column = linePosition.Character
-		};
-
-		return (newText.ToString(), sharpIdeFileLinePosition);
+		return (completionChange.TextChange, newCaretPosition);
 
 		int NewCaretPosition()
 		{
@@ -1037,7 +1028,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	}
 
 	/// Returns the list of files that would be modified by applying the code action. Does not apply the changes to the workspace sln
-	public async Task<List<(SharpIdeFile File, string UpdatedText)>> GetCodeActionApplyChanges(CodeAction codeAction, CancellationToken cancellationToken = default)
+	public async Task<List<SharpIdeFileTextEdit>> GetCodeActionApplyChanges(CodeAction codeAction, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionApplyChanges)}");
 		await _solutionLoadedTcs.Task;
@@ -1059,34 +1050,37 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			}
 		}
 
-		var changedFilesWithText = await GetNaiveSolutionChanges(originalSolution, updatedSolution, cancellationToken);
-		return changedFilesWithText;
+		return await GetSolutionTextEdits(originalSolution, updatedSolution, cancellationToken);
 	}
 
-	private async Task<List<(SharpIdeFile File, string UpdatedText)>> GetNaiveSolutionChanges(Solution oldSolution, Solution newSolution, CancellationToken cancellationToken = default)
+	/// The minimal text edits that turn oldSolution into newSolution - one per changed file, as linked documents (e.g. one per TFM) share a file
+	private async Task<List<SharpIdeFileTextEdit>> GetSolutionTextEdits(Solution oldSolution, Solution newSolution, CancellationToken cancellationToken = default)
 	{
-		var allChanges = newSolution.GetChanges(oldSolution);
 		// TODO: Handle added and removed documents
-		var changedDocIds = allChanges
-			.GetExplicitlyChangedSourceGeneratedDocuments().Union(allChanges
-				.GetProjectChanges()
-				.SelectMany(s => s.GetChangedDocuments().Union(s.GetChangedAdditionalDocuments()))).ToHashSet();
-
-		var changedFilesWithText = await changedDocIds
-			.DistinctBy(s => s.Id) // probably not necessary
-			.Select(id => newSolution.GetDocument(id))
-			//.Select(id => updatedSolution.GetDocument(id) ?? await _workspace.CurrentSolution.GetSourceGeneratedDocumentAsync(id, cancellationToken))
-			.Where(d => d is not null)
-			.OfType<Document>() // ensures non-null
-			.ToAsyncEnumerable()
-			.Select(async (Document doc, CancellationToken ct) =>
+		var edits = new List<SharpIdeFileTextEdit>();
+		var seenFilePaths = new HashSet<string>();
+		foreach (var projectChanges in newSolution.GetChanges(oldSolution).GetProjectChanges())
+		{
+			var changedDocumentIds = projectChanges.GetChangedDocuments(onlyGetDocumentsWithTextChanges: true).Concat(projectChanges.GetChangedAdditionalDocuments());
+			foreach (var documentId in changedDocumentIds)
 			{
-				var text = await doc.GetTextAsync(ct);
-				var sharpFile = _sharpIdeSolutionModel!.AllFiles[doc.FilePath!];
-				return (sharpFile, text.ToString());
-			})
-			.ToListAsync(cancellationToken);
-		return changedFilesWithText;
+				var oldDocument = oldSolution.GetTextDocument(documentId);
+				var newDocument = newSolution.GetTextDocument(documentId);
+				if (oldDocument?.FilePath is not { } filePath || newDocument is null) continue;
+				if (seenFilePaths.Add(filePath) is false) continue;
+
+				var oldText = await oldDocument.GetTextAsync(cancellationToken);
+				// For documents, Roslyn can diff the syntax trees, giving precise changes
+				var changes = (oldDocument, newDocument) is (Document oldDoc, Document newDoc)
+					? (await newDoc.GetTextChangesAsync(oldDoc, cancellationToken)).ToImmutableArray()
+					: (await newDocument.GetTextAsync(cancellationToken)).GetTextChanges(oldText).ToImmutableArray();
+				if (changes.IsEmpty) continue;
+
+				var file = _sharpIdeSolutionModel!.AllFiles[filePath];
+				edits.Add(new SharpIdeFileTextEdit(file, oldText, changes));
+			}
+		}
+		return edits;
 	}
 
 	public record IdeReferenceLocationResult(ReferenceLocation ReferenceLocation, SharpIdeFile? File, ISymbol? EnclosingSymbol);
@@ -1116,7 +1110,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	}
 
 	/// Returns the list of files that would be modified by applying the rename. Does not apply the changes to the workspace sln
-	public async Task<List<(SharpIdeFile File, string UpdatedText)>> GetRenameApplyChanges(ISymbol symbol, string newName, CancellationToken cancellationToken = default)
+	public async Task<List<SharpIdeFileTextEdit>> GetRenameApplyChanges(ISymbol symbol, string newName, CancellationToken cancellationToken = default)
 	{
 		var symbolRenameOptions = new SymbolRenameOptions
 		{
@@ -1127,8 +1121,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		};
 		var currentSolution = _workspace!.CurrentSolution;
 		var newSolution = await Renamer.RenameSymbolAsync(currentSolution, symbol, symbolRenameOptions, newName, cancellationToken);
-		var changedFilesWithText = await GetNaiveSolutionChanges(currentSolution, newSolution, cancellationToken);
-		return changedFilesWithText;
+		return await GetSolutionTextEdits(currentSolution, newSolution, cancellationToken);
 	}
 
 	public async Task<string?> GetMetadataAsSourceFromDebuggingAssemblyAndType(string typeName, string assemblyPath, Guid mvid, string userCodeCallingAssemblyPath, CancellationToken cancellationToken = default)
@@ -1368,47 +1361,39 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return (razorCodeDocument.GetRequiredCSharpDocument(false), generatedDocument, csharpIndex);
 	}
 
-	// Returns true if the document was found and updated, otherwise false
-	public async Task<bool> UpdateDocument(SharpIdeFile fileModel, string newContent)
+	/// Returns true if the document was found and its text changed, otherwise false.
+	/// For incremental parsing, newText should descend (via WithChanges) from the text currently in the workspace.
+	public async Task<bool> UpdateDocument(SharpIdeFile fileModel, SourceText newText)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(UpdateDocument)}");
 		await _solutionLoadedTcs.Task;
 		Guard.Against.Null(fileModel, nameof(fileModel));
-		Guard.Against.NullOrEmpty(newContent, nameof(newContent));
 
-		var updatedSolution = _workspace!.CurrentSolution;
+		var currentSolution = _workspace!.CurrentSolution;
+		var documentIds = currentSolution.GetDocumentIdsWithFilePath(fileModel.Path);
+		if (documentIds.IsEmpty) return false;
 
-		var documentIdsWithFilePath = updatedSolution.GetDocumentIdsWithFilePath(fileModel.Path);
-		bool? updatedAnything = null;
-		foreach (var documentId in documentIdsWithFilePath)
+		// Skip no-ops, e.g. an editor opening a file whose text the workspace already has. Usually cheap - differing lengths return immediately.
+		if (currentSolution.GetTextDocument(documentIds[0]) is { } existingDocument &&
+		    existingDocument.TryGetText(out var existingText) &&
+		    (ReferenceEquals(existingText, newText) || existingText.ContentEquals(newText)))
 		{
-			var textDocument = updatedSolution.GetDocument(documentId)
-			                   ?? updatedSolution.GetAdditionalDocument(documentId)
-			                   ?? updatedSolution.GetAnalyzerConfigDocument(documentId);
+			return false;
+		}
 
-			if (textDocument is null)
+		// Atomic: the transformation is re-run against the latest solution if another change lands first, so concurrent updates can't be lost.
+		// Linked documents (the same file in several projects, e.g. one per TFM) all get the new text.
+		return _workspace.SetCurrentSolution(oldSolution =>
+		{
+			var newSolution = oldSolution;
+			foreach (var documentId in oldSolution.GetDocumentIdsWithFilePath(fileModel.Path))
 			{
-				_logger.LogTrace("Could not find document with path '{FilePath}' in the workspace.", fileModel.Path);
-				continue;
+				if (newSolution.ContainsDocument(documentId)) newSolution = newSolution.WithDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
+				else if (newSolution.ContainsAdditionalDocument(documentId)) newSolution = newSolution.WithAdditionalDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
+				else if (newSolution.ContainsAnalyzerConfigDocument(documentId)) newSolution = newSolution.WithAnalyzerConfigDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
 			}
-
-			var newText = SourceText.From(newContent, Encoding.UTF8);
-			updatedSolution = textDocument switch
-			{
-				Document document => document.WithText(newText).Project.Solution,
-				AdditionalDocument ad => updatedSolution.WithAdditionalDocumentText(textDocument.Id, newText, PreservationMode.PreserveIdentity),
-				AnalyzerConfigDocument acd => updatedSolution.WithAnalyzerConfigDocumentText(textDocument.Id, newText, PreservationMode.PreserveIdentity),
-				_ => throw new ArgumentOutOfRangeException($"Unexpected text document type: {textDocument.GetType().Name}"),
-			};
-			updatedAnything ??= true;
-		}
-		updatedAnything ??= false;
-		if (updatedAnything is true)
-		{
-			_workspace.SetCurrentSolution(updatedSolution);
-			return true;
-		}
-		return false;
+			return newSolution;
+		}, WorkspaceChangeKind.DocumentChanged, documentId: documentIds[0]);
 	}
 
 	public async Task<bool> AddDocument(SharpIdeFile fileModel, string content)

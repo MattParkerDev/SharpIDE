@@ -3,13 +3,14 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Text;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
 public partial class SharpIdeCodeEdit
 {
-	private EventWrapper<CompletionTrigger, string, (int, int), Task> CustomCodeCompletionRequested { get; } = new((_, _, _) => Task.CompletedTask);
+	private EventWrapper<CompletionTrigger, SourceText, (int, int), Task> CustomCodeCompletionRequested { get; } = new((_, _, _) => Task.CompletedTask);
 	private CodeCompletionPopup _completionPopup = null!;
 	private CompletionList? _completionList;
 	private Document? _completionResultDocument;
@@ -26,8 +27,10 @@ public partial class SharpIdeCodeEdit
 			GetCompletionDescriptionAsync,
 			trigger =>
 			{
+				SyncTextFromEditor();
+				if (_currentSourceText is null) return;
 				_completionTrigger = trigger;
-				CustomCodeCompletionRequested.InvokeParallelFireAndForget(trigger, Text, GetCaretPosition());
+				CustomCodeCompletionRequested.InvokeParallelFireAndForget(trigger, _currentSourceText, GetCaretPosition());
 			},
 			ApplySelectedCodeCompletion);
 	}
@@ -51,9 +54,10 @@ public partial class SharpIdeCodeEdit
 			return;
 		}
 
-		var cursorPosition = await this.InvokeAsync(() => GetCaretPosition());
+		var (cursorPosition, sourceText) = await this.InvokeAsync(() => (GetCaretPosition(), _currentSourceText));
+		if (sourceText is null) return;
 		var filteredCompletions = RoslynAnalysis.FilterCompletions(
-			Text,
+			sourceText,
 			new LinePosition(cursorPosition.line, cursorPosition.col),
 			_completionList,
 			_completionTrigger.Value,
@@ -61,7 +65,7 @@ public partial class SharpIdeCodeEdit
 		await this.InvokeAsync(() => _completionPopup.SetOptions(filteredCompletions));
 	}
 
-	private async Task OnCodeCompletionRequested(CompletionTrigger completionTrigger, string documentText, (int, int) caretPosition)
+	private async Task OnCodeCompletionRequested(CompletionTrigger completionTrigger, SourceText documentText, (int, int) caretPosition)
 	{
 		var linePosition = new LinePosition(caretPosition.Item1, caretPosition.Item2);
 		var result = await _roslynAnalysis.GetCodeCompletionsForDocumentAtPosition(_currentFile, documentText, linePosition, completionTrigger);
@@ -92,6 +96,27 @@ public partial class SharpIdeCodeEdit
 		_completionList = null;
 		_completionResultDocument = null;
 		_completionTrigger = null;
-		_ = Task.GodotRun(async () => await _ideApplyCompletionService.ApplyCompletion(_currentFile, completionItem, document));
+		_ = Task.GodotRun(async () =>
+		{
+			var completionText = await document.GetTextAsync();
+			var (change, newCaretPosition) = await RoslynAnalysis.GetCompletionChange(completionItem, document);
+			await this.InvokeAsync(() => ApplyCompletionChange(completionText, change, newCaretPosition));
+		});
+	}
+
+	/// change and newCaretPosition are relative to completionText, the text the completion list was computed for
+	[RequiresGodotUiThread]
+	private void ApplyCompletionChange(SourceText completionText, TextChange change, int newCaretPosition)
+	{
+		SyncTextFromEditor();
+		if (_currentSourceText is null) return;
+		// The user has usually typed since the list was computed (e.g. filter text) - map the change onto the current text, replacing what was typed
+		if (TextDiff.TryMapChangeForward(completionText, _currentSourceText, change, out var mappedChange) is false)
+		{
+			GD.PrintErr($"[{_currentFile.Name.Value}] Completion not applied - the text around it changed since the completion list was computed");
+			return;
+		}
+		var caretOffset = mappedChange.Span.Start + (newCaretPosition - change.Span.Start);
+		ApplyChanges(_currentSourceText, [mappedChange], caretOffset);
 	}
 }
