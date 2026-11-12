@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis.Text;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
@@ -31,24 +32,79 @@ public static class TextDiff
 		var newSpan = newText.AsSpan();
 		var prefix = oldSpan.CommonPrefixLength(newSpan);
 		if (prefix == oldSpan.Length && prefix == newSpan.Length) return null;
-
-		var maxSuffix = Math.Min(oldSpan.Length, newSpan.Length) - prefix;
-		var suffix = 0;
-		const int blockSize = 64;
-		// Compare in vectorised blocks first, then finish character by character
-		while (suffix + blockSize <= maxSuffix &&
-		       oldSpan.Slice(oldSpan.Length - suffix - blockSize, blockSize).SequenceEqual(newSpan.Slice(newSpan.Length - suffix - blockSize, blockSize)))
-		{
-			suffix += blockSize;
-		}
-		while (suffix < maxSuffix && oldSpan[oldSpan.Length - 1 - suffix] == newSpan[newSpan.Length - 1 - suffix])
-		{
-			suffix++;
-		}
+		var suffix = CommonSuffixLength(oldSpan[prefix..], newSpan[prefix..]);
 
 		var oldLength = oldSpan.Length - prefix - suffix;
 		var newLength = newSpan.Length - prefix - suffix;
 		return new TextChange(new TextSpan(prefix, oldLength), newText.Substring(prefix, newLength));
+	}
+
+	/// As <see cref="GetMinimalChange(string, string)"/>, for UTF-32 text (e.g. Godot's native String), returning UTF-16 positions as Roslyn expects.
+	/// Only the inserted text is converted to a managed string.
+	/// Invalid code points (lone surrogates, > U+10FFFF) become U+FFFD, consistent with Encoding.UTF32, so positions match a full conversion.
+	public static TextChange? GetMinimalChangeUtf32(ReadOnlySpan<uint> oldText, ReadOnlySpan<uint> newText)
+	{
+		var prefix = oldText.CommonPrefixLength(newText);
+		if (prefix == oldText.Length && prefix == newText.Length) return null;
+		var suffix = CommonSuffixLength(oldText[prefix..], newText[prefix..]);
+
+		var removed = oldText.Slice(prefix, oldText.Length - prefix - suffix);
+		var inserted = newText.Slice(prefix, newText.Length - prefix - suffix);
+		// Code points above U+FFFF are a surrogate pair (2 chars) in UTF-16
+		var start = prefix + CountSupplementaryCodePoints(oldText[..prefix]);
+		var oldLength = removed.Length + CountSupplementaryCodePoints(removed);
+		return new TextChange(new TextSpan(start, oldLength), Utf32ToUtf16(inserted));
+	}
+
+	private static int CommonSuffixLength<T>(ReadOnlySpan<T> a, ReadOnlySpan<T> b) where T : IEquatable<T>
+	{
+		var maxSuffix = Math.Min(a.Length, b.Length);
+		var suffix = 0;
+		const int blockSize = 64;
+		// Compare in vectorised blocks first, then finish element by element
+		while (suffix + blockSize <= maxSuffix &&
+		       a.Slice(a.Length - suffix - blockSize, blockSize).SequenceEqual(b.Slice(b.Length - suffix - blockSize, blockSize)))
+		{
+			suffix += blockSize;
+		}
+		while (suffix < maxSuffix && a[a.Length - 1 - suffix].Equals(b[b.Length - 1 - suffix]))
+		{
+			suffix++;
+		}
+		return suffix;
+	}
+
+	private static int CountSupplementaryCodePoints(ReadOnlySpan<uint> text)
+	{
+		var count = 0;
+		while (true) // Vectorised search, so text without any (the usual case) is a single fast scan
+		{
+			var index = text.IndexOfAnyInRange(0x10000u, 0x10FFFFu);
+			if (index < 0) return count;
+			count++;
+			text = text[(index + 1)..];
+		}
+	}
+
+	private static string Utf32ToUtf16(ReadOnlySpan<uint> text)
+	{
+		if (text.IsEmpty) return string.Empty;
+		return string.Create(text.Length + CountSupplementaryCodePoints(text), text, static (destination, source) =>
+		{
+			var i = 0;
+			foreach (var codePoint in source)
+			{
+				if (codePoint is >= 0x10000 and <= 0x10FFFF)
+				{
+					i += new Rune(codePoint).EncodeToUtf16(destination[i..]);
+				}
+				else
+				{
+					var c = codePoint <= 0xFFFF ? (char)codePoint : '�';
+					destination[i++] = char.IsSurrogate(c) ? '�' : c;
+				}
+			}
+		});
 	}
 
 	/// Maps <paramref name="change"/>, computed against <paramref name="oldText"/>, onto <paramref name="currentText"/>, like an edge-inclusive tracking span.

@@ -52,7 +52,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private bool _fileDeleted;
 	// The editor owns an open file's text. These mirror Text (UI thread only): _currentSourceText is built from successive WithChanges,
 	// so Roslyn can reparse incrementally, and so edits computed against an older text can be mapped forward.
-	private string _currentText = "";
+	// _textMirror holds Godot's native copy of the previous text, so each edit is found without allocating the whole document as a managed string.
+	private readonly TextEditNativeTextMirror _textMirror = new();
 	private SourceText? _currentSourceText;
 	private bool _pendingReloadMarksClean; // The next text change is a reload from disk, so leaves the file not dirty
 	// Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
@@ -260,6 +261,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			// Saves unsaved changes, so Roslyn (which has the editor's text) and disk agree once the editor is gone
 			_ = _openTabsFileManager.CloseFileAsync(_currentFile, saveIfDirty: _fileDeleted is false);
 		}
+		_textMirror.Dispose();
 		_completionPopup.Dispose();
 		_symbolHoverPopup.Close();
 	}
@@ -355,22 +357,29 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		});
 	}
 
-	/// Brings _currentText/_currentSourceText up to date with Text, and reports the change. Cheap when nothing changed, apart from reading Text.
+	/// Brings _currentSourceText up to date with Text, and reports the change. No managed allocation of the document - Godot's native text is diffed directly.
 	/// Called from text_changed, and before/after programmatic edits, so they never work against a stale base.
 	/// Returns true if the text had changed.
 	[RequiresGodotUiThread]
 	private bool SyncTextFromEditor()
 	{
 		if (_currentSourceText is null) return false; // Not loaded yet
-		var text = Text;
-		if (TextDiff.GetMinimalChange(_currentText, text) is not { } change) return false;
-		_currentText = text;
+		if (_textMirror.Update(this) is not { } change) return false;
 		_currentSourceText = _currentSourceText.WithChanges(change);
+		VerifySourceTextMatchesEditor();
 		var isDirty = _pendingReloadMarksClean is false;
 		_pendingReloadMarksClean = false;
 		// Cheap and synchronous - records the text and queues the Roslyn update, which happens in order, off the UI thread
 		_fileChangedService.OpenFileTextChanged(_currentFile, _currentSourceText, isDirty);
 		return true;
+	}
+
+	/// Catches the editor and Roslyn silently drifting apart, e.g. a UTF-32 -> UTF-16 offset bug. Skipped for large files, as it allocates the whole document.
+	[System.Diagnostics.Conditional("DEBUG")]
+	private void VerifySourceTextMatchesEditor()
+	{
+		if (_currentSourceText is null || _currentSourceText.Length > 200_000) return;
+		if (_currentSourceText.ToString() != Text) GD.PrintErr($"[{_currentFile.Name.Value}] BUG: Roslyn's text no longer matches the editor's text");
 	}
 
 	private async Task OnEditRequested(SharpIdeFileEditRequest request)
@@ -388,8 +397,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			// Disk wins. Applied as a minimal edit (like VS Code), so the caret, scroll position, breakpoints and undo history survive.
 			// The editor may have normalised line endings, so compare like with like.
-			if (_currentText.Contains('\r') is false) reloadedText = reloadedText.Replace("\r\n", "\n");
-			if (TextDiff.GetMinimalChange(_currentText, reloadedText) is not { } reloadChange)
+			var currentText = _currentSourceText.ToString(); // Reloads are rare, so allocating the document here is fine
+			if (currentText.Contains('\r') is false) reloadedText = reloadedText.Replace("\r\n", "\n");
+			if (TextDiff.GetMinimalChange(currentText, reloadedText) is not { } reloadChange)
 			{
 				_currentFile.IsDirty.Value = false;
 				return;
@@ -494,8 +504,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			_fileChangingSuppressBreakpointToggleEvent = false;
 			ClearUndoHistory();
 			// The editor now owns this file's text. Godot may normalise it (e.g. line endings), so Roslyn is given exactly what the editor holds.
-			_currentText = Text;
-			_currentSourceText = SourceText.From(_currentText);
+			_currentSourceText = SourceText.From(_textMirror.Reset(this));
 			_fileChangedService.OpenFileTextChanged(file, _currentSourceText, isDirty: false);
 			if (fileLinePosition is not null) SetFileLinePosition(fileLinePosition.Value);
 			if (file.IsMetadataAsSourceFile) Editable = false;
