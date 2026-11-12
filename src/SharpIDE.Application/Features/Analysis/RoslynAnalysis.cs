@@ -385,12 +385,27 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		if (project.IsLoaded is false) return;
 		var projectDiagnostics = await GetProjectDiagnostics(project, cancellationToken);
-		// A cache hit returns the same SharpIdeDiagnostic instances, so a reference comparison detects "nothing changed".
-		// Skipping here avoids every subscriber (open tabs, Problems panel) tearing down and rebuilding for an identical list.
-		if (project.Diagnostics.SequenceEqual(projectDiagnostics, ReferenceEqualityComparer.Instance)) return;
-		// TODO: only add and remove diffs
-		project.Diagnostics.RemoveRange(project.Diagnostics);
-		project.Diagnostics.AddRange(projectDiagnostics);
+		ApplyProjectDiagnosticsDiff(project, projectDiagnostics);
+	}
+
+	private static readonly Lock _applyProjectDiagnosticsLock = new();
+	/// Only removes diagnostics that went away and adds ones that are new, so subscribers (open tabs, the Problems panel) don't tear down
+	/// and rebuild everything on every update. Uses SharpIdeDiagnostic's value equality, which delegates to Roslyn's Diagnostic.Equals
+	/// (location + message arguments). That means:
+	/// - a diagnostic in an unedited file with only string arguments is equal across compilations (unchanged syntax trees are reused), so it is kept
+	/// - one with symbol arguments is never equal across compilations, so it is replaced - which conveniently means we never keep an
+	///   old instance that would hold an outdated Compilation alive via its symbols
+	private static void ApplyProjectDiagnosticsDiff(SharpIdeProjectModel project, ImmutableArray<SharpIdeDiagnostic> newDiagnostics)
+	{
+		// Serialise concurrent applies (e.g. the focused tab's fast path and the batched solution pass), so they can't interleave mid-diff
+		lock (_applyProjectDiagnosticsLock)
+		{
+			var newSet = newDiagnostics.ToHashSet();
+			var toRemove = project.Diagnostics.Where(d => newSet.Contains(d) is false).ToList();
+			newSet.ExceptWith(project.Diagnostics);
+			if (toRemove.Count is not 0) project.Diagnostics.RemoveRange(toRemove);
+			if (newSet.Count is not 0) project.Diagnostics.AddRange(newSet);
+		}
 	}
 
 	public async Task UpdateProjectDiagnosticsForFile(SharpIdeFile sharpIdeFile, CancellationToken cancellationToken = default)

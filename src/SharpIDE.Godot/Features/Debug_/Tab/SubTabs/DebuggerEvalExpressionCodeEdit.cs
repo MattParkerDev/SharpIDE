@@ -228,7 +228,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		RenderingServer.Singleton.CanvasItemClear(_aboveCanvasItemRid);
 		foreach (var diagnostic in _diagnostics)
 		{
-			var color = diagnostic.Diagnostic.Severity switch
+			var color = diagnostic.Severity switch
 			{
 				DiagnosticSeverity.Error => new Color(1, 0, 0),
 				DiagnosticSeverity.Warning => new Color("ffb700"), _ => new Color(0, 1, 0)

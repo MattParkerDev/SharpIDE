@@ -10,10 +10,10 @@ public static partial class SymbolInfoComponents
         var label = new RichTextLabel();
         label.PushColor(TextEditorDotnetColoursDark.White);
         label.PushFontSize(14);
-        label.AddText(diagnostic.Diagnostic.GetMessage());
+        label.AddText(diagnostic.Message);
         label.PushColor(TextEditorDotnetColoursDark.Gray);
         label.AddText(" ");
-        label.AddText(diagnostic.Diagnostic.Id);
+        label.AddText(diagnostic.Id);
         label.Pop();
         label.Pop();
         return label;

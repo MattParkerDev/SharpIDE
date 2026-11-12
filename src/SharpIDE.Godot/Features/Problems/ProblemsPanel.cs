@@ -19,9 +19,9 @@ public partial class ProblemsPanel : Control
     public Texture2D CsprojIcon { get; set; } = null!;
 
     private SharpIdeSolutionModel? _solution;
-    
+
     [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
-    
+
 	private Tree _tree = null!;
     private TreeItem _rootItem = null!;
 
@@ -63,7 +63,7 @@ public partial class ProblemsPanel : Control
                         }
                     }
                 });
-                
+
             }, configureAwait: false).AddTo(ref disposableBuilder);
         _rootItem.SharpIdeDisposable = disposableBuilder.Build();
     }
@@ -77,7 +77,7 @@ public partial class ProblemsPanel : Control
         treeItem.Visible = sharpIdeProjectModel.Diagnostics.Count is not 0;
         container.Value = treeItem;
         var disposableBuilder = new DisposableBuilder();
-        
+
         var projectDiagnosticsView = sharpIdeProjectModel.Diagnostics.CreateView(y => new TreeItemContainer());
         projectDiagnosticsView.Unfiltered.ToList().ForEach(s => CreateDiagnosticTreeItem(_tree, treeItem, s.Value, s.View));
         projectDiagnosticsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
@@ -88,7 +88,7 @@ public partial class ProblemsPanel : Control
                 {
                     foreach (var innerEvent in innerEvents)
                     {
-                        if (innerEvent.Action is not (NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove)) return;
+                        if (innerEvent.Action is not (NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove)) continue;
                         treeItem.Visible = sharpIdeProjectModel.Diagnostics.Count is not 0;
                         switch (innerEvent.Action)
                         {
@@ -110,11 +110,11 @@ public partial class ProblemsPanel : Control
 
         var diagnostic = treeItem.SharpIdeDiagnostic;
         if (diagnostic is null) return;
-        
-        var message = diagnostic.Diagnostic.GetMessage();
-        var severity = diagnostic.Diagnostic.Severity;
+
+        var message = diagnostic.Message;
+        var severity = diagnostic.Severity;
         var linePosition = diagnostic.Span.Start;
-        
+
         // Get icon based on severity
         var icon = severity switch
         {
@@ -122,15 +122,15 @@ public partial class ProblemsPanel : Control
             DiagnosticSeverity.Warning => WarningIcon,
             _ => null
         };
-        
+
         // Define padding and spacing
         const float padding = 4.0f;
         const float iconSize = 22.0f;
         const float spacing = 6.0f;
-        
+
         var currentX = rect.Position.X + padding;
         var currentY = rect.Position.Y;
-        
+
         // Draw icon
         if (icon is not null)
         {
@@ -138,7 +138,7 @@ public partial class ProblemsPanel : Control
             _tree.DrawTextureRect(icon, iconRect, false);
             currentX += iconSize + spacing;
         }
-        
+
         // Get font and prepare text
         var font = _tree.GetThemeFont(ThemeStringNames.Font);
         var fontSize = _tree.GetThemeFontSize(ThemeStringNames.FontSize);
@@ -150,7 +150,7 @@ public partial class ProblemsPanel : Control
             (false, false) => _tree.GetThemeColor(ThemeStringNames.FontColor)
         };
         var textYPos = currentY + (rect.Size.Y + fontSize) / 2 - 2;
-        
+
         // Calculate right-hand text widths first
         var fileName = Path.GetFileName(diagnostic.FilePath);
         var fileNameWidth = font.GetStringSize(fileName, HorizontalAlignment.Left, -1, fontSize).X;
@@ -162,7 +162,7 @@ public partial class ProblemsPanel : Control
         textLine.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         textLine.SetHorizontalAlignment(HorizontalAlignment.Left);
         textLine.AddString(message, font, fontSize);
-        
+
         // Draw message with width constraint to avoid overlap
         var maxMessageWidth = rect.Size.X - currentX - rightSideWidth - spacing;
         if (maxMessageWidth > 0)
@@ -172,12 +172,12 @@ public partial class ProblemsPanel : Control
             textLine.Clear();
             //_tree.DrawString(font, new Vector2(currentX, textYPos), message, HorizontalAlignment.Left, maxMessageWidth, fontSize, textColor);
         }
-        
+
         // Draw location info (line:column) on the right side
         var locationX = rect.Position.X + rect.Size.X - rightSideWidth;
         var locationColor = textColor with { A = 0.5f };
         _tree.DrawString(font, new Vector2(locationX, textYPos), locationText, HorizontalAlignment.Left, -1, fontSize, locationColor);
-        
+
         // Draw file name on the right side, after the location
         var fileNameX = locationX + locationWidth + spacing;
         var fileNameColor = textColor with { A = 0.7f };
@@ -190,20 +190,20 @@ public partial class ProblemsPanel : Control
         var diagItem = tree.CreateItem(parent);
         diagItem.SetCellMode(0, TreeItem.TreeCellMode.Custom);
         diagItem.SetCustomAsButton(0, true);
-        diagItem.SetTooltipText(0, sharpIdeDiagnostic.Diagnostic.GetMessage());
+        diagItem.SetTooltipText(0, sharpIdeDiagnostic.Message);
         diagItem.SharpIdeDiagnostic = sharpIdeDiagnostic;
         // Avoid allocation via Callable.From((TreeItem s, Rect2 x) => CustomDraw(s, x))
         diagItem.SetCustomDrawCallback(0, _diagnosticCustomDrawCallable!.Value);
         container.Value = diagItem;
     }
-    
+
     [RequiresGodotUiThread]
     private void FreeTreeItem(TreeItem? treeItem)
     {
         treeItem?.SharpIdeDisposable?.Dispose();
         treeItem?.Free();
     }
-    
+
     private void TreeOnItemActivated()
     {
         var selected = _tree.GetSelected();
@@ -211,7 +211,7 @@ public partial class ProblemsPanel : Control
         if (diagnostic is null) return;
         OpenDocumentContainingDiagnostic(diagnostic);
     }
-    
+
     private void OpenDocumentContainingDiagnostic(SharpIdeDiagnostic diagnostic)
     {
         var file = _solution!.AllFiles[diagnostic.FilePath];

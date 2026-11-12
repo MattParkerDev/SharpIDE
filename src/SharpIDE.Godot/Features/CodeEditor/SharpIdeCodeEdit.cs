@@ -397,9 +397,14 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		{
 			_project = project;
 			_projectDiagnosticsObserveDisposable = project.Diagnostics.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-				.SubscribeAwait(async (innerEvent, ct) =>
+				.Chunk(TimeSpan.FromMilliseconds(50)) // A diagnostics update raises a Remove and an Add - handle them together
+				.SubscribeAwait(async (innerEvents, ct) =>
 				{
 					var projectDiagnosticsForFile = project.Diagnostics.Where(s => s.FilePath == _currentFile.Path).ToImmutableArray();
+					// Most updates are for other files in the project - don't redraw this one if its diagnostics are unchanged.
+					// Compared as sets, as hash set enumeration order can change after removals.
+					var current = _projectDiagnosticsForFile;
+					if (projectDiagnosticsForFile.Length == current.Length && current.ToHashSet().SetEquals(projectDiagnosticsForFile)) return;
 					await this.InvokeAsync(() => SetProjectDiagnostics(projectDiagnosticsForFile));
 				}, configureAwait: false);
 
@@ -545,7 +550,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			var line = sharpIdeDiagnostic.Span.Start.Line;
 			var startCol = sharpIdeDiagnostic.Span.Start.Character;
 			var endCol = sharpIdeDiagnostic.Span.End.Character;
-			var color = sharpIdeDiagnostic.Diagnostic.Severity switch
+			var color = sharpIdeDiagnostic.Severity switch
 			{
 				DiagnosticSeverity.Error => new Color(1, 0, 0),
 				DiagnosticSeverity.Warning => new Color("ffb700"),
