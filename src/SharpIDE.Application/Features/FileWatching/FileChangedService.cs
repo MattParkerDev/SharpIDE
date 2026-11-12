@@ -96,11 +96,7 @@ public class FileChangedService
 		var latestTextPerFile = new Dictionary<SharpIdeFile, SourceText>();
 		foreach (var (file, text) in changes) latestTextPerFile[file] = text;
 
-		var updatedAnything = false;
-		foreach (var (file, text) in latestTextPerFile)
-		{
-			updatedAnything |= await _roslynAnalysis.UpdateDocument(file, text);
-		}
+		var updatedAnything = await _roslynAnalysis.UpdateDocuments(latestTextPerFile.Select(s => (s.Key, s.Value)).ToList());
 		if (updatedAnything) OnWorkspaceAltered();
 	}
 
@@ -111,39 +107,41 @@ public class FileChangedService
 		await HandleProjectSystemFileSaved(file);
 	}
 
-	/// The file changed on disk, outside of the IDE. Disk always wins.
-	public async Task ExternalFileChanged(SharpIdeFile file, string newContents)
+	/// Files changed on disk, outside of the IDE (batched by the caller). Disk always wins.
+	/// Closed files reach Roslyn in a single workspace change.
+	public async Task ExternalFilesChanged(IReadOnlyList<(SharpIdeFile File, string NewContents)> changedFiles)
 	{
-		if (_openTabsFileManager.IsOpen(file))
+		var byIsOpen = changedFiles.ToLookup(s => _openTabsFileManager.IsOpen(s.File));
+
+		// The editor owns an open file's text, so the reload goes through it, and reaches Roslyn like any other edit
+		await Task.WhenAll(byIsOpen[true].Select(s => s.File.EditRequested.InvokeParallelAsync(SharpIdeFileEditRequest.Reload(s.NewContents))));
+
+		// AdditionalFiles such as txt files may have changed, so we need to attempt to update the workspace regardless of extension
+		var closedFiles = byIsOpen[false]
+			.Where(s => s.File.IsCsprojFile is false)
+			.Select(s => (s.File, SourceText.From(s.NewContents, Encoding.UTF8)))
+			.ToList();
+		if (await _roslynAnalysis.UpdateDocuments(closedFiles)) OnWorkspaceAltered();
+
+		foreach (var (file, _) in changedFiles)
 		{
-			// The editor owns an open file's text, so the reload goes through it, and reaches Roslyn like any other edit
-			await file.EditRequested.InvokeParallelAsync(SharpIdeFileEditRequest.Reload(newContents));
+			await HandleProjectSystemFileSaved(file);
 		}
-		else if (file.IsCsprojFile is false)
-		{
-			// AdditionalFiles such as txt files may have changed, so we need to attempt to update the workspace regardless of extension
-			var updated = await _roslynAnalysis.UpdateDocument(file, SourceText.From(newContents, Encoding.UTF8));
-			if (updated) OnWorkspaceAltered();
-		}
-		await HandleProjectSystemFileSaved(file);
 	}
 
 	/// Applies edits computed by Roslyn, e.g. by a code action or rename. Open files are edited via their editor (and left unsaved), closed files are written to disk.
+	/// Closed files reach Roslyn in a single workspace change.
 	public async Task ApplyTextEdits(IReadOnlyList<SharpIdeFileTextEdit> edits)
 	{
-		var updatedAnything = false;
-		foreach (var edit in edits)
-		{
-			if (_openTabsFileManager.IsOpen(edit.File))
-			{
-				await edit.File.EditRequested.InvokeParallelAsync(SharpIdeFileEditRequest.ApplyChanges(edit.OldText, edit.Changes));
-				continue;
-			}
-			var newText = edit.OldText.WithChanges(edit.Changes);
-			await _openTabsFileManager.WriteClosedFileAsync(edit.File, newText);
-			updatedAnything |= await _roslynAnalysis.UpdateDocument(edit.File, newText);
-		}
-		if (updatedAnything) OnWorkspaceAltered();
+		var byIsOpen = edits.ToLookup(s => _openTabsFileManager.IsOpen(s.File));
+
+		await Task.WhenAll(byIsOpen[true].Select(s => s.File.EditRequested.InvokeParallelAsync(SharpIdeFileEditRequest.ApplyChanges(s.OldText, s.Changes))));
+
+		var closedFiles = byIsOpen[false]
+			.Select(s => (s.File, Text: s.OldText.WithChanges(s.Changes)))
+			.ToList();
+		await Task.WhenAll(closedFiles.Select(s => _openTabsFileManager.WriteClosedFileAsync(s.File, s.Text)));
+		if (await _roslynAnalysis.UpdateDocuments(closedFiles)) OnWorkspaceAltered();
 	}
 
 	private Task HandleProjectSystemFileSaved(SharpIdeFile file) => file switch

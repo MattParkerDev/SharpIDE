@@ -1363,37 +1363,51 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	/// Returns true if the document was found and its text changed, otherwise false.
 	/// For incremental parsing, newText should descend (via WithChanges) from the text currently in the workspace.
-	public async Task<bool> UpdateDocument(SharpIdeFile fileModel, SourceText newText)
+	public Task<bool> UpdateDocument(SharpIdeFile fileModel, SourceText newText) => UpdateDocuments([(fileModel, newText)]);
+
+	/// Updates several files' text in a single workspace change, so features never see a mix of old and new files.
+	/// Returns true if any document was found and its text changed.
+	public async Task<bool> UpdateDocuments(IReadOnlyCollection<(SharpIdeFile File, SourceText Text)> files)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(UpdateDocument)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(UpdateDocuments)}");
 		await _solutionLoadedTcs.Task;
-		Guard.Against.Null(fileModel, nameof(fileModel));
 
 		var currentSolution = _workspace!.CurrentSolution;
-		var documentIds = currentSolution.GetDocumentIdsWithFilePath(fileModel.Path);
-		if (documentIds.IsEmpty) return false;
-
-		// Skip no-ops, e.g. an editor opening a file whose text the workspace already has. Usually cheap - differing lengths return immediately.
-		if (currentSolution.GetTextDocument(documentIds[0]) is { } existingDocument &&
-		    existingDocument.TryGetText(out var existingText) &&
-		    (ReferenceEquals(existingText, newText) || existingText.ContentEquals(newText)))
+		var changedFiles = new List<(string FilePath, SourceText Text)>(files.Count);
+		DocumentId? firstChangedDocumentId = null;
+		foreach (var (file, newText) in files)
 		{
-			return false;
+			var documentIds = currentSolution.GetDocumentIdsWithFilePath(file.Path);
+			if (documentIds.IsEmpty) continue;
+			// Skip no-ops, e.g. an editor opening a file whose text the workspace already has. Usually cheap - differing lengths return immediately.
+			if (currentSolution.GetTextDocument(documentIds[0]) is { } existingDocument &&
+			    existingDocument.TryGetText(out var existingText) &&
+			    (ReferenceEquals(existingText, newText) || existingText.ContentEquals(newText)))
+			{
+				continue;
+			}
+			changedFiles.Add((file.Path, newText));
+			firstChangedDocumentId ??= documentIds[0];
 		}
+		if (changedFiles.Count is 0) return false;
 
 		// Atomic: the transformation is re-run against the latest solution if another change lands first, so concurrent updates can't be lost.
 		// Linked documents (the same file in several projects, e.g. one per TFM) all get the new text.
+		var changeKind = changedFiles.Count is 1 ? WorkspaceChangeKind.DocumentChanged : WorkspaceChangeKind.SolutionChanged;
 		return _workspace.SetCurrentSolution(oldSolution =>
 		{
 			var newSolution = oldSolution;
-			foreach (var documentId in oldSolution.GetDocumentIdsWithFilePath(fileModel.Path))
+			foreach (var (filePath, newText) in changedFiles)
 			{
-				if (newSolution.ContainsDocument(documentId)) newSolution = newSolution.WithDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
-				else if (newSolution.ContainsAdditionalDocument(documentId)) newSolution = newSolution.WithAdditionalDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
-				else if (newSolution.ContainsAnalyzerConfigDocument(documentId)) newSolution = newSolution.WithAnalyzerConfigDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
+				foreach (var documentId in oldSolution.GetDocumentIdsWithFilePath(filePath))
+				{
+					if (newSolution.ContainsDocument(documentId)) newSolution = newSolution.WithDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
+					else if (newSolution.ContainsAdditionalDocument(documentId)) newSolution = newSolution.WithAdditionalDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
+					else if (newSolution.ContainsAnalyzerConfigDocument(documentId)) newSolution = newSolution.WithAnalyzerConfigDocumentText(documentId, newText, PreservationMode.PreserveIdentity);
+				}
 			}
 			return newSolution;
-		}, WorkspaceChangeKind.DocumentChanged, documentId: documentIds[0]);
+		}, changeKind, documentId: changedFiles.Count is 1 ? firstChangedDocumentId : null);
 	}
 
 	public async Task<bool> AddDocument(SharpIdeFile fileModel, string content)
