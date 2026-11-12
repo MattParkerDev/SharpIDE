@@ -3,16 +3,18 @@ using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.FileWatching;
 
-public class IdeFileOperationsService(SharpIdeRootFolderModificationService rootFolderModificationService, IdeFileSystemLock fileSystemLock)
+public class IdeFileOperationsService(SharpIdeRootFolderModificationService rootFolderModificationService, IdeFileSystemLock fileSystemLock, FileChangedService fileChangedService)
 {
 	private readonly SharpIdeRootFolderModificationService _rootFolderModificationService = rootFolderModificationService;
 	private readonly IdeFileSystemLock _fileSystemLock = fileSystemLock;
+	private readonly FileChangedService _fileChangedService = fileChangedService;
 
 	public async Task RenameDirectory(SharpIdeFolder folder, string newDirectoryName)
 	{
 		var parentPath = Path.GetDirectoryName(folder.Path)!;
 		var newDirectoryPath = Path.Combine(parentPath, newDirectoryName);
 		using var _ = await _fileSystemLock.Lock.LockAsync();
+		await using var __ = _fileChangedService.BeginBatch(); // One workspace change for all the files in the folder
 		Directory.Move(folder.Path, newDirectoryPath);
 		await _rootFolderModificationService.RenameDirectory(folder, newDirectoryName);
 	}
@@ -21,6 +23,7 @@ public class IdeFileOperationsService(SharpIdeRootFolderModificationService root
 	{
 		var newDirectoryPath = Path.Combine(parentFolder.ChildNodeBasePath, newDirectoryName);
 		using var _ = await _fileSystemLock.Lock.LockAsync();
+		await using var __ = _fileChangedService.BeginBatch(); // One workspace change for all the files in the folder
 		Directory.CreateDirectory(newDirectoryPath);
 		await _rootFolderModificationService.AddDirectory(parentFolder, newDirectoryName);
 	}
@@ -28,6 +31,7 @@ public class IdeFileOperationsService(SharpIdeRootFolderModificationService root
 	public async Task DeleteDirectory(SharpIdeFolder folder)
 	{
 		using var _ = await _fileSystemLock.Lock.LockAsync();
+		await using var __ = _fileChangedService.BeginBatch(); // One workspace change for all the files in the folder
 		Directory.Delete(folder.Path, true);
 		await _rootFolderModificationService.RemoveDirectory(folder);
 	}
@@ -36,6 +40,7 @@ public class IdeFileOperationsService(SharpIdeRootFolderModificationService root
 	{
 		var newDirectoryPath = Path.Combine(destinationParentFolder.ChildNodeBasePath, newDirectoryName);
 		using var _ = await _fileSystemLock.Lock.LockAsync();
+		await using var __ = _fileChangedService.BeginBatch(); // One workspace change for all the files in the folder
 		CopyAll(new DirectoryInfo(sourceDirectoryPath), new DirectoryInfo(newDirectoryPath));
 		await _rootFolderModificationService.AddDirectory(destinationParentFolder, newDirectoryName);
 		return;
@@ -60,6 +65,7 @@ public class IdeFileOperationsService(SharpIdeRootFolderModificationService root
 	{
 		var newDirectoryPath = Path.Combine(destinationParentFolder.ChildNodeBasePath, folderToMove.Name.Value);
 		using var _ = await _fileSystemLock.Lock.LockAsync();
+		await using var __ = _fileChangedService.BeginBatch(); // One workspace change for all the files in the folder
 		Directory.Move(folderToMove.Path, newDirectoryPath);
 		await _rootFolderModificationService.MoveDirectory(destinationParentFolder, folderToMove);
 	}

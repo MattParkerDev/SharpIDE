@@ -21,8 +21,10 @@ public class FileChangedService
 	private readonly SharpIdeSolutionService _sharpIdeSolutionService;
 	private readonly IdeOpenTabsFileManager _openTabsFileManager;
 	private readonly AsyncBatchingWorkQueue _updateSolutionDiagnosticsQueue;
+	private readonly Lock _batchLock = new();
 	private int _batchDepth;
 	private bool _workspaceAlteredDuringBatch;
+	private readonly List<WorkspaceFileOperation> _pendingFileOperations = [];
 	// Processes one batch at a time, in order, so Roslyn always ends up with the latest text of each open file
 	private readonly Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue<(SharpIdeFile File, SourceText Text)> _openFileTextChangedQueue;
 
@@ -37,29 +39,16 @@ public class FileChangedService
 
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 
-	public async Task SharpIdeFileRenamed(SharpIdeFile file, string oldFilePath)
-	{
-		if (file.IsRoslynWorkspaceFile)
-		{
-			await HandleWorkspaceFileRenamed(file, oldFilePath);
-		}
-		// TODO: handle csproj moved
-	}
+	// Moves and removals apply to any file - e.g. a txt AdditionalFile from the project's evaluation - and are a no-op if Roslyn doesn't have it
+	public Task SharpIdeFileRenamed(SharpIdeFile file, string oldFilePath) => ApplyOrDeferFileOperation(new WorkspaceFileOperation.Move(file, oldFilePath)); // TODO: handle csproj renamed
 
-	public async Task SharpIdeFileMoved(SharpIdeFile file, string oldFilePath)
-	{
-		if (file.IsRoslynWorkspaceFile)
-		{
-			await HandleWorkspaceFileMoved(file, oldFilePath);
-		}
-		// TODO: handle csproj moved
-	}
+	public Task SharpIdeFileMoved(SharpIdeFile file, string oldFilePath) => ApplyOrDeferFileOperation(new WorkspaceFileOperation.Move(file, oldFilePath)); // TODO: handle csproj moved
 
 	public async Task SharpIdeFileAdded(SharpIdeFile file, string content)
 	{
 		if (file.IsRoslynWorkspaceFile)
 		{
-			await HandleWorkspaceFileAdded(file, content);
+			await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Add(file, content));
 		}
 		// TODO: handle csproj added
 	}
@@ -67,10 +56,7 @@ public class FileChangedService
 	public async Task SharpIdeFileRemoved(SharpIdeFile file)
 	{
 		await file.FileDeleted.InvokeParallelAsync();
-		if (file.IsRoslynWorkspaceFile)
-		{
-			await HandleWorkspaceFileRemoved(file);
-		}
+		await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Remove(file.Path));
 	}
 
 	public async Task AnalyzerDllFilesChanged(ImmutableArray<string> changedDllPaths)
@@ -154,35 +140,42 @@ public class FileChangedService
 
 	private void OnWorkspaceAltered()
 	{
-		if (Volatile.Read(ref _batchDepth) > 0)
+		lock (_batchLock)
 		{
-			Volatile.Write(ref _workspaceAlteredDuringBatch, true);
-			return;
+			if (_batchDepth > 0)
+			{
+				_workspaceAlteredDuringBatch = true;
+				return;
+			}
 		}
 		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
 		_updateSolutionDiagnosticsQueue.AddWork();
 	}
 
-	/// Defers SolutionAltered until the batch ends, so e.g. a branch switch adding and removing many files re-analyses once, rather than per file
-	public IDisposable BeginBatch()
+	/// Files added, removed and moved during the batch reach the workspace in one change, and SolutionAltered is raised once -
+	/// so e.g. a branch switch, or deleting a folder, doesn't update the workspace and re-analyse per file. Batches may nest.
+	public FileChangeBatch BeginBatch()
 	{
-		Interlocked.Increment(ref _batchDepth);
-		return new BatchScope(this);
+		lock (_batchLock) _batchDepth++;
+		return new FileChangeBatch(this);
 	}
 
-	private void EndBatch()
-	{
-		if (Interlocked.Decrement(ref _batchDepth) is not 0) return;
-		if (Interlocked.Exchange(ref _workspaceAlteredDuringBatch, false)) OnWorkspaceAltered();
-	}
+	internal Task ApplyPendingFileOperationsForBatch() => ApplyPendingFileOperations();
 
-	private sealed class BatchScope(FileChangedService service) : IDisposable
+	internal async Task EndBatchAsync()
 	{
-		private int _disposed;
-		public void Dispose()
+		List<WorkspaceFileOperation> operations;
+		bool workspaceAltered;
+		lock (_batchLock)
 		{
-			if (Interlocked.Exchange(ref _disposed, 1) is 0) service.EndBatch();
+			if (--_batchDepth > 0) return;
+			operations = [.._pendingFileOperations];
+			_pendingFileOperations.Clear();
+			workspaceAltered = _workspaceAlteredDuringBatch;
+			_workspaceAlteredDuringBatch = false;
 		}
+		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) workspaceAltered = true;
+		if (workspaceAltered) OnWorkspaceAltered();
 	}
 
 	private async ValueTask ProcessBatchAsync(CancellationToken cancellationToken)
@@ -206,30 +199,46 @@ public class FileChangedService
 		await _sharpIdeSolutionService.ReloadSolution();
 	}
 
-	private async Task HandleWorkspaceFileAdded(SharpIdeFile file, string contents)
+	/// Applied now, or with the rest of the batch if one is in progress
+	private async Task ApplyOrDeferFileOperation(WorkspaceFileOperation operation)
 	{
-		var success = await _roslynAnalysis.AddDocument(file, contents);
-		if (success is false) return;
-		OnWorkspaceAltered();
+		lock (_batchLock)
+		{
+			if (_batchDepth > 0)
+			{
+				_pendingFileOperations.Add(operation);
+				return;
+			}
+		}
+		if (await _roslynAnalysis.ApplyFileOperations([operation])) OnWorkspaceAltered();
 	}
 
-	private async Task HandleWorkspaceFileRemoved(SharpIdeFile file)
+	private async Task ApplyPendingFileOperations()
 	{
-		var success = await _roslynAnalysis.RemoveDocument(file);
-		if (success is false) return;
-		OnWorkspaceAltered();
+		List<WorkspaceFileOperation> operations;
+		lock (_batchLock)
+		{
+			operations = [.._pendingFileOperations];
+			_pendingFileOperations.Clear();
+		}
+		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) OnWorkspaceAltered();
 	}
+}
 
-	private async Task HandleWorkspaceFileMoved(SharpIdeFile file, string oldFilePath)
-	{
-		await _roslynAnalysis.MoveDocument(file, oldFilePath);
-		OnWorkspaceAltered();
-	}
+/// While in progress, files added, removed and moved are applied to the workspace together, and SolutionAltered is raised once, when it ends.
+public sealed class FileChangeBatch : IAsyncDisposable
+{
+	private readonly FileChangedService _service;
+	private int _disposed;
 
-	private async Task HandleWorkspaceFileRenamed(SharpIdeFile file, string oldFilePath)
+	internal FileChangeBatch(FileChangedService service) => _service = service;
+
+	/// Applies the files added, removed and moved so far, in one workspace change - e.g. before updating the text of files that were just moved
+	public Task ApplyPendingFileOperationsAsync() => _service.ApplyPendingFileOperationsForBatch();
+
+	public async ValueTask DisposeAsync()
 	{
-		await _roslynAnalysis.RenameDocument(file, oldFilePath);
-		OnWorkspaceAltered();
+		if (Interlocked.Exchange(ref _disposed, 1) is 0) await _service.EndBatchAsync();
 	}
 }
 

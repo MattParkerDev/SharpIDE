@@ -49,7 +49,8 @@ public class IdeFileExternalChangeHandler
 	{
 		if (SolutionModel is null) return;
 		using var _ = await _fileSystemLock.Lock.LockAsync(cancellationToken);
-		using var __ = _fileChangedService.BeginBatch(); // One SolutionAltered for the whole batch
+		// Files added, removed and moved reach Roslyn in one workspace change, and SolutionAltered is raised once
+		await using var fileChangeBatch = _fileChangedService.BeginBatch();
 		var reconcile = new Reconcile(this);
 
 		if (hints.Any(h => h.RescanAll))
@@ -74,6 +75,8 @@ public class IdeFileExternalChangeHandler
 			}
 		}
 
+		// Before content changes, so e.g. a file moved and edited in this batch is already at its new path in Roslyn
+		await fileChangeBatch.ApplyPendingFileOperationsAsync();
 		await ApplyContentChanges(reconcile.ChangedFiles);
 		if (reconcile.OperationCount > 0) _logger.LogInformation("IdeFileExternalChangeHandler: Reconciled {HintCount} hints - {OperationCount} tree changes, {ChangedFileCount} changed files", hints.Count, reconcile.OperationCount, reconcile.ChangedFiles.Count);
 	}

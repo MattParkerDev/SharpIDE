@@ -1410,15 +1410,120 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		}, changeKind, documentId: changedFiles.Count is 1 ? firstChangedDocumentId : null);
 	}
 
-	public async Task<bool> AddDocument(SharpIdeFile fileModel, string content)
+	/// Applies file additions, removals and moves in a single atomic workspace change, in order.
+	/// Returns true if the workspace changed.
+	public async Task<bool> ApplyFileOperations(IReadOnlyList<WorkspaceFileOperation> operations)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(AddDocument)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ApplyFileOperations)}");
 		await _solutionLoadedTcs.Task;
-		Guard.Against.Null(fileModel, nameof(fileModel));
-		Guard.Against.Null(content, nameof(content));
+		if (operations.Count is 0) return false;
 
+		// Everything needing the project model, async work or new ids is resolved first - the transformation may be re-run, so must be pure
+		var currentSolution = _workspace!.CurrentSolution;
+		var steps = new List<Func<Solution, Solution>>(operations.Count);
+		DocumentId? singleDocumentId = null;
+		foreach (var operation in operations)
+		{
+			switch (operation)
+			{
+				case WorkspaceFileOperation.Add add:
+				{
+					if (GetProjectIdForNewFile(add.File) is not { } projectId) break;
+					var documentId = DocumentId.CreateNewId(projectId);
+					singleDocumentId = documentId;
+					var text = SourceText.From(add.Content, Encoding.UTF8);
+					var (name, path, isCsharp) = (add.File.Name.Value, add.File.Path, add.File.IsCsharpFile);
+					steps.Add(solution => AddFileToSolution(solution, documentId, name, path, text, isCsharp));
+					break;
+				}
+				case WorkspaceFileOperation.Remove remove:
+				{
+					singleDocumentId = currentSolution.GetDocumentIdsWithFilePath(remove.FilePath).FirstOrDefault();
+					var path = remove.FilePath;
+					steps.Add(solution => RemoveFileFromSolution(solution, path));
+					break;
+				}
+				case WorkspaceFileOperation.Move move:
+				{
+					var existingIds = currentSolution.GetDocumentIdsWithFilePath(move.OldFilePath);
+					singleDocumentId = existingIds.FirstOrDefault();
+					// Other files (e.g. a txt AdditionalFile, or .editorconfig) came from the project's evaluation - keep them in their project
+					var targetProjectId = move.File.IsRoslynWorkspaceFile ? GetProjectIdForNewFile(move.File) : existingIds.FirstOrDefault()?.ProjectId;
+					// Only needed if it can't stay the same document - e.g. moved to another project, or it's an additional document
+					SourceText? text = null;
+					if (existingIds.IsEmpty || existingIds.Any(id => id.ProjectId != targetProjectId || currentSolution.ContainsDocument(id) is false))
+					{
+						text = existingIds.IsEmpty is false && currentSolution.GetTextDocument(existingIds[0]) is { } existingDocument
+							? await existingDocument.GetTextAsync()
+							: File.Exists(move.File.Path) ? SourceText.From(await File.ReadAllTextAsync(move.File.Path), Encoding.UTF8) : null;
+					}
+					var newDocumentId = targetProjectId is null ? null : DocumentId.CreateNewId(targetProjectId);
+					var (oldPath, name, path, isCsharp) = (move.OldFilePath, move.File.Name.Value, move.File.Path, move.File.IsCsharpFile);
+					steps.Add(solution => MoveFileInSolution(solution, oldPath, name, path, isCsharp, targetProjectId, newDocumentId, text));
+					break;
+				}
+			}
+		}
+		if (steps.Count is 0) return false;
+
+		var changeKind = operations.Count is 1
+			? operations[0] switch
+			{
+				WorkspaceFileOperation.Add => WorkspaceChangeKind.DocumentAdded,
+				WorkspaceFileOperation.Remove => WorkspaceChangeKind.DocumentRemoved,
+				_ => WorkspaceChangeKind.DocumentInfoChanged,
+			}
+			: WorkspaceChangeKind.SolutionChanged;
+		return _workspace.SetCurrentSolution(
+			oldSolution => steps.Aggregate(oldSolution, (solution, step) => step(solution)),
+			changeKind,
+			documentId: changeKind is WorkspaceChangeKind.SolutionChanged ? null : singleDocumentId);
+	}
+
+	private static Solution AddFileToSolution(Solution solution, DocumentId documentId, string name, string filePath, SourceText text, bool isCsharp, bool isAnalyzerConfig = false)
+	{
+		if (solution.ContainsProject(documentId.ProjectId) is false) return solution;
+		if (solution.GetDocumentIdsWithFilePath(filePath).IsEmpty is false) return solution; // Already there, e.g. added by a project reload
+		if (isCsharp) return solution.AddDocument(documentId, name, text, filePath: filePath);
+		if (isAnalyzerConfig is false) return solution.AddAdditionalDocument(documentId, name, text, filePath: filePath);
+		var loader = TextLoader.From(TextAndVersion.Create(text, VersionStamp.Create(), filePath));
+		return solution.AddAnalyzerConfigDocuments([DocumentInfo.Create(documentId, name, loader: loader, filePath: filePath)]);
+	}
+
+	private static Solution RemoveFileFromSolution(Solution solution, string filePath)
+	{
+		var documentIds = solution.GetDocumentIdsWithFilePath(filePath);
+		if (documentIds.IsEmpty) return solution;
+		return solution
+			.RemoveDocuments([..documentIds.Where(solution.ContainsDocument)])
+			.RemoveAdditionalDocuments([..documentIds.Where(solution.ContainsAdditionalDocument)])
+			.RemoveAnalyzerConfigDocuments([..documentIds.Where(solution.ContainsAnalyzerConfigDocument)]);
+	}
+
+	private static Solution MoveFileInSolution(Solution solution, string oldFilePath, string name, string filePath, bool isCsharp, ProjectId? targetProjectId, DocumentId? newDocumentId, SourceText? text)
+	{
+		var documentIds = solution.GetDocumentIdsWithFilePath(oldFilePath);
+		// The usual case: regular documents staying in their project keep their identity, so nothing is reparsed. Also any linked copies (e.g. one per target framework).
+		if (documentIds.Any(id => id.ProjectId == targetProjectId) && documentIds.All(solution.ContainsDocument))
+		{
+			foreach (var documentId in documentIds)
+			{
+				solution = solution.WithDocumentFilePath(documentId, filePath).WithDocumentName(documentId, name);
+			}
+			return solution;
+		}
+		// Otherwise (moved to another project, or not a regular document - only those can change path in place) remove it, and add it where it belongs now
+		var isAnalyzerConfig = documentIds.Any(solution.ContainsAnalyzerConfigDocument);
+		solution = RemoveFileFromSolution(solution, oldFilePath);
+		if (newDocumentId is null || text is null) return solution;
+		return AddFileToSolution(solution, newDocumentId, name, filePath, text, isCsharp, isAnalyzerConfig);
+	}
+
+	/// The project a file at this path belongs to, by its containing project folder and that project's globs. Null if none.
+	private ProjectId? GetProjectIdForNewFile(SharpIdeFile fileModel)
+	{
 		var sharpIdeProject = GetSharpIdeProjectForSharpIdeFile(fileModel);
-		if (sharpIdeProject is null) return false;
+		if (sharpIdeProject is null) return null;
 		var probableProject = GetProjectForSharpIdeProjectModel(sharpIdeProject);
 		// This file probably belongs to this project, but we need to check its path against the globs for the project to make sure
 		var projectFileInfo = _projectFileInfoMap.GetValueOrDefault(probableProject.Id);
@@ -1427,7 +1532,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var generatedFilesOutputDirectory = projectFileInfo.GeneratedFilesOutputDirectory;
 		if (generatedFilesOutputDirectory is not null && fileModel.Path.StartsWith(generatedFilesOutputDirectory, StringComparison.OrdinalIgnoreCase))
 		{
-			return false;
+			return null;
 		}
 
 		// This may not be perfect, as None Include="" seems to be returned here as one of the globs as Include, with no distinction of Compile vs None etc
@@ -1460,81 +1565,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 		if (belongsToProject is false)
 		{
-			return false;
+			return null;
 		}
-
-		var existingDocumentIdsWithFilePath = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(fileModel.Path);
-		if (!existingDocumentIdsWithFilePath.IsEmpty)
-		{
-			throw new InvalidOperationException($"AddDocument failed: Document '{fileModel.Path}' already exists in workspace");
-		}
-
-		var sourceText = SourceText.From(content, Encoding.UTF8);
-		var documentId = DocumentId.CreateNewId(probableProject.Id);
-
-		_workspace.SetCurrentSolution(oldSolution =>
-		{
-			var newSolution = fileModel switch
-			{
-				{ IsCsharpFile: true } => _workspace.CurrentSolution.AddDocument(documentId, fileModel.Name.Value, sourceText, filePath: fileModel.Path),
-				_ => _workspace.CurrentSolution.AddAdditionalDocument(documentId, fileModel.Name.Value, sourceText, filePath: fileModel.Path),
-			};
-			return newSolution;
-		}, WorkspaceChangeKind.DocumentAdded, documentId: documentId);
-		return true;
-	}
-
-	public async Task<bool> RemoveDocument(SharpIdeFile fileModel)
-	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(RemoveDocument)}");
-		await _solutionLoadedTcs.Task;
-		Guard.Against.Null(fileModel, nameof(fileModel));
-
-		var oldSolution = _workspace!.CurrentSolution;
-		var documentIdsWithFilePath = oldSolution.GetDocumentIdsWithFilePath(fileModel.Path);
-
-		var documentIds = documentIdsWithFilePath.Where(id => oldSolution.GetDocument(id) is not null).ToImmutableArray();
-		var additionalDocumentIds = documentIdsWithFilePath.Where(id => oldSolution.GetAdditionalDocument(id) is not null).ToImmutableArray();
-		var analyzerConfigDocumentIds = documentIdsWithFilePath.Where(id => oldSolution.GetAnalyzerConfigDocument(id) is not null).ToImmutableArray();
-
-		var removedAnything =
-			documentIds.IsEmpty is false ||
-			additionalDocumentIds.IsEmpty is false ||
-			analyzerConfigDocumentIds.IsEmpty is false;
-
-		if (removedAnything is false)
-		{
-			_logger.LogWarning("RemoveDocument failed: Document '{DocumentPath}' not found in workspace", fileModel.Path);
-			return false;
-		}
-
-		var updatedSolution = oldSolution
-			.RemoveDocuments(documentIds)
-			.RemoveAdditionalDocuments(additionalDocumentIds)
-			.RemoveAnalyzerConfigDocuments(analyzerConfigDocumentIds);
-
-		_workspace.SetCurrentSolution(updatedSolution);
-		return true;
-	}
-
-	public async Task MoveDocument(SharpIdeFile sharpIdeFile, string oldFilePath)
-	{
-		var documentId = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(oldFilePath).Single();
-		_workspace.SetCurrentSolution(oldSolution =>
-		{
-			var newSolution = oldSolution.WithDocumentFilePath(documentId, sharpIdeFile.Path);
-			return newSolution;
-		}, WorkspaceChangeKind.DocumentInfoChanged, documentId: documentId);
-	}
-
-	public async Task RenameDocument(SharpIdeFile sharpIdeFile, string oldFilePath)
-	{
-		var documentId = _workspace!.CurrentSolution.GetDocumentIdsWithFilePath(oldFilePath).Single();
-		_workspace.SetCurrentSolution(oldSolution =>
-		{
-			var newSolution = oldSolution.WithDocumentFilePath(documentId, sharpIdeFile.Path).WithDocumentName(documentId, sharpIdeFile.Name.Value);
-			return newSolution;
-		}, WorkspaceChangeKind.DocumentInfoChanged, documentId: documentId);
+		return probableProject.Id;
 	}
 
 	public async Task<string> GetOutputDllPathForProject(SharpIdeProjectModel projectModel)
