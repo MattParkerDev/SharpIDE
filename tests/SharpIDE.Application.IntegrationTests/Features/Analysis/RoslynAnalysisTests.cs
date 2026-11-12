@@ -37,8 +37,8 @@ public class RoslynAnalysisTests
 	    var roslynAnalysis = new RoslynAnalysis(logger, buildService, analyzerFileWatcher);
 
 	    var slnFolderPath = @"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx";
-	    var rootFolder = await FileSystemService.GetSharpIdeRootFolderForSolutionAsync(slnFolderPath);
-	    var (solutionModel, _, _) = await SharpIdeSolutionService.ReadSolution(slnFolderPath, rootFolder, TestContext.Current.CancellationToken);
+	    var fileTree = new SharpIdeFileTree();
+	    var (solutionModel, _, _) = await SharpIdeSolutionService.ReadSolution(slnFolderPath, fileTree, TestContext.Current.CancellationToken);
 	    var sharpIdeApplicationProject = solutionModel.AllProjects.Single(p => p.Name.Value == "SharpIDE.Application");
 
 	    var timer = Stopwatch.StartNew();

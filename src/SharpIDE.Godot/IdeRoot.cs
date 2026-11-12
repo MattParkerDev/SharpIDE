@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Godot;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.Analysis;
@@ -132,9 +132,9 @@ public partial class IdeRoot : Control
 		{
 			GD.Print($"Selected: {path}");
 			var timer = Stopwatch.StartNew();
-			var sharpIdeRootFolder = await FileSystemService.GetSharpIdeRootFolderForSolutionAsync(path);
+			var fileTree = new SharpIdeFileTree();
 			ProjectEvaluation.ClearLoadedProjects();
-			var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(path, sharpIdeRootFolder);
+			var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(path, fileTree);
 			timer.Stop();
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
@@ -147,7 +147,7 @@ public partial class IdeRoot : Control
 			_searchAllFilesWindow.Solution = solutionModel;
 			_fileExternalChangeHandler.SolutionModel = solutionModel;
 			_fileChangedService.SolutionModel = solutionModel;
-			_rootFolderModificationService.RootFolder = sharpIdeRootFolder;
+			_rootFolderModificationService.FileTree = fileTree;
 			_roslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);
 			_fileWatcher.StartWatching(solutionModel);
 

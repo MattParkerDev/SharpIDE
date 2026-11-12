@@ -16,12 +16,12 @@ public class SharpIdeSolutionModel : ISharpIdeNode, IExpandableSharpIdeNode, ISo
 	public required ObservableHashSet<SharpIdeProjectModel> AllProjects { get; set; }
 	public bool Expanded { get; set; }
 
-	public required SharpIdeRootFolder RootFolder { get; set; }
-	public ConcurrentDictionary<string, SharpIdeFile> AllFiles => RootFolder.AllFiles;
-	public ObservableList<SharpIdeFolder> AllFolders => RootFolder.AllFolders;
+	public required SharpIdeFileTree FileTree { get; set; }
+	public ConcurrentDictionary<string, SharpIdeFile> AllFiles => FileTree.AllFiles;
+	public ObservableList<SharpIdeFolder> AllFolders => FileTree.AllFolders;
 
 	[SetsRequiredMembers]
-	internal SharpIdeSolutionModel(string solutionFilePath, IntermediateSolutionModel intermediateModel, SharpIdeRootFolder sharpIdeRootFolder)
+	internal SharpIdeSolutionModel(string solutionFilePath, IntermediateSolutionModel intermediateModel, SharpIdeFileTree fileTree)
 	{
 		var solutionName = Path.GetFileName(solutionFilePath);
 		var allProjects = new ConcurrentBag<SharpIdeProjectModel>();
@@ -30,9 +30,9 @@ public class SharpIdeSolutionModel : ISharpIdeNode, IExpandableSharpIdeNode, ISo
 		Name = solutionName;
 		FilePath = solutionFilePath;
 		DirectoryPath = Path.GetDirectoryName(solutionFilePath)!;
-		RootFolder = sharpIdeRootFolder;
-		Projects = new ObservableList<SharpIdeProjectModel>(intermediateModel.Projects.Select(s => new SharpIdeProjectModel(s, allProjects, allFiles, allFolders, this, sharpIdeRootFolder)));
-		SlnFolders = new ObservableList<SharpIdeSolutionFolder>(intermediateModel.SolutionFolders.Select(s => new SharpIdeSolutionFolder(s, allProjects, allFiles, allFolders, this, sharpIdeRootFolder)));
+		FileTree = fileTree;
+		Projects = new ObservableList<SharpIdeProjectModel>(intermediateModel.Projects.Select(s => new SharpIdeProjectModel(s, allProjects, allFiles, allFolders, this, fileTree)));
+		SlnFolders = new ObservableList<SharpIdeSolutionFolder>(intermediateModel.SolutionFolders.Select(s => new SharpIdeSolutionFolder(s, allProjects, allFiles, allFolders, this, fileTree)));
 		AllProjects = new ObservableHashSet<SharpIdeProjectModel>(allProjects);
 	}
 }

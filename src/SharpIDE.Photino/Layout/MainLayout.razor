@@ -185,8 +185,8 @@
 		var solutionFilePath = (string)result.Data!;
 		_solutionFilePath = solutionFilePath;
 
-		var sharpIdeRootFolder = await FileSystemService.GetSharpIdeRootFolderForSolutionAsync(solutionFilePath);
-		var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(solutionFilePath, sharpIdeRootFolder);
+		var fileTree = new SharpIdeFileTree();
+		var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(solutionFilePath, fileTree);
 		await SharpIdeSolutionService.LoadSolution(solutionModel, solutionFilePath, vsSln, solutionSerializer);
 
 		_solutionModel = solutionModel;

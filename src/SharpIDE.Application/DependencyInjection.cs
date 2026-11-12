@@ -45,7 +45,6 @@ public static class DependencyInjection
 		services.AddScoped<SharpIdeMetadataAsSourceService>();
 		services.AddScoped<DotnetTemplateService>();
 		services.AddScoped<SharpIdeSolutionService>();
-		services.AddScoped<FileSystemService>();
 		services.AddLogging();
 		return services;
 	}

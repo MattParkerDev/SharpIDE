@@ -30,7 +30,7 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 	public async Task ReloadSolution(CancellationToken cancellationToken = default)
 	{
 		Guard.Against.Null(_solutionFilePath);
-		var (newSharpIdeSolutionModel, solutionModel, _) = await ReadSolution(_solutionFilePath, _sharpIdeSolutionModel!.RootFolder, cancellationToken);
+		var (newSharpIdeSolutionModel, solutionModel, _) = await ReadSolution(_solutionFilePath, _sharpIdeSolutionModel!.FileTree, cancellationToken);
 		_vsSolution = solutionModel;
 		_sharpIdeSolutionModel!.UpdateFromNewSolution(newSharpIdeSolutionModel);
 		await _roslynAnalysis.ReloadSolution(cancellationToken);
@@ -50,7 +50,7 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 	}
 
 	// Weird separation between ReadSolution and LoadSolution is so we can call the static ReadSolution in IdeRoot before all the UI Nodes are ready and DI services injected
-	public static async Task<(SharpIdeSolutionModel, SolutionModel, ISolutionSerializer)> ReadSolution(string solutionFilePath, SharpIdeRootFolder sharpIdeRootFolder, CancellationToken cancellationToken = default)
+	public static async Task<(SharpIdeSolutionModel, SolutionModel, ISolutionSerializer)> ReadSolution(string solutionFilePath, SharpIdeFileTree fileTree, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity();
 
@@ -63,35 +63,50 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 			vsSolution = await solutionSerializer.OpenAsync(solutionFilePath, cancellationToken);
 		}
 
+		// Before the projects are created, as they look up their folders in the tree. Resolved as IntermediateMapper does.
+		var solutionDirectory = Path.GetDirectoryName(solutionFilePath);
+		fileTree.UpdateRoots(solutionFilePath, vsSolution.SolutionProjects
+			.Where(p => p.Extension is ".csproj")
+			.Select(p => new DirectoryInfo(Path.Join(solutionDirectory, p.FilePath)).FullName));
+
 		// This intermediate model is pretty much useless, but I have left it around as we grab the project nodes with it, which we might use later.
 		var intermediateModel = await IntermediateMapper.GetIntermediateModel(solutionFilePath, vsSolution, cancellationToken);
 
-		var solutionModel = new SharpIdeSolutionModel(solutionFilePath, intermediateModel, sharpIdeRootFolder);
-
-		var gitFolderPath = Repository.Discover(solutionFilePath);
-		if (gitFolderPath is null) return (solutionModel, vsSolution, solutionSerializer);
-		using var repo = new Repository(gitFolderPath);
-		var status = repo.RetrieveStatus(new StatusOptions());
-
-		foreach (var entry in status.Where(s => s.State is not FileStatus.Ignored))
-		{
-			// Relative to the repository root, which may be above the solution's directory
-			var filePath = new FileInfo(Path.Combine(repo.Info.WorkingDirectory, entry.FilePath)).FullName; // used to normalise path separators
-			var fileInSolution = solutionModel.AllFiles.GetValueOrDefault(filePath);
-			if (fileInSolution is null) continue;
-
-			var mappedGitStatus = entry.State switch
-			{
-				FileStatus.NewInIndex | FileStatus.ModifiedInWorkdir => GitFileStatus.Added, // I've seen these appear together
-				FileStatus.NewInIndex or FileStatus.NewInWorkdir => GitFileStatus.Added,
-				FileStatus.ModifiedInIndex or FileStatus.ModifiedInWorkdir => GitFileStatus.Modified,
-				_ => GitFileStatus.Unaltered // TODO: handle other kinds?
-			};
-
-			fileInSolution.GitStatus = mappedGitStatus;
-		}
-
+		var solutionModel = new SharpIdeSolutionModel(solutionFilePath, intermediateModel, fileTree);
+		SetGitStatuses(solutionModel);
 		return (solutionModel, vsSolution, solutionSerializer);
+	}
+
+	/// A root outside the solution's repository (e.g. a project in another repository) has its own
+	private static void SetGitStatuses(SharpIdeSolutionModel solutionModel)
+	{
+		var gitFolderPaths = solutionModel.FileTree.Roots
+			.Select(r => Repository.Discover(r.Path))
+			.OfType<string>()
+			.Distinct(PathComparison.Comparer);
+		foreach (var gitFolderPath in gitFolderPaths)
+		{
+			using var repo = new Repository(gitFolderPath);
+			var status = repo.RetrieveStatus(new StatusOptions());
+
+			foreach (var entry in status.Where(s => s.State is not FileStatus.Ignored))
+			{
+				// Relative to the repository root, which may be above the solution's directory
+				var filePath = new FileInfo(Path.Combine(repo.Info.WorkingDirectory, entry.FilePath)).FullName; // used to normalise path separators
+				var fileInSolution = solutionModel.AllFiles.GetValueOrDefault(filePath);
+				if (fileInSolution is null) continue;
+
+				var mappedGitStatus = entry.State switch
+				{
+					FileStatus.NewInIndex | FileStatus.ModifiedInWorkdir => GitFileStatus.Added, // I've seen these appear together
+					FileStatus.NewInIndex or FileStatus.NewInWorkdir => GitFileStatus.Added,
+					FileStatus.ModifiedInIndex or FileStatus.ModifiedInWorkdir => GitFileStatus.Modified,
+					_ => GitFileStatus.Unaltered // TODO: handle other kinds?
+				};
+
+				fileInSolution.GitStatus = mappedGitStatus;
+			}
+		}
 	}
 
 	// This currently only adds the project to the VS Persistence solution, and persists it back to disk. We are currently relying on the sln change from disk, for

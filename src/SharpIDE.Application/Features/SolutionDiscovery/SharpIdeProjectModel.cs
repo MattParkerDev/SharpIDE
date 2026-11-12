@@ -30,13 +30,13 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public required Task<MsBuildProjectLoadResult> MsBuildEvaluationProjectTask { get; set; }
 
 	[SetsRequiredMembers]
-	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent, SharpIdeRootFolder sharpIdeRootFolder)
+	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent, SharpIdeFileTree fileTree)
 	{
 		Parent = parent;
 		Name = new ReactiveProperty<string>(projectModel.Model.ActualDisplayName);
 		FilePath = projectModel.FullFilePath;
 		DirectoryPath = Path.GetDirectoryName(projectModel.FullFilePath)!;
-		Folder = sharpIdeRootFolder.GetFolderForProject(projectModel.FullFilePath);
+		Folder = fileTree.GetFolderForProject(projectModel.FullFilePath);
 		ActiveMsBuildProjectLoadResult = new ReactiveProperty<MsBuildProjectInstanceLoadResult>(new MsBuildProjectInstanceLoadResult
 		{
 			LoadState = MsBuildProjectLoadState.Loading
@@ -55,7 +55,7 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		};
 		return await Task.Run(async () =>
 		{
-			// Not Folder is null - a project outside the root folder (e.g. on another drive) has no folder, but can still load
+			// Not Folder is null - a project can have no folder (e.g. its file is at a drive root, see SharpIdeFileTree), but can still load
 			if (File.Exists(FilePath) is false)
 			{
 				var missingResult = new MsBuildProjectInstanceLoadResult

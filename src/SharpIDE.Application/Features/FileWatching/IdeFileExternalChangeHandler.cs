@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Threading;
@@ -23,7 +23,7 @@ public class IdeFileExternalChangeHandler
 	private readonly AsyncBatchingWorkQueue<FileSystemHint> _hintQueue;
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 
-	private SharpIdeRootFolder RootFolder => SolutionModel.RootFolder;
+	private SharpIdeFileTree FileTree => SolutionModel.FileTree;
 
 	private readonly record struct FileSystemHint(string Path, string? RenamedFromPath = null, bool RescanAll = false);
 
@@ -55,7 +55,7 @@ public class IdeFileExternalChangeHandler
 
 		if (hints.Any(h => h.RescanAll))
 		{
-			await reconcile.Folder(RootFolder);
+			foreach (var root in FileTree.Roots) await reconcile.Folder(root);
 		}
 		else
 		{
@@ -110,7 +110,7 @@ public class IdeFileExternalChangeHandler
 	/// One batch's comparison of disk against the model
 	private sealed class Reconcile(IdeFileExternalChangeHandler handler)
 	{
-		private readonly SharpIdeRootFolder _root = handler.RootFolder;
+		private readonly SharpIdeFileTree _tree = handler.FileTree;
 		private readonly SharpIdeRootFolderModificationService _modificationService = handler._rootFolderModificationService;
 		private readonly ILogger _logger = handler._logger;
 		private Dictionary<string, SharpIdeFolder>? _foldersByPath;
@@ -128,15 +128,15 @@ public class IdeFileExternalChangeHandler
 			var newName = System.IO.Path.GetFileName(newPath);
 			try
 			{
-				if (_root.AllFiles.TryGetValue(oldPath, out var file))
+				if (_tree.AllFiles.TryGetValue(oldPath, out var file))
 				{
-					if ((isCaseOnlyRename is false && _root.AllFiles.ContainsKey(newPath)) || File.Exists(newPath) is false) return false;
+					if ((isCaseOnlyRename is false && _tree.AllFiles.ContainsKey(newPath)) || File.Exists(newPath) is false) return false;
 					if (file.Parent != newParent) await _modificationService.MoveFile(newParent, file);
 					if (file.Name.Value != newName) await _modificationService.RenameFile(file, newName);
 					OperationCount++;
 					return true;
 				}
-				if (FindFolder(oldPath) is { } folder && folder != _root)
+				if (FindFolder(oldPath) is { } folder && _tree.IsRoot(folder) is false)
 				{
 					if ((isCaseOnlyRename is false && FindFolder(newPath) is not null) || Directory.Exists(newPath) is false) return false;
 					if (folder.Parent != newParent) await _modificationService.MoveDirectory(newParent, folder);
@@ -158,7 +158,7 @@ public class IdeFileExternalChangeHandler
 		{
 			try
 			{
-				var modelFile = _root.AllFiles.GetValueOrDefault(path);
+				var modelFile = _tree.AllFiles.GetValueOrDefault(path);
 				var modelFolder = modelFile is null ? FindFolder(path) : null;
 				var isFileOnDisk = File.Exists(path);
 				var isFolderOnDisk = isFileOnDisk is false && Directory.Exists(path);
@@ -174,7 +174,7 @@ public class IdeFileExternalChangeHandler
 				}
 				else if (modelFolder is not null)
 				{
-					if (isFolderOnDisk || modelFolder == _root) return;
+					if (isFolderOnDisk || _tree.IsRoot(modelFolder)) return; // A root's folder is added and removed with its project
 					await RemoveFolder(modelFolder);
 				}
 
@@ -271,11 +271,11 @@ public class IdeFileExternalChangeHandler
 
 		private SharpIdeFolder? FindFolder(string path)
 		{
-			if (PathComparison.PathEquals(path, _root.Path)) return _root;
+			if (_tree.FindRoot(path) is { } root) return root;
 			if (_foldersByPath is null)
 			{
 				_foldersByPath = new Dictionary<string, SharpIdeFolder>(PathComparison.Comparer);
-				foreach (var folder in _root.AllFolders) _foldersByPath.TryAdd(folder.Path, folder);
+				foreach (var folder in _tree.AllFolders) _foldersByPath.TryAdd(folder.Path, folder);
 			}
 			return _foldersByPath.GetValueOrDefault(path);
 		}

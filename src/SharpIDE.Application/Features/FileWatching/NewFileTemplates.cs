@@ -1,4 +1,4 @@
-using SharpIDE.Application.Features.FileSystem;
+﻿using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.FileWatching;
@@ -23,7 +23,7 @@ public static class NewFileTemplates
 	{
 		var names = new List<string>();
 		SharpIdeFolder? current = folder;
-		while (current is not null and not SharpIdeRootFolder)
+		while (current is not null && current.Parent is SharpIdeFolder) // Not a root - including one the IDE moved into another folder
 		{
 			names.Add(current.Name.Value);
 			current = current.Parent as SharpIdeFolder;

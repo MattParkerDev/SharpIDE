@@ -12,12 +12,12 @@ public class SharpIdeSolutionItemFile : ISharpIdeNode
 	public required SharpIdeFile? File { get; set; }
 
 	[SetsRequiredMembers]
-	internal SharpIdeSolutionItemFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, SharpIdeRootFolder sharpIdeRootFolder)
+	internal SharpIdeSolutionItemFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, SharpIdeFileTree fileTree)
 	{
 		Path = fullPath;
 		Name = name;
 		Extension = extension;
 		Parent = parent;
-		File = sharpIdeRootFolder.AllFiles.GetValueOrDefault(fullPath);
+		File = fileTree.AllFiles.GetValueOrDefault(fullPath);
 	}
 }
