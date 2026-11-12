@@ -4,6 +4,7 @@ using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Events;
+using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery;
@@ -24,21 +25,22 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	public string? PdbSourceFilePathForDebugger { get; set; }
 	public GitFileStatus GitStatus { get; set; } = GitFileStatus.Unaltered;
 	public required ReactiveProperty<bool> IsDirty { get; init; }
-	public required bool SuppressDiskChangeEvents { get; set; } // probably has concurrency issues
-	public required DateTimeOffset? LastIdeWriteTime { get; set; }
+	/// The stamp of the file on disk when we last read or wrote it. Null if unknown, in which case a change to it is checked by reading it.
+	/// Only written under IdeFileSystemLock.
+	public FileStamp? DiskStamp { get; set; }
 	/// Raised for open files only - their editor applies the edit, and reports the result back via FileChangedService.OpenFileTextChanged
 	public EventWrapper<SharpIdeFileEditRequest, Task> EditRequested { get; } = new((_) => Task.CompletedTask);
 	public EventWrapper<Task> FileDeleted { get; } = new(() => Task.CompletedTask);
 
 	[SetsRequiredMembers]
-	internal SharpIdeFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, bool isMetadataAsSourceFile = false, string? pdbSourceFilePath = null)
+	internal SharpIdeFile(string fullPath, string name, string extension, IExpandableSharpIdeNode parent, ConcurrentBag<SharpIdeFile> allFiles, bool isMetadataAsSourceFile = false, string? pdbSourceFilePath = null, FileStamp? diskStamp = null)
 	{
 		Path = fullPath;
 		Name = new ReactiveProperty<string>(name);
 		Extension = extension;
 		Parent = parent;
 		IsDirty = new ReactiveProperty<bool>(false);
-		SuppressDiskChangeEvents = false;
+		DiskStamp = diskStamp;
 		IsMetadataAsSourceFile = isMetadataAsSourceFile;
 		PdbSourceFilePathForDebugger = pdbSourceFilePath;
 		allFiles.Add(this);

@@ -134,9 +134,10 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 		}
 	}
 
-	public async Task<SharpIdeFile> CreateFile(SharpIdeFolder parentFolder, string newFilePath, string fileName, string contents)
+	/// diskStamp should be read before the contents were, so a change during the read is still detected. Read now if not given (e.g. a file the IDE just wrote).
+	public async Task<SharpIdeFile> CreateFile(SharpIdeFolder parentFolder, string newFilePath, string fileName, string contents, FileStamp? diskStamp = null)
 	{
-		var sharpIdeFile = new SharpIdeFile(newFilePath, fileName, Path.GetExtension(newFilePath), parentFolder, []);
+		var sharpIdeFile = new SharpIdeFile(newFilePath, fileName, Path.GetExtension(newFilePath), parentFolder, [], diskStamp: diskStamp ?? FileStamp.TryRead(newFilePath));
 
 		var correctInsertionPosition = GetInsertionPosition(parentFolder, sharpIdeFile);
 		parentFolder.Files.Insert(correctInsertionPosition, sharpIdeFile);

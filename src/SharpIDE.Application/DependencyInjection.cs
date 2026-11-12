@@ -34,6 +34,7 @@ public static class DependencyInjection
 		services.AddScoped<TestRunnerService>();
 		services.AddScoped<NugetPackageIconCacheService>();
 		services.AddScoped<IdeFileWatcher>();
+		services.AddScoped<IdeFileSystemLock>();
 		services.AddScoped<IdeNavigationHistoryService>();
 		services.AddScoped<IdeOpenTabsFileManager>();
 		services.AddScoped<RoslynAnalysis>();

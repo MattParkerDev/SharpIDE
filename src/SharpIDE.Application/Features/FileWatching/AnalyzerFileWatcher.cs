@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
-using FileWatcherEx;
+﻿using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Threading;
 using SharpIDE.Application.Features.Events;
@@ -10,46 +8,50 @@ namespace SharpIDE.Application.Features.FileWatching;
 public class AnalyzerFileWatcher
 {
 	private readonly AsyncBatchingWorkQueue<string> _fileChangedQueue;
+	private readonly Lock _lock = new();
+	private List<FileSystemWatcher> _fileWatchers = [];
 
 	public AnalyzerFileWatcher()
 	{
 		_fileChangedQueue = new AsyncBatchingWorkQueue<string>(
 			TimeSpan.FromMilliseconds(500),
 			async (filePaths, ct) => await GlobalEvents.Instance.AnalyzerDllsChanged.InvokeParallelAsync(filePaths.ToImmutableArray()),
+			StringComparer.Ordinal,
 			new AsynchronousOperationListenerProvider.NullOperationListener(),
 			CancellationToken.None);
 	}
 
-	private readonly ConcurrentDictionary<string, FileSystemWatcherEx> _fileWatchers = new();
-
-	// I wanted to avoid this, but unfortunately we have to watch individual files in different directories
-	public async Task StartWatchingFiles(ImmutableArray<string> filePaths)
+	/// The analyzer dlls are spread across directories (e.g. NuGet packages), so one non-recursive watcher per directory, filtered to just those files
+	public Task StartWatchingFiles(ImmutableArray<string> filePaths)
 	{
-		// This can definitely be optimized to not recreate watchers unnecessarily
-		var existingFileWatchers = _fileWatchers.Values.ToList();
-		foreach (var watcher in existingFileWatchers)
-		{
-			watcher.OnChanged -= OnFileChanged;
-			watcher.Dispose();
-		}
-		_fileWatchers.Clear();
-
-		foreach (var filePath in filePaths)
-		{
-			var fileWatcher = new FileSystemWatcherEx(Path.GetDirectoryName(filePath)!)
+		var newWatchers = filePaths
+			.GroupBy(path => Path.GetDirectoryName(path)!, StringComparer.Ordinal)
+			.Where(group => Directory.Exists(group.Key))
+			.Select(group =>
 			{
-				Filter = Path.GetFileName(filePath),
-				NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
-			};
+				var watcher = new FileSystemWatcher(group.Key)
+				{
+					// Builds may replace a dll (delete + create, or rename over it) rather than write to it
+					NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName
+				};
+				foreach (var path in group) watcher.Filters.Add(Path.GetFileName(path));
+				watcher.Changed += OnFileChanged;
+				watcher.Created += OnFileChanged;
+				watcher.Renamed += OnFileChanged;
+				watcher.EnableRaisingEvents = true;
+				return watcher;
+			})
+			.ToList();
 
-			fileWatcher.OnChanged += OnFileChanged;
-			fileWatcher.Start();
-			_fileWatchers.TryAdd(filePath, fileWatcher);
+		List<FileSystemWatcher> oldWatchers;
+		lock (_lock)
+		{
+			oldWatchers = _fileWatchers;
+			_fileWatchers = newWatchers;
 		}
+		foreach (var watcher in oldWatchers) watcher.Dispose();
+		return Task.CompletedTask;
 	}
 
-	private void OnFileChanged(object? sender, FileChangedEvent e)
-	{
-		_fileChangedQueue.AddWork(e.FullPath);
-	}
+	private void OnFileChanged(object sender, FileSystemEventArgs e) => _fileChangedQueue.AddWork(e.FullPath);
 }

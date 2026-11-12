@@ -35,7 +35,6 @@
 
   <ItemGroup>
     <PackageReference Include="CliWrap" />
-    <PackageReference Include="FileWatcherEx" />
     <PackageReference Include="ICSharpCode.Decompiler" />
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers">

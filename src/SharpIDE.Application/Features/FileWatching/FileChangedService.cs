@@ -21,6 +21,8 @@ public class FileChangedService
 	private readonly SharpIdeSolutionService _sharpIdeSolutionService;
 	private readonly IdeOpenTabsFileManager _openTabsFileManager;
 	private readonly AsyncBatchingWorkQueue _updateSolutionDiagnosticsQueue;
+	private int _batchDepth;
+	private bool _workspaceAlteredDuringBatch;
 	// Processes one batch at a time, in order, so Roslyn always ends up with the latest text of each open file
 	private readonly Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue<(SharpIdeFile File, SourceText Text)> _openFileTextChangedQueue;
 
@@ -75,8 +77,7 @@ public class FileChangedService
 	{
 		var success = await _roslynAnalysis.ReloadProjectsWithAnyOfAnalyzerFileReferences(changedDllPaths);
 		if (success is false) return;
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
+		OnWorkspaceAltered();
 	}
 
 	/// Called on the UI thread by an open file's editor, whenever its text changes - including edits it was asked to make (completion, code actions, reloads from disk).
@@ -153,8 +154,35 @@ public class FileChangedService
 
 	private void OnWorkspaceAltered()
 	{
+		if (Volatile.Read(ref _batchDepth) > 0)
+		{
+			Volatile.Write(ref _workspaceAlteredDuringBatch, true);
+			return;
+		}
 		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
 		_updateSolutionDiagnosticsQueue.AddWork();
+	}
+
+	/// Defers SolutionAltered until the batch ends, so e.g. a branch switch adding and removing many files re-analyses once, rather than per file
+	public IDisposable BeginBatch()
+	{
+		Interlocked.Increment(ref _batchDepth);
+		return new BatchScope(this);
+	}
+
+	private void EndBatch()
+	{
+		if (Interlocked.Decrement(ref _batchDepth) is not 0) return;
+		if (Interlocked.Exchange(ref _workspaceAlteredDuringBatch, false)) OnWorkspaceAltered();
+	}
+
+	private sealed class BatchScope(FileChangedService service) : IDisposable
+	{
+		private int _disposed;
+		public void Dispose()
+		{
+			if (Interlocked.Exchange(ref _disposed, 1) is 0) service.EndBatch();
+		}
 	}
 
 	private async ValueTask ProcessBatchAsync(CancellationToken cancellationToken)
@@ -169,8 +197,7 @@ public class FileChangedService
 		project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
 		await project.MsBuildEvaluationProjectTask;
 		await _roslynAnalysis.ReloadProject(project, CancellationToken.None);
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
+		OnWorkspaceAltered();
 	}
 
 	private async Task HandleSlnChanged(SharpIdeFile file)
@@ -183,30 +210,26 @@ public class FileChangedService
 	{
 		var success = await _roslynAnalysis.AddDocument(file, contents);
 		if (success is false) return;
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
+		OnWorkspaceAltered();
 	}
 
 	private async Task HandleWorkspaceFileRemoved(SharpIdeFile file)
 	{
 		var success = await _roslynAnalysis.RemoveDocument(file);
 		if (success is false) return;
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
+		OnWorkspaceAltered();
 	}
 
 	private async Task HandleWorkspaceFileMoved(SharpIdeFile file, string oldFilePath)
 	{
 		await _roslynAnalysis.MoveDocument(file, oldFilePath);
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
+		OnWorkspaceAltered();
 	}
 
 	private async Task HandleWorkspaceFileRenamed(SharpIdeFile file, string oldFilePath)
 	{
 		await _roslynAnalysis.RenameDocument(file, oldFilePath);
-		GlobalEvents.Instance.SolutionAltered.InvokeParallelFireAndForget();
-		_updateSolutionDiagnosticsQueue.AddWork();
+		OnWorkspaceAltered();
 	}
 }
 

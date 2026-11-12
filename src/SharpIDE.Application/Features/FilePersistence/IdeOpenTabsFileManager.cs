@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
+using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.FilePersistence;
@@ -8,8 +9,9 @@ namespace SharpIDE.Application.Features.FilePersistence;
 
 /// Holds the in memory copies of open files, and manages saving/loading them to/from disk.
 /// An open file's text is owned by its editor, which reports every change via FileChangedService.OpenFileTextChanged.
-public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
+public class IdeOpenTabsFileManager(IdeFileSystemLock fileSystemLock, ILogger<IdeOpenTabsFileManager> logger)
 {
+	private readonly IdeFileSystemLock _fileSystemLock = fileSystemLock;
 	private readonly ILogger<IdeOpenTabsFileManager> _logger = logger;
 
 	private readonly ConcurrentDictionary<SharpIdeFile, Lazy<Task<SourceText>>> _openFiles = new();
@@ -48,12 +50,12 @@ public class IdeOpenTabsFileManager(ILogger<IdeOpenTabsFileManager> logger)
 		await WriteAllText(file, text);
 	}
 
+	/// Under the file system lock, recording the stamp of what we wrote - so the watcher recognises this write as ours, and a reconcile never sees it half done
 	private async Task WriteAllText(SharpIdeFile file, SourceText text)
 	{
-		file.SuppressDiskChangeEvents = true;
+		using var _ = await _fileSystemLock.Lock.LockAsync();
 		await File.WriteAllTextAsync(file.Path, text.ToString());
-		file.LastIdeWriteTime = DateTimeOffset.Now;
-		file.SuppressDiskChangeEvents = false;
+		file.DiskStamp = FileStamp.TryRead(file.Path);
 		_logger.LogInformation("IdeOpenTabsFileManager: Saved file {FilePath}", file.Path);
 	}
 
