@@ -113,40 +113,81 @@ public partial class PackageDetailsProjectEntry : MarginContainer
         }
     }
 
+    /// Whether this project's reference can take the change, as its own buttons show it. Call on the UI thread
+    public bool CanChange(PackageChangeKind kind)
+    {
+        if (_changing || PackageId is null) return false;
+        // As the Add button: a project without its own reference - none at all, or one a package brings in - but not one the SDK adds
+        if (kind is PackageChangeKind.Install) return VersionSelectedInDetails is not null && ProjectPackageReference is not { IsTopLevel: true } && ProjectPackageReference?.IsAutoReferenced is not true;
+        if (ProjectPackageReference is not { IsTopLevel: true, IsAutoReferenced: false } reference) return false;
+        return kind switch
+        {
+            PackageChangeKind.Remove => true,
+            PackageChangeKind.Upgrade => VersionSelectedInDetails is { } selected && reference.InstalledVersion < selected,
+            PackageChangeKind.Downgrade => VersionSelectedInDetails is { } selected && reference.InstalledVersion > selected,
+            _ => false
+        };
+    }
+
     private void RequestChange(bool remove)
     {
-        if (_changing || PackageId is not { } packageId) return;
-        var version = VersionSelectedInDetails;
-        if (remove is false && version is null) return;
-
-        _changing = true;
-        _installedVersionLabel.RemoveThemeColorOverride(ThemeStringNames.FontColor);
-        _installedVersionLabel.Text = remove ? "Removing..." : $"Installing {version!.ToNormalizedString()}...";
-        _installedVersionLabel.TooltipText = string.Empty;
-        DisplayRelevantButtons();
-
-        var project = ProjectModel;
+        if (BeginChange(remove, queued: false) is not { } change) return;
         _ = Task.GodotRun(async () =>
         {
-            var result = remove
-                ? await _packageReferenceService.RemoveAsync(project, packageId)
-                : await _packageReferenceService.AddOrUpdateAsync(project, packageId, version!);
-            await this.InvokeAsync(() =>
-            {
-                _changing = false;
-                if (result.Success)
-                {
-                    _installedVersionLabel.Text = string.Empty;
-                }
-                else
-                {
-                    _installedVersionLabel.Text = "Failed";
-                    _installedVersionLabel.AddThemeColorOverride(ThemeStringNames.FontColor, ErrorColor);
-                    _installedVersionLabel.TooltipText = result.Errors.Count > 1 ? string.Join('\n', result.Errors) : result.Error ?? "The change failed";
-                }
-                DisplayRelevantButtons();
-            });
+            var result = await RunChangeAsync(change);
             if (result.Success && PackageReferencesChanged is { } changed) await changed();
         });
     }
+
+    public sealed record PendingChange(SharpIdeProjectModel Project, string PackageId, NuGetVersion? Version, bool Remove);
+
+    /// Shows the change as under way (or, when queued behind other projects' changes, as waiting), and returns what to change - null if it can't start.
+    /// Call on the UI thread, then <see cref="RunChangeAsync"/> off it.
+    public PendingChange? BeginChange(bool remove, bool queued)
+    {
+        if (_changing || PackageId is not { } packageId) return null;
+        var version = VersionSelectedInDetails;
+        if (remove is false && version is null) return null;
+
+        _changing = true;
+        _installedVersionLabel.RemoveThemeColorOverride(ThemeStringNames.FontColor);
+        _installedVersionLabel.Text = ChangeStatusText(remove, version, queued);
+        _installedVersionLabel.TooltipText = string.Empty;
+        DisplayRelevantButtons();
+        return new PendingChange(ProjectModel, packageId, version, remove);
+    }
+
+    /// Makes the change begun by <see cref="BeginChange"/>, showing how it went. Call off the UI thread.
+    /// Doesn't raise <see cref="PackageReferencesChanged"/> - a caller changing several projects raises it once they're all done.
+    public async Task<PackageReferenceChangeResult> RunChangeAsync(PendingChange change)
+    {
+        await this.InvokeAsync(() => _installedVersionLabel.Text = ChangeStatusText(change.Remove, change.Version, queued: false));
+        var result = change.Remove
+            ? await _packageReferenceService.RemoveAsync(change.Project, change.PackageId)
+            : await _packageReferenceService.AddOrUpdateAsync(change.Project, change.PackageId, change.Version!);
+        await this.InvokeAsync(() =>
+        {
+            _changing = false;
+            if (result.Success)
+            {
+                _installedVersionLabel.Text = string.Empty;
+            }
+            else
+            {
+                _installedVersionLabel.Text = "Failed";
+                _installedVersionLabel.AddThemeColorOverride(ThemeStringNames.FontColor, ErrorColor);
+                _installedVersionLabel.TooltipText = result.Errors.Count > 1 ? string.Join('\n', result.Errors) : result.Error ?? "The change failed";
+            }
+            DisplayRelevantButtons();
+        });
+        return result;
+    }
+
+    private static string ChangeStatusText(bool remove, NuGetVersion? version, bool queued) => (remove, queued) switch
+    {
+        (true, true) => "Waiting to remove...",
+        (true, false) => "Removing...",
+        (false, true) => $"Waiting to install {version!.ToNormalizedString()}...",
+        (false, false) => $"Installing {version!.ToNormalizedString()}..."
+    };
 }

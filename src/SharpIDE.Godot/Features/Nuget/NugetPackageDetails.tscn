@@ -3,6 +3,10 @@
 [ext_resource type="Script" uid="uid://d1v1v4uqdu2rw" path="res://Features/Nuget/NugetPackageDetails.cs" id="1_c3hm2"]
 [ext_resource type="Texture2D" uid="uid://b5ih61vdjv5e6" path="res://Features/ToolPanes/Resources/ButtonIcons/Nuget.svg" id="1_jrdf0"]
 [ext_resource type="PackedScene" uid="uid://5uan5u23cr2s" path="res://Features/Nuget/PackageDetailsProjectEntry.tscn" id="3_tik62"]
+[ext_resource type="Texture2D" uid="uid://n22q8d0nhuf7" path="res://Features/Nuget/Resources/upgrade-icon.svg" id="4_upgrd"]
+[ext_resource type="Texture2D" uid="uid://cwwqf66568iac" path="res://Features/Nuget/Resources/downgrade-icon.svg" id="5_dwngr"]
+[ext_resource type="Texture2D" uid="uid://bvokbt0ofw201" path="res://Features/Nuget/Resources/remove-icon.svg" id="6_remov"]
+[ext_resource type="Texture2D" uid="uid://bh48xoc6pvchm" path="res://Features/Nuget/Resources/add-icon.svg" id="7_instl"]
 
 [node name="NugetPackageDetails" type="VBoxContainer" unique_id=1264762970]
 anchors_preset = 15
@@ -56,6 +60,34 @@ selected = 0
 item_count = 1
 popup/item_0/text = "nuget"
 popup/item_0/id = 0
+
+[node name="InstallAllButton" type="Button" parent="HBoxContainer2" unique_id=1170348852]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Install in projects..."
+theme_override_constants/icon_max_width = 23
+icon = ExtResource("7_instl")
+
+[node name="UpgradeAllButton" type="Button" parent="HBoxContainer2" unique_id=1395027714]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Upgrade in projects..."
+theme_override_constants/icon_max_width = 23
+icon = ExtResource("4_upgrd")
+
+[node name="DowngradeAllButton" type="Button" parent="HBoxContainer2" unique_id=1826304471]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Downgrade in projects..."
+theme_override_constants/icon_max_width = 23
+icon = ExtResource("5_dwngr")
+
+[node name="RemoveAllButton" type="Button" parent="HBoxContainer2" unique_id=702415963]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Remove from projects..."
+theme_override_constants/icon_max_width = 23
+icon = ExtResource("6_remov")
 
 [node name="InfoFoldableContainer" type="FoldableContainer" parent="." unique_id=1492895289]
 unique_name_in_owner = true

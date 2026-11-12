@@ -15,6 +15,12 @@ public partial class NugetPackageDetails : VBoxContainer
 	private OptionButton _versionOptionButton = null!;
 	private OptionButton _nugetSourceOptionButton = null!;
 	private VBoxContainer _projectsVBoxContainer = null!;
+	private Button _installAllButton = null!;
+	private Button _upgradeAllButton = null!;
+	private Button _downgradeAllButton = null!;
+	private Button _removeAllButton = null!;
+	/// A change across several projects is under way - they run one at a time, as each is a restore
+	private bool _changingProjects;
 
 	private IdePackageResult? _package;
 	private NuGetVersion? _selectedVersion;
@@ -38,8 +44,100 @@ public partial class NugetPackageDetails : VBoxContainer
 		_projectsVBoxContainer = GetNode<VBoxContainer>("%ProjectsVBoxContainer");
 		_nugetSourceOptionButton.ItemSelected += index => _ = Task.GodotRun(() => OnNugetSourceSelected(index));
 		_versionOptionButton.ItemSelected += VersionSelected;
-		
+		_installAllButton = GetNode<Button>("%InstallAllButton");
+		_installAllButton.Pressed += () => ShowChangeDialog(PackageChangeKind.Install);
+		_upgradeAllButton = GetNode<Button>("%UpgradeAllButton");
+		_downgradeAllButton = GetNode<Button>("%DowngradeAllButton");
+		_removeAllButton = GetNode<Button>("%RemoveAllButton");
+		_upgradeAllButton.Pressed += () => ShowChangeDialog(PackageChangeKind.Upgrade);
+		_downgradeAllButton.Pressed += () => ShowChangeDialog(PackageChangeKind.Downgrade);
+		_removeAllButton.Pressed += () => ShowChangeDialog(PackageChangeKind.Remove);
+
 		_projectsVBoxContainer.QueueFreeChildren();
+		DisplayRelevantButtons();
+	}
+
+	/// Not those SetProjects has replaced, which are freed at the end of the frame
+	private List<PackageDetailsProjectEntry> ProjectEntries => _projectsVBoxContainer.GetChildren().OfType<PackageDetailsProjectEntry>().Where(e => e.IsQueuedForDeletion() is false).ToList();
+
+	/// Each top-level button shows when at least one project can take its change. Call on the UI thread
+	private void DisplayRelevantButtons()
+	{
+		var entries = ProjectEntries;
+		// Whenever any project doesn't reference the package itself
+		_installAllButton.Visible = _changingProjects is false && entries.Any(e => e.CanChange(PackageChangeKind.Install));
+		_upgradeAllButton.Visible = _changingProjects is false && entries.Any(e => e.CanChange(PackageChangeKind.Upgrade));
+		_downgradeAllButton.Visible = _changingProjects is false && entries.Any(e => e.CanChange(PackageChangeKind.Downgrade));
+		_removeAllButton.Visible = _changingProjects is false && entries.Any(e => e.CanChange(PackageChangeKind.Remove));
+	}
+
+	private void ShowChangeDialog(PackageChangeKind kind)
+	{
+		if (_package is null || _changingProjects) return;
+		var packageId = _package.PackageId;
+		var newVersion = kind is PackageChangeKind.Remove ? string.Empty : _selectedVersion?.ToNormalizedString() ?? string.Empty;
+		var rows = ProjectEntries
+			.Where(e => e.CanChange(kind))
+			.OrderBy(e => e.ProjectModel.Name.Value, StringComparer.OrdinalIgnoreCase)
+			.Select(e => new PackageChangeDialogRow(e, OldVersionText(e.ProjectPackageReference), newVersion))
+			.ToList();
+		if (rows.Count is 0) return;
+
+		var oldVersions = rows.Select(r => r.OldVersion).Distinct().ToList();
+		var fromVersion = oldVersions.Count is 1 ? $" {oldVersions[0]}" : string.Empty;
+		var (title, okText) = kind switch
+		{
+			PackageChangeKind.Install => ($"Install {packageId} {newVersion} in projects", "Install"),
+			PackageChangeKind.Upgrade => ($"Upgrade {packageId}{fromVersion} to {newVersion} in projects", "Upgrade"),
+			PackageChangeKind.Downgrade => ($"Downgrade {packageId}{fromVersion} to {newVersion} in projects", "Downgrade"),
+			_ => ($"Remove {packageId}{fromVersion} from projects", "Remove")
+		};
+		var dialog = new PackageChangeDialog();
+		dialog.Setup(title, okText, packageId, rows);
+		dialog.RowsConfirmed += confirmedRows => ChangeProjects(confirmedRows, remove: kind is PackageChangeKind.Remove);
+		AddChild(dialog);
+		dialog.PopupForRows();
+	}
+
+	/// Blank where the project has no reference, in brackets where a package brings it in, as the project rows show it
+	private static string OldVersionText(ProjectPackageReference? reference) => reference switch
+	{
+		null => string.Empty,
+		{ IsTransitive: true } => $"({reference.InstalledVersion.ToNormalizedString()})",
+		_ => reference.InstalledVersion.ToNormalizedString()
+	};
+
+	/// Changes each project in turn - a change restores, and only one can run at a time - then raises PackageReferencesChanged once. Call on the UI thread
+	private void ChangeProjects(List<PackageChangeDialogRow> rows, bool remove)
+	{
+		var changes = rows
+			.Select((row, index) => (row.Entry, Change: row.Entry.BeginChange(remove, queued: index > 0)))
+			.Where(c => c.Change is not null)
+			.ToList();
+		if (changes.Count is 0) return;
+		_changingProjects = true;
+		DisplayRelevantButtons();
+		_ = Task.GodotRun(async () =>
+		{
+			var anySucceeded = false;
+			try
+			{
+				foreach (var (entry, change) in changes)
+				{
+					var result = await entry.RunChangeAsync(change!);
+					anySucceeded |= result.Success;
+				}
+			}
+			finally
+			{
+				await this.InvokeAsync(() =>
+				{
+					_changingProjects = false;
+					DisplayRelevantButtons();
+				});
+			}
+			if (anySucceeded) await OnPackageReferencesChanged();
+		});
 	}
 
 	private void VersionSelected(long index)
@@ -51,6 +149,7 @@ public partial class NugetPackageDetails : VBoxContainer
 			child.VersionSelectedInDetails = selectedVersion?.Item;
 			child.DisplayRelevantButtons();
 		}
+		DisplayRelevantButtons();
 	}
 
 	private Task OnPackageReferencesChanged() => PackageReferencesChanged?.Invoke() ?? Task.CompletedTask;
@@ -122,6 +221,7 @@ public partial class NugetPackageDetails : VBoxContainer
 				scene.ProjectPackageReference = projectPackageReference;
 				scene.SetValues();
 			}
+			DisplayRelevantButtons();
 		});
 	}
 	
