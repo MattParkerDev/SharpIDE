@@ -91,48 +91,109 @@ theme_override_colors/font_hover_color = Color(0.96862745, 0.70980394, 0.6392157
 theme_override_colors/font_hover_pressed_color = Color(0.96862745, 0.70980394, 0.6392157, 1)
 text = "Prerelease"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer" unique_id=927214814]
+[node name="NugetTabContainer" type="TabContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer" unique_id=1436720951]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+theme_type_variation = &"CodeEditorTabContainer"
+current_tab = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer" unique_id=1163596775]
+[node name="Installed" type="ScrollContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer" unique_id=927214814]
+layout_mode = 2
+size_flags_vertical = 3
+metadata/_tab_index = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed" unique_id=1163596775]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1707483424]
+[node name="HBoxContainer0" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=1848306127]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1733055884]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=1290574436]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Packages to Update in "
+
+[node name="PackagesToUpdateSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=1517093382]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "Application"
+
+[node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=872915603]
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = ": "
+
+[node name="PackagesToUpdateResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=1960482271]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Gray600Label"
+text = "0"
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=394817265]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/margin_left = 10
+
+[node name="PackagesToUpdateProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0/MarginContainer" unique_id=1104739856]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 2
+indeterminate = true
+editor_preview_indeterminate = false
+
+[node name="PanelContainer0" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=1673025918]
+layout_mode = 2
+
+[node name="PackagesToUpdateVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer0" unique_id=588216470]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer0/PackagesToUpdateVBoxContainer" unique_id=2031647708 instance=ExtResource("2_arg4f")]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=1707483424]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer" unique_id=1733055884]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Installed Packages in "
 
-[node name="InstalledPackagesSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=479190710]
+[node name="InstalledPackagesSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer" unique_id=479190710]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Application"
 
-[node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1660023931]
+[node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer" unique_id=1660023931]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = ": "
 
-[node name="InstalledPackagesResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=989261814]
+[node name="InstalledPackagesResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer" unique_id=989261814]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "0"
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer" unique_id=1351131590]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer" unique_id=1351131590]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/margin_left = 10
 
-[node name="InstalledPackagesProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer/MarginContainer" unique_id=864251173]
+[node name="InstalledPackagesProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer/MarginContainer" unique_id=864251173]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 9)
 layout_mode = 2
@@ -142,53 +203,53 @@ theme_override_font_sizes/font_size = 2
 indeterminate = true
 editor_preview_indeterminate = false
 
-[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1928280903]
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=1928280903]
 layout_mode = 2
 
-[node name="InstalledPackagesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer" unique_id=1022932123]
+[node name="InstalledPackagesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer" unique_id=1022932123]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer/InstalledPackagesVBoxContainer" unique_id=298374841 instance=ExtResource("2_arg4f")]
+[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer/InstalledPackagesVBoxContainer" unique_id=298374841 instance=ExtResource("2_arg4f")]
 layout_mode = 2
 
-[node name="PackageEntry2" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer/InstalledPackagesVBoxContainer" unique_id=1333219449 instance=ExtResource("2_arg4f")]
+[node name="PackageEntry2" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer/InstalledPackagesVBoxContainer" unique_id=1333219449 instance=ExtResource("2_arg4f")]
 layout_mode = 2
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=509701791]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=509701791]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=2123233617]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer2" unique_id=2123233617]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Implicitly Installed Packages in "
 
-[node name="ImplicitlyInstalledPackagesSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=2111917140]
+[node name="ImplicitlyInstalledPackagesSlnOrProjectNameLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer2" unique_id=2111917140]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Application"
 
-[node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=634398114]
+[node name="Label3" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer2" unique_id=634398114]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = ": "
 
-[node name="ImplicitlyInstalledPackagesResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=1733748545]
+[node name="ImplicitlyInstalledPackagesResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer2" unique_id=1733748545]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "0"
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2" unique_id=2016740907]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer2" unique_id=2016740907]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/margin_left = 10
 
-[node name="ImplicitlyInstalledPackagesProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer2/MarginContainer" unique_id=1006274296]
+[node name="ImplicitlyInstalledPackagesProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer2/MarginContainer" unique_id=1006274296]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 9)
 layout_mode = 2
@@ -198,38 +259,49 @@ theme_override_font_sizes/font_size = 2
 indeterminate = true
 editor_preview_indeterminate = false
 
-[node name="PanelContainer2" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=763330207]
+[node name="PanelContainer2" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=763330207]
 layout_mode = 2
 
-[node name="ImplicitlyInstalledPackagesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer2" unique_id=965595645]
+[node name="ImplicitlyInstalledPackagesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer2" unique_id=965595645]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer2/ImplicitlyInstalledPackagesVBoxContainer" unique_id=509301039 instance=ExtResource("2_arg4f")]
+[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/PanelContainer2/ImplicitlyInstalledPackagesVBoxContainer" unique_id=509301039 instance=ExtResource("2_arg4f")]
 layout_mode = 2
 
-[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1180468629]
+[node name="Discover" type="ScrollContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer" unique_id=1259381047]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+metadata/_tab_index = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover" unique_id=1987402315]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="HBoxContainer3" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer" unique_id=1180468629]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=665734724]
+[node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/HBoxContainer3" unique_id=665734724]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Available Packages: "
 
-[node name="PackageSearchResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=640578649]
+[node name="PackageSearchResultCountLabel" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/HBoxContainer3" unique_id=640578649]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
 text = "Top 100"
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3" unique_id=546716895]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/HBoxContainer3" unique_id=546716895]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/margin_left = 10
 
-[node name="PackageSearchProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/HBoxContainer3/MarginContainer" unique_id=1504525464]
+[node name="PackageSearchProgressBar" type="ProgressBar" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/HBoxContainer3/MarginContainer" unique_id=1504525464]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 9)
 layout_mode = 2
@@ -239,15 +311,15 @@ theme_override_font_sizes/font_size = 2
 indeterminate = true
 editor_preview_indeterminate = false
 
-[node name="PanelContainer3" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer" unique_id=1106029355]
+[node name="PanelContainer3" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer" unique_id=1106029355]
 layout_mode = 2
 
-[node name="AvailablePackagesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer3" unique_id=1322379159]
+[node name="AvailablePackagesVBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/PanelContainer3" unique_id=1322379159]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/ScrollContainer/VBoxContainer/PanelContainer3/AvailablePackagesVBoxContainer" unique_id=300051982 instance=ExtResource("2_arg4f")]
+[node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/PanelContainer3/AvailablePackagesVBoxContainer" unique_id=300051982 instance=ExtResource("2_arg4f")]
 layout_mode = 2
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer" unique_id=1771208103]

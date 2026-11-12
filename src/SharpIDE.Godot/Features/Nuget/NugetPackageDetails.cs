@@ -59,7 +59,7 @@ public partial class NugetPackageDetails : VBoxContainer
 	{
 		if (_package is null || _package.PackageId.Equals(package.PackageId, StringComparison.OrdinalIgnoreCase) is false) _selectedVersion = null;
 		_package = package;
-		var iconTask = _nugetPackageIconCacheService.GetNugetPackageIcon(_package.PackageId, _package.PackageFromSources.First().PackageSearchMetadata.IconUrl);
+		var iconTask = _nugetPackageIconCacheService.GetNugetPackageIcon(_package.PackageId, _package.PackageFromSources.FirstOrDefault().PackageSearchMetadata?.IconUrl);
 		await this.InvokeAsync(() =>
 		{
 			_packageNameLabel.Text = package.PackageId;
@@ -80,6 +80,8 @@ public partial class NugetPackageDetails : VBoxContainer
 			}
 			_nugetSourceOptionButton.Selected = 0;
 		});
+		// No source returned the package (unreachable, or it isn't on any enabled source) - there are no versions to list
+		if (package.PackageFromSources.Count is 0) return;
 		await OnNugetSourceSelected(0);
 	}
 	

@@ -68,13 +68,15 @@ public partial class PackageEntry : MarginContainer
 								  """;
 		}
 		_installedVersionLabel.Text = GetInstalledVersionsText(installedPackagedInfo);
+		_sourceNamesContainer.QueueFreeChildren();
+		// No source returned the package (unreachable, or it isn't on any enabled source)
+		if (PackageResult.PackageFromSources.Count is 0) return;
 		var highestVersionPackageFromSource = PackageResult.PackageFromSources
 			.MaxBy(p => p.PackageSearchMetadata.Identity.Version);
 		if (installedPackagedInfo?.ProjectPackageReferences.TrueForAll(s => s.InstalledVersion != highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version) is true)
 		{
 			_latestVersionLabel.Text = highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version.ToNormalizedString();
 		}
-		_sourceNamesContainer.QueueFreeChildren();
 
 		_ = Task.GodotRun(async () =>
 		{

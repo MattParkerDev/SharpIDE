@@ -10,17 +10,21 @@ namespace SharpIDE.Godot.Features.Nuget;
 
 public partial class NugetPanel : Control
 {
+	private VBoxContainer _packagesToUpdateVboxContainer = null!;
 	private VBoxContainer _installedPackagesVboxContainer = null!;
 	private VBoxContainer _implicitlyInstalledPackagesItemList = null!;
 	private VBoxContainer _availablePackagesItemList = null!;
 	private OptionButton _solutionOrProjectOptionButton = null!;
 	private Button _refreshButton = null!;
 	
+	private Label _packagesToUpdateSlnOrProjectNameLabel = null!;
+	private Label _packagesToUpdateResultCountLabel = null!;
 	private Label _installedPackagesSlnOrProjectNameLabel = null!;
 	private Label _installedPackagesResultCountLabel = null!;
 	private Label _implicitlyInstalledPackagesSlnOrProjectNameLabel = null!;
 	private Label _implicitlyInstalledPackagesResultCountLabel = null!;
 	
+	private ProgressBar _packagesToUpdateProgressBar = null!;
 	private ProgressBar _installedPackagesProgressBar = null!;
 	private ProgressBar _implicitlyInstalledPackagesProgressBar = null!;
 	private ProgressBar _packageSearchProgressBar = null!;
@@ -42,6 +46,12 @@ public partial class NugetPanel : Control
 
 	public override void _Ready()
 	{
+		_packagesToUpdateVboxContainer = GetNode<VBoxContainer>("%PackagesToUpdateVBoxContainer");
+		_packagesToUpdateSlnOrProjectNameLabel = GetNode<Label>("%PackagesToUpdateSlnOrProjectNameLabel");
+		_packagesToUpdateResultCountLabel = GetNode<Label>("%PackagesToUpdateResultCountLabel");
+		_packagesToUpdateProgressBar = GetNode<ProgressBar>("%PackagesToUpdateProgressBar");
+		_packagesToUpdateProgressBar.Visible = false;
+		_packagesToUpdateVboxContainer.QueueFreeChildren();
 		_installedPackagesVboxContainer = GetNode<VBoxContainer>("%InstalledPackagesVBoxContainer");
 		_implicitlyInstalledPackagesItemList = GetNode<VBoxContainer>("%ImplicitlyInstalledPackagesVBoxContainer");
 		_availablePackagesItemList = GetNode<VBoxContainer>("%AvailablePackagesVBoxContainer");
@@ -134,6 +144,7 @@ public partial class NugetPanel : Control
 		};
 		await this.InvokeAsync(() =>
 		{
+			_packagesToUpdateSlnOrProjectNameLabel.Text = text;
 			_installedPackagesSlnOrProjectNameLabel.Text = text;
 			_implicitlyInstalledPackagesSlnOrProjectNameLabel.Text = text;
 		});
@@ -189,6 +200,17 @@ public partial class NugetPanel : Control
 		}).ToList();
 		var transitiveScenes = scenes.Where(s => s.PackageResult.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
 		var directScenes = scenes.Except(transitiveScenes).ToList();
+		// A node can only have one parent, so the updates section gets its own entries
+		var updateScenes = directScenes
+			.Where(s => HasUpdate(s.PackageResult))
+			.Select(s =>
+			{
+				var scene = _packageEntryScene.Instantiate<PackageEntry>();
+				scene.PackageResult = s.PackageResult;
+				scene.PackageSelected += OnPackageSelected;
+				return scene;
+			})
+			.ToList();
 		await setDetailsProjectsTask;
 		if (_selectedPackageResult is not null)
 		{
@@ -199,8 +221,13 @@ public partial class NugetPanel : Control
 		}
 		await this.InvokeAsync(() =>
 		{
+			_packagesToUpdateVboxContainer.QueueFreeChildren();
 			_installedPackagesVboxContainer.QueueFreeChildren();
 			_implicitlyInstalledPackagesItemList.QueueFreeChildren();
+			foreach (var updateScene in updateScenes)
+			{
+				_packagesToUpdateVboxContainer.AddChild(updateScene);
+			}
 			foreach (var transitiveScene in transitiveScenes)
 			{
 				_implicitlyInstalledPackagesItemList.AddChild(transitiveScene);
@@ -217,7 +244,16 @@ public partial class NugetPanel : Control
 				? string.Empty
 				: $"Not restored, so their packages aren't listed:\n{string.Join("\n", unrestoredProjects.Select(p => p.Name.Value))}";
 			_implicitlyInstalledPackagesResultCountLabel.Text = transitiveScenes.Count.ToString();
+			_packagesToUpdateResultCountLabel.Text = updateScenes.Count.ToString();
 		});
+	}
+
+	/// Whether a source has a newer version than one a project references directly - implicit (transitive) references are updated through what brings them in
+	private static bool HasUpdate(IdePackageResult packageResult)
+	{
+		if (packageResult.InstalledNugetPackageInfo is not { } installedInfo || packageResult.PackageFromSources.Count is 0) return false;
+		var latestVersion = packageResult.PackageFromSources.Max(s => s.PackageSearchMetadata.Identity.Version)!;
+		return installedInfo.ProjectPackageReferences.Any(r => r.IsTransitive is false && r.InstalledVersion < latestVersion);
 	}
 	
 	private async Task OnActivityChanged(Activity activity)
@@ -227,6 +263,7 @@ public partial class NugetPanel : Control
 		{
 			await this.InvokeAsync(() =>
 			{
+				_packagesToUpdateProgressBar.Visible = isOccurring;
 				_installedPackagesProgressBar.Visible = isOccurring;
 				_implicitlyInstalledPackagesProgressBar.Visible = isOccurring;
 			});
