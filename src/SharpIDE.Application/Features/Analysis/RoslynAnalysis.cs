@@ -33,6 +33,7 @@ using Microsoft.CodeAnalysis.SignatureHelp;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
+using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
@@ -226,10 +227,13 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	/// Callers should call UpdateSolutionDiagnostics after this
 	/// Ensure that the SharpIdeSolutionModel has been updated before calling this and any subsequent calls
-	public async Task ReloadProject(SharpIdeProjectModel projectModel, CancellationToken cancellationToken = default)
+	public Task ReloadProject(SharpIdeProjectModel projectModel, CancellationToken cancellationToken = default) => ReloadProjects([projectModel], cancellationToken);
+
+	/// Reloads several projects (and those depending on them) with one restore and one load - e.g. several csproj files changed by a git checkout
+	public async Task ReloadProjects(IReadOnlyCollection<SharpIdeProjectModel> projectModels, CancellationToken cancellationToken = default)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ReloadProject)}");
-		_logger.LogInformation("RoslynAnalysis: Reloading project {ProjectPath}", projectModel.FilePath);
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ReloadProjects)}");
+		_logger.LogInformation("RoslynAnalysis: Reloading projects {ProjectPaths}", string.Join(", ", projectModels.Select(p => p.FilePath)));
 		await _solutionLoadedTcs.Task;
 		Guard.Against.Null(_workspace, nameof(_workspace));
 		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
@@ -237,12 +241,15 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.Internal, cancellationToken);
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(CustomMsBuildProjectLoader)}.{nameof(CustomMsBuildProjectLoader.LoadProjectInfosAsync)}");
 
-		var thisProject = GetProjectForSharpIdeProjectModel(projectModel);
 		var oldSolution = _workspace.CurrentSolution;
 
 		// we can reliably rely on the Solution's graph of project inter-references, as a project has only been reloaded - no projects have been added or removed from the solution
-		var dependentProjects = oldSolution.GetProjectDependencyGraph().GetProjectsThatTransitivelyDependOnThisProject(thisProject.Id);
-		var projectPathsToReload = dependentProjects.Select(id => oldSolution.GetProject(id)!.FilePath!).Append(thisProject.FilePath!).Distinct().ToList();
+		var dependencyGraph = oldSolution.GetProjectDependencyGraph();
+		var projectPathsToReload = projectModels
+			.Select(GetProjectForSharpIdeProjectModel)
+			.SelectMany(project => dependencyGraph.GetProjectsThatTransitivelyDependOnThisProject(project.Id).Select(id => oldSolution.GetProject(id)!.FilePath!).Append(project.FilePath!))
+			.Distinct()
+			.ToList();
 		//var projectMap = ProjectMap.Create(oldSolution); // using a projectMap may speed up LoadProjectInfosAsync, TODO: test
 		// This will get all projects necessary to build this group of projects, regardless of whether those projects are actually affected by the original project change
 		// We can potentially optimise this, but given this is the expensive part, lets just proceed with reloading them all in the solution
@@ -360,7 +367,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		_logger.LogInformation("RoslynAnalysis: Reloading {ProjectCount} projects that reference an analyzer that changed", projectsToReload.Count);
 		foreach (var project in projectsToReload)
 		{
-			var sharpIdeProjectModel = _sharpIdeSolutionModel!.AllProjects.Single(p => p.FilePath == project.FilePath);
+			var sharpIdeProjectModel = _sharpIdeSolutionModel!.AllProjects.Single(p => PathComparison.PathEquals(p.FilePath, project.FilePath));
 			await ReloadProject(sharpIdeProjectModel, cancellationToken);
 		}
 
@@ -573,7 +580,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private async Task<Document> GetDocumentForSharpIdeFile(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = fileModel.IsCsharpFile ? project.Documents.SingleOrDefault(s => s.FilePath == fileModel.Path)
+		var document = fileModel.IsCsharpFile ? project.Documents.SingleOrDefault(s => PathComparison.PathEquals(s.FilePath, fileModel.Path))
 				: await GetRazorSourceGeneratedDocumentInProjectForSharpIdeFile(project, fileModel, cancellationToken);
 		Guard.Against.Null(document, nameof(document));
 		return document;
@@ -581,7 +588,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private static async Task<SourceGeneratedDocument> GetRazorSourceGeneratedDocumentInProjectForSharpIdeFile(Project project, SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
-		var razorDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var razorDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
@@ -602,7 +609,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			//throw new InvalidOperationException("File is not a .razor file");
 		}
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var razorDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var razorDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
@@ -718,7 +725,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		}
 
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 		Guard.Against.Null(document, nameof(document));
 
 		var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
@@ -743,7 +750,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		}
 
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 		Guard.Against.Null(document);
 		return await DebuggerExpressionIntelliSenseSession.CreateAsync(document, debuggerStoppedPosition, cancellationToken);
 	}
@@ -1230,7 +1237,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		var project = GetProjectForSharpIdeFile(fileModel);
 
-		var additionalDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var additionalDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
@@ -1256,7 +1263,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan)> LookupSymbolInCs(SharpIdeFile fileModel, LinePosition linePosition)
 	{
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 		Guard.Against.Null(document, nameof(document));
 		var sourceText = await document.GetTextAsync();
 		var position = sourceText.GetPosition(linePosition);
@@ -1269,7 +1276,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan, TokenSemanticInfo? semanticInfo)> LookupSymbolSemanticInfoInCs(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
 		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => s.FilePath == fileModel.Path);
+		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 		Guard.Against.Null(document, nameof(document));
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.GetPosition(linePosition);
@@ -1285,7 +1292,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		var project = GetProjectForSharpIdeFile(fileModel);
 
-		var additionalDocument = project.AdditionalDocuments.Single(s => s.FilePath == fileModel.Path);
+		var additionalDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 
 		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
@@ -1613,7 +1620,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static Project GetProjectForSharpIdeProjectModel(SharpIdeProjectModel projectModel)
 	{
 		Guard.Against.Null(projectModel);
-		var projectsForProjectPath = _workspace!.CurrentSolution.Projects.Where(s => s.FilePath == projectModel.FilePath).ToList();
+		var projectsForProjectPath = _workspace!.CurrentSolution.Projects.Where(s => PathComparison.PathEquals(s.FilePath, projectModel.FilePath)).ToList();
 		if (projectsForProjectPath.Count is 0) throw new InvalidOperationException($"No project found in workspace for project path '{projectModel.FilePath}'");
 		if (projectsForProjectPath.Count is 1)
 		{

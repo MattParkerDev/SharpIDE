@@ -8,19 +8,17 @@ public static class IntermediateMapper
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity();
 
-		// Remove any projects that aren't csproj, TODO: Instead of removing, display in the solution explorer that the project type isn't supported
-		foreach (var vsSolutionSolutionProject in vsSolution.SolutionProjects.Where(s => s.Extension is not ".csproj").ToList())
-		{
-			vsSolution.RemoveProject(vsSolutionSolutionProject);
-		}
+		// Skip any projects that aren't csproj, TODO: Instead of skipping, display in the solution explorer that the project type isn't supported
+		// Filtered, not removed from vsSolution - it is saved back to disk when the IDE edits the solution, which would delete them from the user's solution file
+		var csprojProjects = vsSolution.SolutionProjects.Where(s => s.Extension is ".csproj").ToList();
 
 		var rootFolders = vsSolution.SolutionFolders
 			.Where(f => f.Parent is null)
-			.Select(f => GetSlnFolderModel(f, solutionFilePath, vsSolution.SolutionFolders, vsSolution.SolutionProjects))
+			.Select(f => GetSlnFolderModel(f, solutionFilePath, vsSolution.SolutionFolders, csprojProjects))
 			.OrderBy(s => s.Model.Name)
 			.ToList();
 
-		var rootProjects = vsSolution.SolutionProjects
+		var rootProjects = csprojProjects
 			.Where(p => p.Parent is null)
 			.Select(s => s.GetProjectModel(solutionFilePath))
 			.OrderBy(s => s.Model.ActualDisplayName)

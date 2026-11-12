@@ -24,7 +24,7 @@ public class SharpIdeRootFolder : SharpIdeFolder
 		Files = new ObservableList<SharpIdeFile>(folderInfo.GetFiles(this, allFiles));
 		Folders = new ObservableList<SharpIdeFolder>(this.GetSubFolders(this, allFiles, allFolders));
 
-		AllFiles = new ConcurrentDictionary<string, SharpIdeFile>(allFiles.DistinctBy(s => s.Path).ToDictionary(s => s.Path));
+		AllFiles = new ConcurrentDictionary<string, SharpIdeFile>(allFiles.DistinctBy(s => s.Path, PathComparison.Comparer).Select(s => KeyValuePair.Create(s.Path, s)), PathComparison.Comparer);
 		AllFolders = new ObservableList<SharpIdeFolder>(allFolders);
 	}
 

@@ -25,6 +25,8 @@ public class FileChangedService
 	private int _batchDepth;
 	private bool _workspaceAlteredDuringBatch;
 	private readonly List<WorkspaceFileOperation> _pendingFileOperations = [];
+	private bool _pendingSolutionReload;
+	private readonly HashSet<SharpIdeProjectModel> _pendingProjectReloads = [];
 	// Processes one batch at a time, in order, so Roslyn always ends up with the latest text of each open file
 	private readonly Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue<(SharpIdeFile File, SourceText Text)> _openFileTextChangedQueue;
 
@@ -40,9 +42,14 @@ public class FileChangedService
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
 
 	// Moves and removals apply to any file - e.g. a txt AdditionalFile from the project's evaluation - and are a no-op if Roslyn doesn't have it
-	public Task SharpIdeFileRenamed(SharpIdeFile file, string oldFilePath) => ApplyOrDeferFileOperation(new WorkspaceFileOperation.Move(file, oldFilePath)); // TODO: handle csproj renamed
+	public Task SharpIdeFileRenamed(SharpIdeFile file, string oldFilePath) => SharpIdeFileMoved(file, oldFilePath);
 
-	public Task SharpIdeFileMoved(SharpIdeFile file, string oldFilePath) => ApplyOrDeferFileOperation(new WorkspaceFileOperation.Move(file, oldFilePath)); // TODO: handle csproj moved
+	public async Task SharpIdeFileMoved(SharpIdeFile file, string oldFilePath)
+	{
+		await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Move(file, oldFilePath));
+		// A project the solution references has moved away from (or onto) its path - IDE moves update the solution file to follow it first
+		if (IsSolutionProjectPath(oldFilePath) || IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true);
+	}
 
 	public async Task SharpIdeFileAdded(SharpIdeFile file, string content)
 	{
@@ -50,14 +57,22 @@ public class FileChangedService
 		{
 			await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Add(file, content));
 		}
-		// TODO: handle csproj added
+		// e.g. a project the solution references, which was missing, has been checked out
+		if (IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true);
 	}
 
 	public async Task SharpIdeFileRemoved(SharpIdeFile file)
 	{
 		await file.FileDeleted.InvokeParallelAsync();
 		await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Remove(file.Path));
+		if (IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true); // Now shown as missing
 	}
+
+	/// A csproj the solution references. Projects that aren't in the solution aren't loaded, so adding or removing one doesn't matter (as in VS).
+	private bool IsSolutionProjectPath(string filePath) =>
+		SolutionModel is not null &&
+		filePath.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) &&
+		SolutionModel.AllProjects.Any(p => FilePathNormalizer.AreFilePathsEquivalent(p.FilePath, filePath));
 
 	public async Task AnalyzerDllFilesChanged(ImmutableArray<string> changedDllPaths)
 	{
@@ -131,12 +146,54 @@ public class FileChangedService
 		if (await _roslynAnalysis.UpdateDocuments(closedFiles)) OnWorkspaceAltered();
 	}
 
-	private Task HandleProjectSystemFileSaved(SharpIdeFile file) => file switch
+	private Task HandleProjectSystemFileSaved(SharpIdeFile file)
 	{
-		{ IsSlnFile: true } => HandleSlnChanged(file),
-		{ IsCsprojFile: true } => HandleCsprojChanged(file),
-		_ => Task.CompletedTask
-	};
+		if (SolutionModel is null) return Task.CompletedTask;
+		if (file.IsSlnFile && FilePathNormalizer.AreFilePathsEquivalent(file.Path, SolutionModel.FilePath)) return ApplyOrDeferProjectSystemChange(reloadSolution: true);
+		if (file.IsCsprojFile && SolutionModel.AllProjects.FirstOrDefault(p => FilePathNormalizer.AreFilePathsEquivalent(p.FilePath, file.Path)) is { } project)
+		{
+			return ApplyOrDeferProjectSystemChange(reloadSolution: false, project);
+		}
+		return Task.CompletedTask;
+	}
+
+	/// Applied now, or once at the end of the batch - so e.g. a git checkout changing the sln and several csproj files reloads once
+	private async Task ApplyOrDeferProjectSystemChange(bool reloadSolution, SharpIdeProjectModel? projectToReload = null)
+	{
+		lock (_batchLock)
+		{
+			if (_batchDepth > 0)
+			{
+				_pendingSolutionReload |= reloadSolution;
+				if (projectToReload is not null) _pendingProjectReloads.Add(projectToReload);
+				return;
+			}
+		}
+		await ApplyProjectSystemChanges(reloadSolution, projectToReload is null ? [] : [projectToReload]);
+	}
+
+	private async Task ApplyProjectSystemChanges(bool reloadSolution, IReadOnlyCollection<SharpIdeProjectModel> projectsToReload)
+	{
+		if (reloadSolution is false && projectsToReload.Count is 0) return;
+		if (reloadSolution)
+		{
+			// Re-reads the solution file (adding, removing and re-resolving projects), and reloads every project in Roslyn
+			await _sharpIdeSolutionService.ReloadSolution();
+			// Projects kept by the reload keep their MSBuild evaluation, so re-evaluate any whose csproj changed too
+			var keptProjects = projectsToReload.Where(SolutionModel.AllProjects.Contains).ToList();
+			foreach (var project in keptProjects) project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
+			await Task.WhenAll(keptProjects.Select(p => p.MsBuildEvaluationProjectTask));
+		}
+		else
+		{
+			foreach (var project in projectsToReload) project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
+			await Task.WhenAll(projectsToReload.Select(p => p.MsBuildEvaluationProjectTask));
+			await _roslynAnalysis.ReloadProjects(projectsToReload, CancellationToken.None);
+		}
+		// Reloaded projects read their documents from disk - put back the editors' text of open files, which may be unsaved
+		await _roslynAnalysis.UpdateDocuments(_openTabsFileManager.GetOpenFileTexts());
+		OnWorkspaceAltered();
+	}
 
 	private void OnWorkspaceAltered()
 	{
@@ -166,6 +223,8 @@ public class FileChangedService
 	{
 		List<WorkspaceFileOperation> operations;
 		bool workspaceAltered;
+		bool reloadSolution;
+		List<SharpIdeProjectModel> projectsToReload;
 		lock (_batchLock)
 		{
 			if (--_batchDepth > 0) return;
@@ -173,30 +232,20 @@ public class FileChangedService
 			_pendingFileOperations.Clear();
 			workspaceAltered = _workspaceAlteredDuringBatch;
 			_workspaceAlteredDuringBatch = false;
+			reloadSolution = _pendingSolutionReload;
+			_pendingSolutionReload = false;
+			projectsToReload = [.._pendingProjectReloads];
+			_pendingProjectReloads.Clear();
 		}
 		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) workspaceAltered = true;
+		// After the file operations, so a project reload sees the files' current paths
+		await ApplyProjectSystemChanges(reloadSolution, projectsToReload);
 		if (workspaceAltered) OnWorkspaceAltered();
 	}
 
 	private async ValueTask ProcessBatchAsync(CancellationToken cancellationToken)
 	{
 		await _roslynAnalysis.UpdateSolutionDiagnostics(cancellationToken);
-	}
-
-	private async Task HandleCsprojChanged(SharpIdeFile file)
-	{
-		var project = SolutionModel.AllProjects.SingleOrDefault(p => p.FilePath == file.Path);
-		if (project is null) return;
-		project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
-		await project.MsBuildEvaluationProjectTask;
-		await _roslynAnalysis.ReloadProject(project, CancellationToken.None);
-		OnWorkspaceAltered();
-	}
-
-	private async Task HandleSlnChanged(SharpIdeFile file)
-	{
-		if (FilePathNormalizer.AreFilePathsEquivalent(file.Path, SolutionModel.FilePath) is false) return;
-		await _sharpIdeSolutionService.ReloadSolution();
 	}
 
 	/// Applied now, or with the rest of the batch if one is in progress

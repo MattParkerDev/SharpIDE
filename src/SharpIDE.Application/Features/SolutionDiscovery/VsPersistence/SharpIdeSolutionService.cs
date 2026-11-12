@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.FileSystem;
+using SharpIDE.Application.Features.FileWatching;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
@@ -74,8 +75,8 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 
 		foreach (var entry in status.Where(s => s.State is not FileStatus.Ignored))
 		{
-			// Assumes solution file is at git repo root
-			var filePath = new FileInfo(Path.Combine(solutionModel.DirectoryPath, entry.FilePath)).FullName; // used to normalise path separators
+			// Relative to the repository root, which may be above the solution's directory
+			var filePath = new FileInfo(Path.Combine(repo.Info.WorkingDirectory, entry.FilePath)).FullName; // used to normalise path separators
 			var fileInSolution = solutionModel.AllFiles.GetValueOrDefault(filePath);
 			if (fileInSolution is null) continue;
 
@@ -194,6 +195,31 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 		}
 		if (renamedAny is false) return;
 		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+	}
+
+	/// Call after the IDE has moved or renamed a project file, or a folder containing project files, on disk - so the solution keeps referencing them, as in VS.
+	/// Unlike the methods above, the caller reloads the solution (the moved csproj triggers it, once its batch ends), so the save's stamp is recorded for the watcher to ignore.
+	/// Must be called under IdeFileSystemLock.
+	public async Task UpdateProjectPathsAfterMove(string oldPath, string newPath, CancellationToken cancellationToken = default)
+	{
+		if (_vsSolution is null || _solutionSerializer is null || _solutionFilePath is null) return;
+		var solutionDirectory = Path.GetDirectoryName(_solutionFilePath)!;
+		var oldFolderPrefix = Path.TrimEndingDirectorySeparator(oldPath) + Path.DirectorySeparatorChar;
+		var updatedAny = false;
+		foreach (var vsProject in _vsSolution.SolutionProjects)
+		{
+			var projectFullPath = Path.GetFullPath(Path.Combine(solutionDirectory, vsProject.FilePath));
+			var newProjectFullPath = FilePathNormalizer.AreFilePathsEquivalent(projectFullPath, oldPath) ? newPath
+				: projectFullPath.StartsWith(oldFolderPrefix, StringComparison.OrdinalIgnoreCase) ? Path.Combine(newPath, projectFullPath[oldFolderPrefix.Length..])
+				: null;
+			if (newProjectFullPath is null) continue;
+			// Relative to the sln file directory, as in AddProject
+			vsProject.FilePath = Path.GetRelativePath(solutionDirectory, newProjectFullPath).Replace('\\', '/');
+			updatedAny = true;
+		}
+		if (updatedAny is false) return;
+		await _solutionSerializer.SaveAsync(_solutionFilePath, _vsSolution, cancellationToken);
+		if (_sharpIdeSolutionModel?.AllFiles.GetValueOrDefault(_solutionFilePath) is { } solutionFile) solutionFile.DiskStamp = FileStamp.TryRead(_solutionFilePath);
 	}
 
 	// Same as AddProject - we rely on the sln change from disk to update the SharpIdeSolutionModel

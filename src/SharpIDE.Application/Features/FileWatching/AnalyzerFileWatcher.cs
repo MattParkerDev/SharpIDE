@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Threading;
 using SharpIDE.Application.Features.Events;
+using SharpIDE.Application.Features.FileSystem;
 
 namespace SharpIDE.Application.Features.FileWatching;
 
@@ -16,7 +17,7 @@ public class AnalyzerFileWatcher
 		_fileChangedQueue = new AsyncBatchingWorkQueue<string>(
 			TimeSpan.FromMilliseconds(500),
 			async (filePaths, ct) => await GlobalEvents.Instance.AnalyzerDllsChanged.InvokeParallelAsync(filePaths.ToImmutableArray()),
-			StringComparer.Ordinal,
+			PathComparison.Comparer,
 			new AsynchronousOperationListenerProvider.NullOperationListener(),
 			CancellationToken.None);
 	}
@@ -25,7 +26,7 @@ public class AnalyzerFileWatcher
 	public Task StartWatchingFiles(ImmutableArray<string> filePaths)
 	{
 		var newWatchers = filePaths
-			.GroupBy(path => Path.GetDirectoryName(path)!, StringComparer.Ordinal)
+			.GroupBy(path => Path.GetDirectoryName(path)!, PathComparison.Comparer)
 			.Where(group => Directory.Exists(group.Key))
 			.Select(group =>
 			{

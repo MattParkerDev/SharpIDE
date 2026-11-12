@@ -55,7 +55,8 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 		};
 		return await Task.Run(async () =>
 		{
-			if (Folder is null)
+			// Not Folder is null - a project outside the root folder (e.g. on another drive) has no folder, but can still load
+			if (File.Exists(FilePath) is false)
 			{
 				var missingResult = new MsBuildProjectInstanceLoadResult
 				{

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using SharpIDE.Application.Features.FileWatching;
+using SharpIDE.Application.Features.FileSystem;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery;
 
@@ -13,7 +14,7 @@ public static class TreeMapperV2
 	/// True if any folder in the path below rootPath is excluded (e.g. bin, obj). Allocation free.
 	public static bool IsInExcludedFolder(string rootPath, string fullPath)
 	{
-		if (fullPath.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase) is false) return true; // Not ours
+		if (PathComparison.IsSameOrUnder(fullPath, rootPath) is false) return true; // Not ours
 		var relativePath = fullPath.AsSpan(rootPath.Length);
 		foreach (var segmentRange in relativePath.SplitAny(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
 		{

@@ -59,7 +59,7 @@ public class IdeFileExternalChangeHandler
 		}
 		else
 		{
-			var pathsToCheck = new HashSet<string>(StringComparer.Ordinal);
+			var pathsToCheck = new HashSet<string>(PathComparison.Comparer);
 			foreach (var hint in hints)
 			{
 				if (hint.RenamedFromPath is { } oldPath && await reconcile.TryRename(oldPath, hint.Path) is false)
@@ -120,7 +120,9 @@ public class IdeFileExternalChangeHandler
 
 		public async Task<bool> TryRename(string oldPath, string newPath)
 		{
-			if (File.Exists(oldPath) || Directory.Exists(oldPath)) return false; // Not a plain rename (e.g. something was put back) - just check both paths
+			// e.g. Foo.cs -> foo.cs. On a case insensitive file system the old path still "exists", and the model already "has" the new one.
+			var isCaseOnlyRename = PathComparison.PathEquals(oldPath, newPath) && string.Equals(oldPath, newPath, StringComparison.Ordinal) is false;
+			if (isCaseOnlyRename is false && (File.Exists(oldPath) || Directory.Exists(oldPath))) return false; // Not a plain rename (e.g. something was put back) - just check both paths
 			var newParent = FindFolder(System.IO.Path.GetDirectoryName(newPath)!);
 			if (newParent is null) return false;
 			var newName = System.IO.Path.GetFileName(newPath);
@@ -128,7 +130,7 @@ public class IdeFileExternalChangeHandler
 			{
 				if (_root.AllFiles.TryGetValue(oldPath, out var file))
 				{
-					if (_root.AllFiles.ContainsKey(newPath) || File.Exists(newPath) is false) return false;
+					if ((isCaseOnlyRename is false && _root.AllFiles.ContainsKey(newPath)) || File.Exists(newPath) is false) return false;
 					if (file.Parent != newParent) await _modificationService.MoveFile(newParent, file);
 					if (file.Name.Value != newName) await _modificationService.RenameFile(file, newName);
 					OperationCount++;
@@ -136,7 +138,7 @@ public class IdeFileExternalChangeHandler
 				}
 				if (FindFolder(oldPath) is { } folder && folder != _root)
 				{
-					if (FindFolder(newPath) is not null || Directory.Exists(newPath) is false) return false;
+					if ((isCaseOnlyRename is false && FindFolder(newPath) is not null) || Directory.Exists(newPath) is false) return false;
 					if (folder.Parent != newParent) await _modificationService.MoveDirectory(newParent, folder);
 					if (folder.Name.Value != newName) await _modificationService.RenameDirectory(folder, newName);
 					_foldersByPath = null; // Paths below it changed
@@ -192,11 +194,11 @@ public class IdeFileExternalChangeHandler
 			{
 				var directoryInfo = new DirectoryInfo(folder.Path);
 				if (directoryInfo.Exists is false) return; // Its parent's comparison removes it
-				var diskFiles = directoryInfo.EnumerateFiles().ToDictionary(f => f.FullName, StringComparer.Ordinal);
+				var diskFiles = directoryInfo.EnumerateFiles().ToDictionary(f => f.FullName, PathComparison.Comparer);
 				var diskFolderPaths = directoryInfo.EnumerateDirectories("*", new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint })
 					.Where(d => TreeMapperV2.IsExcludedFolderName(d.Name) is false)
 					.Select(d => d.FullName)
-					.ToHashSet(StringComparer.Ordinal);
+					.ToHashSet(PathComparison.Comparer);
 
 				foreach (var file in folder.Files.ToList())
 				{
@@ -269,10 +271,10 @@ public class IdeFileExternalChangeHandler
 
 		private SharpIdeFolder? FindFolder(string path)
 		{
-			if (string.Equals(path, _root.Path, StringComparison.Ordinal)) return _root;
+			if (PathComparison.PathEquals(path, _root.Path)) return _root;
 			if (_foldersByPath is null)
 			{
-				_foldersByPath = new Dictionary<string, SharpIdeFolder>(StringComparer.Ordinal);
+				_foldersByPath = new Dictionary<string, SharpIdeFolder>(PathComparison.Comparer);
 				foreach (var folder in _root.AllFolders) _foldersByPath.TryAdd(folder.Path, folder);
 			}
 			return _foldersByPath.GetValueOrDefault(path);

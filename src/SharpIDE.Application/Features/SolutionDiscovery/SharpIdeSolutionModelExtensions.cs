@@ -1,4 +1,5 @@
 ﻿using ObservableCollections;
+using SharpIDE.Application.Features.FileSystem;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery;
 
@@ -6,7 +7,8 @@ public static class SharpIdeSolutionModelExtensions
 {
 	public static SharpIdeProjectModel? GetProjectForContainingFolderPath(this SharpIdeSolutionModel solution, SharpIdeFolder folder)
 	{
-		var sharpIdeProject = solution.AllProjects.SingleOrDefault(s => s.DirectoryPath == folder.Path);
+		// First, not Single - two csproj files may share a folder
+		var sharpIdeProject = solution.AllProjects.FirstOrDefault(s => PathComparison.PathEquals(s.DirectoryPath, folder.Path));
 		return sharpIdeProject;
 	}
 
@@ -32,12 +34,12 @@ public static class SharpIdeSolutionModelExtensions
 	{
 		// Projects whose Folder null-state changed: remove old, re-add new
 		var changedExistingProjects = existing
-			.Join(updated, p => p.FilePath, np => np.FilePath, (p, np) => (Old: p, New: np))
+			.Join(updated, p => p.FilePath, np => np.FilePath, (p, np) => (Old: p, New: np), PathComparison.Comparer)
 			.Where(pair => (pair.Old.Folder is null) != (pair.New.Folder is null))
 			.ToList();
 
-		List<SharpIdeProjectModel> toRemove = [..existing.ExceptBy(updated.Select(np => np.FilePath), p => p.FilePath), ..changedExistingProjects.Select(pair => pair.Old)];
-		List<SharpIdeProjectModel> toAdd = [..updated.ExceptBy(existing.Select(p => p.FilePath), np => np.FilePath), ..changedExistingProjects.Select(pair => pair.New)];
+		List<SharpIdeProjectModel> toRemove = [..existing.ExceptBy(updated.Select(np => np.FilePath), p => p.FilePath, PathComparison.Comparer), ..changedExistingProjects.Select(pair => pair.Old)];
+		List<SharpIdeProjectModel> toAdd = [..updated.ExceptBy(existing.Select(p => p.FilePath), np => np.FilePath, PathComparison.Comparer), ..changedExistingProjects.Select(pair => pair.New)];
 		foreach (var s in toRemove) existing.Remove(s);
 		foreach (var s in toAdd) existing.Insert(GetInsertionPosition(existing, s), s);
 	}
@@ -46,11 +48,11 @@ public static class SharpIdeSolutionModelExtensions
 	{
 		// Solution files whose .File null-state changed: remove old, re-add new
 		var changedExistingSolutionItemFiles = existing
-			.Join(updated, p => p.Path, np => np.Path, (p, np) => (Old: p, New: np))
+			.Join(updated, p => p.Path, np => np.Path, (p, np) => (Old: p, New: np), PathComparison.Comparer)
 			.Where(pair => (pair.Old.File is null) != (pair.New.File is null))
 			.ToList();
-		List<SharpIdeSolutionItemFile> toRemove = [..existing.ExceptBy(updated.Select(np => np.Path), p => p.Path), ..changedExistingSolutionItemFiles.Select(pair => pair.Old)];
-		List<SharpIdeSolutionItemFile> toAdd = [..updated.ExceptBy(existing.Select(p => p.Path), np => np.Path), ..changedExistingSolutionItemFiles.Select(pair => pair.New)];
+		List<SharpIdeSolutionItemFile> toRemove = [..existing.ExceptBy(updated.Select(np => np.Path), p => p.Path, PathComparison.Comparer), ..changedExistingSolutionItemFiles.Select(pair => pair.Old)];
+		List<SharpIdeSolutionItemFile> toAdd = [..updated.ExceptBy(existing.Select(p => p.Path), np => np.Path, PathComparison.Comparer), ..changedExistingSolutionItemFiles.Select(pair => pair.New)];
 		foreach (var s in toRemove) existing.Remove(s);
 		foreach (var s in toAdd) existing.Insert(GetInsertionPosition(existing, s), s);
 	}

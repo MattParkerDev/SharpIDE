@@ -25,6 +25,12 @@ public class IdeOpenTabsFileManager(IdeFileSystemLock fileSystemLock, ILogger<Id
 
 	public bool IsOpen(SharpIdeFile file) => _openFiles.ContainsKey(file);
 
+	/// The current (editor) text of each open file that has loaded
+	public IReadOnlyList<(SharpIdeFile File, SourceText Text)> GetOpenFileTexts() => _openFiles
+		.Where(s => s.Value.IsValueCreated && s.Value.Value.IsCompletedSuccessfully)
+		.Select(s => (s.Key, s.Value.Value.Result))
+		.ToList();
+
 	/// Returns false if the file is not open, e.g. a late text change from an editor that is closing
 	public bool TryUpdateFileTextInMemory(SharpIdeFile file, SourceText newText)
 	{
