@@ -178,7 +178,7 @@ public partial class NugetPanel : Control
 			SharpIdeProjectModel projectModel => [projectModel],
 			_ => throw new InvalidOperationException("Unknown solution or project type")
 		};
-		var installedPackages = await ProjectEvaluation.GetPackageReferencesForProjects(projects);
+		var (installedPackages, unrestoredProjects) = await ProjectEvaluation.GetPackageReferencesForProjects(projects);
 		var idePackageResult = await _nugetClientService.GetPackagesForInstalledPackages(slnOrProject.DirectoryPath, installedPackages);
 		var scenes = idePackageResult.Select(s =>
 		{
@@ -209,7 +209,13 @@ public partial class NugetPanel : Control
 			{
 				_installedPackagesVboxContainer.AddChild(directScene);
 			}
-			_installedPackagesResultCountLabel.Text = directScenes.Count.ToString();
+			// Projects that aren't loaded or restored have no project.assets.json to read their packages from
+			_installedPackagesResultCountLabel.Text = unrestoredProjects.Count is 0
+				? directScenes.Count.ToString()
+				: $"{directScenes.Count} ({unrestoredProjects.Count} {(unrestoredProjects.Count is 1 ? "project" : "projects")} not restored)";
+			_installedPackagesResultCountLabel.TooltipText = unrestoredProjects.Count is 0
+				? string.Empty
+				: $"Not restored, so their packages aren't listed:\n{string.Join("\n", unrestoredProjects.Select(p => p.Name.Value))}";
 			_implicitlyInstalledPackagesResultCountLabel.Text = transitiveScenes.Count.ToString();
 		});
 	}

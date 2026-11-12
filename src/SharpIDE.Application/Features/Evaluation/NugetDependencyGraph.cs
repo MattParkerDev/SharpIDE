@@ -10,16 +10,12 @@ public class Dependent
 }
 public static class NugetDependencyGraph
 {
-	internal static Dictionary<string, List<Dependent>> GetPackageDependencyMap(LockFile assetsFile)
+	/// For one target (framework, and optionally RID) of an assets file - a multi-targeted project has a target per framework
+	internal static Dictionary<string, List<Dependent>> GetPackageDependencyMap(LockFileTarget target)
 	{
 		var parentMap = new Dictionary<string, List<Dependent>>(StringComparer.OrdinalIgnoreCase);
 
-		var target = assetsFile.Targets.SingleOrDefault(s => s.RuntimeIdentifier is null);
-		if (target == null) return parentMap;
-
-		var packageLibraries = target.Libraries.ToList();
-
-		foreach (var library in packageLibraries)
+		foreach (var library in target.Libraries)
 		{
 			var dependencies = library.Dependencies;
 			foreach (var packageDependency in dependencies)

@@ -1,5 +1,6 @@
 ﻿using NuGet.Common;
 using NuGet.Configuration;
+using NuGet.Packaging.Core;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using SharpIDE.Application.Features.Evaluation;
@@ -114,36 +115,73 @@ public class NugetClientService
 		var packageSourceProvider = new PackageSourceProvider(settings);
 		var packageSources = packageSourceProvider.LoadPackageSources().Where(p => p.IsEnabled).ToList();
 
-		var packagesResult = new List<IdePackageResult>();
-		foreach (var installedPackage in installedPackages)
+		// Each source's resources once, not once per package. A source that can't be reached is left out, rather than failing every package
+		var sourcesResources = (await Task.WhenAll(packageSources.Select(source => GetSourceResources(source, cancellationToken))).ConfigureAwait(false))
+			.OfType<SourceResources>()
+			.ToList();
+
+		// As dotnet list package --outdated does: be nice to HTTP sources, else bounded by the CPU
+		var maxParallel = packageSources.Any(s => s.IsHttp) ? 8 : Environment.ProcessorCount + 1;
+		var packagesResult = new IdePackageResult[installedPackages.Count];
+		await Parallel.ForEachAsync(Enumerable.Range(0, installedPackages.Count), new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = cancellationToken }, async (index, ct) =>
 		{
+			var installedPackage = installedPackages[index];
 			var isPrimarilyTransitive = installedPackage.ProjectPackageReferences.Any(p => p.IsTransitive is false) is false;
 			var installedNugetPackageInfo = new InstalledNugetPackageInfo(isPrimarilyTransitive, installedPackage.ProjectPackageReferences);
-			var idePackageResult = new IdePackageResult(installedPackage.Name, [], installedNugetPackageInfo);
 
-			foreach (var source in packageSources)
-			{
-				var repository = Repository.Factory.GetCoreV3(source.Source);
-				var metadataResource = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
+			var latestFromSources = await Task.WhenAll(sourcesResources.Select(async resources => (resources.Source, Latest: await GetLatestPackageMetadata(resources, installedPackage.Name, ct).ConfigureAwait(false)))).ConfigureAwait(false);
+			var packageFromSources = latestFromSources
+				.Where(s => s.Latest is not null)
+				.Select(s => new IdePackageFromSourceResult(s.Latest!, s.Source))
+				.ToList();
+			packagesResult[index] = new IdePackageResult(installedPackage.Name, packageFromSources, installedNugetPackageInfo);
+		}).ConfigureAwait(false);
+		return packagesResult.ToList();
+	}
 
-				if (metadataResource == null)
-					continue;
+	private sealed record SourceResources(PackageSource Source, FindPackageByIdResource? FindPackageById, PackageMetadataResource? PackageMetadata);
 
-				var foundPackages = (await metadataResource.GetMetadataAsync(installedPackage.Name, true, true, _sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false)).ToList();
-				var latestPackage = foundPackages.LastOrDefault(s => _includePrerelease || !s.Identity.Version.IsPrerelease);
-				if (latestPackage is null)
-				{
-					// _includePrerelease may be null, and this package may have only prerelease versions
-					latestPackage = foundPackages.LastOrDefault();
-				}
-				if (latestPackage != null)
-				{
-					idePackageResult.PackageFromSources.Add(new IdePackageFromSourceResult(latestPackage, source));
-				}
-			}
-
-			packagesResult.Add(idePackageResult);
+	private static async Task<SourceResources?> GetSourceResources(PackageSource source, CancellationToken cancellationToken)
+	{
+		try
+		{
+			var repository = Repository.Factory.GetCoreV3(source);
+			var findPackageById = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken).ConfigureAwait(false);
+			var packageMetadata = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
+			return findPackageById is null && packageMetadata is null ? null : new SourceResources(source, findPackageById, packageMetadata);
 		}
-		return packagesResult;
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			return null;
+		}
+	}
+
+	/// The latest version's metadata (latest stable, unless the package only has prereleases), or null if the source doesn't have the package.
+	/// Finds the latest version from the version list (the flat container's small, CDN-cached index.json on V3 feeds), then asks for that one version's
+	/// metadata - rather than the metadata of every version, which for a package with many versions is several registration pages
+	private async Task<IPackageSearchMetadata?> GetLatestPackageMetadata(SourceResources resources, string packageId, CancellationToken cancellationToken)
+	{
+		try
+		{
+			if (resources.FindPackageById is not null && resources.PackageMetadata is not null)
+			{
+				var versions = (await resources.FindPackageById.GetAllVersionsAsync(packageId, _sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false)).ToList();
+				if (versions.Count is 0) return null;
+				// _includePrerelease may be false, and this package may have only prerelease versions
+				var latestVersion = versions.Where(v => _includePrerelease || v.IsPrerelease is false).Max() ?? versions.Max()!;
+				var latest = await resources.PackageMetadata.GetMetadataAsync(new PackageIdentity(packageId, latestVersion), _sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false);
+				if (latest is not null) return latest;
+				// The version list and the metadata can briefly disagree (e.g. just published) - fall through to reading every version's metadata
+			}
+			if (resources.PackageMetadata is null) return null;
+
+			var foundPackages = (await resources.PackageMetadata.GetMetadataAsync(packageId, true, true, _sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false)).ToList();
+			return foundPackages.LastOrDefault(s => _includePrerelease || !s.Identity.Version.IsPrerelease) ?? foundPackages.LastOrDefault();
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			// The source failed for this package - the others' results still stand
+			return null;
+		}
 	}
 }
