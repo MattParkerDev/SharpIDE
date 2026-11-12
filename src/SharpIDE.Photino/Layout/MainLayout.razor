@@ -202,6 +202,7 @@
 	{
 		if (AppState.IdeSettings.OpenTerminalOnBuildRebuildRestore) SelectBottomPanel(BottomPanelType.Build);
 		_cancellationTokenSource = new CancellationTokenSource();
+		await BuildService.StartHostAsync(_solutionFilePath!); // No-op once started for this solution
 		await BuildService.MsBuildAsync(_solutionFilePath!, buildType, BuildStartedFlags.UserFacing, _cancellationTokenSource.Token);
 		_cancellationTokenSource = null;
 	}

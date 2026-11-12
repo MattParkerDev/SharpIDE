@@ -22,8 +22,6 @@
 
     <PackageVersion Include="Microsoft.Build" Version="18.14.0-1.26560.127" />
     <PackageVersion Include="Microsoft.Build.Framework" Version="18.14.0-1.26560.127" />
-    <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="18.14.0-1.26560.127" />
-    <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.14.0-1.26560.127" />
 
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.14.0-1.26561.1" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.14.0-1.26561.1" />

@@ -1,14 +1,9 @@
-﻿using Ardalis.GuardClauses;
-using Microsoft.Build.Evaluation;
-using Microsoft.Build.Exceptions;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
+using Ardalis.GuardClauses;
 using NuGet.Frameworks;
 using NuGet.ProjectModel;
 using NuGet.Versioning;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.SolutionDiscovery;
-using Project = Microsoft.Build.Evaluation.Project;
 
 namespace SharpIDE.Application.Features.Evaluation;
 
@@ -32,146 +27,33 @@ public sealed record MsBuildProjectLoadResult
 public sealed record MsBuildProjectInstanceLoadResult
 {
 	public MsBuildProjectLoadState LoadState { get; init; }
-	public Project? Project { get; init; }
+	/// Set when LoadState is Loaded
+	public MsBuildProjectSnapshot? Snapshot { get; init; }
 	public SharpIdeDiagnostic? Diagnostic { get; init; }
 }
 
+/// What the IDE needs from an evaluation of one project instance (the outer project, or one TFM), evaluated in SharpIDE.MsBuildHost.
+/// Equality is by reference - each evaluation is a new snapshot.
+public sealed class MsBuildProjectSnapshot(IReadOnlyDictionary<string, string> properties, string sdk, IReadOnlyList<MsBuildPackageReference> packageReferences)
+{
+	public IReadOnlyDictionary<string, string> Properties { get; } = properties;
+	/// The Sdk attribute of the Project element, e.g. Microsoft.NET.Sdk.BlazorWebAssembly. Empty if not set there.
+	public string Sdk { get; } = sdk;
+	public IReadOnlyList<MsBuildPackageReference> PackageReferences { get; } = packageReferences;
+
+	/// Empty if the property isn't set, like Project.GetPropertyValue
+	public string GetPropertyValue(string name) => Properties.GetValueOrDefault(name) ?? string.Empty;
+}
+
+public sealed record MsBuildPackageReference(string Name, string? Version);
+
 public static class ProjectEvaluation
 {
-	private static readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
-	public static async Task<MsBuildProjectLoadResult> LoadOrReloadProject(string projectFilePath)
-	{
-		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(LoadOrReloadProject)}");
-		Guard.Against.Null(projectFilePath, nameof(projectFilePath));
-
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-
-		if (File.Exists(projectFilePath) is false)
-		{
-			var missingResult = new MsBuildProjectInstanceLoadResult
-			{
-				LoadState = MsBuildProjectLoadState.Missing
-			};
-			return new MsBuildProjectLoadResult
-			{
-				OuterProjectLoadResult = missingResult,
-				TfmSpecificLoadResults = [],
-				DefaultActiveProjectLoadResult = missingResult
-			};
-		}
-
-		try
-		{
-			var loadedProjects = _projectCollection.GetLoadedProjects(projectFilePath);
-			var outerProject = loadedProjects.FirstOrDefault(project => project.GlobalProperties.ContainsKey("TargetFramework") is false);
-			if (outerProject is not null)
-			{
-				var projectRootElement = outerProject.Xml;
-				projectRootElement.Reload(false);
-				outerProject.ReevaluateIfNecessary();
-			}
-			else
-			{
-				outerProject = _projectCollection.LoadProject(projectFilePath);
-			}
-
-			var outerProjectLoadResult = new MsBuildProjectInstanceLoadResult
-			{
-				LoadState = MsBuildProjectLoadState.Loaded,
-				Project = outerProject
-			};
-
-			var targetFrameworks = outerProject.GetPropertyValue("TargetFrameworks")
-				.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-				.Distinct(StringComparer.OrdinalIgnoreCase)
-				.ToList();
-			if (targetFrameworks.Count == 0)
-			{
-				foreach (var innerProject in loadedProjects.Where(project => project.GlobalProperties.ContainsKey("TargetFramework")))
-				{
-					_projectCollection.UnloadProject(innerProject);
-				}
-
-				return new MsBuildProjectLoadResult
-				{
-					OuterProjectLoadResult = outerProjectLoadResult,
-					TfmSpecificLoadResults = [],
-					DefaultActiveProjectLoadResult = outerProjectLoadResult
-				};
-			}
-
-			var desiredTargetFrameworks = targetFrameworks.ToHashSet(StringComparer.OrdinalIgnoreCase);
-			var innerProjectsByTargetFramework = new Dictionary<string, Project>(StringComparer.OrdinalIgnoreCase);
-			foreach (var innerProject in loadedProjects.Where(project => project.GlobalProperties.TryGetValue("TargetFramework", out _)))
-			{
-				var targetFramework = innerProject.GlobalProperties["TargetFramework"];
-				if (desiredTargetFrameworks.Contains(targetFramework) is false || innerProjectsByTargetFramework.TryAdd(targetFramework, innerProject) is false)
-				{
-					_projectCollection.UnloadProject(innerProject);
-				}
-			}
-
-			var tfmSpecificLoadResults = new List<MsBuildProjectInstanceLoadResult>(targetFrameworks.Count);
-			foreach (var targetFramework in targetFrameworks)
-			{
-				try
-				{
-					if (innerProjectsByTargetFramework.TryGetValue(targetFramework, out var innerProject))
-					{
-						innerProject.ReevaluateIfNecessary();
-					}
-					else
-					{
-						innerProject = _projectCollection.LoadProject(projectFilePath, new Dictionary<string, string>
-						{
-							["TargetFramework"] = targetFramework
-						}, toolsVersion: null);
-					}
-
-					tfmSpecificLoadResults.Add(new MsBuildProjectInstanceLoadResult
-					{
-						LoadState = MsBuildProjectLoadState.Loaded,
-						Project = innerProject
-					});
-				}
-				catch (InvalidProjectFileException ex)
-				{
-					tfmSpecificLoadResults.Add(new MsBuildProjectInstanceLoadResult
-					{
-						LoadState = MsBuildProjectLoadState.Invalid,
-						Diagnostic = ex.ToDiagnostic()
-					});
-				}
-			}
-
-			return new MsBuildProjectLoadResult
-			{
-				OuterProjectLoadResult = outerProjectLoadResult,
-				TfmSpecificLoadResults = tfmSpecificLoadResults,
-				DefaultActiveProjectLoadResult = GetActiveProjectLoadResult(tfmSpecificLoadResults)
-			};
-		}
-		catch (InvalidProjectFileException ex)
-		{
-			var invalidResult = new MsBuildProjectInstanceLoadResult
-			{
-				LoadState = MsBuildProjectLoadState.Invalid,
-				Diagnostic = ex.ToDiagnostic()
-			};
-			return new MsBuildProjectLoadResult
-			{
-				OuterProjectLoadResult = invalidResult,
-				TfmSpecificLoadResults = [],
-				DefaultActiveProjectLoadResult = invalidResult
-			};
-		}
-	}
-
-	private static MsBuildProjectInstanceLoadResult GetActiveProjectLoadResult(List<MsBuildProjectInstanceLoadResult> loadResults)
+	internal static MsBuildProjectInstanceLoadResult GetActiveProjectLoadResult(List<MsBuildProjectInstanceLoadResult> loadResults)
 	{
 		var loadedProjects = loadResults
-			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Project: not null })
-			.Select(result => (Result: result, Framework: NuGetFramework.Parse(result.Project!.GetPropertyValue("TargetFramework"))))
+			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Snapshot: not null })
+			.Select(result => (Result: result, Framework: NuGetFramework.Parse(result.Snapshot!.GetPropertyValue("TargetFramework"))))
 			.ToList();
 
 		if (loadedProjects.Count is 0) return loadResults[0];
@@ -192,28 +74,6 @@ public static class ProjectEvaluation
 			.First();
 	}
 
-	public static void ClearLoadedProjects()
-	{
-		_projectCollection.UnloadAllProjects();
-	}
-
-	public static Guid GetOrCreateDotnetUserSecretsId(SharpIdeProjectModel projectModel)
-	{
-		Guard.Against.Null(projectModel, nameof(projectModel));
-
-		var project = _projectCollection.GetLoadedProjects(projectModel.FilePath).Single(project => project.GlobalProperties.ContainsKey("TargetFramework") is false);
-		var projectRootElement = project.Xml;
-		var userSecretsId = project.GetPropertyValue("UserSecretsId");
-		if (string.IsNullOrWhiteSpace(userSecretsId))
-		{
-			var newGuid = Guid.NewGuid();
-			var property = projectRootElement.AddProperty("UserSecretsId", newGuid.ToString());
-			project.Save();
-			return newGuid;
-		}
-		return Guid.Parse(userSecretsId);
-	}
-
 	public static async Task<List<InstalledPackage>> GetPackageReferencesForProjects(List<SharpIdeProjectModel> projectModels, bool includeTransitive = true)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(GetPackageReferencesForProjects)}");
@@ -221,7 +81,7 @@ public static class ProjectEvaluation
 
 		var projects = projectModels.Select(s =>
 		{
-			var proj = s.ActiveMsBuildEvaluationProject;
+			var proj = s.ActiveMsBuildSnapshot;
 			var assetsPath = proj.GetPropertyValue("ProjectAssetsFile");
 
 			if (File.Exists(assetsPath) is false)
@@ -245,7 +105,7 @@ public static class ProjectEvaluation
 		{
 			var dependencyMap = NugetDependencyGraph.GetPackageDependencyMap(assetsFile);
 
-			var activeTargetFramework = project.ActiveMsBuildEvaluationProject.GetPropertyValue("TargetFramework");
+			var activeTargetFramework = project.ActiveMsBuildSnapshot.GetPropertyValue("TargetFramework");
 			var target = assetsFile.Targets.FirstOrDefault(t =>
 				t.RuntimeIdentifier == null &&
 				t.TargetFramework.GetShortFolderName().Equals(activeTargetFramework, StringComparison.OrdinalIgnoreCase));
@@ -292,14 +152,6 @@ public static class ProjectEvaluation
 			}
 		}
 		return allPackages.Values.ToList();
-	}
-
-	private static SharpIdeDiagnostic ToDiagnostic(this InvalidProjectFileException ex)
-	{
-		var linePosition = new LinePosition(ex.LineNumber - 1, ex.ColumnNumber - 1);
-		var linePositionSpan = new LinePositionSpan(linePosition, linePosition);
-		var diagnostic = Diagnostic.Create(new DiagnosticDescriptor(id: ex.ErrorCode, title: string.Empty, ex.BaseMessage, ex.ErrorSubcategory ?? "MSBuild", DiagnosticSeverity.Error, isEnabledByDefault: true, helpLinkUri: ex.HelpLink), Location.Create(ex.ProjectFile, TextSpan.FromBounds(0, 0), linePositionSpan));
-		return new SharpIdeDiagnostic(linePositionSpan, diagnostic, ex.ProjectFile);
 	}
 }
 

@@ -10,7 +10,7 @@ public partial class SharpIdeCodeEdit
 	{
 		if (_project is null || index < 0) return;
 		var tfmSpecificLoadResults = _project.TfmSpecificLoadResults.Value
-			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Project: not null })
+			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Snapshot: not null })
 			.ToList();
 		if (index >= tfmSpecificLoadResults.Count) return;
 
@@ -23,7 +23,7 @@ public partial class SharpIdeCodeEdit
 	{
 		if (_project is null) return;
 		var loadResults = _project.TfmSpecificLoadResults.Value
-			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Project: not null })
+			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Snapshot: not null })
 			.ToList();
 
 		_tfmOptionButton.Clear();
@@ -35,7 +35,7 @@ public partial class SharpIdeCodeEdit
 
 		foreach (var loadResult in loadResults)
 		{
-			_tfmOptionButton.AddItem(loadResult.Project!.GetPropertyValue("TargetFramework"));
+			_tfmOptionButton.AddItem(loadResult.Snapshot!.GetPropertyValue("TargetFramework"));
 		}
 
 		var selectedIndex = loadResults.IndexOf(_project.ActiveMsBuildProjectLoadResult.Value);
@@ -48,7 +48,7 @@ public partial class SharpIdeCodeEdit
 	{
 		if (_project is null) return;
 		var selectedIndex = _project.TfmSpecificLoadResults.Value
-			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Project: not null })
+			.Where(result => result is { LoadState: MsBuildProjectLoadState.Loaded, Snapshot: not null })
 			.IndexOf(_project.ActiveMsBuildProjectLoadResult.Value);
 		if (selectedIndex >= 0 && selectedIndex < _tfmOptionButton.ItemCount) _tfmOptionButton.Select(selectedIndex);
 	}

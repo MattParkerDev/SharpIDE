@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
@@ -7,9 +8,10 @@ namespace SharpIDE.Application.Features.FileWatching;
 /// Watches each of the solution's root folders, and passes each event on as a hint ("look at this path") - IdeFileExternalChangeHandler works out what actually changed.
 /// So the oddities of OS file watching (merged, reordered, split or lost events) don't matter. A lost event (buffer overflow) means a rescan.
 /// Handlers only filter and enqueue, to drain the OS buffer as fast as possible.
-public sealed class IdeFileWatcher(IdeFileExternalChangeHandler changeHandler, ILogger<IdeFileWatcher> logger) : IDisposable
+public sealed class IdeFileWatcher(IdeFileExternalChangeHandler changeHandler, ProjectEvaluationService projectEvaluationService, ILogger<IdeFileWatcher> logger) : IDisposable
 {
 	private readonly IdeFileExternalChangeHandler _changeHandler = changeHandler;
+	private readonly ProjectEvaluationService _projectEvaluationService = projectEvaluationService;
 	private readonly ILogger<IdeFileWatcher> _logger = logger;
 	private readonly Lock _lock = new();
 	private Dictionary<string, FileSystemWatcher> _watchersByRootPath = new(PathComparison.Comparer);
@@ -88,12 +90,24 @@ public sealed class IdeFileWatcher(IdeFileExternalChangeHandler changeHandler, I
 
 	private void OnEvent(string rootPath, FileSystemEventArgs e)
 	{
-		if (TreeMapperV2.IsInExcludedFolder(rootPath, e.FullPath)) return;
+		if (TreeMapperV2.IsInExcludedFolder(rootPath, e.FullPath))
+		{
+			// The obj/*.nuget.g.props/targets restore writes are imported by projects, though obj is otherwise ignored
+			if (IsRestoreGeneratedImport(e.FullPath)) _projectEvaluationService.ImportFileChanged(e.FullPath);
+			return;
+		}
 		_changeHandler.PathChanged(e.FullPath);
+	}
+
+	private static bool IsRestoreGeneratedImport(string path)
+	{
+		var fileName = Path.GetFileName(path.AsSpan());
+		return fileName.EndsWith(".nuget.g.props", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".nuget.g.targets", StringComparison.OrdinalIgnoreCase);
 	}
 
 	private void OnRenamed(string rootPath, RenamedEventArgs e)
 	{
+		if (IsRestoreGeneratedImport(e.FullPath) && TreeMapperV2.IsInExcludedFolder(rootPath, e.FullPath)) _projectEvaluationService.ImportFileChanged(e.FullPath);
 		var isOldPathExcluded = TreeMapperV2.IsInExcludedFolder(rootPath, e.OldFullPath);
 		var isNewPathExcluded = TreeMapperV2.IsInExcludedFolder(rootPath, e.FullPath);
 		if (isOldPathExcluded is false && isNewPathExcluded is false) _changeHandler.PathRenamed(e.OldFullPath, e.FullPath);

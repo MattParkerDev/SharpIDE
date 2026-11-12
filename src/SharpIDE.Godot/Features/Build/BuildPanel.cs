@@ -39,6 +39,6 @@ public partial class BuildPanel : Control
     private async Task OnBuildStarted(BuildStartedFlags _)
     {
         await this.InvokeAsync(() => _terminal.ClearTerminal());
-        _buildOutputPipeReader ??= _buildService.BuildLogPipeReader;
+        _buildOutputPipeReader = _buildService.BuildLogPipeReader; // A new reader if the host was restarted
     }
 }

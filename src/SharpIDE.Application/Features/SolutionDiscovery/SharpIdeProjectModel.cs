@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading.Channels;
 using Ardalis.GuardClauses;
-using Microsoft.Build.Evaluation;
 using ObservableCollections;
 using R3;
 using SharpIDE.Application.Features.Analysis;
@@ -27,7 +26,10 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public CancellationTokenSource? RunningCancellationTokenSource { get; set; }
 	public ReactiveProperty<MsBuildProjectInstanceLoadResult> ActiveMsBuildProjectLoadResult { get; }
 	public ReactiveProperty<IReadOnlyList<MsBuildProjectInstanceLoadResult>> TfmSpecificLoadResults { get; }
-	public required Task<MsBuildProjectLoadResult> MsBuildEvaluationProjectTask { get; set; }
+	private readonly Lock _evaluationLock = new();
+	private TaskCompletionSource<MsBuildProjectLoadResult> _evaluationTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	/// Completes when the current (or, before the first evaluation has started, the first) evaluation does. Never faults - a failed evaluation is an Invalid result.
+	public Task<MsBuildProjectLoadResult> MsBuildEvaluationProjectTask { get { lock (_evaluationLock) return _evaluationTcs.Task; } }
 
 	[SetsRequiredMembers]
 	internal SharpIdeProjectModel(IntermediateProjectModel projectModel, ConcurrentBag<SharpIdeProjectModel> allProjects, ConcurrentBag<SharpIdeFile> allFiles, ConcurrentBag<SharpIdeFolder> allFolders, IExpandableSharpIdeNode parent, SharpIdeFileTree fileTree)
@@ -42,63 +44,62 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 			LoadState = MsBuildProjectLoadState.Loading
 		});
 		TfmSpecificLoadResults = new ReactiveProperty<IReadOnlyList<MsBuildProjectInstanceLoadResult>>([]);
-		MsBuildEvaluationProjectTask = LoadOrReloadProjectInMsBuild();
+		// Evaluated by ProjectEvaluationService, once the solution's SharpIDE.MsBuildHost is up
 		allProjects.Add(this);
 	}
 
-	public async Task<MsBuildProjectLoadResult> LoadOrReloadProjectInMsBuild()
+	/// Called by ProjectEvaluationService as it starts evaluating
+	internal void BeginEvaluation()
 	{
+		lock (_evaluationLock)
+		{
+			if (_evaluationTcs.Task.IsCompleted) _evaluationTcs = new TaskCompletionSource<MsBuildProjectLoadResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+		}
 		TfmSpecificLoadResults.Value = [];
 		ActiveMsBuildProjectLoadResult.Value = new MsBuildProjectInstanceLoadResult
 		{
 			LoadState = MsBuildProjectLoadState.Loading
 		};
-		return await Task.Run(async () =>
-		{
-			// Not Folder is null - a project can have no folder (e.g. its file is at a drive root, see SharpIdeFileTree), but can still load
-			if (File.Exists(FilePath) is false)
-			{
-				var missingResult = new MsBuildProjectInstanceLoadResult
-				{
-					LoadState = MsBuildProjectLoadState.Missing
-				};
-				ActiveMsBuildProjectLoadResult.Value = missingResult;
-				return new MsBuildProjectLoadResult
-				{
-					OuterProjectLoadResult = missingResult,
-					DefaultActiveProjectLoadResult = missingResult,
-					TfmSpecificLoadResults = []
-				};
-			}
-			var result = await ProjectEvaluation.LoadOrReloadProject(FilePath);
-			Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
-			if (result.DefaultActiveProjectLoadResult.LoadState is MsBuildProjectLoadState.Invalid)
-			{
-				Guard.Against.Null(result.DefaultActiveProjectLoadResult.Diagnostic);
-				Diagnostics.Add(result.DefaultActiveProjectLoadResult.Diagnostic);
-			}
-
-			TfmSpecificLoadResults.Value = result.TfmSpecificLoadResults;
-			ActiveMsBuildProjectLoadResult.Value = result.DefaultActiveProjectLoadResult;
-			return result;
-		});
 	}
 
-	public Project ActiveMsBuildEvaluationProject => ActiveMsBuildProjectLoadResult.Value.Project
-		?? throw new InvalidOperationException("Do not attempt to access the MsBuildEvaluationProject before it has been loaded");
+	/// Called by ProjectEvaluationService with each evaluation's result - including re-evaluations it didn't announce with BeginEvaluation (e.g. an imported file changed)
+	internal void ApplyEvaluationResult(MsBuildProjectLoadResult result)
+	{
+		Diagnostics.RemoveRange(Diagnostics.set); // Clear regardless
+		if (result.DefaultActiveProjectLoadResult is { LoadState: MsBuildProjectLoadState.Invalid, Diagnostic: { } diagnostic })
+		{
+			Diagnostics.Add(diagnostic);
+		}
+
+		TfmSpecificLoadResults.Value = result.TfmSpecificLoadResults;
+		ActiveMsBuildProjectLoadResult.Value = result.DefaultActiveProjectLoadResult;
+		lock (_evaluationLock)
+		{
+			if (_evaluationTcs.TrySetResult(result) is false)
+			{
+				var completed = new TaskCompletionSource<MsBuildProjectLoadResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+				completed.SetResult(result);
+				_evaluationTcs = completed;
+			}
+		}
+	}
+
+	public MsBuildProjectSnapshot ActiveMsBuildSnapshot => ActiveMsBuildProjectLoadResult.Value.Snapshot
+		?? throw new InvalidOperationException("Do not attempt to access the MSBuild evaluation snapshot before the project has been loaded");
 
 	public bool IsLoading => ActiveMsBuildProjectLoadResult.Value.LoadState is MsBuildProjectLoadState.Loading;
 	public bool IsLoaded => ActiveMsBuildProjectLoadResult.Value.LoadState is MsBuildProjectLoadState.Loaded;
 	public bool IsInvalid => ActiveMsBuildProjectLoadResult.Value.LoadState is MsBuildProjectLoadState.Invalid or MsBuildProjectLoadState.Missing;
-	public bool IsRunnable => ActiveMsBuildEvaluationProject.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject;
-	public bool IsBlazorProject => ActiveMsBuildEvaluationProject.Xml.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
-	public bool IsGodotProject => ActiveMsBuildEvaluationProject.Xml.Sdk.StartsWith("Godot.NET.Sdk");
-	public bool IsMtpTestProject => ActiveMsBuildEvaluationProject.GetPropertyValue("IsTestingPlatformApplication") is "true";
-	public string BlazorDevServerVersion => ActiveMsBuildEvaluationProject.Items.Single(s => s.ItemType is "PackageReference" && s.EvaluatedInclude is "Microsoft.AspNetCore.Components.WebAssembly.DevServer").GetMetadataValue("Version");
-	public string RootNamespace => ActiveMsBuildEvaluationProject.GetPropertyValue("RootNamespace");
-	public string TargetFramework => ActiveMsBuildEvaluationProject.GetPropertyValue("TargetFramework");
-	public string RunCommand => ActiveMsBuildEvaluationProject.GetPropertyValue("RunCommand");
-	public string RunArguments => ActiveMsBuildEvaluationProject.GetPropertyValue("RunArguments");
+	// Blazor WASM and Godot projects may not be Exe, but are launched via RunCommand
+	public bool IsRunnable => ActiveMsBuildSnapshot.GetPropertyValue("OutputType") is "Exe" or "WinExe" || IsBlazorProject || IsGodotProject || string.IsNullOrWhiteSpace(RunCommand) is false;
+	public bool IsBlazorProject => ActiveMsBuildSnapshot.Sdk is "Microsoft.NET.Sdk.BlazorWebAssembly";
+	public bool IsGodotProject => ActiveMsBuildSnapshot.Sdk.StartsWith("Godot.NET.Sdk");
+	public bool IsMtpTestProject => ActiveMsBuildProjectLoadResult.Value.Snapshot?.GetPropertyValue("IsTestingPlatformApplication") is "true";
+	public string RootNamespace => ActiveMsBuildSnapshot.GetPropertyValue("RootNamespace");
+	public string TargetFramework => ActiveMsBuildSnapshot.GetPropertyValue("TargetFramework");
+	/// As evaluated - the values used to launch come from a Build;ComputeRunArguments build at run time
+	public string RunCommand => ActiveMsBuildSnapshot.GetPropertyValue("RunCommand");
+	public string RunArguments => ActiveMsBuildSnapshot.GetPropertyValue("RunArguments");
 	public bool OpenInRunPanel { get; set; }
 	public StandardIo? ProcessStandardIo { get; set; }
 

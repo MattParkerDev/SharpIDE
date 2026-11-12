@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.Razor.Utilities;
@@ -6,8 +6,10 @@ using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Text;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Editor;
+using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FilePersistence;
+using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 using AsyncBatchingWorkQueue = Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue;
@@ -19,6 +21,7 @@ public class FileChangedService
 {
 	private readonly RoslynAnalysis _roslynAnalysis;
 	private readonly SharpIdeSolutionService _sharpIdeSolutionService;
+	private readonly ProjectEvaluationService _projectEvaluationService;
 	private readonly IdeOpenTabsFileManager _openTabsFileManager;
 	private readonly AsyncBatchingWorkQueue _updateSolutionDiagnosticsQueue;
 	private readonly Lock _batchLock = new();
@@ -27,11 +30,13 @@ public class FileChangedService
 	private readonly List<WorkspaceFileOperation> _pendingFileOperations = [];
 	private bool _pendingSolutionReload;
 	private readonly HashSet<SharpIdeProjectModel> _pendingProjectReloads = [];
+	private readonly HashSet<string> _pendingImportFileChanges = new(PathComparison.Comparer);
 	// Processes one batch at a time, in order, so Roslyn always ends up with the latest text of each open file
 	private readonly Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue<(SharpIdeFile File, SourceText Text)> _openFileTextChangedQueue;
 
-	public FileChangedService(RoslynAnalysis roslynAnalysis, IdeOpenTabsFileManager openTabsFileManager, SharpIdeSolutionService sharpIdeSolutionService)
+	public FileChangedService(RoslynAnalysis roslynAnalysis, IdeOpenTabsFileManager openTabsFileManager, SharpIdeSolutionService sharpIdeSolutionService, ProjectEvaluationService projectEvaluationService)
 	{
+		_projectEvaluationService = projectEvaluationService;
 		_roslynAnalysis = roslynAnalysis;
 		_openTabsFileManager = openTabsFileManager;
 		_sharpIdeSolutionService = sharpIdeSolutionService;
@@ -49,6 +54,7 @@ public class FileChangedService
 		await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Move(file, oldFilePath));
 		// A project the solution references has moved away from (or onto) its path - IDE moves update the solution file to follow it first
 		if (IsSolutionProjectPath(oldFilePath) || IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true);
+		await ApplyOrDeferImportFileChanges(oldFilePath, file.Path);
 	}
 
 	public async Task SharpIdeFileAdded(SharpIdeFile file, string content)
@@ -59,6 +65,7 @@ public class FileChangedService
 		}
 		// e.g. a project the solution references, which was missing, has been checked out
 		if (IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true);
+		await ApplyOrDeferImportFileChanges(file.Path); // e.g. a new Directory.Build.props
 	}
 
 	public async Task SharpIdeFileRemoved(SharpIdeFile file)
@@ -66,6 +73,7 @@ public class FileChangedService
 		await file.FileDeleted.InvokeParallelAsync();
 		await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Remove(file.Path));
 		if (IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true); // Now shown as missing
+		await ApplyOrDeferImportFileChanges(file.Path);
 	}
 
 	/// A csproj the solution references. Projects that aren't in the solution aren't loaded, so adding or removing one doesn't matter (as in VS).
@@ -154,7 +162,27 @@ public class FileChangedService
 		{
 			return ApplyOrDeferProjectSystemChange(reloadSolution: false, project);
 		}
-		return Task.CompletedTask;
+		return ApplyOrDeferImportFileChanges(file.Path);
+	}
+
+	/// Directory.Build.props/targets, Directory.Packages.props etc - the projects that import them (or may now) are re-evaluated. Ignores other files.
+	private async Task ApplyOrDeferImportFileChanges(params string[] filePaths)
+	{
+		List<string> importFilePaths = [];
+		foreach (var filePath in filePaths)
+		{
+			if (ProjectEvaluationService.IsMsBuildImportFile(filePath)) importFilePaths.Add(filePath);
+		}
+		if (importFilePaths.Count is 0 || SolutionModel is null) return;
+		lock (_batchLock)
+		{
+			if (_batchDepth > 0)
+			{
+				_pendingImportFileChanges.UnionWith(importFilePaths);
+				return;
+			}
+		}
+		await _projectEvaluationService.ReloadForChangedFilesAsync(importFilePaths);
 	}
 
 	/// Applied now, or once at the end of the batch - so e.g. a git checkout changing the sln and several csproj files reloads once
@@ -181,13 +209,11 @@ public class FileChangedService
 			await _sharpIdeSolutionService.ReloadSolution();
 			// Projects kept by the reload keep their MSBuild evaluation, so re-evaluate any whose csproj changed too
 			var keptProjects = projectsToReload.Where(SolutionModel.AllProjects.Contains).ToList();
-			foreach (var project in keptProjects) project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
-			await Task.WhenAll(keptProjects.Select(p => p.MsBuildEvaluationProjectTask));
+			await _projectEvaluationService.EvaluateProjectsAsync(keptProjects);
 		}
 		else
 		{
-			foreach (var project in projectsToReload) project.MsBuildEvaluationProjectTask = project.LoadOrReloadProjectInMsBuild();
-			await Task.WhenAll(projectsToReload.Select(p => p.MsBuildEvaluationProjectTask));
+			await _projectEvaluationService.EvaluateProjectsAsync(projectsToReload);
 			await _roslynAnalysis.ReloadProjects(projectsToReload, CancellationToken.None);
 		}
 		// Reloaded projects read their documents from disk - put back the editors' text of open files, which may be unsaved
@@ -225,6 +251,7 @@ public class FileChangedService
 		bool workspaceAltered;
 		bool reloadSolution;
 		List<SharpIdeProjectModel> projectsToReload;
+		List<string> importFileChanges;
 		lock (_batchLock)
 		{
 			if (--_batchDepth > 0) return;
@@ -236,10 +263,14 @@ public class FileChangedService
 			_pendingSolutionReload = false;
 			projectsToReload = [.._pendingProjectReloads];
 			_pendingProjectReloads.Clear();
+			importFileChanges = [.._pendingImportFileChanges];
+			_pendingImportFileChanges.Clear();
 		}
 		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) workspaceAltered = true;
 		// After the file operations, so a project reload sees the files' current paths
 		await ApplyProjectSystemChanges(reloadSolution, projectsToReload);
+		// After project file reloads, so their evaluations aren't redone
+		if (importFileChanges.Count > 0) await _projectEvaluationService.ReloadForChangedFilesAsync(importFileChanges);
 		if (workspaceAltered) OnWorkspaceAltered();
 	}
 

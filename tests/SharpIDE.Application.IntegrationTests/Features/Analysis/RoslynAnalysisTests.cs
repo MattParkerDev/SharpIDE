@@ -17,7 +17,6 @@ public class RoslynAnalysisTests
 	public RoslynAnalysisTests(ITestOutputHelper testOutputHelper)
 	{
 		_testOutputHelper = testOutputHelper;
-		SharpIdeMsbuildLocator.Register();
 	}
 
 

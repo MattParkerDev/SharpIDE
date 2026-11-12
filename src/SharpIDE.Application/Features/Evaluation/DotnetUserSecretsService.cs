@@ -3,14 +3,16 @@ using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.Evaluation;
 
-public class DotnetUserSecretsService
+public class DotnetUserSecretsService(ProjectEvaluationService projectEvaluationService)
 {
+	private readonly ProjectEvaluationService _projectEvaluationService = projectEvaluationService;
+
 	public async Task<(Guid, string filePath)> GetOrCreateUserSecretsId(SharpIdeProjectModel projectModel)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(DotnetUserSecretsService)}.{nameof(GetOrCreateUserSecretsId)}");
 		Guard.Against.Null(projectModel, nameof(projectModel));
 
-		var userSecretsId = ProjectEvaluation.GetOrCreateDotnetUserSecretsId(projectModel);
+		var userSecretsId = await _projectEvaluationService.GetOrCreateUserSecretsIdAsync(projectModel).ConfigureAwait(false);
 		var userSecretsFilePath = GetUserSecretsFilePath(userSecretsId);
 		var file = new FileInfo(userSecretsFilePath);
 		if (file.Exists)

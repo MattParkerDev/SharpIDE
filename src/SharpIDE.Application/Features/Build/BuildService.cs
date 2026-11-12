@@ -32,13 +32,6 @@ public partial class BuildService(ILogger<BuildService> logger) : IDisposable
 
 	public async Task<SharpIdeBuildResult> MsBuildAsync(string solutionOrProjectFilePath, BuildType buildType = BuildType.Build, BuildStartedFlags buildStartedFlags = BuildStartedFlags.UserFacing, CancellationToken cancellationToken = default)
 	{
-		_rpcBuildService ??= await ConnectRpc(solutionOrProjectFilePath);
-		if (_cancellationTokenSource is not null) throw new InvalidOperationException("A build is already in progress.");
-		_cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(BuildService)}.{nameof(MsBuildAsync)}");
-
-		BuildStarted.InvokeParallelFireAndForget(buildStartedFlags);
-		var timer = Stopwatch.StartNew();
 		var buildTypeDto = buildType switch
 		{
 			BuildType.Build => BuildTypeDto.Build,
@@ -47,19 +40,48 @@ public partial class BuildService(ILogger<BuildService> logger) : IDisposable
 			BuildType.Restore => BuildTypeDto.Restore,
 			_ => throw new ArgumentOutOfRangeException(nameof(buildType), buildType, null)
 		};
-		var (buildResult, exception) = await _rpcBuildService.MsBuildAsync(solutionOrProjectFilePath, buildTypeDto, _cancellationTokenSource.Token).ConfigureAwait(false);
-		timer.Stop();
-		BuildFinished.InvokeParallelFireAndForget();
-		_cancellationTokenSource = null;
-		_logger.LogInformation(exception, "Build result: {BuildResult} in {ElapsedMilliseconds}ms", buildResult, timer.ElapsedMilliseconds);
-		var mappedResult = buildResult switch
-		{
-			BuildResultDto.Success => SharpIdeBuildResult.Success,
-			BuildResultDto.Failure => SharpIdeBuildResult.Failure,
-			_ => throw new ArgumentOutOfRangeException()
-		};
-		return mappedResult;
+		var (buildResult, exception) = await RunBuildAsync((rpc, ct) => rpc.MsBuildAsync(solutionOrProjectFilePath, buildTypeDto, ct), buildStartedFlags, cancellationToken).ConfigureAwait(false);
+		_logger.LogInformation(exception, "Build result: {BuildResult}", buildResult);
+		return MapResult(buildResult);
 	}
+
+	/// Restores and builds the project (not the solution) with Build;ComputeRunArguments, returning the properties needed to launch it
+	public async Task<(SharpIdeBuildResult BuildResult, IReadOnlyDictionary<string, string> RunProperties)> BuildProjectForRunAsync(string projectFilePath, string? targetFramework, BuildStartedFlags buildStartedFlags = BuildStartedFlags.UserFacing, CancellationToken cancellationToken = default)
+	{
+		var result = await RunBuildAsync((rpc, ct) => rpc.BuildProjectForRunAsync(projectFilePath, targetFramework, ct), buildStartedFlags, cancellationToken).ConfigureAwait(false);
+		if (result.ErrorMessage is not null) _logger.LogWarning("Build for run failed: {ErrorMessage}", result.ErrorMessage);
+		_logger.LogInformation("Build for run result: {BuildResult}", result.BuildResult);
+		return (MapResult(result.BuildResult), result.Properties);
+	}
+
+	private async Task<T> RunBuildAsync<T>(Func<IRpcBuildService, CancellationToken, Task<T>> build, BuildStartedFlags buildStartedFlags, CancellationToken cancellationToken)
+	{
+		var rpcBuildService = await GetRpcAsync(cancellationToken);
+		if (_cancellationTokenSource is not null) throw new InvalidOperationException("A build is already in progress.");
+		_cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(BuildService)}.{nameof(RunBuildAsync)}");
+
+		BuildStarted.InvokeParallelFireAndForget(buildStartedFlags);
+		var timer = Stopwatch.StartNew();
+		try
+		{
+			return await build(rpcBuildService, _cancellationTokenSource.Token).ConfigureAwait(false);
+		}
+		finally
+		{
+			timer.Stop();
+			_cancellationTokenSource = null;
+			BuildFinished.InvokeParallelFireAndForget();
+			_logger.LogInformation("Build finished in {ElapsedMilliseconds}ms", timer.ElapsedMilliseconds);
+		}
+	}
+
+	private static SharpIdeBuildResult MapResult(BuildResultDto buildResult) => buildResult switch
+	{
+		BuildResultDto.Success => SharpIdeBuildResult.Success,
+		BuildResultDto.Failure => SharpIdeBuildResult.Failure,
+		_ => throw new ArgumentOutOfRangeException(nameof(buildResult), buildResult, null)
+	};
 
 	public async Task CancelBuildAsync()
 	{

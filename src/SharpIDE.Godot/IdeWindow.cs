@@ -37,7 +37,6 @@ public partial class IdeWindow : Control
         // Godot doesn't have an easy equivalent of launchsettings.json, and we also want this to be set for published builds
         Environment.SetEnvironmentVariable("MSBUILD_PARSE_SLN_WITH_SOLUTIONPERSISTENCE", "1");
         GD.Print($"SharpIDE running on '{RuntimeInformation.FrameworkDescription}' Runtime");
-        SharpIdeMsbuildLocator.Register();
         GodotOtelExtensions.AddServiceDefaults();
         Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
         GetTree().GetRoot().ContentScaleFactor = Singletons.AppState.IdeSettings.UiScale;

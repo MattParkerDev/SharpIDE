@@ -7,124 +7,202 @@ using Microsoft.Extensions.Logging;
 using NeoSmart.AsyncLock;
 using NuGet.Versioning;
 using PolyType.SourceGenerator;
+using SharpIDE.Application.Features.Events;
 using SharpIDE.MsBuildHost.Contracts;
 using StreamJsonRpc;
 
 namespace SharpIDE.Application.Features.Build;
 
+/// One SharpIDE.MsBuildHost process per opened solution, serving both evaluation and real builds.
+/// It uses the SDK resolved from the solution's folder (global.json), so it is started when the solution is opened, and killed when this (scoped) service is disposed - i.e. when another solution is opened.
+/// If it crashes, it is restarted, and HostRestarted is raised so everything can be re-evaluated.
 public partial class BuildService
 {
-    private Task? _fillPipeFromLoggerTask;
-    private Process? _sharpIdeMsBuildHostProcess;
-    private Socket? _buildLogSocket;
+	private Process? _sharpIdeMsBuildHostProcess;
+	private JsonRpc? _rpc;
+	private Socket? _buildLogSocket;
+	private Task? _fillPipeFromLoggerTask;
 	private readonly AsyncLock _rpcInitLock = new AsyncLock();
-	private bool _rpcDisposing;
+	private volatile bool _rpcDisposing;
+	private volatile string? _hostSolutionFilePath;
+	private int _consecutiveCrashCount;
+	private const int MaxConsecutiveCrashRestarts = 3;
 
-    private async Task<IRpcBuildService> ConnectRpc(string solutionOrProjectFilePath)
-    {
-        using (await _rpcInitLock.LockAsync())
-        {
-            if (_rpcBuildService is not null) return _rpcBuildService;
-            if (_fillPipeFromLoggerTask is not null) throw new InvalidOperationException("Build logger pipe is already open, but RPC service is not initialized. This should never happen.");
-            var sharpIdeMsBuildHostDllPath = Path.Combine(AppContext.BaseDirectory, "SharpIdeMsBuildHost", "SharpIDE.MsBuildHost.dll");
-			var slnOrProjectDirectory = Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
-            var sdkVersion = await GetCorrectDotnetSdkVersion(slnOrProjectDirectory);
-            var startupInfo = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                ArgumentList = { sharpIdeMsBuildHostDllPath, sdkVersion.ToNormalizedString(), slnOrProjectDirectory },
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            var keysToRemove = startupInfo.Environment
-                .Where(s => s.Key.StartsWith("DOTNET_", StringComparison.OrdinalIgnoreCase) || s.Key.StartsWith("MSBuild", StringComparison.OrdinalIgnoreCase))
-                .Where(s => s.Key.Equals("DOTNET_CLI_TELEMETRY_OPTOUT", StringComparison.OrdinalIgnoreCase) is false) // I don't know if this affects anything in MSBuild, but let's propagate it anyway if the user has it set
-                .Select(s => s.Key)
-                .ToList();
-            keysToRemove.ForEach(s => startupInfo.Environment.Remove(s));
-            startupInfo.Environment["DOTNET_ROLL_FORWARD_TO_PRERELEASE"] = "1";
-            // ["DOTNET_ROLL_FORWARD"] = "LatestMajor" isn't necessary as it is set in the SharpIDE.MsBuildHost.runtimeconfig.json, from the <RollForward>LatestMajor</RollForward> csproj property
-            var process = Process.Start(startupInfo);
-            if (process is null) throw new InvalidOperationException("Failed to start SharpIDE.MsBuildHost");
-            var handler = new LengthHeaderMessageHandler(process.StandardInput.BaseStream, process.StandardOutput.BaseStream, new NerdbankMessagePackFormatter { TypeShapeProvider = TypeShapeProvider_SharpIDE_MsBuildHost_Contracts.Default });
-            var rpc = new JsonRpc(handler);
+	/// Raised once the host has been restarted after a crash. The new host has no evaluations, so every project needs re-evaluating.
+	public EventWrapper<Task> HostRestarted { get; } = new(() => Task.CompletedTask);
 
-            rpc.StartListening();
+	/// Starts the host for the solution being opened. Evaluation needs it immediately, so this isn't left until the first build.
+	/// The solution path is recorded synchronously, so callers that don't await this can still use the host as soon as it is up.
+	public Task StartHostAsync(string solutionFilePath, CancellationToken cancellationToken = default)
+	{
+		if (_hostSolutionFilePath is not null && _hostSolutionFilePath != solutionFilePath) throw new InvalidOperationException("The build host is already started for a different solution. A new solution gets a new BuildService scope.");
+		_hostSolutionFilePath = solutionFilePath;
+		return GetRpcAsync(cancellationToken);
+	}
 
-            var proxy = rpc.Attach<IRpcBuildService>();
-            var (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath) = await proxy.GetMsbuildInfoAsync();
-            _logger.LogInformation("Connected to SharpIDE.MsBuildHost running on '{RpcBuildHostRuntimeVersion}' Runtime with MSBuild from SDK at '{RpcBuildHostMsBuildPath}'", rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath);
-            _fillPipeFromLoggerTask = await OpenMsBuildLoggerPipe(proxy);
-            _sharpIdeMsBuildHostProcess = process;
-            return proxy;
-        }
-    }
+	internal async Task<IRpcBuildService> GetRpcAsync(CancellationToken cancellationToken = default)
+	{
+		using (await _rpcInitLock.LockAsync(cancellationToken))
+		{
+			ObjectDisposedException.ThrowIf(_rpcDisposing, this);
+			if (_rpcBuildService is not null) return _rpcBuildService;
+			var solutionFilePath = _hostSolutionFilePath ?? throw new InvalidOperationException($"The build host has not been started - call {nameof(StartHostAsync)} when the solution is opened.");
+			_rpcBuildService = await ConnectRpc(solutionFilePath);
+			return _rpcBuildService;
+		}
+	}
 
-    private static async Task<NuGetVersion> GetCorrectDotnetSdkVersion(string slnOrProjectDirectory)
-    {
-	    var result = await Cli.Wrap("dotnet").WithWorkingDirectory(slnOrProjectDirectory).WithArguments("--version").ExecuteBufferedAsync();
-	    var sdkVersion = NuGetVersion.Parse(result.StandardOutput.Trim());
-	    return sdkVersion;
-    }
+	private async Task<IRpcBuildService> ConnectRpc(string solutionOrProjectFilePath)
+	{
+		if (_fillPipeFromLoggerTask is not null) throw new InvalidOperationException("Build logger pipe is already open, but RPC service is not initialized. This should never happen.");
+		var sharpIdeMsBuildHostDllPath = Path.Combine(AppContext.BaseDirectory, "SharpIdeMsBuildHost", "SharpIDE.MsBuildHost.dll");
+		var slnOrProjectDirectory = Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
+		var sdkVersion = await GetCorrectDotnetSdkVersion(slnOrProjectDirectory);
+		var startupInfo = new ProcessStartInfo
+		{
+			FileName = "dotnet",
+			ArgumentList = { sharpIdeMsBuildHostDllPath, sdkVersion.ToNormalizedString(), slnOrProjectDirectory },
+			RedirectStandardInput = true,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			UseShellExecute = false,
+			CreateNoWindow = true,
+			WindowStyle = ProcessWindowStyle.Hidden
+		};
+		var keysToRemove = startupInfo.Environment
+			.Where(s => s.Key.StartsWith("DOTNET_", StringComparison.OrdinalIgnoreCase) || s.Key.StartsWith("MSBuild", StringComparison.OrdinalIgnoreCase))
+			.Where(s => s.Key.Equals("DOTNET_CLI_TELEMETRY_OPTOUT", StringComparison.OrdinalIgnoreCase) is false) // I don't know if this affects anything in MSBuild, but let's propagate it anyway if the user has it set
+			.Select(s => s.Key)
+			.ToList();
+		keysToRemove.ForEach(s => startupInfo.Environment.Remove(s));
+		startupInfo.Environment["DOTNET_ROLL_FORWARD_TO_PRERELEASE"] = "1";
+		// ["DOTNET_ROLL_FORWARD"] = "LatestMajor" isn't necessary as it is set in the SharpIDE.MsBuildHost.runtimeconfig.json, from the <RollForward>LatestMajor</RollForward> csproj property
+		var process = Process.Start(startupInfo);
+		if (process is null) throw new InvalidOperationException("Failed to start SharpIDE.MsBuildHost");
+		// stdout is the RPC channel. Drain stderr, so the host can never block on a full stderr buffer, and so a crash's output is logged.
+		process.ErrorDataReceived += (_, e) =>
+		{
+			if (string.IsNullOrEmpty(e.Data) is false) _logger.LogWarning("SharpIDE.MsBuildHost stderr: {Line}", e.Data);
+		};
+		process.BeginErrorReadLine();
+		var handler = new LengthHeaderMessageHandler(process.StandardInput.BaseStream, process.StandardOutput.BaseStream, new NerdbankMessagePackFormatter { TypeShapeProvider = TypeShapeProvider_SharpIDE_MsBuildHost_Contracts.Default });
+		var rpc = new JsonRpc(handler);
+		rpc.Disconnected += (_, e) => OnRpcDisconnected(rpc, e);
 
-    private async Task<Task> OpenMsBuildLoggerPipe(IRpcBuildService rpcBuildService)
-    {
-        if (_buildLogSocket is not null) throw new InvalidOperationException("Build log socket is already open.");
-        var pipe = new Pipe(new PipeOptions(useSynchronizationContext: false));
-        var pipeReader = pipe.Reader;
-        var pipeWriter = pipe.Writer;
+		rpc.StartListening();
 
-        var unixDomainSocketFilePath = $"{Path.GetTempFileName()}.sock";
-        var serverSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-        serverSocket.Bind(new UnixDomainSocketEndPoint(unixDomainSocketFilePath));
-        serverSocket.Listen(1);
-        await rpcBuildService.BeginWritingMsBuildOutputToSocket(unixDomainSocketFilePath);
+		var proxy = rpc.Attach<IRpcBuildService>();
+		var (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath) = await proxy.GetMsbuildInfoAsync();
+		_logger.LogInformation("Connected to SharpIDE.MsBuildHost running on '{RpcBuildHostRuntimeVersion}' Runtime with MSBuild from SDK at '{RpcBuildHostMsBuildPath}'", rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath);
+		_fillPipeFromLoggerTask = await OpenMsBuildLoggerPipe(proxy);
+		_sharpIdeMsBuildHostProcess = process;
+		_rpc = rpc;
+		return proxy;
+	}
 
-        var socket = await serverSocket.AcceptAsync();
-        serverSocket.Close();
-        File.Delete(unixDomainSocketFilePath);
-        var fillPipeTask = Task.Run(async () =>
-        {
-            try
-            {
-                var buffer = new byte[4096];
-                while (true)
-                {
-	                if (_rpcDisposing) break;
-                    var bytesRead = await socket.ReceiveAsync(buffer, SocketFlags.None);
-                    if (bytesRead == 0) break; // End of stream
-                    await pipeWriter.WriteAsync(buffer.AsMemory(0, bytesRead));
-                }
-            }
-            catch when (_rpcDisposing)
-            {
-	            // Socket is being closed
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while reading from SharpIDE.MsBuildHost logger socket");
-            }
-            finally
-            {
-                await pipeWriter.CompleteAsync();
-            }
-        });
-        BuildLogPipeReader = pipeReader;
-        _buildLogSocket = socket;
-        return fillPipeTask;
-    }
+	private void OnRpcDisconnected(JsonRpc rpc, JsonRpcDisconnectedEventArgs e)
+	{
+		if (_rpcDisposing) return;
+		_ = Task.Run(async () =>
+		{
+			using (await _rpcInitLock.LockAsync())
+			{
+				if (_rpcDisposing || ReferenceEquals(_rpc, rpc) is false) return; // Already handled, or a connection that never completed
+				_logger.LogError(e.Exception, "SharpIDE.MsBuildHost disconnected ({Reason}: {Description}), restarting it", e.Reason, e.Description);
+				TearDownConnection();
+			}
 
-    public void Dispose()
-    {
-	    _rpcDisposing = true;
-	    _cancellationTokenSource?.Cancel();
-	    _buildLogSocket?.Shutdown(SocketShutdown.Both);
-	    _buildLogSocket?.Close(0);
-	    _sharpIdeMsBuildHostProcess?.Kill(entireProcessTree: true);
-	    _sharpIdeMsBuildHostProcess?.Dispose();
-    }
+			if (++_consecutiveCrashCount > MaxConsecutiveCrashRestarts)
+			{
+				_logger.LogError("SharpIDE.MsBuildHost has crashed {CrashCount} times in a row - not restarting it until it is next needed", _consecutiveCrashCount);
+				return;
+			}
+			try
+			{
+				await GetRpcAsync();
+				await HostRestarted.InvokeParallelAsync();
+				_consecutiveCrashCount = 0;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to restart SharpIDE.MsBuildHost");
+			}
+		});
+	}
+
+	/// Must be called inside _rpcInitLock
+	private void TearDownConnection()
+	{
+		_rpcBuildService = null;
+		_rpc?.Dispose();
+		_rpc = null;
+		try { _buildLogSocket?.Shutdown(SocketShutdown.Both); } catch (SocketException) { }
+		_buildLogSocket?.Close(0);
+		_buildLogSocket = null;
+		_fillPipeFromLoggerTask = null;
+		try { _sharpIdeMsBuildHostProcess?.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } // Already exited
+		_sharpIdeMsBuildHostProcess?.Dispose();
+		_sharpIdeMsBuildHostProcess = null;
+	}
+
+	private static async Task<NuGetVersion> GetCorrectDotnetSdkVersion(string slnOrProjectDirectory)
+	{
+		var result = await Cli.Wrap("dotnet").WithWorkingDirectory(slnOrProjectDirectory).WithArguments("--version").ExecuteBufferedAsync();
+		var sdkVersion = NuGetVersion.Parse(result.StandardOutput.Trim());
+		return sdkVersion;
+	}
+
+	private async Task<Task> OpenMsBuildLoggerPipe(IRpcBuildService rpcBuildService)
+	{
+		if (_buildLogSocket is not null) throw new InvalidOperationException("Build log socket is already open.");
+		var pipe = new Pipe(new PipeOptions(useSynchronizationContext: false));
+		var pipeReader = pipe.Reader;
+		var pipeWriter = pipe.Writer;
+
+		var unixDomainSocketFilePath = $"{Path.GetTempFileName()}.sock";
+		var serverSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+		serverSocket.Bind(new UnixDomainSocketEndPoint(unixDomainSocketFilePath));
+		serverSocket.Listen(1);
+		await rpcBuildService.BeginWritingMsBuildOutputToSocket(unixDomainSocketFilePath);
+
+		var socket = await serverSocket.AcceptAsync();
+		serverSocket.Close();
+		File.Delete(unixDomainSocketFilePath);
+		var fillPipeTask = Task.Run(async () =>
+		{
+			try
+			{
+				var buffer = new byte[4096];
+				while (true)
+				{
+					if (_rpcDisposing) break;
+					var bytesRead = await socket.ReceiveAsync(buffer, SocketFlags.None);
+					if (bytesRead == 0) break; // End of stream
+					await pipeWriter.WriteAsync(buffer.AsMemory(0, bytesRead));
+				}
+			}
+			catch when (_rpcDisposing || ReferenceEquals(_buildLogSocket, socket) is false)
+			{
+				// Socket is being closed, or the host crashed and was torn down
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error while reading from SharpIDE.MsBuildHost logger socket");
+			}
+			finally
+			{
+				await pipeWriter.CompleteAsync();
+			}
+		});
+		BuildLogPipeReader = pipeReader;
+		_buildLogSocket = socket;
+		return fillPipeTask;
+	}
+
+	public void Dispose()
+	{
+		_rpcDisposing = true;
+		_cancellationTokenSource?.Cancel();
+		TearDownConnection();
+	}
 }

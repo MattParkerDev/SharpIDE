@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.Build.Locator;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using Photino.Blazor;
@@ -65,9 +64,7 @@ public class Program
 			app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
 		};
 
-		//var instance = MSBuildLocator.QueryVisualStudioInstances().OrderByDescending(instance => instance.Version).First();
-		//MSBuildLocator.RegisterInstance(instance);
-		var instance = MSBuildLocator.RegisterDefaults();
+		// MSBuild runs out of process, in SharpIDE.MsBuildHost - it is never registered or loaded here
 
 		app.Run();
 	}

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Godot;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.Analysis;
@@ -41,6 +41,7 @@ public partial class IdeRoot : Control
 	[Inject] private readonly IdeFileExternalChangeHandler _fileExternalChangeHandler = null!;
 	[Inject] private readonly IdeFileWatcher _fileWatcher = null!;
 	[Inject] private readonly BuildService _buildService = null!;
+	[Inject] private readonly ProjectEvaluationService _projectEvaluationService = null!;
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
     [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
     [Inject] private readonly SharpIdeRootFolderModificationService _rootFolderModificationService = null!;
@@ -133,11 +134,12 @@ public partial class IdeRoot : Control
 			GD.Print($"Selected: {path}");
 			var timer = Stopwatch.StartNew();
 			var fileTree = new SharpIdeFileTree();
-			ProjectEvaluation.ClearLoadedProjects();
 			var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(path, fileTree);
 			timer.Stop();
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
+			// The solution's SharpIDE.MsBuildHost - evaluation needs it straight away. This scope is new for this solution, so it is a fresh host.
+			var startHostTask = _buildService.StartHostAsync(path);
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
 			await _sharpIdeSolutionService.LoadSolution(solutionModel, path, vsSln, solutionSerializer);
 			_sharpIdeSolutionAccessor.SolutionModel = solutionModel;
@@ -147,6 +149,20 @@ public partial class IdeRoot : Control
 			_searchAllFilesWindow.Solution = solutionModel;
 			_fileExternalChangeHandler.SolutionModel = solutionModel;
 			_fileChangedService.SolutionModel = solutionModel;
+			_projectEvaluationService.SolutionModel = solutionModel;
+			_ = Task.GodotRun(async () =>
+			{
+				try
+				{
+					await startHostTask;
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Failed to start SharpIDE.MsBuildHost");
+				}
+				// On failure, each project's evaluation fails (shown as load failed), and the host is retried on the next use
+				await _projectEvaluationService.EvaluateProjectsAsync(solutionModel.AllProjects.ToList());
+			});
 			_rootFolderModificationService.FileTree = fileTree;
 			_roslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);
 			_fileWatcher.StartWatching(solutionModel);

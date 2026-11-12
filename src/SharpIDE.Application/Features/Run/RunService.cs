@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Threading.Channels;
 using Ardalis.GuardClauses;
@@ -37,7 +37,10 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 		{
 			if (project.RunningCancellationTokenSource is not null) throw new InvalidOperationException($"Project {project.Name.Value} is already running with a cancellation token source.");
 
-			var buildResult = await _buildService.MsBuildAsync(project.FilePath);
+			// Multi-TFM projects are built (and run) for the TFM active in the editor
+			var activeSnapshot = project.ActiveMsBuildProjectLoadResult.Value.Snapshot;
+			var targetFramework = project.TfmSpecificLoadResults.Value.Count > 0 ? activeSnapshot?.GetPropertyValue("TargetFramework") : null;
+			var (buildResult, runProperties) = await _buildService.BuildProjectForRunAsync(project.FilePath, targetFramework);
 			if (buildResult is not SharpIdeBuildResult.Success)
 			{
 				_logger.LogInformation("Build failed for project {ProjectName}. Aborting run/debug.", project.Name.Value);
@@ -49,26 +52,14 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 			var launchProfiles = await LaunchSettingsParser.GetLaunchSettingsProfiles(project);
 			var launchProfile = launchProfiles.FirstOrDefault();
-
-			var fileName = launchProfile?.CommandName switch
-			{
-				"Executable" => launchProfile.ExecutablePath,
-				"Project" or _ => "dotnet",
-			} ?? "dotnet";
-
-			var workingDirectory = launchProfile?.WorkingDirectory switch
-			{
-				"$(ProjectDir)" => project.DirectoryPath,
-				null => project.DirectoryPath,
-				{} nonNullString => nonNullString,
-			};
+			var outputType = activeSnapshot?.GetPropertyValue("OutputType");
+			var launch = ProjectLaunchResolver.Resolve(project.DirectoryPath, outputType, runProperties, launchProfile);
 
 			var processStartInfo = new ProcessStartInfo2
 			{
-				FileName = fileName,
-				WorkingDirectory = workingDirectory,
-				//Arguments = $"run --project \"{project.FilePath}\" --no-restore",
-				Arguments = await GetRunArguments(project),
+				FileName = launch.FileName,
+				WorkingDirectory = launch.WorkingDirectory,
+				Arguments = launch.Arguments,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
 				RedirectStandardInput = false,
@@ -80,11 +71,12 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 			// processStartInfo.EnvironmentVariables["TERM"] = "xterm"; // may be necessary on linux/macOS
 			if (launchProfile is not null)
 			{
+				if (launchProfile.ApplicationUrl != null) processStartInfo.EnvironmentVariables["ASPNETCORE_URLS"] = launchProfile.ApplicationUrl;
+				// Applied last, so the profile wins
 				foreach (var envVar in launchProfile.EnvironmentVariables)
 				{
 					processStartInfo.EnvironmentVariables[envVar.Key] = envVar.Value;
 				}
-				if (launchProfile.ApplicationUrl != null) processStartInfo.EnvironmentVariables["ASPNETCORE_URLS"] = launchProfile.ApplicationUrl;
 			}
 			if (isDebug)
 			{
@@ -238,28 +230,5 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 		return _projectDebuggerSessionIds.TryGetValue(project, out var debuggerSessionId)
 			? debuggerSessionId
 			: throw new InvalidOperationException($"Project {project.Name.Value} does not have a debugger session.");
-	}
-
-	private async Task<List<string>> GetRunArguments(SharpIdeProjectModel project)
-	{
-		var dllFullPath = await _roslynAnalysis.GetOutputDllPathForProject(project);
-		if (project.IsBlazorProject)
-		{
-			var blazorDevServerVersion = project.BlazorDevServerVersion;
-			// TODO: Naive implementation which doesn't handle a relocated NuGet package cache
-			var blazorDevServerDllPath = Path.Combine(
-				Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-				".nuget",
-				"packages",
-				"microsoft.aspnetcore.components.webassembly.devserver",
-				blazorDevServerVersion,
-				"tools",
-				"blazor-devserver.dll");
-			var blazorDevServerFile = new FileInfo(blazorDevServerDllPath);
-			if (blazorDevServerFile.Exists is false) throw new FileNotFoundException($"Blazor dev server not found at expected path: {blazorDevServerDllPath}");
-			// C:/Users/Matthew/.nuget/packages/microsoft.aspnetcore.components.webassembly.devserver/9.0.7/tools/blazor-devserver.dll --applicationpath C:\Users\Matthew\Documents\Git\BlazorCodeBreaker\artifacts\bin\WebUi\debug\WebUi.dll
-			return [blazorDevServerFile.FullName, "--applicationpath", dllFullPath];
-		}
-		return [dllFullPath];
 	}
 }

@@ -1,18 +1,20 @@
-﻿using Ardalis.GuardClauses;
+using Ardalis.GuardClauses;
 using LibGit2Sharp;
 using Microsoft.CodeAnalysis.Razor.Utilities;
 using Microsoft.VisualStudio.SolutionPersistence;
 using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.FileWatching;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 
-public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
+public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis, ProjectEvaluationService projectEvaluationService)
 {
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
+	private readonly ProjectEvaluationService _projectEvaluationService = projectEvaluationService;
 
 	private SharpIdeSolutionModel? _sharpIdeSolutionModel;
 	private SolutionModel? _vsSolution;
@@ -33,7 +35,11 @@ public class SharpIdeSolutionService(RoslynAnalysis roslynAnalysis)
 		var (newSharpIdeSolutionModel, solutionModel, _) = await ReadSolution(_solutionFilePath, _sharpIdeSolutionModel!.FileTree, cancellationToken);
 		_vsSolution = solutionModel;
 		_sharpIdeSolutionModel!.UpdateFromNewSolution(newSharpIdeSolutionModel);
+		// Projects kept by the update keep their evaluation - only the newly added ones (from the new model) need evaluating
+		var addedProjects = _sharpIdeSolutionModel.AllProjects.Where(newSharpIdeSolutionModel.AllProjects.Contains).ToList();
+		var evaluateAddedProjectsTask = _projectEvaluationService.EvaluateProjectsAsync(addedProjects, cancellationToken);
 		await _roslynAnalysis.ReloadSolution(cancellationToken);
+		await evaluateAddedProjectsTask;
 		await _roslynAnalysis.UpdateSolutionDiagnostics(cancellationToken);
 	}
 

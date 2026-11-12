@@ -1,7 +1,6 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Build.Framework;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.MSBuild;
@@ -147,12 +146,12 @@ public partial class CustomMsBuildProjectLoader
 	/// <param name="solutionFilePath">The path to the solution file to be loaded. This may be an absolute path or a path relative to the
 	/// current working directory.</param>
 	/// <param name="progress">An optional <see cref="IProgress{T}"/> that will receive updates as the solution is loaded.</param>
-	/// <param name="msbuildLogger">An optional <see cref="ILogger"/> that will log MSBuild results.</param>
+	/// <param name="binaryLogFilePath">An optional path to write an MSBuild binary log of the design-time builds to. (Not an MSBuild ILogger, so the IDE process never loads Microsoft.Build.)</param>
 	/// <param name="cancellationToken">An optional <see cref="CancellationToken"/> to allow cancellation of this operation.</param>
 	public async Task<(SolutionInfo, Dictionary<ProjectId, ProjectFileInfo> projectFileInfos)> LoadSolutionInfoAsync(
 		string solutionFilePath,
 		IProgress<ProjectLoadProgress>? progress = null,
-		ILogger? msbuildLogger = null,
+		string? binaryLogFilePath = null,
 		CancellationToken cancellationToken = default)
 	{
 		if (solutionFilePath == null)
@@ -183,7 +182,7 @@ public partial class CustomMsBuildProjectLoader
 			[.. projectPaths],
 			projectMap: null,
 			progress,
-			msbuildLogger,
+			binaryLogFilePath,
 			requestedProjectOptions: reportingOptions,
 			discoveredProjectOptions: reportingOptions,
 			preferMetadataForReferencesOfDiscoveredProjects: false,
@@ -206,13 +205,13 @@ public partial class CustomMsBuildProjectLoader
 	/// <param name="projectMap">An optional <see cref="ProjectMap"/> that will be used to resolve project references to existing projects.
 	/// This is useful when populating a custom <see cref="Workspace"/>.</param>
 	/// <param name="progress">An optional <see cref="IProgress{T}"/> that will receive updates as the project is loaded.</param>
-	/// <param name="msbuildLogger">An optional <see cref="ILogger"/> that will log msbuild results.</param>
+	/// <param name="binaryLogFilePath">An optional path to write an MSBuild binary log of the design-time builds to.</param>
 	/// <param name="cancellationToken">An optional <see cref="CancellationToken"/> to allow cancellation of this operation.</param>
 	public async Task<ImmutableArray<ProjectInfo>> LoadProjectInfoAsync(
 		string projectFilePath,
 		ProjectMap? projectMap = null,
 		IProgress<ProjectLoadProgress>? progress = null,
-		ILogger? msbuildLogger = null,
+		string? binaryLogFilePath = null,
 		CancellationToken cancellationToken = default)
 	{
 		if (projectFilePath == null)
@@ -233,7 +232,7 @@ public partial class CustomMsBuildProjectLoader
 			[absoluteProjectPath],
 			projectMap,
 			progress,
-			msbuildLogger,
+			binaryLogFilePath,
 			requestedProjectOptions,
 			discoveredProjectOptions,
 			LoadMetadataForReferencedProjects,
@@ -264,14 +263,14 @@ public partial class CustomMsBuildProjectLoader
 		ImmutableArray<string> projectPaths,
 		ProjectMap? projectMap,
 		IProgress<ProjectLoadProgress>? progress,
-		ILogger? msbuildLogger,
+		string? binaryLogFilePath,
 		DiagnosticReportingOptions requestedProjectOptions,
 		DiagnosticReportingOptions discoveredProjectOptions,
 		bool preferMetadataForReferencesOfDiscoveredProjects,
 		CancellationToken cancellationToken)
 	{
-		var binLogPathProvider = IsBinaryLogger(msbuildLogger, out var fileName)
-			? new BinLogPathProvider(fileName)
+		var binLogPathProvider = binaryLogFilePath is not null
+			? new BinLogPathProvider(binaryLogFilePath)
 			: null;
 
 		var buildHostProcessManager = new BuildHostProcessManager(_knownCommandLineParserLanguages, Properties, binLogPathProvider, loggerFactory: _loggerFactory);
@@ -332,23 +331,6 @@ public partial class CustomMsBuildProjectLoader
 		var projectInfos = await worker.LoadAsync(cancellationToken).ConfigureAwait(false);
 		return (projectInfos, worker.ProjectFileInfos);
 	}
-	private static bool IsBinaryLogger([NotNullWhen(returnValue: true)] ILogger? logger, out string? fileName)
-	{
-		// We validate the type name to avoid taking a dependency on the Microsoft.Build package
-		// because it brings along additional dependencies and servicing requirements.
-		if (logger?.GetType().FullName != "Microsoft.Build.Logging.BinaryLogger")
-		{
-			fileName = null;
-			return false;
-		}
-
-		// The logger.Parameters could contain more than just the filename, such as "ProjectImports" or "OmitInitialInfo".
-		// Attempt to get the parsed filname directly from the logger if possible.
-		var fileNameProperty = logger.GetType().GetProperty("FileName");
-		fileName = fileNameProperty?.GetValue(logger) as string ?? logger.Parameters;
-		return true;
-	}
-
 	internal sealed class BinLogPathProvider : IBinLogPathProvider
 	{
 		private const string DefaultFileName = "msbuild";

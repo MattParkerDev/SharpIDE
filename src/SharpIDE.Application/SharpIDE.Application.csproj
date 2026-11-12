@@ -24,13 +24,11 @@
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Features" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.CSharp.Features" />
-    <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.Build" MemberPattern="^Microsoft\.Build\.Logging\.(TerminalLogger|Terminal)\..*" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces:System.Linq.RoslynEnumerableExtensions" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Razor.Workspaces:System.Collections.Immutable.ImmutableArrayExtensions" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts:Microsoft.CodeAnalysis.ErrorReporting.FatalError" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts:Microsoft.CodeAnalysis.ErrorReporting.ErrorSeverity" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts:Microsoft.CodeAnalysis.Contract" />
-    <DoNotPublicize Include="Microsoft.Build:Microsoft.CodeAnalysis.ICollectionExtensions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,23 +45,18 @@
     <PackageReference Include="Microsoft.TemplateEngine.IDE" />
     <PackageReference Include="Microsoft.TemplateSearch.Common" />
     <PackageReference Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
-    <!-- If any Microsoft.Build.*.dll (Excluding Locator) ends up in the output, it will be prioritised for loading by MSBuild Nodes  -->
     <PackageReference Include="Ardalis.GuardClauses" />
     <PackageReference Include="AsyncReadProcess" />
-    <PackageReference Include="Microsoft.Build" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Build.Locator" />
     <PackageReference Include="Krafs.Publicizer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Build.Tasks.Core" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Build.Utilities.Core" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" />
 <!--    <PackageReference Include="Microsoft.VisualStudioCode.RazorExtension" />--> <!-- Either this or Microsoft.CodeAnalysis.Remote.Razor supplies RemoteSnapshotManager -->
     <PackageReference Include="Microsoft.CodeAnalysis.Remote.Razor" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.Features" />
+    <!-- Roslyn's BuildHost, for design-time builds. MSBuild itself (evaluation and builds) runs in SharpIDE.MsBuildHost - nothing in this process may load Microsoft.Build*. -->
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
     <PackageReference Include="NeoSmart.AsyncLock" />
@@ -83,4 +76,12 @@
   <ItemGroup>
     <ProjectReference Include="..\SharpIDE.MsBuildHost.Contracts\SharpIDE.MsBuildHost.Contracts.csproj" />
   </ItemGroup>
+
+  <!-- Microsoft.CodeAnalysis.Workspaces.MSBuild depends on Microsoft.Build.Framework, for MSBuildWorkspace's ILogger parameters, which we don't use.
+       Keep it out of the output, so the IDE process can never load an MSBuild assembly - if something tries to, it fails loudly instead of pinning an SDK's MSBuild. -->
+  <Target Name="RemoveMsBuildAssembliesFromOutput" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="$([System.String]::Copy('%(RuntimeCopyLocalItems.NuGetPackageId)').StartsWith('Microsoft.Build'))" />
+    </ItemGroup>
+  </Target>
 </Project>

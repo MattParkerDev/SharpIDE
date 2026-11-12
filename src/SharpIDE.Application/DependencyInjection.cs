@@ -22,6 +22,7 @@ public static class DependencyInjection
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
 		services.AddScoped<BuildService>();
+		services.AddScoped<ProjectEvaluationService>();
 		services.AddScoped<RunService>();
 		services.AddScoped<DebuggingService>();
 		services.AddScoped<SearchService>();
