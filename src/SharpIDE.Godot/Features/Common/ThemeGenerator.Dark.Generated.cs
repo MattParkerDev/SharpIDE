@@ -81,6 +81,29 @@ public static partial class ThemeGenerator
         };
         theme.SetStylebox("normal", "Button", button_Normal);
 
+        // As normal, with a fainter outline - in both themes, as Godot's default (10% grey at 30% opacity, no outline) vanishes on a panel
+        var button_Disabled = new StyleBoxFlat
+        {
+	        ResourceSceneUniqueId = "StyleBoxFlat_guqd5",
+	        ContentMarginLeft = 4.0f,
+	        ContentMarginTop = 4.0f,
+	        ContentMarginRight = 4.0f,
+	        ContentMarginBottom = 4.0f,
+	        BgColor = whiteAt3Percent,
+	        BorderWidthLeft = 1,
+	        BorderWidthTop = 1,
+	        BorderWidthRight = 1,
+	        BorderWidthBottom = 1,
+	        BorderColor = whiteAt6Percent,
+	        BorderBlend = true,
+	        CornerRadiusTopLeft = 3,
+	        CornerRadiusTopRight = 3,
+	        CornerRadiusBottomRight = 3,
+	        CornerRadiusBottomLeft = 3,
+	        CornerDetail = 5
+        };
+        theme.SetStylebox("disabled", "Button", button_Disabled);
+
         var button_Pressed = new StyleBoxFlat
         {
 	        ResourceSceneUniqueId = "StyleBoxFlat_5v2og",
@@ -757,6 +780,7 @@ public static partial class ThemeGenerator
         theme.SetFont("normal_font", "Terminal", ResourceLoader.Load<Font>("uid://vmgmcu8gc6nt"));
         theme.SetFontSize("font_size", "Terminal", 16);
         theme.SetConstant("IsLight1OrDark2", "ThemeInfo", lightOrDark);
+        AddCheckBoxStyles(theme, colors);
 
         if (isLightTheme)
         {
@@ -795,28 +819,6 @@ public static partial class ThemeGenerator
                 CornerDetail = 5
             };
             theme.SetStylebox("hovered", "Tree", tree_Hovered);
-
-            var button_Disabled = new StyleBoxFlat
-            {
-	            ResourceSceneUniqueId = "StyleBoxFlat_guqd5",
-	            ContentMarginLeft = 4.0f,
-	            ContentMarginTop = 4.0f,
-	            ContentMarginRight = 4.0f,
-	            ContentMarginBottom = 4.0f,
-	            BgColor = whiteAt3Percent,
-	            BorderWidthLeft = 1,
-	            BorderWidthTop = 1,
-	            BorderWidthRight = 1,
-	            BorderWidthBottom = 1,
-	            BorderColor = whiteAt6Percent,
-	            BorderBlend = true,
-	            CornerRadiusTopLeft = 3,
-	            CornerRadiusTopRight = 3,
-	            CornerRadiusBottomRight = 3,
-	            CornerRadiusBottomLeft = 3,
-	            CornerDetail = 5
-            };
-            theme.SetStylebox("disabled", "Button", button_Disabled);
         }
 
         return theme;

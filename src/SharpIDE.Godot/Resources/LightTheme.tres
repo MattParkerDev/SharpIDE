@@ -84,6 +84,24 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
 
+[sub_resource type="DPITexture" id="DPITexture_chkchk"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" rx=\"3.5\" fill=\"#2b2b2b\" fill-opacity=\"1\"/><path d=\"M4.5 8.25 L7 10.75 L11.5 5.5\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke=\"#fafafa\" stroke-opacity=\"1\"/></svg>"
+
+[sub_resource type="DPITexture" id="DPITexture_chkchd"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" rx=\"3.5\" fill=\"#2b2b2b\" fill-opacity=\"0.5\"/><path d=\"M4.5 8.25 L7 10.75 L11.5 5.5\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke=\"#fafafa\" stroke-opacity=\"1\"/></svg>"
+
+[sub_resource type="DPITexture" id="DPITexture_chkunc"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"1.5\" width=\"13\" height=\"13\" rx=\"3\" stroke-width=\"1\" fill=\"#000000\" fill-opacity=\"0.059\" stroke=\"#000000\" stroke-opacity=\"0.125\"/></svg>"
+
+[sub_resource type="DPITexture" id="DPITexture_chkund"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"1.5\" width=\"13\" height=\"13\" rx=\"3\" stroke-width=\"1\" fill=\"#000000\" fill-opacity=\"0.029\" stroke=\"#000000\" stroke-opacity=\"0.063\"/></svg>"
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_chkbx"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_38n5o"]
 bg_color = Color(0.82, 0.82, 0.82, 1)
 border_width_left = 1
@@ -534,6 +552,15 @@ Button/styles/disabled = SubResource("StyleBoxFlat_guqd5")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
 Button/styles/normal = SubResource("StyleBoxFlat_kyxro")
 Button/styles/pressed = SubResource("StyleBoxFlat_5v2og")
+CheckBox/icons/checked = SubResource("DPITexture_chkchk")
+CheckBox/icons/checked_disabled = SubResource("DPITexture_chkchd")
+CheckBox/icons/unchecked = SubResource("DPITexture_chkunc")
+CheckBox/icons/unchecked_disabled = SubResource("DPITexture_chkund")
+CheckBox/styles/disabled = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/hover = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/hover_pressed = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/normal = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/pressed = SubResource("StyleBoxEmpty_chkbx")
 CodeEdit/colors/completion_background_color = Color(1, 1, 1, 0)
 CodeEdit/colors/completion_selected_color = Color(0.61, 0.805, 1, 1)
 CodeEdit/colors/current_line_color = Color(0.94, 0.94, 0.94, 1)

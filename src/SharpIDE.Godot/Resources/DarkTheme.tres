@@ -12,6 +12,24 @@ content_margin_right = 8.0
 content_margin_bottom = 8.0
 bg_color = Color(0.09974625, 0.10354479, 0.10734332, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_guqd5"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(1, 1, 1, 0.03137255)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.0627451)
+border_blend = true
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dwjdr"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -65,6 +83,24 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 corner_detail = 5
+
+[sub_resource type="DPITexture" id="DPITexture_chkchk"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" rx=\"3.5\" fill=\"#d4d4d4\" fill-opacity=\"1\"/><path d=\"M4.5 8.25 L7 10.75 L11.5 5.5\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke=\"#1e1e1e\" stroke-opacity=\"1\"/></svg>"
+
+[sub_resource type="DPITexture" id="DPITexture_chkchd"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1\" y=\"1\" width=\"14\" height=\"14\" rx=\"3.5\" fill=\"#d4d4d4\" fill-opacity=\"0.5\"/><path d=\"M4.5 8.25 L7 10.75 L11.5 5.5\" fill=\"none\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke=\"#1e1e1e\" stroke-opacity=\"1\"/></svg>"
+
+[sub_resource type="DPITexture" id="DPITexture_chkunc"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"1.5\" width=\"13\" height=\"13\" rx=\"3\" stroke-width=\"1\" fill=\"#ffffff\" fill-opacity=\"0.063\" stroke=\"#ffffff\" stroke-opacity=\"0.125\"/></svg>"
+
+[sub_resource type="DPITexture" id="DPITexture_chkund"]
+_source = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\"><rect x=\"1.5\" y=\"1.5\" width=\"13\" height=\"13\" rx=\"3\" stroke-width=\"1\" fill=\"#ffffff\" fill-opacity=\"0.031\" stroke=\"#ffffff\" stroke-opacity=\"0.063\"/></svg>"
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_chkbx"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_38n5o"]
 bg_color = Color(0.16862746, 0.1764706, 0.1882353, 1)
@@ -496,9 +532,19 @@ expand_margin_bottom = 6.0
 [resource]
 default_font = ExtResource("2_amw38")
 AcceptDialog/styles/panel = SubResource("StyleBoxFlat_acptdlg")
+Button/styles/disabled = SubResource("StyleBoxFlat_guqd5")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
 Button/styles/normal = SubResource("StyleBoxFlat_kyxro")
 Button/styles/pressed = SubResource("StyleBoxFlat_5v2og")
+CheckBox/icons/checked = SubResource("DPITexture_chkchk")
+CheckBox/icons/checked_disabled = SubResource("DPITexture_chkchd")
+CheckBox/icons/unchecked = SubResource("DPITexture_chkunc")
+CheckBox/icons/unchecked_disabled = SubResource("DPITexture_chkund")
+CheckBox/styles/disabled = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/hover = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/hover_pressed = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/normal = SubResource("StyleBoxEmpty_chkbx")
+CheckBox/styles/pressed = SubResource("StyleBoxEmpty_chkbx")
 CodeEdit/colors/completion_background_color = Color(1, 1, 1, 0)
 CodeEdit/colors/completion_selected_color = Color(0.18039216, 0.2627451, 0.43137255, 1)
 CodeEdit/colors/current_line_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
