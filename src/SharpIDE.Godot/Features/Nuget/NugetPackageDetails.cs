@@ -1,4 +1,5 @@
 using Godot;
+using Microsoft.CodeAnalysis.Threading;
 using NuGet.Frameworks;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
@@ -36,6 +37,8 @@ public partial class NugetPackageDetails : VBoxContainer
 
 	private IdePackageResult? _package;
 	private NuGetVersion? _selectedVersion;
+	/// Cancels a source's versions still loading when another source, or package, is selected
+	private readonly CancellationSeries _sourceVersionsCancellationSeries = new();
 
 	/// Raised off the UI thread once a project's reference to the package has been changed
 	public event Func<Task>? PackageReferencesChanged;
@@ -159,7 +162,10 @@ public partial class NugetPackageDetails : VBoxContainer
 
 	private void VersionSelected(long index)
 	{
-		var selectedVersion = _versionOptionButton.GetItemMetadata((int)index).As<RefCountedContainer<NuGetVersion>>();
+		// -1 when the source has no versions to choose from
+		var selectedVersion = index >= 0 && index < _versionOptionButton.ItemCount
+			? _versionOptionButton.GetItemMetadata((int)index).As<RefCountedContainer<NuGetVersion>>()
+			: null;
 		_selectedVersion = selectedVersion?.Item;
 		ShowInfo(_versionMetadata.Find(m => m.Identity.Version == _selectedVersion));
 		foreach (var child in _projectsVBoxContainer.GetChildren().OfType<PackageDetailsProjectEntry>())
@@ -304,11 +310,14 @@ public partial class NugetPackageDetails : VBoxContainer
 		// No source returned the package (unreachable, or it isn't on any enabled source) - there are no versions to list
 		if (package.PackageFromSources.Count is 0)
 		{
+			// The previous package's versions may still be loading
+			_sourceVersionsCancellationSeries.CreateNext();
 			await this.InvokeAsync(() =>
 			{
 				_versionMetadata = [];
 				_localInstallations = [];
-				ShowInfo(null);
+				// No version to select - so the projects' buttons don't offer the previous package's
+				VersionSelected(-1);
 			});
 			return;
 		}
@@ -358,14 +367,30 @@ public partial class NugetPackageDetails : VBoxContainer
 	
 	private async Task OnNugetSourceSelected(long sourceIndex)
 	{
+		// Another source (or package) selected while this one's versions load replaces them - they'd otherwise be shown if they arrived last
+		var cancellationToken = _sourceVersionsCancellationSeries.CreateNext();
 		var packageFromSource = _package!.PackageFromSources[(int)sourceIndex];
 		var packageId = packageFromSource.PackageSearchMetadata.Identity.Id;
-		var results = await _nugetClientService.GetAllVersionsOfPackageInSource(packageId, packageFromSource.Source);
+		List<IPackageSearchMetadata> results;
+		try
+		{
+			results = await _nugetClientService.GetAllVersionsOfPackageInSource(packageId, packageFromSource.Source, cancellationToken);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			return;
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			// The source failed (e.g. it needs credentials) - show it as having no versions, rather than leaving the previous source's
+			results = [];
+		}
 		var localInstallations = _sharpIdeSolutionAccessor.SolutionModel is { } solution
 			? _nugetClientService.GetLocalInstallations(packageId, solution.DirectoryPath)
 			: [];
 		await this.InvokeAsync(() =>
 		{
+			if (cancellationToken.IsCancellationRequested) return;
 			_versionMetadata = results;
 			_localInstallations = localInstallations;
 			// Until a version is selected, e.g. when the source has none
@@ -379,7 +404,7 @@ public partial class NugetPackageDetails : VBoxContainer
 			}
 			// Keep the version chosen before a refresh, e.g. after a downgrade
 			var selectedIndex = _selectedVersion is null ? -1 : results.FindIndex(m => m.Identity.Version == _selectedVersion);
-			if (selectedIndex < 0) selectedIndex = 0;
+			if (selectedIndex < 0) selectedIndex = results.Count > 0 ? 0 : -1;
 			_versionOptionButton.Selected = selectedIndex;
 			VersionSelected(selectedIndex);
 		});

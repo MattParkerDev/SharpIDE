@@ -142,12 +142,18 @@ public class NugetClientService
 			var repository = Repository.Factory.GetCoreV3(source);
 			var packageMetadataResource = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
 
+			// Prereleases are asked for too, as a package with only prereleases on this source shows them - as GetLatestPackageMetadata does, which decides
+			// which sources a package is listed with. Otherwise the source would be listed with no versions
 			var metadata = await packageMetadataResource.GetMetadataAsync(
-				packageId, includePrerelease: _includePrerelease, includeUnlisted: false,
+				packageId, includePrerelease: true, includeUnlisted: false,
 				_sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false);
 
 			//var packageByIdResource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken).ConfigureAwait(false);
 			var metadataList = metadata.ToList();
+			if (_includePrerelease is false && metadataList.Any(m => m.Identity.Version.IsPrerelease is false))
+			{
+				metadataList.RemoveAll(m => m.Identity.Version.IsPrerelease);
+			}
 			metadataList.Reverse();
 			return metadataList;
 	}
