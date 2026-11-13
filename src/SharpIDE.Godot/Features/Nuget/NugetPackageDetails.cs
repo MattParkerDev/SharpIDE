@@ -67,6 +67,9 @@ public partial class NugetPackageDetails : VBoxContainer
 		_projectsVBoxContainer = GetNode<VBoxContainer>("%ProjectsVBoxContainer");
 		_nugetSourceOptionButton.ItemSelected += index => _ = Task.GodotRun(() => OnNugetSourceSelected(index));
 		_versionOptionButton.ItemSelected += VersionSelected;
+		// Otherwise the popup grows to the window's height for a package with many versions - past this it scrolls. Wide enough to not limit the width
+		_versionOptionButton.GetPopup().MaxSize = new Vector2I(16384, 400);
+		_versionOptionButton.OpenPopupAboveWhenNoRoomBelow();
 		_installAllButton = GetNode<Button>("%InstallAllButton");
 		_installAllButton.Pressed += () => ShowChangeDialog(PackageChangeKind.Install);
 		_upgradeAllButton = GetNode<Button>("%UpgradeAllButton");
