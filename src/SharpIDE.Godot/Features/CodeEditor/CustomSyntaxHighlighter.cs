@@ -12,7 +12,11 @@ public partial class CustomHighlighter : SyntaxHighlighter
 {
     private readonly Dictionary _emptyDict = new();
 
-    private System.Collections.Generic.Dictionary<int, ImmutableArray<SharpIdeClassifiedSpan>> _classifiedSpansByLine = [];
+    // All of the document's spans, sorted by line then character, and the range of them that belongs to each line that has any
+    private ImmutableArray<SharpIdeClassifiedSpan> _classifiedSpans = [];
+    private System.Collections.Generic.Dictionary<int, LineSpanRange> _spanRangesByLine = [];
+
+    private readonly record struct LineSpanRange(int Start, int Count);
 
     public EditorThemeColorSet ColourSetForTheme = null!;
     private HighlightEntries _highlightEntries = null!;
@@ -53,10 +57,17 @@ public partial class CustomHighlighter : SyntaxHighlighter
     /// <param name="classifiedSpans">Sorted, single-line, non-overlapping spans</param>
     public void SetHighlightingData(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)
     {
-        _classifiedSpansByLine = classifiedSpans
-            .Where(s => s.Length is not 0)
-            .GroupBy(s => s.Line)
-            .ToDictionary(g => g.Key, g => g.ToImmutableArray());
+        var spanRangesByLine = new System.Collections.Generic.Dictionary<int, LineSpanRange>();
+        var lineStart = 0;
+        for (var i = 1; i <= classifiedSpans.Length; i++)
+        {
+            if (i < classifiedSpans.Length && classifiedSpans[i].Line == classifiedSpans[lineStart].Line) continue;
+            spanRangesByLine[classifiedSpans[lineStart].Line] = new LineSpanRange(lineStart, i - lineStart);
+            lineStart = i;
+        }
+
+        _classifiedSpans = classifiedSpans;
+        _spanRangesByLine = spanRangesByLine;
     }
 
     // Indicates that lines were removed or added, and the overall result of that is that a line (wasLineNumber), is now (becameLineNumber)
@@ -80,7 +91,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     private void LinesAdded(long fromLine, int difference, SharpIdeCodeEdit.LineEditOrigin origin)
     {
-        _classifiedSpansByLine = Rearrange(_classifiedSpansByLine, fromLine, difference, origin);
+        _spanRangesByLine = Rearrange(_spanRangesByLine, fromLine, difference, origin);
         return;
 
         static System.Collections.Generic.Dictionary<int, T> Rearrange<T>(System.Collections.Generic.Dictionary<int, T> existingDictionary, long fromLine, int difference, SharpIdeCodeEdit.LineEditOrigin origin)
@@ -107,7 +118,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
     
     private void LinesRemoved(long fromLine, int numberOfLinesRemoved)
     {
-        _classifiedSpansByLine = Rearrange(_classifiedSpansByLine, fromLine, numberOfLinesRemoved);
+        _spanRangesByLine = Rearrange(_spanRangesByLine, fromLine, numberOfLinesRemoved);
         return;
 
         static System.Collections.Generic.Dictionary<int, T> Rearrange<T>(System.Collections.Generic.Dictionary<int, T> existingDictionary, long fromLine, int numberOfLinesRemoved)
@@ -137,7 +148,8 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     public override Dictionary _GetLineSyntaxHighlighting(int line)
     {
-        if (_classifiedSpansByLine.TryGetValue(line, out var spansForLine) is false) return _emptyDict;
+        if (_spanRangesByLine.TryGetValue(line, out var range) is false) return _emptyDict;
+        var spansForLine = _classifiedSpans.AsSpan(range.Start, range.Count);
 
         var entries = _highlightEntries.ByClassification;
         var defaultEntry = _highlightEntries.DefaultColor;
@@ -145,6 +157,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
         for (var i = 0; i < spansForLine.Length; i++)
         {
             var span = spansForLine[i];
+            if (span.Length is 0) continue;
             highlights[span.StartCharacter] = entries[(int)span.Classification];
 
             // Godot applies a colour until the next entry on the line, so reset to the default colour for any gap after this span
