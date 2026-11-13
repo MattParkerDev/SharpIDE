@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Godot;
+using NuGet.Versioning;
 using SharpIDE.Application;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Nuget;
@@ -37,11 +38,20 @@ public partial class NugetPanel : Control
 	
 	private NugetPackageDetails _nugetPackageDetails = null!;
 
+	private CheckBox _packagesToUpdateSelectAllCheckBox = null!;
+	private Button _packagesToUpdateUpdateButton = null!;
+	/// The rows of the Packages to Update section, each with its checkbox
+	private readonly List<(CheckBox CheckBox, IdePackageResult Package)> _updateRows = [];
+	/// Ticked packages, by id - kept across refreshes, for those still with an update
+	private readonly HashSet<string> _selectedUpdatePackageIds = new(StringComparer.OrdinalIgnoreCase);
+	private bool _updatingPackages;
+
 	private SharpIdeSolutionModel? _solution;
 	
 	[Inject] private readonly NugetClientService _nugetClientService = null!;
 	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
 	[Inject] private readonly ActivityMonitor _activityMonitor = null!;
+	[Inject] private readonly PackageReferenceService _packageReferenceService = null!;
 	
 	private readonly PackedScene _packageEntryScene = ResourceLoader.Load<PackedScene>("uid://cqc2xlt81ju8s");
 	private readonly Texture2D _csprojIcon = ResourceLoader.Load<Texture2D>("uid://cqt30ma6xgder");
@@ -58,7 +68,11 @@ public partial class NugetPanel : Control
 		_packagesToUpdateProgressBar = GetNode<ProgressBar>("%PackagesToUpdateProgressBar");
 		_packagesToUpdateProgressBar.Visible = false;
 		_packagesToUpdateVboxContainer.QueueFreeChildren();
-		_installedPackagesVboxContainer = GetNode<VBoxContainer>("%InstalledPackagesVBoxContainer");
+		_packagesToUpdateSelectAllCheckBox = GetNode<CheckBox>("%PackagesToUpdateSelectAllCheckBox");
+		_packagesToUpdateUpdateButton = GetNode<Button>("%PackagesToUpdateUpdateButton");
+		_packagesToUpdateSelectAllCheckBox.Toggled += OnSelectAllUpdatesToggled;
+		_packagesToUpdateUpdateButton.Pressed += UpdateSelectedPackages;
+		_installedPackagesVboxContainer =GetNode<VBoxContainer>("%InstalledPackagesVBoxContainer");
 		_implicitlyInstalledPackagesItemList = GetNode<VBoxContainer>("%ImplicitlyInstalledPackagesVBoxContainer");
 		_availablePackagesItemList = GetNode<VBoxContainer>("%AvailablePackagesVBoxContainer");
 		_solutionOrProjectOptionButton = GetNode<OptionButton>("%SolutionOrProjectOptionButton");
@@ -264,10 +278,7 @@ public partial class NugetPanel : Control
 			_packagesToUpdateVboxContainer.QueueFreeChildren();
 			_installedPackagesVboxContainer.QueueFreeChildren();
 			_implicitlyInstalledPackagesItemList.QueueFreeChildren();
-			foreach (var updateScene in updateScenes)
-			{
-				_packagesToUpdateVboxContainer.AddChild(updateScene);
-			}
+			SetUpdateRows(updateScenes);
 			foreach (var transitiveScene in transitiveScenes)
 			{
 				_implicitlyInstalledPackagesItemList.AddChild(transitiveScene);
@@ -288,12 +299,125 @@ public partial class NugetPanel : Control
 		});
 	}
 
-	/// Whether a source has a newer version than one a project references directly - implicit (transitive) references are updated through what brings them in
-	private static bool HasUpdate(IdePackageResult packageResult)
+	/// Whether a source has a newer version than one a project references itself - implicit (transitive) references are updated through what brings them in,
+	/// and those the SDK adds through the SDK
+	private static bool HasUpdate(IdePackageResult packageResult) => GetUpdates(packageResult).Count > 0;
+
+	/// Each project reference to move to the latest version any source has
+	private static List<(SharpIdeProjectModel Project, NuGetVersion Version)> GetUpdates(IdePackageResult packageResult)
 	{
-		if (packageResult.InstalledNugetPackageInfo is not { } installedInfo || packageResult.PackageFromSources.Count is 0) return false;
+		if (packageResult.InstalledNugetPackageInfo is not { } installedInfo || packageResult.PackageFromSources.Count is 0) return [];
 		var latestVersion = packageResult.PackageFromSources.Max(s => s.PackageSearchMetadata.Identity.Version)!;
-		return installedInfo.ProjectPackageReferences.Any(r => r.IsTransitive is false && r.InstalledVersion < latestVersion);
+		return installedInfo.ProjectPackageReferences
+			.Where(r => r is { IsTopLevel: true, IsAutoReferenced: false } && r.InstalledVersion < latestVersion)
+			.Select(r => (r.Project, latestVersion))
+			.DistinctBy(u => u.Project)
+			.ToList();
+	}
+
+	/// Puts each entry in a row with a checkbox, ticked if it was before. Call on the UI thread, once the previous rows are queued for freeing
+	private void SetUpdateRows(List<PackageEntry> updateScenes)
+	{
+		_updateRows.Clear();
+		foreach (var scene in updateScenes)
+		{
+			var package = scene.PackageResult;
+			var checkBox = new CheckBox { ButtonPressed = _selectedUpdatePackageIds.Contains(package.PackageId), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+			checkBox.Toggled += pressed =>
+			{
+				if (pressed) _selectedUpdatePackageIds.Add(package.PackageId);
+				else _selectedUpdatePackageIds.Remove(package.PackageId);
+				UpdateUpdateControls();
+			};
+			scene.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+			var row = new HBoxContainer();
+			row.AddThemeConstantOverride(ThemeStringNames.Separation, 0);
+			row.AddChild(checkBox);
+			row.AddChild(scene);
+			_packagesToUpdateVboxContainer.AddChild(row);
+			_updateRows.Add((checkBox, package));
+		}
+		// Forget packages no longer listed, e.g. those just updated
+		_selectedUpdatePackageIds.IntersectWith(_updateRows.Select(r => r.Package.PackageId));
+		UpdateUpdateControls();
+	}
+
+	private void OnSelectAllUpdatesToggled(bool pressed)
+	{
+		foreach (var (checkBox, package) in _updateRows)
+		{
+			checkBox.SetPressedNoSignal(pressed);
+			if (pressed) _selectedUpdatePackageIds.Add(package.PackageId);
+			else _selectedUpdatePackageIds.Remove(package.PackageId);
+		}
+		UpdateUpdateControls();
+	}
+
+	/// The select-all checkbox ticked when every row is, and the Update button enabled when any is. Call on the UI thread
+	private void UpdateUpdateControls()
+	{
+		var selectedCount = _updateRows.Count(r => r.CheckBox.ButtonPressed);
+		_packagesToUpdateSelectAllCheckBox.SetPressedNoSignal(_updateRows.Count > 0 && selectedCount == _updateRows.Count);
+		_packagesToUpdateSelectAllCheckBox.Disabled = _updatingPackages || _updateRows.Count is 0;
+		foreach (var (checkBox, _) in _updateRows) checkBox.Disabled = _updatingPackages;
+		_packagesToUpdateUpdateButton.Disabled = _updatingPackages || selectedCount is 0;
+		if (_updatingPackages is false) _packagesToUpdateUpdateButton.Text = selectedCount is 0 ? "Update" : $"Update ({selectedCount})";
+	}
+
+	/// Moves each ticked package to its latest version in every project referencing an older one - one project at a time, as each change restores - then reads the packages again
+	private void UpdateSelectedPackages()
+	{
+		if (_updatingPackages) return;
+		var changes = _updateRows
+			.Where(r => r.CheckBox.ButtonPressed)
+			.SelectMany(r => GetUpdates(r.Package).Select(u => (r.Package.PackageId, u.Project, u.Version)))
+			.ToList();
+		if (changes.Count is 0) return;
+		_updatingPackages = true;
+		UpdateUpdateControls();
+		_ = Task.GodotRun(async () =>
+		{
+			var failures = new List<string>();
+			var anySucceeded = false;
+			try
+			{
+				foreach (var (index, (packageId, project, version)) in changes.Index())
+				{
+					await this.InvokeAsync(() => _packagesToUpdateUpdateButton.Text = $"Updating {index + 1}/{changes.Count}...");
+					var result = await _packageReferenceService.AddOrUpdateAsync(project, packageId, version);
+					anySucceeded |= result.Success;
+					if (result.Success is false) failures.Add($"{packageId} {version.ToNormalizedString()} in {project.Name.Value}: {result.Error ?? "the change failed"}");
+				}
+			}
+			finally
+			{
+				await this.InvokeAsync(() =>
+				{
+					_updatingPackages = false;
+					UpdateUpdateControls();
+					if (failures.Count > 0) ShowUpdateFailures(failures);
+				});
+			}
+			if (anySucceeded) await OnPackageReferencesChanged();
+		});
+	}
+
+	private void ShowUpdateFailures(List<string> failures)
+	{
+		var dialog = new AcceptDialog
+		{
+			Title = failures.Count is 1 ? "An update failed" : $"{failures.Count} updates failed",
+			DialogText = string.Join('\n', failures),
+			DialogAutowrap = true,
+			Exclusive = true,
+			Transient = true
+		};
+		dialog.VisibilityChanged += () =>
+		{
+			if (dialog.Visible is false) dialog.QueueFree();
+		};
+		AddChild(dialog);
+		dialog.PopupCentered(new Vector2I(700, 0));
 	}
 	
 	private async Task OnActivityChanged(Activity activity)

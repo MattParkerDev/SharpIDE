@@ -112,6 +112,11 @@ size_flags_vertical = 3
 layout_mode = 2
 theme_override_constants/separation = 0
 
+[node name="PackagesToUpdateSelectAllCheckBox" type="CheckBox" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=1630577213]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Select all"
+
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=1290574436]
 layout_mode = 2
 theme_type_variation = &"Gray600Label"
@@ -149,6 +154,14 @@ size_flags_vertical = 4
 theme_override_font_sizes/font_size = 2
 indeterminate = true
 editor_preview_indeterminate = false
+
+[node name="PackagesToUpdateUpdateButton" type="Button" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer/HBoxContainer0" unique_id=1218840947]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "Update the selected packages to their latest versions"
+disabled = true
+text = "Update"
 
 [node name="PanelContainer0" type="PanelContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Installed/VBoxContainer" unique_id=1673025918]
 layout_mode = 2
