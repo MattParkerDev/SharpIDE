@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.Threading;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
+using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -21,6 +22,9 @@ public class ProjectEvaluationService
 	private readonly AsyncBatchingWorkQueue<string> _importFileChangedQueue;
 
 	public SharpIdeSolutionModel? SolutionModel { get; set; }
+
+	/// Raised after imported files changed and the projects importing them were re-evaluated - with the changed files, and those projects. Their Roslyn projects may now be stale.
+	public EventWrapper<IReadOnlyCollection<string>, IReadOnlyList<SharpIdeProjectModel>, Task> ProjectsReevaluatedForImportChanges { get; } = new((_, _) => Task.CompletedTask);
 
 	public ProjectEvaluationService(BuildService buildService, ILogger<ProjectEvaluationService> logger)
 	{
@@ -66,6 +70,7 @@ public class ProjectEvaluationService
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluationService)}.{nameof(ReloadForChangedFilesAsync)}");
 		var solutionModel = SolutionModel;
 		if (solutionModel is null || changedFilePaths.Count is 0) return;
+		var reevaluatedProjects = new List<SharpIdeProjectModel>();
 		try
 		{
 			var rpc = await _buildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
@@ -73,13 +78,25 @@ public class ProjectEvaluationService
 			foreach (var result in results)
 			{
 				var project = solutionModel.AllProjects.FirstOrDefault(p => PathComparison.Comparer.Equals(p.FilePath, result.ProjectFilePath));
-				project?.ApplyEvaluationResult(ToLoadResult(result));
+				if (project is null) continue;
+				project.ApplyEvaluationResult(ToLoadResult(result));
+				reevaluatedProjects.Add(project);
 			}
 			_logger.LogInformation("Re-evaluated {ProjectCount} projects after {FileCount} imported files changed", results.Count, changedFilePaths.Count);
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Failed to re-evaluate projects after imported files changed");
+			return;
+		}
+		if (reevaluatedProjects.Count is 0) return;
+		try
+		{
+			await ProjectsReevaluatedForImportChanges.InvokeParallelAsync(changedFilePaths, reevaluatedProjects).ConfigureAwait(false);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to handle projects re-evaluated after imported files changed");
 		}
 	}
 

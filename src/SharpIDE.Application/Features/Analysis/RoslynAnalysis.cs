@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Composition.Hosting;
 using System.Diagnostics;
@@ -62,6 +63,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private readonly AnalyzerFileWatcher _analyzerFileWatcher = analyzerFileWatcher;
 
 	public static AdhocWorkspace? _workspace;
+	/// When each project's last design-time build started - the solution load's, for projects not reloaded since
+	private DateTime _solutionDesignTimeBuildStartedUtc = DateTime.MaxValue;
+	private readonly ConcurrentDictionary<string, DateTime> _projectDesignTimeBuildStartedUtc = new(PathComparison.Comparer);
 	private static CustomMsBuildProjectLoader? _msBuildProjectLoader;
 	private static RemoteSnapshotManager? _snapshotManager;
 	private static RemoteSemanticTokensLegendService? _semanticTokensLegendService;
@@ -133,6 +137,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			//_msBuildProjectLoader!.LoadMetadataForReferencedProjects = true;
 
 			// This call is the expensive part - design-time building every project
+			_projectDesignTimeBuildStartedUtc.Clear();
+			_solutionDesignTimeBuildStartedUtc = DateTime.UtcNow;
 			var (solutionInfo, projectFileInfos) = await _msBuildProjectLoader!.LoadSolutionInfoAsync(solutionFilePath, cancellationToken: cancellationToken);
 			_projectFileInfoMap = projectFileInfos;
 
@@ -257,6 +263,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			.ToList();
 		// The solution's other projects are referenced as they are, rather than design-time built and loaded again. A reference to a project outside the solution is still loaded.
 		var projectMap = DesignTimeProjectMap.Create(oldSolution, projectPathsToReload);
+		var designTimeBuildStartedUtc = DateTime.UtcNow;
+		foreach (var path in projectPathsToReload) _projectDesignTimeBuildStartedUtc[path] = designTimeBuildStartedUtc;
 		var (loadedProjectInfos, projectFileInfos) = await _msBuildProjectLoader.LoadProjectInfosAsync(projectPathsToReload.ToImmutableArray(), projectMap, null, cancellationToken);
 		foreach (var (projectId, projectFileInfo) in projectFileInfos)
 		{
@@ -352,6 +360,13 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 				return docInfo.WithId(mappedDocumentId);
 			}).ToImmutableArray();
+	}
+
+	/// Whether the project is loaded in the workspace, and its last design-time build started before the given time - so hasn't seen changes made then
+	public bool IsProjectDesignTimeBuiltBefore(SharpIdeProjectModel projectModel, DateTime utcTime)
+	{
+		if (_workspace is null || _workspace.CurrentSolution.Projects.Any(p => PathComparison.PathEquals(p.FilePath, projectModel.FilePath)) is false) return false;
+		return _projectDesignTimeBuildStartedUtc.GetValueOrDefault(projectModel.FilePath, _solutionDesignTimeBuildStartedUtc) < utcTime;
 	}
 
 	public async Task<bool> ReloadProjectsWithAnyOfAnalyzerFileReferences(ImmutableArray<string> analyzerFilePaths, CancellationToken cancellationToken = default)

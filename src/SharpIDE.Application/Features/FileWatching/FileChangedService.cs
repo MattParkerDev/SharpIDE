@@ -42,6 +42,22 @@ public class FileChangedService
 		_sharpIdeSolutionService = sharpIdeSolutionService;
 		_updateSolutionDiagnosticsQueue = new AsyncBatchingWorkQueue(TimeSpan.FromMilliseconds(200), ProcessBatchAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
 		_openFileTextChangedQueue = new(TimeSpan.Zero, ProcessOpenFileTextChangesAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
+		_projectEvaluationService.ProjectsReevaluatedForImportChanges.Subscribe(OnProjectsReevaluatedForImportChanges);
+	}
+
+	/// Imported files (Directory.Build.props/targets, Directory.Packages.props, obj/*.nuget.g.props etc) changed, and the projects importing them were re-evaluated -
+	/// their Roslyn projects (references, compiler options, analyzers, documents) come from a design-time build, so reload them too.
+	/// Except projects whose last design-time build started after the files changed, which already saw them - e.g. the restore a (re)load runs before its design-time build writes obj/*.nuget.g.props.
+	private async Task OnProjectsReevaluatedForImportChanges(IReadOnlyCollection<string> changedFilePaths, IReadOnlyList<SharpIdeProjectModel> projects)
+	{
+		// A deleted file has no write time - it changed just now
+		var changedAtUtc = changedFilePaths.Max(path => File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.UtcNow);
+		var projectsToReload = projects.Where(project => _roslynAnalysis.IsProjectDesignTimeBuiltBefore(project, changedAtUtc)).ToList();
+		if (projectsToReload.Count is 0) return;
+		await _roslynAnalysis.ReloadProjects(projectsToReload, CancellationToken.None);
+		// Reloaded projects read their documents from disk - put back the editors' text of open files, which may be unsaved
+		await _roslynAnalysis.UpdateDocuments(_openTabsFileManager.GetOpenFileTexts());
+		OnWorkspaceAltered();
 	}
 
 	public SharpIdeSolutionModel SolutionModel { get; set; } = null!;
