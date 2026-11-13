@@ -34,6 +34,11 @@ public partial class PackageEntry : MarginContainer
 	[Inject] private readonly NugetPackageIconCacheService _nugetPackageIconCacheService = null!;
 	
 	public IdePackageResult PackageResult { get; set; } = null!;
+	/// What the labels show - the sources and their latest versions, and the installed info - so an update that changes neither is skipped
+	private (InstalledNugetPackageInfo? InstalledInfo, string Sources)? _appliedValues;
+	/// The icon is loaded once, from the first source to have the package
+	private bool _iconRequested;
+
 	public override void _Ready()
 	{
 		_button = GetNode<Button>("Button");
@@ -46,11 +51,22 @@ public partial class PackageEntry : MarginContainer
 		ApplyValues();
 		_button.Pressed += () => _ = Task.GodotRun(() => PackageSelected.Invoke(PackageResult));
 	}
-	
+
+	/// Shows the package's latest results, e.g. as more sources answer - reusing this entry rather than replacing it. Call on the UI thread
+	public void SetPackageResult(IdePackageResult packageResult)
+	{
+		PackageResult = packageResult;
+		if (IsNodeReady()) ApplyValues();
+	}
+
 	private void ApplyValues()
 	{
 		if (PackageResult is null) return;
+		var values = (PackageResult.InstalledNugetPackageInfo, string.Join('|', PackageResult.PackageFromSources.Select(s => $"{s.Source.Source}:{s.PackageSearchMetadata.Identity.Version}")));
+		if (_appliedValues == values) return;
+		_appliedValues = values;
 		_packageNameLabel.Text = PackageResult.PackageId;
+		_latestVersionLabel.Text = string.Empty;
 		var installedPackagedInfo = PackageResult.InstalledNugetPackageInfo;
 		if (installedPackagedInfo?.IsPrimarilyTransitive is true && installedPackagedInfo.ProjectPackageReferences.Any(p => p.DependentPackages?.Count is not 0) is true)
 		{
@@ -78,20 +94,25 @@ public partial class PackageEntry : MarginContainer
 			_latestVersionLabel.Text = highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version.ToNormalizedString();
 		}
 
-		_ = Task.GodotRun(async () =>
+		if (_iconRequested is false)
 		{
+			_iconRequested = true;
+			var packageId = PackageResult.PackageId;
 			var firstSource = PackageResult.PackageFromSources.First();
-			var (iconBytes, iconFormat) = await _nugetPackageIconCacheService.GetNugetPackageIcon(PackageResult.PackageId, firstSource.PackageSearchMetadata.IconUrl, firstSource.Source);
-			var imageTexture = ImageTextureHelper.GetImageTextureFromBytes(iconBytes, iconFormat);
-			if (imageTexture is not null)
+			_ = Task.GodotRun(async () =>
 			{
-				await this.InvokeAsync(() =>
+				var (iconBytes, iconFormat) = await _nugetPackageIconCacheService.GetNugetPackageIcon(packageId, firstSource.PackageSearchMetadata.IconUrl, firstSource.Source);
+				var imageTexture = ImageTextureHelper.GetImageTextureFromBytes(iconBytes, iconFormat);
+				if (imageTexture is not null)
 				{
-					// The list may have been rebuilt (e.g. another source's results arrived) and this entry freed while the icon loaded
-					if (IsInstanceValid(_packageIconTextureRect)) _packageIconTextureRect.Texture = imageTexture;
-				});
-			}
-		});
+					await this.InvokeAsync(() =>
+					{
+						// The entry may have been removed (e.g. another solution or project selected) and freed while the icon loaded
+						if (IsInstanceValid(_packageIconTextureRect)) _packageIconTextureRect.Texture = imageTexture;
+					});
+				}
+			});
+		}
 		
 		foreach (var (index, packageFromSource) in PackageResult.PackageFromSources.Index())
 		{

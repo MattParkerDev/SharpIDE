@@ -44,6 +44,11 @@ public partial class NugetPanel : Control
 	private Button _packagesToUpdateUpdateButton = null!;
 	/// The rows of the Packages to Update section, each with its checkbox
 	private readonly List<(CheckBox CheckBox, IdePackageResult Package)> _updateRows = [];
+	// Each list's entries (for the updates section, its rows), by package id - kept so new results update them, rather than replacing them
+	private readonly Dictionary<string, Control> _updateRowNodes = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, Control> _installedEntryNodes = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, Control> _implicitlyInstalledEntryNodes = new(StringComparer.OrdinalIgnoreCase);
+	private readonly Dictionary<string, Control> _availableEntryNodes = new(StringComparer.OrdinalIgnoreCase);
 	/// Ticked packages, by id - kept across refreshes, for those still with an update
 	private readonly HashSet<string> _selectedUpdatePackageIds = new(StringComparer.OrdinalIgnoreCase);
 	private bool _updatingPackages;
@@ -132,7 +137,8 @@ public partial class NugetPanel : Control
 	private void OnSolutionOrProjectSelected(long index)
 	{
 		var slnOrProject = (ISolutionOrProject?)_projects[(int)index] ?? _solution!;
-		_installedPackagesCts?.Cancel();
+		// Cancel runs the cancelled load's callbacks on this (the UI) thread - CancelAsync runs them off it
+		_ = _installedPackagesCts?.CancelAsync();
 		_installedPackagesCts = new CancellationTokenSource();
 		var cancellationToken = _installedPackagesCts.Token;
 		_ = Task.GodotRun(async () =>
@@ -148,7 +154,7 @@ public partial class NugetPanel : Control
 	{
 		if (_searchResultsRequested || _tabContainer.GetCurrentTabControl() != _discoverTab) return;
 		_searchResultsRequested = true;
-		_searchResultsCts?.Cancel();
+		_ = _searchResultsCts?.CancelAsync();
 		_searchResultsCts = new CancellationTokenSource();
 		var cancellationToken = _searchResultsCts.Token;
 		_ = Task.GodotRun(() => PopulateSearchResults(cancellationToken));
@@ -203,25 +209,10 @@ public partial class NugetPanel : Control
 			// Each update is the whole list so far - the fastest source's results first, then the other sources each has them on, then the slower sources'
 			await foreach (var result in _nugetClientService.GetTop100Results(_sharpIdeSolutionAccessor.SolutionModel!.DirectoryPath, cancellationToken))
 			{
-				var scenes = result.Select(s =>
-				{
-					var scene = _packageEntryScene.Instantiate<PackageEntry>();
-					scene.PackageResult = s;
-					scene.PackageSelected += OnPackageSelected;
-					return scene;
-				}).ToList();
 				await this.InvokeAsync(() =>
 				{
-					if (cancellationToken.IsCancellationRequested)
-					{
-						foreach (var scene in scenes) scene.QueueFree();
-						return;
-					}
-					_availablePackagesItemList.QueueFreeChildren();
-					foreach (var scene in scenes)
-					{
-						_availablePackagesItemList.AddChild(scene);
-					}
+					if (cancellationToken.IsCancellationRequested) return;
+					SyncPackageEntries(_availablePackagesItemList, _availableEntryNodes, result);
 				});
 			}
 		}
@@ -275,26 +266,9 @@ public partial class NugetPanel : Control
 
 	private async Task ShowInstalledPackages(List<IdePackageResult> idePackageResult, List<SharpIdeProjectModel> unrestoredProjects, bool isFirst, CancellationToken cancellationToken)
 	{
-		var scenes = idePackageResult.Select(s =>
-		{
-			var scene = _packageEntryScene.Instantiate<PackageEntry>();
-			scene.PackageResult = s;
-			scene.PackageSelected += OnPackageSelected;
-			return scene;
-		}).ToList();
-		var transitiveScenes = scenes.Where(s => s.PackageResult.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
-		var directScenes = scenes.Except(transitiveScenes).ToList();
-		// A node can only have one parent, so the updates section gets its own entries
-		var updateScenes = directScenes
-			.Where(s => HasUpdate(s.PackageResult))
-			.Select(s =>
-			{
-				var scene = _packageEntryScene.Instantiate<PackageEntry>();
-				scene.PackageResult = s.PackageResult;
-				scene.PackageSelected += OnPackageSelected;
-				return scene;
-			})
-			.ToList();
+		var transitivePackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
+		var directPackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive is false).ToList();
+		var updatePackages = directPackages.Where(HasUpdate).ToList();
 		if (_selectedPackageResult is { } selected && cancellationToken.IsCancellationRequested is false)
 		{
 			var updatedPackageResult = idePackageResult.SingleOrDefault(p => p.PackageId.Equals(selected.PackageId, StringComparison.OrdinalIgnoreCase));
@@ -307,32 +281,20 @@ public partial class NugetPanel : Control
 		}
 		await this.InvokeAsync(() =>
 		{
-			if (cancellationToken.IsCancellationRequested)
-			{
-				foreach (var scene in scenes.Concat(updateScenes)) scene.QueueFree();
-				return;
-			}
-			_packagesToUpdateVboxContainer.QueueFreeChildren();
-			_installedPackagesVboxContainer.QueueFreeChildren();
-			_implicitlyInstalledPackagesItemList.QueueFreeChildren();
-			SetUpdateRows(updateScenes);
-			foreach (var transitiveScene in transitiveScenes)
-			{
-				_implicitlyInstalledPackagesItemList.AddChild(transitiveScene);
-			}
-			foreach (var directScene in directScenes)
-			{
-				_installedPackagesVboxContainer.AddChild(directScene);
-			}
+			if (cancellationToken.IsCancellationRequested) return;
+			// A node can only have one parent, so the updates section has its own entries
+			SetUpdateRows(updatePackages);
+			SyncPackageEntries(_implicitlyInstalledPackagesItemList, _implicitlyInstalledEntryNodes, transitivePackages);
+			SyncPackageEntries(_installedPackagesVboxContainer, _installedEntryNodes, directPackages);
 			// Projects that aren't loaded or restored have no project.assets.json to read their packages from
 			_installedPackagesResultCountLabel.Text = unrestoredProjects.Count is 0
-				? directScenes.Count.ToString()
-				: $"{directScenes.Count} ({unrestoredProjects.Count} {(unrestoredProjects.Count is 1 ? "project" : "projects")} not restored)";
+				? directPackages.Count.ToString()
+				: $"{directPackages.Count} ({unrestoredProjects.Count} {(unrestoredProjects.Count is 1 ? "project" : "projects")} not restored)";
 			_installedPackagesResultCountLabel.TooltipText = unrestoredProjects.Count is 0
 				? string.Empty
 				: $"Not restored, so their packages aren't listed:\n{string.Join("\n", unrestoredProjects.Select(p => p.Name.Value))}";
-			_implicitlyInstalledPackagesResultCountLabel.Text = transitiveScenes.Count.ToString();
-			_packagesToUpdateResultCountLabel.Text = updateScenes.Count.ToString();
+			_implicitlyInstalledPackagesResultCountLabel.Text = transitivePackages.Count.ToString();
+			_packagesToUpdateResultCountLabel.Text = updatePackages.Count.ToString();
 		});
 	}
 
@@ -352,28 +314,68 @@ public partial class NugetPanel : Control
 			.ToList();
 	}
 
-	/// Puts each entry in a row with a checkbox, ticked if it was before. Call on the UI thread, once the previous rows are queued for freeing
-	private void SetUpdateRows(List<PackageEntry> updateScenes)
+	private PackageEntry CreateEntry(IdePackageResult packageResult)
 	{
-		_updateRows.Clear();
-		foreach (var scene in updateScenes)
+		var entry = _packageEntryScene.Instantiate<PackageEntry>();
+		entry.PackageResult = packageResult;
+		entry.PackageSelected += OnPackageSelected;
+		return entry;
+	}
+
+	/// Makes the container show these packages, in this order - updating the entries already there rather than replacing them, as results arrive several
+	/// times a second and rebuilding every entry (and reloading its icon) each time made the UI lag. Call on the UI thread
+	private static void SyncEntries(Container container, Dictionary<string, Control> nodes, List<IdePackageResult> packages, Func<IdePackageResult, Control> create, Action<Control, IdePackageResult> update)
+	{
+		var packageIds = packages.Select(p => p.PackageId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		foreach (var (packageId, node) in nodes.Where(n => packageIds.Contains(n.Key) is false).ToList())
 		{
-			var package = scene.PackageResult;
-			var checkBox = new CheckBox { ButtonPressed = _selectedUpdatePackageIds.Contains(package.PackageId), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+			nodes.Remove(packageId);
+			// Removed now, not at the end of the frame, so the indices below are right
+			container.RemoveChild(node);
+			node.QueueFree();
+		}
+		foreach (var (index, package) in packages.Index())
+		{
+			if (nodes.TryGetValue(package.PackageId, out var node))
+			{
+				update(node, package);
+			}
+			else
+			{
+				node = create(package);
+				nodes[package.PackageId] = node;
+				container.AddChild(node);
+			}
+			if (node.GetIndex() != index) container.MoveChild(node, index);
+		}
+	}
+
+	private void SyncPackageEntries(Container container, Dictionary<string, Control> nodes, List<IdePackageResult> packages) =>
+		SyncEntries(container, nodes, packages, CreateEntry, (node, package) => ((PackageEntry)node).SetPackageResult(package));
+
+	/// Shows each package in a row with a checkbox, ticked if it was before. Call on the UI thread
+	private void SetUpdateRows(List<IdePackageResult> packages)
+	{
+		SyncEntries(_packagesToUpdateVboxContainer, _updateRowNodes, packages, package =>
+		{
+			var packageId = package.PackageId;
+			var checkBox = new CheckBox { ButtonPressed = _selectedUpdatePackageIds.Contains(packageId), SizeFlagsVertical = SizeFlags.ShrinkCenter };
 			checkBox.Toggled += pressed =>
 			{
-				if (pressed) _selectedUpdatePackageIds.Add(package.PackageId);
-				else _selectedUpdatePackageIds.Remove(package.PackageId);
+				if (pressed) _selectedUpdatePackageIds.Add(packageId);
+				else _selectedUpdatePackageIds.Remove(packageId);
 				UpdateUpdateControls();
 			};
-			scene.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+			var entry = CreateEntry(package);
+			entry.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 			var row = new HBoxContainer();
 			row.AddThemeConstantOverride(ThemeStringNames.Separation, 0);
 			row.AddChild(checkBox);
-			row.AddChild(scene);
-			_packagesToUpdateVboxContainer.AddChild(row);
-			_updateRows.Add((checkBox, package));
-		}
+			row.AddChild(entry);
+			return row;
+		}, (row, package) => row.GetChild<PackageEntry>(1).SetPackageResult(package));
+		_updateRows.Clear();
+		_updateRows.AddRange(packages.Select(p => (_updateRowNodes[p.PackageId].GetChild<CheckBox>(0), p)));
 		// Ticked packages not (yet) listed are only forgotten once every source has answered - a slow source may yet have their update
 		UpdateUpdateControls();
 	}
