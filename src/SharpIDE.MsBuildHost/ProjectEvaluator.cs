@@ -84,8 +84,14 @@ public sealed class ProjectEvaluator
 					.ToList();
 				if (importingProjects.Count is 0)
 				{
-					// Not imported by anything - yet. A newly created Directory.Build.props, or a nuget.g.props written by the first restore, may now be imported by any project below it.
+					// Not imported by anything - yet. A newly created Directory.Build.props may now be imported by any project below it.
 					importingProjects = outerProjectPaths.Where(p => IsUnder(p, Path.GetDirectoryName(changedFilePath)!)).ToList();
+					// The first restore writes <project file>.nuget.g.props/targets into the project's MSBuildProjectExtensionsPath (obj/ by default), which Microsoft.Common.props/targets imports by wildcard.
+					// That folder is below the project (or elsewhere, e.g. artifacts/obj), so the check above doesn't find it.
+					importingProjects.AddRange(loadedProjects
+						.Where(p => p.GlobalProperties.ContainsKey(TargetFrameworkProperty) is false)
+						.Where(p => IsRestoreOutputOf(p, changedFilePath))
+						.Select(p => p.FullPath));
 				}
 				affectedProjectPaths.UnionWith(importingProjects);
 			}
@@ -250,6 +256,15 @@ public sealed class ProjectEvaluator
 		new(ex.ErrorCode, ex.BaseMessage, ex.ErrorSubcategory, ex.HelpLink, ex.ProjectFile, ex.LineNumber, ex.ColumnNumber);
 
 	private static StringComparer PathComparer => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+	private static bool IsRestoreOutputOf(Project project, string filePath)
+	{
+		var projectExtensionsPath = project.GetPropertyValue("MSBuildProjectExtensionsPath");
+		if (string.IsNullOrWhiteSpace(projectExtensionsPath)) return false;
+		var projectExtensionsDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectExtensionsPath, project.DirectoryPath));
+		return PathComparer.Equals(Path.GetDirectoryName(filePath), projectExtensionsDirectory)
+			&& Path.GetFileName(filePath).StartsWith(Path.GetFileName(project.FullPath) + ".", OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+	}
 
 	private static bool IsUnder(string filePath, string directoryPath)
 	{
