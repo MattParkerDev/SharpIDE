@@ -57,8 +57,9 @@ public sealed class DesignTimeBuildManager
 			{
 				Loggers = [logger],
 				MaxNodeCount = MaxNodeCount,
-				// Out of proc nodes would otherwise outlive this host (and SharpIDE)
-				EnableNodeReuse = false,
+				// Out of proc nodes outlive the batch (and this host), so later batches don't wait for new ones to start. Idle ones are shared with other MSBuild processes on the same SDK (our build host, the CLI).
+				// Left over ones exit after MSBuild's idle timeout (15 minutes), as the CLI's do.
+				EnableNodeReuse = true,
 			});
 			try
 			{
@@ -107,9 +108,9 @@ public sealed class DesignTimeBuildManager
 		}
 	}
 
-	// Just the in-proc node by default. Out of proc nodes (without node reuse) are started for every batch, and die at its EndBuild - for sharpdbg (12 projects) a batch took ~1.9s with ProcessorCount / 2 nodes, vs ~0.8s with 1.
-	// With node reuse, 4 nodes were no faster than 1. Larger solutions may differ - SHARPIDE_DESIGNTIME_MAXNODECOUNT overrides it.
-	private static int MaxNodeCount => int.TryParse(Environment.GetEnvironmentVariable("SHARPIDE_DESIGNTIME_MAXNODECOUNT"), out var count) && count > 0 ? count : 1;
+	// 4 nodes (reused between batches) by default. Measured, warm batches: 12 projects ~350ms vs ~480ms with 1 node, 131 projects ~4-5s vs ~7-9s.
+	// 8 were no faster than 4. A batch that has to start nodes (the first, after they've idled out) is slower for a small solution - sharpdbg ~1.0s vs ~0.9s. SHARPIDE_DESIGNTIME_MAXNODECOUNT overrides it.
+	private static int MaxNodeCount => int.TryParse(Environment.GetEnvironmentVariable("SHARPIDE_DESIGNTIME_MAXNODECOUNT"), out var count) && count > 0 ? count : Math.Min(4, Environment.ProcessorCount);
 
 	/// The collection's global properties are fixed, so a different set (e.g. another SolutionDir) gets a new collection
 	private ProjectCollection GetProjectCollection(Dictionary<string, string> globalProperties)
@@ -146,7 +147,7 @@ public sealed class DesignTimeBuildManager
 		Project project;
 		try
 		{
-			project = new Project(projectFilePath, null, null, projectCollection, LoadSettings);
+			project = await RunBlockingAsync(() => new Project(projectFilePath, null, null, projectCollection, LoadSettings), cancellationToken).ConfigureAwait(false);
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
@@ -158,7 +159,7 @@ public sealed class DesignTimeBuildManager
 		try
 		{
 			var projectInstances = await BuildProjectInstancesAsync(project, buildManager, logger, log, cancellationToken).ConfigureAwait(false);
-			var projectFileInfos = projectInstances.Select(instance => new ProjectInstanceReader(language, instance.ProjectInstance, instance.Project).CreateProjectFileInfo()).ToArray();
+			var projectFileInfos = await RunBlockingAsync(() => projectInstances.Select(instance => new ProjectInstanceReader(language, instance.ProjectInstance, instance.Project).CreateProjectFileInfo()).ToArray(), cancellationToken).ConfigureAwait(false);
 			return new DesignTimeBuildResultDto(projectFilePath, projectFileInfos, log.ToArray());
 		}
 		finally
@@ -178,34 +179,40 @@ public sealed class DesignTimeBuildManager
 		}
 
 		// A separate evaluation per TFM, so they can build in parallel
-		var innerProjects = targetFrameworks.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+		var innerProjects = await Task.WhenAll(targetFrameworks.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
 			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.Select(tfm => new Project(project.FullPath, new Dictionary<string, string>(project.GlobalProperties) { ["TargetFramework"] = tfm }, null, project.ProjectCollection, LoadSettings))
-			.ToList();
+			.Select(tfm => RunBlockingAsync(() => new Project(project.FullPath, new Dictionary<string, string>(project.GlobalProperties) { ["TargetFramework"] = tfm }, null, project.ProjectCollection, LoadSettings), cancellationToken))).ConfigureAwait(false);
 		var instances = await Task.WhenAll(innerProjects.Select(innerProject => BuildProjectInstanceAsync(innerProject, buildManager, logger, log, cancellationToken))).ConfigureAwait(false);
 		return [.. instances.Zip(innerProjects)];
 	}
 
 	private static async Task<ProjectInstance> BuildProjectInstanceAsync(Project project, BuildManager buildManager, DesignTimeDiagnosticLogger logger, DiagnosticLog log, CancellationToken cancellationToken)
 	{
-		// The executed instance holds the project's final state after the design-time build
-		var projectInstance = project.CreateProjectInstance();
-		var missingTarget = RequiredTargets.FirstOrDefault(target => projectInstance.Targets.ContainsKey(target) is false);
-		if (missingTarget is not null)
+		var tcs = new TaskCompletionSource<BuildResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var (projectInstance, submission) = await RunBlockingAsync<(ProjectInstance, BuildSubmission?)>(() =>
 		{
-			log.Add(DiagnosticLogItemKindDto.Error, $"Project does not contain '{missingTarget}' target.", project.FullPath);
-			return projectInstance;
-		}
-		string[] targets = [.. RequiredTargets, .. OptionalTargets.Where(projectInstance.Targets.ContainsKey)];
+			// The executed instance holds the project's final state after the design-time build
+			var projectInstance = project.CreateProjectInstance();
+			var missingTarget = RequiredTargets.FirstOrDefault(target => projectInstance.Targets.ContainsKey(target) is false);
+			if (missingTarget is not null)
+			{
+				log.Add(DiagnosticLogItemKindDto.Error, $"Project does not contain '{missingTarget}' target.", project.FullPath);
+				return (projectInstance, null);
+			}
+			string[] targets = [.. RequiredTargets, .. OptionalTargets.Where(projectInstance.Targets.ContainsKey)];
 
-		cancellationToken.ThrowIfCancellationRequested();
-		// The build may happen on another node, so ProvideProjectStateAfterBuild to get its state back
-		var submission = buildManager.PendBuildRequest(new BuildRequestData(projectInstance, targets, hostServices: null, BuildRequestDataFlags.ProvideProjectStateAfterBuild));
-		logger.RegisterLog(submission.SubmissionId, log);
+			cancellationToken.ThrowIfCancellationRequested();
+			// The build may happen on another node, so ask for its state back - just what ProjectInstanceReader reads, rather than the whole state serialized back over the node's pipe
+			var submission = buildManager.PendBuildRequest(new BuildRequestData(projectInstance, targets, hostServices: null, BuildRequestDataFlags.ProvideSubsetOfStateAfterBuild,
+				propertiesToTransfer: null, ProjectInstanceReader.RequestedProjectState));
+			logger.RegisterLog(submission.SubmissionId, log);
+			submission.ExecuteAsync(sub => tcs.TrySetResult(sub.BuildResult!), null);
+			return (projectInstance, submission);
+		}, cancellationToken).ConfigureAwait(false);
+		if (submission is null) return projectInstance;
+
 		try
 		{
-			var tcs = new TaskCompletionSource<BuildResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-			submission.ExecuteAsync(sub => tcs.TrySetResult(sub.BuildResult!), null);
 			var result = await tcs.Task.ConfigureAwait(false);
 			if (result.OverallResult is BuildResultCode.Failure && result.Exception is not null) log.Add(result.Exception, projectInstance.FullPath);
 			return result.ProjectStateAfterBuild ?? projectInstance;
@@ -213,6 +220,25 @@ public sealed class DesignTimeBuildManager
 		finally
 		{
 			logger.UnregisterLog(submission.SubmissionId);
+		}
+	}
+
+	// Evaluation, PendBuildRequest (which waits for the BuildManager's lock) and reading results all block - so only a few at once, rather than one thread pool thread per project.
+	// Otherwise the pool is starved, and with out of proc nodes so is MSBuild's own async work (e.g. node handshakes) - 131 projects with 4 nodes took ~8-16s per batch,
+	// sometimes stalling for 30s while a node handshake timed out, vs a steady ~4.5s with enough threads.
+	// Most of the blocking is MSBuild's ConditionEvaluator serializing evaluations of the same condition - this can be removed once https://github.com/dotnet/msbuild/pull/15544 is merged.
+	private static readonly SemaphoreSlim BlockingWorkThrottle = new(Math.Max(2, Environment.ProcessorCount / 2));
+
+	private static async Task<T> RunBlockingAsync<T>(Func<T> work, CancellationToken cancellationToken)
+	{
+		await BlockingWorkThrottle.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			return work();
+		}
+		finally
+		{
+			BlockingWorkThrottle.Release();
 		}
 	}
 

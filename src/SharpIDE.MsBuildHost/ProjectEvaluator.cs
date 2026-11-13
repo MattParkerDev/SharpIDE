@@ -150,7 +150,10 @@ public sealed class ProjectEvaluator
 	{
 		var distinctPaths = projectFilePaths.Select(Path.GetFullPath).Distinct(PathComparer).ToList();
 		var results = new ProjectEvaluationDto[distinctPaths.Count];
-		Parallel.For(0, distinctPaths.Count, new ParallelOptions { CancellationToken = cancellationToken }, i =>
+		// Capped, as evaluation blocks (MSBuild's ConditionEvaluator serializes evaluating the same condition across projects, so more at once isn't faster) -
+		// uncapped, Parallel.For keeps taking thread pool threads, starving a build running in this host meanwhile (its node handshakes, callbacks, logging). As DesignTimeBuildManager.RunBlockingAsync.
+		// The cap can be removed once https://github.com/dotnet/msbuild/pull/15544 is merged.
+		Parallel.For(0, distinctPaths.Count, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, i =>
 		{
 			results[i] = LoadOrReloadProject(distinctPaths[i], reloadProjectFile, forceReevaluation);
 		});

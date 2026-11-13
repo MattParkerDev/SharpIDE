@@ -14,18 +14,17 @@ internal static class ProjectInstanceExtensions
 	public static IEnumerable<ITaskItem> GetDocuments(this ProjectInstance project) => project.GetItems("Compile");
 	public static IEnumerable<ITaskItem> GetEditorConfigFiles(this ProjectInstance project) => project.GetItems("EditorConfigFiles");
 
-	public static IEnumerable<MetadataReferenceItemDto> GetMetadataReferences(this ProjectInstance project)
+	/// projectDirectory, rather than the instance's FullPath - a project's state after building on an out of proc node doesn't have it
+	public static IEnumerable<MetadataReferenceItemDto> GetMetadataReferences(this ProjectInstance project, string projectDirectory)
 	{
 		foreach (var item in project.GetItems("ReferencePath"))
 		{
 			if (item.ReferenceOutputAssemblyIsTrue())
 			{
-				yield return new MetadataReferenceItemDto(project.GetAbsolutePath(item.EvaluatedInclude), item.GetAliases(), EmbedInteropTypes: ToBool(item.GetMetadataValue("EmbedInteropTypes")));
+				yield return new MetadataReferenceItemDto(ResolvePath(item.EvaluatedInclude, projectDirectory), item.GetAliases(), EmbedInteropTypes: ToBool(item.GetMetadataValue("EmbedInteropTypes")));
 			}
 		}
 	}
-
-	public static string GetAbsolutePath(this ProjectInstance project, string path) => ResolvePath(path, Path.GetDirectoryName(project.FullPath)!);
 
 	/// Resolves a path that may be relative to the directory, normalising it - or leaves it as it is, if it can't be
 	public static string ResolvePath(string path, string baseDirectory)

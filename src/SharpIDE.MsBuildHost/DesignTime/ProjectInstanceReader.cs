@@ -11,6 +11,40 @@ namespace SharpIDE.MsBuildHost.DesignTime;
 /// Reads a design-time built project into a ProjectFileInfoDto
 internal readonly struct ProjectInstanceReader
 {
+	/// Everything this reads from a built project (CSharpCommandLineArgumentReader and ProjectInstanceExtensions included) - so a build returns just that, rather than the project's whole state,
+	/// which for a build on an out of proc node is serialized back over its pipe. Anything read that isn't listed here is missing (an empty property, no items, no metadata).
+	public static readonly RequestedProjectState RequestedProjectState = new()
+	{
+		PropertyFilters =
+		[
+			// ProjectInstanceReader
+			"ChecksumAlgorithm", "PdbChecksumAlgorithm", "TargetFramework", "TargetPath", "TargetRefPath", "CompilerGeneratedFilesOutputPath", "RootNamespace",
+			"TargetFrameworkIdentifier", "TargetFrameworkVersion", "ProjectAssetsFile", "CodePage",
+			// CSharpCommandLineArgumentReader
+			"AllowUnsafeBlocks", "AppConfigForCompiler", "BaseAddress", "CheckForOverflowUnderflow", "DebugSymbols", "DebugType", "DefineConstants", "DelaySign", "ErrorReport",
+			"Features", "FileAlignment", "GenerateFullPaths", "HighEntropyVA", "KeyContainerName", "KeyOriginatorFile", "LangVersion", "ModuleAssemblyName", "NoCompilerStandardLib",
+			"NoWarn", "Optimize", "OutputType", "PdbFile", "PlatformTarget", "ResolvedCodeAnalysisRuleSet", "SignAssembly", "StartupObject", "SubsystemVersion",
+			"TreatWarningsAsErrors", "WarningLevel", "WarningsAsErrors", "WarningsNotAsErrors",
+		],
+		// Item type -> the metadata read from its items
+		ItemFilters = new Dictionary<string, List<string>>
+		{
+			["CscCommandLineArgs"] = [],
+			["Compile"] = ["Link"],
+			["AdditionalFiles"] = ["Link"],
+			["EditorConfigFiles"] = ["Link"],
+			["ReferencePath"] = ["ReferenceOutputAssembly", "Aliases", "EmbedInteropTypes"],
+			["Analyzer"] = [],
+			["ProjectReference"] = ["ReferenceOutputAssembly", "Aliases"],
+			["PackageReference"] = ["Version"],
+			["IntermediateAssembly"] = [],
+			["ProjectCapability"] = [],
+			["Content"] = [],
+			["Import"] = [],
+			["DocFileItem"] = [],
+		},
+	};
+
 	private readonly string _language;
 	private readonly ProjectInstance _projectInstance;
 	private readonly Project _project;
@@ -38,9 +72,9 @@ internal readonly struct ProjectInstanceReader
 		// If the compiler didn't provide arguments (the design-time build failed), pass references separately, and recover the remaining options from the evaluated project
 		if (commandLineArgs.Length is 0)
 		{
-			metadataReferences = [.. _projectInstance.GetMetadataReferences()];
+			metadataReferences = [.. _projectInstance.GetMetadataReferences(_projectDirectory)];
 			analyzerReferences = [.. _projectInstance.GetAnalyzers().Select(static item => item.ItemSpec).Select(GetAbsolutePathRelativeToProject)];
-			commandLineArgs = _language is LanguageNames.CSharp ? CSharpCommandLineArgumentReader.Read(_projectInstance) : [];
+			commandLineArgs = _language is LanguageNames.CSharp ? CSharpCommandLineArgumentReader.Read(_projectInstance, _projectDirectory) : [];
 		}
 
 		var checksumAlgorithm = _projectInstance.ReadPropertyString("ChecksumAlgorithm");
@@ -73,7 +107,7 @@ internal readonly struct ProjectInstanceReader
 			CodePage = _projectInstance.ReadCodePage(),
 			ChecksumAlgorithm = checksumAlgorithm,
 			ProjectCapabilities = [.. _projectInstance.GetItems("ProjectCapability").Select(item => item.EvaluatedInclude)],
-			ContentFilePaths = [.. _projectInstance.GetItems("Content").Select(item => item.GetMetadataValue("FullPath"))],
+			ContentFilePaths = [.. _projectInstance.GetItems("Content").Select(static item => item.EvaluatedInclude).Select(GetAbsolutePathRelativeToProject)],
 			FileGlobs = [.. _project.GetAllGlobs().Select(static g => new FileGlobsDto(
 				Includes: [.. g.IncludeGlobs.Select(ExpandAbsolutePath)],
 				Excludes: [.. g.Excludes.Select(ExpandAbsolutePath)],
@@ -103,7 +137,8 @@ internal readonly struct ProjectInstanceReader
 		{
 			return (Path.GetDirectoryName(link) ?? "").Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 		}
-		var relativeDirectory = Path.GetDirectoryName(Path.GetRelativePath(_projectDirectory, itemSpec));
+		// itemSpec made absolute first - Path.GetRelativePath would resolve a relative one against the current directory, which MSBuild changes as it builds projects
+		var relativeDirectory = Path.GetDirectoryName(Path.GetRelativePath(_projectDirectory, GetAbsolutePathRelativeToProject(itemSpec)));
 		return relativeDirectory is null ? [] : relativeDirectory.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
 	}
 

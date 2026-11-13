@@ -21,18 +21,25 @@ internal sealed class CSharpCommandLineArgumentReader
 	private readonly ProjectInstance _project;
 	private readonly List<string> _builder = [];
 
-	private CSharpCommandLineArgumentReader(ProjectInstance project) => _project = project;
+	private readonly string _projectDirectory;
 
-	public static string[] Read(ProjectInstance project)
+	private CSharpCommandLineArgumentReader(ProjectInstance project, string projectDirectory)
 	{
-		var reader = new CSharpCommandLineArgumentReader(project);
+		_project = project;
+		_projectDirectory = projectDirectory;
+	}
+
+	/// projectDirectory, rather than the instance's FullPath - a project's state after building on an out of proc node doesn't have it
+	public static string[] Read(ProjectInstance project, string projectDirectory)
+	{
+		var reader = new CSharpCommandLineArgumentReader(project, projectDirectory);
 		reader.ReadCore();
 		return [.. reader._builder];
 	}
 
 	private void ReadCore()
 	{
-		foreach (var additionalFile in _project.GetAdditionalFiles()) Add("additionalfile", _project.GetAbsolutePath(additionalFile.ItemSpec));
+		foreach (var additionalFile in _project.GetAdditionalFiles()) Add("additionalfile", ProjectInstanceExtensions.ResolvePath(additionalFile.ItemSpec, _projectDirectory));
 
 		var codePage = _project.ReadCodePage();
 		if (codePage != 0) Add("codepage", codePage.ToString());
