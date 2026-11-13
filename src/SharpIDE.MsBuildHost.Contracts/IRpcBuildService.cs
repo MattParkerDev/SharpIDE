@@ -15,17 +15,6 @@ public partial interface IRpcBuildService
 	/// Restores, then builds the project with Build;ComputeRunArguments (TargetFramework set as a global property when given), returning the run properties from its state after the build
 	Task<RunBuildResultDto> BuildProjectForRunAsync(string projectFilePath, string? targetFramework, CancellationToken cancellationToken = default);
 
-	// Evaluation only - these never run targets, so they can run alongside a build
-
-	/// Evaluates (or re-evaluates, re-reading the project file from disk) each project, its outer project plus one evaluation per TFM
-	Task<List<ProjectEvaluationDto>> EvaluateProjectsAsync(List<string> projectFilePaths, CancellationToken cancellationToken = default);
-	/// Files that projects may import changed on disk (project files, Directory.Build.props/targets, Directory.Packages.props, obj/*.nuget.g.props/targets...).
-	/// Reloads them, and returns the re-evaluation of every loaded project they may affect.
-	Task<List<ProjectEvaluationDto>> ReloadProjectsAsync(List<string> changedFilePaths, CancellationToken cancellationToken = default);
-	Task UnloadAllProjectsAsync();
-	/// Adds a UserSecretsId property to the project file if it doesn't have one, and returns it
-	Task<string> GetOrCreateUserSecretsIdAsync(string projectFilePath);
-
 	// Package references - these write project files, then restore, so they run as a build
 
 	/// Adds the package to the project at the version, or moves it to the version, writing the version where the project's evaluation keeps it

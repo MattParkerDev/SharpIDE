@@ -41,6 +41,7 @@ public partial class IdeRoot : Control
 	[Inject] private readonly IdeFileExternalChangeHandler _fileExternalChangeHandler = null!;
 	[Inject] private readonly IdeFileWatcher _fileWatcher = null!;
 	[Inject] private readonly BuildService _buildService = null!;
+	[Inject] private readonly DesignTimeBuildService _designTimeBuildService = null!;
 	[Inject] private readonly ProjectEvaluationService _projectEvaluationService = null!;
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
     [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
@@ -138,8 +139,10 @@ public partial class IdeRoot : Control
 			timer.Stop();
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
-			// The solution's SharpIDE.MsBuildHost - evaluation needs it straight away. This scope is new for this solution, so it is a fresh host.
-			var startHostTask = _buildService.StartHostAsync(path);
+			// The solution's SharpIDE.MsBuildHosts - this scope is new for this solution, so they are fresh hosts.
+			// The build host for the restore before the workspace loads, the design-time host for evaluation, which needs it straight away.
+			var startBuildHostTask = _buildService.StartHostAsync(path);
+			var startHostTask = _designTimeBuildService.StartHostAsync(path);
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
 			await _sharpIdeSolutionService.LoadSolution(solutionModel, path, vsSln, solutionSerializer);
 			_sharpIdeSolutionAccessor.SolutionModel = solutionModel;
@@ -158,10 +161,22 @@ public partial class IdeRoot : Control
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "Failed to start SharpIDE.MsBuildHost");
+					_logger.LogError(ex, "Failed to start SharpIDE.MsBuildHost (design-time)");
 				}
 				// On failure, each project's evaluation fails (shown as load failed), and the host is retried on the next use
 				await _projectEvaluationService.EvaluateProjectsAsync(solutionModel.AllProjects.ToList());
+			});
+			_ = Task.GodotRun(async () =>
+			{
+				try
+				{
+					await startBuildHostTask;
+				}
+				catch (Exception ex)
+				{
+					// Retried on the next build
+					_logger.LogError(ex, "Failed to start SharpIDE.MsBuildHost");
+				}
 			});
 			_rootFolderModificationService.FileTree = fileTree;
 			_roslynAnalysis.StartLoadingSolutionInWorkspace(solutionModel);

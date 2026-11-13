@@ -14,10 +14,10 @@ using SharpIDE.MsBuildHost.Contracts;
 
 namespace SharpIDE.Application.Features.Evaluation;
 
-/// MSBuild evaluation of the solution's projects, served by SharpIDE.MsBuildHost - the IDE process never loads MSBuild.
+/// MSBuild evaluation of the solution's projects, served by the design-time SharpIDE.MsBuildHost (sharing its parsed XML with design-time builds) - the IDE process never loads MSBuild.
 public class ProjectEvaluationService
 {
-	private readonly BuildService _buildService;
+	private readonly DesignTimeBuildService _designTimeBuildService;
 	private readonly ILogger<ProjectEvaluationService> _logger;
 	private readonly AsyncBatchingWorkQueue<string> _importFileChangedQueue;
 
@@ -26,13 +26,13 @@ public class ProjectEvaluationService
 	/// Raised after imported files changed and the projects importing them were re-evaluated - with the changed files, and those projects. Their Roslyn projects may now be stale.
 	public EventWrapper<IReadOnlyCollection<string>, IReadOnlyList<SharpIdeProjectModel>, Task> ProjectsReevaluatedForImportChanges { get; } = new((_, _) => Task.CompletedTask);
 
-	public ProjectEvaluationService(BuildService buildService, ILogger<ProjectEvaluationService> logger)
+	public ProjectEvaluationService(DesignTimeBuildService designTimeBuildService, ILogger<ProjectEvaluationService> logger)
 	{
-		_buildService = buildService;
+		_designTimeBuildService = designTimeBuildService;
 		_logger = logger;
 		// A restore writes several obj files in quick succession
 		_importFileChangedQueue = new AsyncBatchingWorkQueue<string>(TimeSpan.FromMilliseconds(300), ProcessImportFileChangesAsync, PathComparison.Comparer, IAsynchronousOperationListener.Instance, CancellationToken.None);
-		_buildService.HostRestarted.Subscribe(OnHostRestarted);
+		_designTimeBuildService.HostRestarted.Subscribe(OnHostRestarted);
 	}
 
 	/// Files projects import - Directory.Build.props/targets, Directory.Packages.props, the obj/*.nuget.g.props/targets restore writes, and any other props/targets
@@ -47,7 +47,7 @@ public class ProjectEvaluationService
 		foreach (var project in projects) project.BeginEvaluation();
 		try
 		{
-			var rpc = await _buildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
+			var rpc = await _designTimeBuildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
 			var results = await rpc.EvaluateProjectsAsync(projects.Select(p => p.FilePath).ToList(), cancellationToken).ConfigureAwait(false);
 			var resultsByPath = results.ToDictionary(r => r.ProjectFilePath, PathComparison.Comparer);
 			foreach (var project in projects)
@@ -59,7 +59,7 @@ public class ProjectEvaluationService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Failed to evaluate {ProjectCount} projects in SharpIDE.MsBuildHost", projects.Count);
+			_logger.LogError(ex, "Failed to evaluate {ProjectCount} projects in SharpIDE.MsBuildHost (design-time)", projects.Count);
 			foreach (var project in projects) project.ApplyEvaluationResult(FailedLoadResult(project.FilePath, $"Evaluation failed: {ex.Message}"));
 		}
 	}
@@ -73,7 +73,7 @@ public class ProjectEvaluationService
 		var reevaluatedProjects = new List<SharpIdeProjectModel>();
 		try
 		{
-			var rpc = await _buildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
+			var rpc = await _designTimeBuildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
 			var results = await rpc.ReloadProjectsAsync(changedFilePaths.ToList(), cancellationToken).ConfigureAwait(false);
 			foreach (var result in results)
 			{
@@ -106,7 +106,7 @@ public class ProjectEvaluationService
 	public async Task<Guid> GetOrCreateUserSecretsIdAsync(SharpIdeProjectModel projectModel, CancellationToken cancellationToken = default)
 	{
 		Guard.Against.Null(projectModel);
-		var rpc = await _buildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
+		var rpc = await _designTimeBuildService.GetRpcAsync(cancellationToken).ConfigureAwait(false);
 		var userSecretsId = await rpc.GetOrCreateUserSecretsIdAsync(projectModel.FilePath).ConfigureAwait(false);
 		return Guid.Parse(userSecretsId);
 	}
@@ -120,7 +120,7 @@ public class ProjectEvaluationService
 	{
 		var solutionModel = SolutionModel;
 		if (solutionModel is null) return;
-		_logger.LogInformation("SharpIDE.MsBuildHost restarted - re-evaluating all projects");
+		_logger.LogInformation("SharpIDE.MsBuildHost (design-time) restarted - re-evaluating all projects");
 		await EvaluateProjectsAsync(solutionModel.AllProjects.ToList()).ConfigureAwait(false);
 	}
 

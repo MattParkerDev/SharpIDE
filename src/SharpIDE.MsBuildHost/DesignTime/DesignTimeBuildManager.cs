@@ -121,11 +121,13 @@ public sealed class DesignTimeBuildManager
 			return _projectCollection;
 		}
 
-		_projectCollection?.UnloadAllProjects();
+		// One at a time - UnloadAllProjects clears the XML cache, which is process-wide, so would clear the ProjectEvaluator's too
+		if (_projectCollection is not null) foreach (var project in _projectCollection.LoadedProjects.ToList()) _projectCollection.UnloadProject(project);
 		_projectCollection?.Dispose();
 		var allProperties = new Dictionary<string, string>(DefaultGlobalProperties);
 		foreach (var (key, value) in globalProperties) allProperties[key] = value;
-		// reuseProjectRootElementCache: XML read from disk is kept, and re-read when a file changes (checked by timestamp), as dotnet-watch does
+		// reuseProjectRootElementCache: XML read from disk is kept, and re-read when a file changes (checked by timestamp), as dotnet-watch does.
+		// The cache is process-wide - shared with the ProjectEvaluator's collection, and with this one's replacements
 		_projectCollection = new ProjectCollection(
 			globalProperties: allProperties,
 			loggers: [],
@@ -223,13 +225,14 @@ public sealed class DesignTimeBuildManager
 		}
 	}
 
+	// Also used by the ProjectEvaluator, which evaluates in this host alongside design-time builds - one cap on blocked thread pool threads for the whole process.
 	// Evaluation, PendBuildRequest (which waits for the BuildManager's lock) and reading results all block - so only a few at once, rather than one thread pool thread per project.
 	// Otherwise the pool is starved, and with out of proc nodes so is MSBuild's own async work (e.g. node handshakes) - 131 projects with 4 nodes took ~8-16s per batch,
 	// sometimes stalling for 30s while a node handshake timed out, vs a steady ~4.5s with enough threads.
 	// Most of the blocking is MSBuild's ConditionEvaluator serializing evaluations of the same condition - this can be removed once https://github.com/dotnet/msbuild/pull/15544 is merged.
 	private static readonly SemaphoreSlim BlockingWorkThrottle = new(Math.Max(2, Environment.ProcessorCount / 2));
 
-	private static async Task<T> RunBlockingAsync<T>(Func<T> work, CancellationToken cancellationToken)
+	internal static async Task<T> RunBlockingAsync<T>(Func<T> work, CancellationToken cancellationToken)
 	{
 		await BlockingWorkThrottle.WaitAsync(cancellationToken).ConfigureAwait(false);
 		try

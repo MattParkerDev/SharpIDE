@@ -2,12 +2,16 @@ using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Exceptions;
 using SharpIDE.MsBuildHost.Contracts;
+using SharpIDE.MsBuildHost.DesignTime;
 
 namespace SharpIDE.MsBuildHost;
 
-/// Evaluation only - never runs targets, and never touches BuildManager, so it can run alongside real builds in this process.
-/// (If a target ever needs running for evaluation, don't use ProjectInstance.Build - it opens a BuildManager.DefaultBuildManager session, which throws if a build already has one open.
-/// Send it through the same path real builds use instead.)
+/// Evaluation only - never runs targets, and never touches BuildManager, so it can run alongside design-time builds in the design-time host.
+/// (If a target ever needs running for evaluation, don't use ProjectInstance.Build - it opens a BuildManager.DefaultBuildManager session, which throws if a design-time batch already has one open.
+/// Send it through DesignTimeBuildManager instead.)
+/// Its ProjectCollection is its own (no global properties - evaluated as a real build of the project would be), but shares the process-wide XML cache with DesignTimeBuildManager's.
+/// That cache's ProjectRootElements may be in use by a design-time evaluation, so they are never changed in place (no Reload, no edits) - the cache re-reads a file that changed
+/// on disk (checked by timestamp) as a new ProjectRootElement, so a project whose own file changed is loaded again, and one whose imports changed is re-evaluated.
 public sealed class ProjectEvaluator
 {
 	private const string TargetFrameworkProperty = "TargetFramework";
@@ -28,8 +32,17 @@ public sealed class ProjectEvaluator
 		"UserSecretsId",
 	];
 
-	// Fine to share with builds - new BuildParameters() gets its own ProjectRootElementCache
-	private readonly ProjectCollection _projectCollection = ProjectCollection.GlobalProjectCollection;
+	// Lives as long as the host. reuseProjectRootElementCache: the process-wide XML cache, which re-reads a file when it changes on disk (checked by timestamp)
+	private readonly ProjectCollection _projectCollection = new(
+		globalProperties: null,
+		loggers: [],
+		remoteLoggers: [],
+		ToolsetDefinitionLocations.Default,
+		maxNodeCount: 1,
+		onlyLogCriticalEvents: false,
+		loadProjectsReadOnly: false,
+		useAsynchronousLogging: false,
+		reuseProjectRootElementCache: true);
 	// One batch at a time. Projects within a batch are evaluated in parallel.
 	private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -38,7 +51,7 @@ public sealed class ProjectEvaluator
 		await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 		try
 		{
-			return EvaluateInParallel(projectFilePaths, reloadProjectFile: true, forceReevaluation: false, cancellationToken);
+			return await EvaluateInParallelAsync(projectFilePaths, reloadProjectFile: _ => true, forceReevaluation: false, cancellationToken).ConfigureAwait(false);
 		}
 		finally
 		{
@@ -59,25 +72,10 @@ public sealed class ProjectEvaluator
 				.ToList();
 			if (outerProjectPaths.Count is 0) return [];
 
-			var unloadEverything = false;
+			var changedPaths = changedFilePaths.Select(Path.GetFullPath).ToHashSet(PathComparer);
 			var affectedProjectPaths = new HashSet<string>(PathComparer);
-			foreach (var changedFilePath in changedFilePaths.Select(Path.GetFullPath).Distinct(PathComparer))
+			foreach (var changedFilePath in changedPaths)
 			{
-				var projectRootElement = ProjectRootElement.TryOpen(changedFilePath, _projectCollection);
-				if (projectRootElement is not null)
-				{
-					try
-					{
-						projectRootElement.Reload(throwIfUnsavedChanges: false);
-					}
-					catch (Exception ex) when (ex is InvalidProjectFileException or IOException or UnauthorizedAccessException)
-					{
-						// e.g. deleted, or now invalid XML - start again from disk
-						unloadEverything = true;
-						break;
-					}
-				}
-
 				var importingProjects = loadedProjects
 					.Where(p => PathComparer.Equals(p.FullPath, changedFilePath) || p.Imports.Any(i => PathComparer.Equals(i.ImportedProject.FullPath, changedFilePath)))
 					.Select(p => p.FullPath)
@@ -96,15 +94,10 @@ public sealed class ProjectEvaluator
 				affectedProjectPaths.UnionWith(importingProjects);
 			}
 
-			if (unloadEverything)
-			{
-				_projectCollection.UnloadAllProjects();
-				return EvaluateInParallel(outerProjectPaths, reloadProjectFile: false, forceReevaluation: false, cancellationToken);
-			}
-
-			// Conditions such as Exists(...) aren't tracked, so a file appearing doesn't make a project dirty - force it
+			// Conditions such as Exists(...) aren't tracked, so a file appearing doesn't make a project dirty - force it.
+			// A changed (or deleted, or now invalid) import is re-read from the cache when the project is re-evaluated, so only a changed project file needs the project loading again.
 			var projectsToEvaluate = outerProjectPaths.Where(affectedProjectPaths.Contains).ToList();
-			return EvaluateInParallel(projectsToEvaluate, reloadProjectFile: false, forceReevaluation: true, cancellationToken);
+			return await EvaluateInParallelAsync(projectsToEvaluate, reloadProjectFile: changedPaths.Contains, forceReevaluation: true, cancellationToken).ConfigureAwait(false);
 		}
 		finally
 		{
@@ -117,7 +110,7 @@ public sealed class ProjectEvaluator
 		await _lock.WaitAsync().ConfigureAwait(false);
 		try
 		{
-			_projectCollection.UnloadAllProjects();
+			UnloadAllProjects();
 		}
 		finally
 		{
@@ -125,7 +118,8 @@ public sealed class ProjectEvaluator
 		}
 	}
 
-	/// Edits the XML through ProjectRootElement, so the rest of the file is left as it was
+	/// Edits the XML through ProjectRootElement, so the rest of the file is left as it was.
+	/// In a ProjectCollection (and so XML cache) of its own, so the shared cache's XML isn't changed in place - our projects pick the change up when the file watcher re-evaluates them.
 	public async Task<string> GetOrCreateUserSecretsIdAsync(string projectFilePath)
 	{
 		await _lock.WaitAsync().ConfigureAwait(false);
@@ -136,8 +130,10 @@ public sealed class ProjectEvaluator
 			if (string.IsNullOrWhiteSpace(userSecretsId) is false) return userSecretsId;
 
 			var newUserSecretsId = Guid.NewGuid().ToString();
-			project.Xml.AddProperty("UserSecretsId", newUserSecretsId);
-			project.Save();
+			using var editCollection = new ProjectCollection();
+			var projectRootElement = ProjectRootElement.Open(projectFilePath, editCollection, preserveFormatting: true);
+			projectRootElement.AddProperty("UserSecretsId", newUserSecretsId);
+			projectRootElement.Save();
 			return newUserSecretsId;
 		}
 		finally
@@ -146,18 +142,22 @@ public sealed class ProjectEvaluator
 		}
 	}
 
-	private List<ProjectEvaluationDto> EvaluateInParallel(IReadOnlyCollection<string> projectFilePaths, bool reloadProjectFile, bool forceReevaluation, CancellationToken cancellationToken)
+	/// reloadProjectFile: whether a project's own file may have changed, so it needs loading again (from the cache, which re-reads it if it has)
+	private async Task<List<ProjectEvaluationDto>> EvaluateInParallelAsync(IReadOnlyCollection<string> projectFilePaths, Func<string, bool> reloadProjectFile, bool forceReevaluation, CancellationToken cancellationToken)
 	{
-		var distinctPaths = projectFilePaths.Select(Path.GetFullPath).Distinct(PathComparer).ToList();
-		var results = new ProjectEvaluationDto[distinctPaths.Count];
-		// Capped, as evaluation blocks (MSBuild's ConditionEvaluator serializes evaluating the same condition across projects, so more at once isn't faster) -
-		// uncapped, Parallel.For keeps taking thread pool threads, starving a build running in this host meanwhile (its node handshakes, callbacks, logging). As DesignTimeBuildManager.RunBlockingAsync.
-		// The cap can be removed once https://github.com/dotnet/msbuild/pull/15544 is merged.
-		Parallel.For(0, distinctPaths.Count, new ParallelOptions { CancellationToken = cancellationToken, MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, i =>
-		{
-			results[i] = LoadOrReloadProject(distinctPaths[i], reloadProjectFile, forceReevaluation);
-		});
-		return results.ToList();
+		// Evaluation blocks (MSBuild's ConditionEvaluator serializes evaluating the same condition across projects, so more at once isn't faster) -
+		// so it shares design-time builds' throttle, rather than taking thread pool threads a design-time batch running meanwhile needs (its node handshakes, callbacks, logging).
+		var results = await Task.WhenAll(projectFilePaths
+			.Select(Path.GetFullPath)
+			.Distinct(PathComparer)
+			.Select(path => Task.Run(() => DesignTimeBuildManager.RunBlockingAsync(() => LoadOrReloadProject(path, reloadProjectFile(path), forceReevaluation), cancellationToken), cancellationToken))).ConfigureAwait(false);
+		return [.. results];
+	}
+
+	/// One at a time - ProjectCollection.UnloadAllProjects clears the XML cache, which is process-wide, so would clear design-time builds' too
+	private void UnloadAllProjects()
+	{
+		foreach (var project in _projectCollection.LoadedProjects.ToList()) _projectCollection.UnloadProject(project);
 	}
 
 	private Project? GetOuterProject(string projectFilePath) => _projectCollection.GetLoadedProjects(projectFilePath)
@@ -174,11 +174,16 @@ public sealed class ProjectEvaluator
 		try
 		{
 			var loadedProjects = _projectCollection.GetLoadedProjects(projectFilePath).ToList();
+			// Their XML (shared by the outer and inner projects) is as the file was when they were loaded - load them again, rather than Reload the shared cache's XML in place.
+			// Unchanged on disk, the cache hands back the same XML, so this costs an evaluation, as Reload did.
+			if (reloadProjectFile)
+			{
+				foreach (var project in loadedProjects) _projectCollection.UnloadProject(project);
+				loadedProjects = [];
+			}
 			var outerProject = loadedProjects.FirstOrDefault(project => project.GlobalProperties.ContainsKey(TargetFrameworkProperty) is false);
 			if (outerProject is not null)
 			{
-				// Shared by the outer and inner projects
-				if (reloadProjectFile) outerProject.Xml.Reload(throwIfUnsavedChanges: false);
 				if (forceReevaluation) outerProject.MarkDirty();
 				outerProject.ReevaluateIfNecessary();
 			}

@@ -11,7 +11,6 @@ public class RpcBuildService : IRpcBuildService
 {
 	private static readonly string[] RunPropertyNames = ["RunCommand", "RunArguments", "RunWorkingDirectory", "TargetPath", "OutDir"];
 	private PipeTextWriter _buildTextWriter = new PipeTextWriter();
-	private readonly ProjectEvaluator _projectEvaluator = new ProjectEvaluator();
 	private readonly PackageReferenceEditor _packageReferenceEditor;
 	private Task? _socketWriteTask;
 
@@ -66,16 +65,6 @@ public class RpcBuildService : IRpcBuildService
 			: RunPropertyNames.ToDictionary(name => name, name => projectState.GetPropertyValue(name));
 		return new RunBuildResultDto(MapResult(buildResult.OverallResult), buildResult.Exception?.Message, properties);
 	}
-
-	public Task<List<ProjectEvaluationDto>> EvaluateProjectsAsync(List<string> projectFilePaths, CancellationToken cancellationToken = default)
-		=> _projectEvaluator.EvaluateProjectsAsync(projectFilePaths, cancellationToken);
-
-	public Task<List<ProjectEvaluationDto>> ReloadProjectsAsync(List<string> changedFilePaths, CancellationToken cancellationToken = default)
-		=> _projectEvaluator.ReloadProjectsAsync(changedFilePaths, cancellationToken);
-
-	public Task UnloadAllProjectsAsync() => _projectEvaluator.UnloadAllProjectsAsync();
-
-	public Task<string> GetOrCreateUserSecretsIdAsync(string projectFilePath) => _projectEvaluator.GetOrCreateUserSecretsIdAsync(projectFilePath);
 
 	public Task<PackageReferenceChangeResultDto> AddOrUpdatePackageReferenceAsync(string projectFilePath, string packageId, string version, CancellationToken cancellationToken = default)
 		=> _packageReferenceEditor.AddOrUpdateAsync(projectFilePath, packageId, version, cancellationToken);

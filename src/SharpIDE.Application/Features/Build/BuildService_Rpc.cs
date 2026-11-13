@@ -13,9 +13,9 @@ using StreamJsonRpc;
 
 namespace SharpIDE.Application.Features.Build;
 
-/// One SharpIDE.MsBuildHost process per opened solution, serving both evaluation and real builds.
+/// One SharpIDE.MsBuildHost process per opened solution, serving real builds (evaluation is served by DesignTimeBuildService's host).
 /// It uses the SDK resolved from the solution's folder (global.json), so it is started when the solution is opened, and killed when this (scoped) service is disposed - i.e. when another solution is opened.
-/// If it crashes, it is restarted, and HostRestarted is raised so everything can be re-evaluated.
+/// If it crashes, it is restarted.
 public partial class BuildService
 {
 	private Process? _sharpIdeMsBuildHostProcess;
@@ -28,10 +28,7 @@ public partial class BuildService
 	private int _consecutiveCrashCount;
 	private const int MaxConsecutiveCrashRestarts = 3;
 
-	/// Raised once the host has been restarted after a crash. The new host has no evaluations, so every project needs re-evaluating.
-	public EventWrapper<Task> HostRestarted { get; } = new(() => Task.CompletedTask);
-
-	/// Starts the host for the solution being opened. Evaluation needs it immediately, so this isn't left until the first build.
+	/// Starts the host for the solution being opened, so it isn't left until the first build (the restore before the workspace loads).
 	/// The solution path is recorded synchronously, so callers that don't await this can still use the host as soon as it is up.
 	public Task StartHostAsync(string solutionFilePath, CancellationToken cancellationToken = default)
 	{
@@ -86,7 +83,6 @@ public partial class BuildService
 			try
 			{
 				await GetRpcAsync();
-				await HostRestarted.InvokeParallelAsync();
 				_consecutiveCrashCount = 0;
 			}
 			catch (Exception ex)
