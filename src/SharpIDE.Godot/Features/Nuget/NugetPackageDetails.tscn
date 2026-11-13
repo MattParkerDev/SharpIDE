@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://cwwqf66568iac" path="res://Features/Nuget/Resources/downgrade-icon.svg" id="5_dwngr"]
 [ext_resource type="Texture2D" uid="uid://bvokbt0ofw201" path="res://Features/Nuget/Resources/remove-icon.svg" id="6_remov"]
 [ext_resource type="Texture2D" uid="uid://bh48xoc6pvchm" path="res://Features/Nuget/Resources/add-icon.svg" id="7_instl"]
+[ext_resource type="Script" uid="uid://cko5hl4tbc175" path="res://Features/Common/CustomFoldableContainer.cs" id="8_fold"]
 
 [node name="NugetPackageDetails" type="VBoxContainer" unique_id=1264762970]
 anchors_preset = 15
@@ -89,12 +90,31 @@ tooltip_text = "Remove from projects..."
 theme_override_constants/icon_max_width = 23
 icon = ExtResource("6_remov")
 
-[node name="InfoFoldableContainer" type="FoldableContainer" parent="." unique_id=1492895289]
+[node name="InfoFoldableContainer" type="Container" parent="." unique_id=1492895289]
 unique_name_in_owner = true
 layout_mode = 2
-folded = true
-title = "Info - OpenTelemetry protocol exporter for OpenTelemetry .NET"
-title_text_overrun_behavior = 3
+script = ExtResource("8_fold")
+Title = "Info"
+Summary = "Library for interacting with command-line interfaces"
+Folded = true
+
+[node name="MarginContainer" type="MarginContainer" parent="InfoFoldableContainer" unique_id=1047116525]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="InfoRichTextLabel" type="RichTextLabel" parent="InfoFoldableContainer/MarginContainer" unique_id=346109532]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 2
+bbcode_enabled = true
+text = "Library for interacting with command-line interfaces"
+fit_content = true
+context_menu_enabled = true
+selection_enabled = true
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=723630067]
 layout_mode = 2

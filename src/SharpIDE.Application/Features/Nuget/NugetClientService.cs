@@ -5,6 +5,7 @@ using NuGet.Configuration;
 using NuGet.Packaging.Core;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
+using NuGet.Versioning;
 using SharpIDE.Application.Features.Evaluation;
 
 namespace SharpIDE.Application.Features.Nuget;
@@ -148,6 +149,21 @@ public class NugetClientService
 			var metadataList = metadata.ToList();
 			metadataList.Reverse();
 			return metadataList;
+	}
+
+	/// Each version of the package restored to the global packages folder (as the directory's NuGet config sets it), newest first
+	public List<(NuGetVersion Version, string Path)> GetLocalInstallations(string packageId, string directoryPath)
+	{
+		var globalPackagesFolder = SettingsUtility.GetGlobalPackagesFolder(Settings.LoadDefaultSettings(root: directoryPath));
+		// The folder layout is {id}/{version}, both lower case
+		var packageFolder = Path.Combine(globalPackagesFolder, packageId.ToLowerInvariant());
+		if (Directory.Exists(packageFolder) is false) return [];
+		return Directory.EnumerateDirectories(packageFolder)
+			.Select(path => (Version: NuGetVersion.TryParse(Path.GetFileName(path), out var version) ? version : null, Path: path))
+			.Where(i => i.Version is not null)
+			.Select(i => (i.Version!, i.Path))
+			.OrderByDescending(i => i.Item1)
+			.ToList();
 	}
 
 	public async Task<List<IdePackageResult>> GetPackagesForInstalledPackages(string directoryPath, List<InstalledPackage> installedPackages, CancellationToken cancellationToken = default)

@@ -1,8 +1,11 @@
 using Godot;
+using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
+using SharpIDE.Application;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Nuget;
 using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.Godot.Features.Common;
 using SharpIDE.Godot.Features.Problems;
 
 namespace SharpIDE.Godot.Features.Nuget;
@@ -11,7 +14,11 @@ public partial class NugetPackageDetails : VBoxContainer
 {
 	private TextureRect _packageIconTextureRect = null!;
 	private Label _packageNameLabel = null!;
-	private FoldableContainer _infoFoldableContainer = null!;
+	private CustomFoldableContainer _infoFoldableContainer = null!;
+	private RichTextLabel _infoRichTextLabel = null!;
+	/// The selected source's metadata for each version, as the version dropdown lists them
+	private List<IPackageSearchMetadata> _versionMetadata = [];
+	private List<(NuGetVersion Version, string Path)> _localInstallations = [];
 	private OptionButton _versionOptionButton = null!;
 	private OptionButton _nugetSourceOptionButton = null!;
 	private VBoxContainer _projectsVBoxContainer = null!;
@@ -34,11 +41,14 @@ public partial class NugetPackageDetails : VBoxContainer
 	
 	[Inject] private readonly NugetPackageIconCacheService _nugetPackageIconCacheService = null!;
 	[Inject] private readonly NugetClientService _nugetClientService = null!;
+	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
 	public override void _Ready()
 	{
 		_packageIconTextureRect = GetNode<TextureRect>("%PackageIconTextureRect");
 		_packageNameLabel = GetNode<Label>("%PackageNameLabel");
-		_infoFoldableContainer = GetNode<FoldableContainer>("%InfoFoldableContainer");
+		_infoFoldableContainer = GetNode<CustomFoldableContainer>("%InfoFoldableContainer");
+		_infoRichTextLabel = GetNode<RichTextLabel>("%InfoRichTextLabel");
+		SetUpInfo();
 		_versionOptionButton = GetNode<OptionButton>("%VersionOptionButton");
 		_nugetSourceOptionButton = GetNode<OptionButton>("%NugetSourceOptionButton");
 		_projectsVBoxContainer = GetNode<VBoxContainer>("%ProjectsVBoxContainer");
@@ -144,6 +154,7 @@ public partial class NugetPackageDetails : VBoxContainer
 	{
 		var selectedVersion = _versionOptionButton.GetItemMetadata((int)index).As<RefCountedContainer<NuGetVersion>>();
 		_selectedVersion = selectedVersion?.Item;
+		ShowInfo(_versionMetadata.Find(m => m.Identity.Version == _selectedVersion));
 		foreach (var child in _projectsVBoxContainer.GetChildren().OfType<PackageDetailsProjectEntry>())
 		{
 			child.VersionSelectedInDetails = selectedVersion?.Item;
@@ -151,6 +162,71 @@ public partial class NugetPackageDetails : VBoxContainer
 		}
 		DisplayRelevantButtons();
 	}
+
+	/// Links open in the browser, or for a local installation, the file manager
+	private void SetUpInfo()
+	{
+		_infoRichTextLabel.MetaClicked += meta => OS.ShellOpen(meta.AsString());
+		// Overriding a child's theme items only notifies the child, so this doesn't loop
+		ThemeChanged += ApplyInfoTheme;
+		ApplyInfoTheme();
+		ShowInfo(null);
+	}
+
+	/// The info text in the pane's label colour (a RichTextLabel's is otherwise white), with [b] in a semibold weight of the theme's font, as the Info title
+	private void ApplyInfoTheme()
+	{
+		_infoRichTextLabel.AddThemeColorOverride(DefaultColorName, GetThemeColor(ThemeStringNames.FontColor, Gray700LabelType));
+		_infoRichTextLabel.AddThemeFontOverride(BoldFontName, new FontVariation
+		{
+			BaseFont = GetThemeDefaultFont(),
+			VariationOpentype = new global::Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("weight")] = 600 }
+		});
+	}
+
+	private static readonly StringName BoldFontName = "bold_font";
+	private static readonly StringName DefaultColorName = "default_color";
+	private static readonly StringName Gray700LabelType = "Gray700Label";
+	private const string LinkColor = "589df6";
+
+	/// Shows the version's details - its description, links, author and publish date - and where the package is restored locally. Call on the UI thread
+	private void ShowInfo(IPackageSearchMetadata? metadata)
+	{
+		var description = metadata?.Description?.Trim() ?? string.Empty;
+		_infoFoldableContainer.Summary = description;
+		var text = new System.Text.StringBuilder();
+		if (description.Length > 0) text.AppendLine(Escape(description));
+
+		if (metadata is not null)
+		{
+			var links = new List<string>();
+			if (metadata.PackageDetailsUrl is { } detailsUrl) links.Add(Link(detailsUrl.Host.EndsWith("nuget.org", StringComparison.OrdinalIgnoreCase) ? "NuGet.org" : detailsUrl.Host, detailsUrl.AbsoluteUri));
+			if (metadata.ProjectUrl is { } projectUrl) links.Add(Link(projectUrl.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ? "GitHub" : "Project website", projectUrl.AbsoluteUri));
+			var license = metadata.LicenseMetadata?.License;
+			if (metadata.LicenseUrl is { } licenseUrl) links.Add(Link(string.IsNullOrWhiteSpace(license) ? "License" : license, licenseUrl.AbsoluteUri));
+			else if (string.IsNullOrWhiteSpace(license) is false) links.Add(Escape(license));
+			links.Add(Link("Google", $"https://www.google.com/search?q={Uri.EscapeDataString(metadata.Identity.Id)}"));
+			text.AppendLine($"[b]Links:[/b] {string.Join("  ", links)}");
+			if (string.IsNullOrWhiteSpace(metadata.Authors) is false) text.AppendLine($"[b]Author:[/b] {Escape(metadata.Authors)}");
+			// nuget.org gives unlisted packages a 1900 publish date
+			if (metadata.Published is { Year: > 1900 } published) text.AppendLine($"[b]Published:[/b] {published.LocalDateTime:MMMM d, yyyy}");
+		}
+
+		if (_localInstallations.Count > 0)
+		{
+			text.AppendLine("[b]Local Installations:[/b]");
+			foreach (var (_, path) in _localInstallations) text.AppendLine(Link(path, path, external: false));
+		}
+
+		_infoRichTextLabel.Text = text.ToString().TrimEnd();
+		_infoFoldableContainer.Visible =_infoRichTextLabel.Text.Length > 0;
+	}
+
+	private static string Link(string text, string target, bool external = true) =>
+		$"[url=\"{target.Replace("\"", "%22")}\"][color={LinkColor}]{Escape(text)}{(external ? " ↗" : string.Empty)}[/color][/url]";
+
+	/// So BBCode in the text shows as written
+	private static string Escape(string text) => text.Replace("[", "[lb]");
 
 	private Task OnPackageReferencesChanged() => PackageReferencesChanged?.Invoke() ?? Task.CompletedTask;
 
@@ -180,7 +256,16 @@ public partial class NugetPackageDetails : VBoxContainer
 			_nugetSourceOptionButton.Selected = 0;
 		});
 		// No source returned the package (unreachable, or it isn't on any enabled source) - there are no versions to list
-		if (package.PackageFromSources.Count is 0) return;
+		if (package.PackageFromSources.Count is 0)
+		{
+			await this.InvokeAsync(() =>
+			{
+				_versionMetadata = [];
+				_localInstallations = [];
+				ShowInfo(null);
+			});
+			return;
+		}
 		await OnNugetSourceSelected(0);
 	}
 	
@@ -228,10 +313,17 @@ public partial class NugetPackageDetails : VBoxContainer
 	private async Task OnNugetSourceSelected(long sourceIndex)
 	{
 		var packageFromSource = _package!.PackageFromSources[(int)sourceIndex];
-		var results = await _nugetClientService.GetAllVersionsOfPackageInSource(packageFromSource.PackageSearchMetadata.Identity.Id, packageFromSource.Source);
+		var packageId = packageFromSource.PackageSearchMetadata.Identity.Id;
+		var results = await _nugetClientService.GetAllVersionsOfPackageInSource(packageId, packageFromSource.Source);
+		var localInstallations = _sharpIdeSolutionAccessor.SolutionModel is { } solution
+			? _nugetClientService.GetLocalInstallations(packageId, solution.DirectoryPath)
+			: [];
 		await this.InvokeAsync(() =>
 		{
-			_infoFoldableContainer.Title = packageFromSource.PackageSearchMetadata.Description;
+			_versionMetadata = results;
+			_localInstallations = localInstallations;
+			// Until a version is selected, e.g. when the source has none
+			ShowInfo(packageFromSource.PackageSearchMetadata);
 			_versionOptionButton.Clear();
 			foreach (var (index, metadata) in results.Index())
 			{

@@ -335,9 +335,11 @@ theme_override_constants/separation = 0
 [node name="PackageEntry" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/NugetTabContainer/Discover/VBoxContainer/PanelContainer3/AvailablePackagesVBoxContainer" unique_id=300051982 instance=ExtResource("2_arg4f")]
 layout_mode = 2
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer" unique_id=1771208103]
+[node name="DetailsScrollContainer" type="ScrollContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer" unique_id=1771208103]
 layout_mode = 2
+horizontal_scroll_mode = 0
 
-[node name="NugetPackageDetails" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer2" unique_id=828299858 instance=ExtResource("3_yr6k7")]
+[node name="NugetPackageDetails" parent="VBoxContainer/MarginContainer2/HSplitContainer/DetailsScrollContainer" unique_id=828299858 instance=ExtResource("3_yr6k7")]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
