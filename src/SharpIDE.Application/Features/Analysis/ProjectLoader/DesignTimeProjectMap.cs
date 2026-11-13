@@ -17,6 +17,33 @@ public sealed class DesignTimeProjectMap
 	private readonly Dictionary<ProjectId, string> _projectIdToOutputFilePathMap = [];
 	private readonly Dictionary<ProjectId, string> _projectIdToOutputRefFilePathMap = [];
 
+	/// The solution's projects, except excludedProjectPaths - so loading projects that reference them (e.g. reloading a project) uses them as they are, instead of design-time building and loading them again.
+	/// Projects being loaded must be excluded, or the Worker returns their existing ProjectInfos instead of loading them.
+	internal static DesignTimeProjectMap Create(Solution solution, IEnumerable<string> excludedProjectPaths)
+	{
+		var excluded = new HashSet<string>(excludedProjectPaths, PathComparison.Comparer);
+		var projectMap = new DesignTimeProjectMap();
+		foreach (var project in solution.Projects)
+		{
+			if (string.IsNullOrEmpty(project.FilePath) || excluded.Contains(project.FilePath)) continue;
+			projectMap.Add(project);
+		}
+		return projectMap;
+	}
+
+	private void Add(Project project)
+	{
+		var projectPath = project.FilePath!;
+		if (_projectPathToProjectIdsMap.TryGetValue(projectPath, out var projectIds) is false) _projectPathToProjectIdsMap[projectPath] = projectIds = [];
+		projectIds.Add(project.Id);
+		if (string.IsNullOrEmpty(project.OutputFilePath) is false) _projectIdToOutputFilePathMap[project.Id] = project.OutputFilePath;
+		if (string.IsNullOrEmpty(project.OutputRefFilePath) is false) _projectIdToOutputRefFilePathMap[project.Id] = project.OutputRefFilePath;
+		AddProjectInfo(project.State.ProjectInfo);
+	}
+
+	/// Projects the map already has ProjectInfos for, which don't need loading (or design-time building)
+	internal bool ContainsProjectInfosFor(string projectPath) => _projectPathToProjectInfosMap.ContainsKey(projectPath);
+
 	internal void AddProjectInfo(ProjectInfo projectInfo)
 	{
 		var projectFilePath = projectInfo.FilePath;

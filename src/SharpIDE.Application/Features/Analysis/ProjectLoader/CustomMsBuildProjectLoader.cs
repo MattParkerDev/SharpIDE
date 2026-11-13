@@ -197,7 +197,8 @@ public partial class CustomMsBuildProjectLoader
 			solutionFilePath,
 			Properties,
 			_projectFileExtensionRegistry,
-			_diagnosticReporter);
+			_diagnosticReporter,
+			projectMap);
 
 		// The Worker asks for one project at a time - so build all the requested ones up front, together. Ones they reference that aren't requested (e.g. outside the solution) are built as the Worker finds them.
 		await projectFileInfoProvider.DesignTimeBuildAsync(projectPaths, cancellationToken).ConfigureAwait(false);

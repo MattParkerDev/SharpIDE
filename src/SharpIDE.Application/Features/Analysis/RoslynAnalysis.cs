@@ -255,11 +255,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			.SelectMany(project => dependencyGraph.GetProjectsThatTransitivelyDependOnThisProject(project.Id).Select(id => oldSolution.GetProject(id)!.FilePath!).Append(project.FilePath!))
 			.Distinct()
 			.ToList();
-		//var projectMap = ProjectMap.Create(oldSolution); // using a projectMap may speed up LoadProjectInfosAsync, TODO: test
-		// This will get all projects necessary to build this group of projects, regardless of whether those projects are actually affected by the original project change
-		// We can potentially optimise this, but given this is the expensive part, lets just proceed with reloading them all in the solution
-		// We potentially lose performance because Workspace/Solution caches are dropped, but lets not prematurely optimise
-		var (loadedProjectInfos, projectFileInfos) = await _msBuildProjectLoader.LoadProjectInfosAsync(projectPathsToReload.ToImmutableArray(), null, null, cancellationToken);
+		// The solution's other projects are referenced as they are, rather than design-time built and loaded again. A reference to a project outside the solution is still loaded.
+		var projectMap = DesignTimeProjectMap.Create(oldSolution, projectPathsToReload);
+		var (loadedProjectInfos, projectFileInfos) = await _msBuildProjectLoader.LoadProjectInfosAsync(projectPathsToReload.ToImmutableArray(), projectMap, null, cancellationToken);
 		foreach (var (projectId, projectFileInfo) in projectFileInfos)
 		{
 			_projectFileInfoMap[projectId] = projectFileInfo;

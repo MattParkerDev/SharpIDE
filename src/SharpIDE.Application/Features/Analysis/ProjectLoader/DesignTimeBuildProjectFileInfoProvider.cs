@@ -14,7 +14,8 @@ internal sealed class DesignTimeBuildProjectFileInfoProvider(
 	string solutionFilePath,
 	ImmutableDictionary<string, string> globalProperties,
 	ProjectFileExtensionRegistry projectFileExtensionRegistry,
-	DiagnosticReporter diagnosticReporter)
+	DiagnosticReporter diagnosticReporter,
+	DesignTimeProjectMap? projectMap)
 {
 	private readonly Dictionary<string, DesignTimeBuildResultDto> _results = new(PathComparison.Comparer);
 
@@ -35,10 +36,11 @@ internal sealed class DesignTimeBuildProjectFileInfoProvider(
 		}
 	}
 
-	/// Not built yet, and in a language we load
+	/// Not built yet, not already loaded (in the project map - the Worker uses those as they are), and in a language we load
 	private List<string> GetPathsToBuild(IEnumerable<string> projectPaths) => projectPaths
 		.Distinct(PathComparison.Comparer)
 		.Where(path => _results.ContainsKey(path) is false)
+		.Where(path => projectMap?.ContainsProjectInfosFor(path) is not true)
 		.Where(path => projectFileExtensionRegistry.TryGetLanguageNameFromProjectPath(path, DiagnosticReportingMode.Ignore, out _, out _))
 		.ToList();
 
