@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Godot;
 using Godot.Collections;
 using SharpIDE.Application.Features.Analysis;
@@ -14,7 +15,18 @@ public partial class CustomHighlighter : SyntaxHighlighter
     private System.Collections.Generic.Dictionary<int, ImmutableArray<SharpIdeClassifiedSpan>> _classifiedSpansByLine = [];
 
     public EditorThemeColorSet ColourSetForTheme = null!;
-    private Color[] _colorsByClassification = [];
+    private HighlightEntries _highlightEntries = null!;
+
+    /// <summary>
+    /// The per-colour { "color": Color } entries we return to Godot, shared by every line and editor using the same theme.
+    /// Godot only reads them, so they are created once per theme instead of once per span on every highlight call.
+    /// </summary>
+    private sealed class HighlightEntries(Dictionary[] byClassification, Dictionary defaultColor)
+    {
+        public readonly Dictionary[] ByClassification = byClassification;
+        public readonly Dictionary DefaultColor = defaultColor;
+    }
+    private static readonly ConditionalWeakTable<EditorThemeColorSet, HighlightEntries> _highlightEntriesByTheme = new();
 
     public void UpdateThemeColorCache(LightOrDarkTheme themeType)
     {
@@ -24,7 +36,18 @@ public partial class CustomHighlighter : SyntaxHighlighter
             LightOrDarkTheme.Dark => EditorThemeColours.Dark,
             _ => throw new NotImplementedException("Unknown theme type")
         };
-        _colorsByClassification = ClassificationToColorMapper.GetColorTable(ColourSetForTheme);
+        _highlightEntries = _highlightEntriesByTheme.GetValue(ColourSetForTheme, static colorSet =>
+        {
+            var colors = ClassificationToColorMapper.GetColorTable(colorSet);
+            var byClassification = new Dictionary[colors.Length];
+            for (var i = 0; i < colors.Length; i++)
+            {
+                byClassification[i] = CreateEntry(colors[i]);
+            }
+            return new HighlightEntries(byClassification, CreateEntry(colorSet.White));
+
+            static Dictionary CreateEntry(Color color) => new() { { ColorStringName, color } };
+        });
     }
 
     /// <param name="classifiedSpans">Sorted, single-line, non-overlapping spans</param>
@@ -116,19 +139,19 @@ public partial class CustomHighlighter : SyntaxHighlighter
     {
         if (_classifiedSpansByLine.TryGetValue(line, out var spansForLine) is false) return _emptyDict;
 
-        var colors = _colorsByClassification;
-        var defaultColor = ColourSetForTheme.White;
+        var entries = _highlightEntries.ByClassification;
+        var defaultEntry = _highlightEntries.DefaultColor;
         var highlights = new Dictionary();
         for (var i = 0; i < spansForLine.Length; i++)
         {
             var span = spansForLine[i];
-            highlights[span.StartCharacter] = new Dictionary { { ColorStringName, colors[(int)span.Classification] } };
+            highlights[span.StartCharacter] = entries[(int)span.Classification];
 
             // Godot applies a colour until the next entry on the line, so reset to the default colour for any gap after this span
             var nextStart = i + 1 < spansForLine.Length ? spansForLine[i + 1].StartCharacter : int.MaxValue;
             if (nextStart > span.EndCharacter)
             {
-                highlights[span.EndCharacter] = new Dictionary { { ColorStringName, defaultColor } };
+                highlights[span.EndCharacter] = defaultEntry;
             }
         }
 
