@@ -23,7 +23,10 @@ public partial class NugetPackageDetails : VBoxContainer
 	/// The version whose details the Info and Dependencies sections show
 	private IPackageSearchMetadata? _shownMetadata;
 	/// The selected source's metadata for each version, as the version dropdown lists them
+	/// The selected source's versions, prereleases included, newest first - those listed are filtered from these
 	private List<IPackageSearchMetadata> _versionMetadata = [];
+	/// Whether prerelease versions are listed. Only touched on the UI thread
+	private bool _includePrerelease;
 	private List<(NuGetVersion Version, string Path)> _localInstallations = [];
 	private OptionButton _versionOptionButton = null!;
 	private OptionButton _nugetSourceOptionButton = null!;
@@ -395,18 +398,35 @@ public partial class NugetPackageDetails : VBoxContainer
 			_localInstallations = localInstallations;
 			// Until a version is selected, e.g. when the source has none
 			ShowInfo(packageFromSource.PackageSearchMetadata);
-			_versionOptionButton.Clear();
-			foreach (var (index, metadata) in results.Index())
-			{
-				_versionOptionButton.AddItem(metadata.Identity.Version.ToNormalizedString(), index);
-				_versionOptionButton.SetItemMetadata(index, new RefCountedContainer<NuGetVersion>(metadata.Identity.Version));
-				//_versionOptionButton.SetItemIcon(index, _warningIconTextureRect);
-			}
-			// Keep the version chosen before a refresh, e.g. after a downgrade
-			var selectedIndex = _selectedVersion is null ? -1 : results.FindIndex(m => m.Identity.Version == _selectedVersion);
-			if (selectedIndex < 0) selectedIndex = results.Count > 0 ? 0 : -1;
-			_versionOptionButton.Selected = selectedIndex;
-			VersionSelected(selectedIndex);
+			ShowVersions();
 		});
+	}
+
+	/// Prereleases are filtered from the source's versions in memory, so toggling them doesn't ask the source again. Call on the UI thread
+	public void SetIncludePrerelease(bool includePrerelease)
+	{
+		if (_includePrerelease == includePrerelease) return;
+		_includePrerelease = includePrerelease;
+		if (_package is not null) ShowVersions();
+	}
+
+	/// Lists the source's versions - without prereleases unless they're included, or the source only has prereleases - keeping the version chosen if it's
+	/// still listed (e.g. after a downgrade, or toggling prereleases). Call on the UI thread
+	private void ShowVersions()
+	{
+		var versions = _includePrerelease || _versionMetadata.TrueForAll(m => m.Identity.Version.IsPrerelease)
+			? _versionMetadata
+			: _versionMetadata.FindAll(m => m.Identity.Version.IsPrerelease is false);
+		_versionOptionButton.Clear();
+		foreach (var (index, metadata) in versions.Index())
+		{
+			_versionOptionButton.AddItem(metadata.Identity.Version.ToNormalizedString(), index);
+			_versionOptionButton.SetItemMetadata(index, new RefCountedContainer<NuGetVersion>(metadata.Identity.Version));
+			//_versionOptionButton.SetItemIcon(index, _warningIconTextureRect);
+		}
+		var selectedIndex = _selectedVersion is null ? -1 : versions.FindIndex(m => m.Identity.Version == _selectedVersion);
+		if (selectedIndex < 0) selectedIndex = versions.Count > 0 ? 0 : -1;
+		_versionOptionButton.Selected = selectedIndex;
+		VersionSelected(selectedIndex);
 	}
 }

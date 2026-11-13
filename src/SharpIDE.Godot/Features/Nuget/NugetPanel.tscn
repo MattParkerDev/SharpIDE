@@ -82,7 +82,8 @@ popup/item_0/text = "Solution"
 popup/item_0/icon = ExtResource("2_3q32m")
 popup/item_0/id = 0
 
-[node name="CheckButton" type="CheckButton" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer" unique_id=2059034505]
+[node name="PrereleaseCheckButton" type="CheckButton" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer" unique_id=2059034505]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9490196, 0.5137255, 0.4, 1)
 theme_override_colors/font_focus_color = Color(0.9490196, 0.5137255, 0.4, 1)

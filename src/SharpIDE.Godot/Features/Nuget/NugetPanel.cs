@@ -55,6 +55,12 @@ public partial class NugetPanel : Control
 	private bool _updatingPackages;
 
 	private SharpIdeSolutionModel? _solution;
+
+	private CheckButton _prereleaseCheckButton = null!;
+	/// Whether prerelease versions are shown, and offered as updates. Only touched on the UI thread
+	private bool _includePrerelease;
+	/// The installed packages last shown, so toggling prereleases redraws them without asking the sources again. Only touched on the UI thread
+	private (List<IdePackageResult> Packages, List<SharpIdeProjectModel> UnrestoredProjects)? _shownInstalledPackages;
 	
 	[Inject] private readonly NugetClientService _nugetClientService = null!;
 	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
@@ -107,6 +113,8 @@ public partial class NugetPanel : Control
 			LoadSearchResultsIfDiscoverOpen();
 		};
 		_nugetPackageDetails.PackageReferencesChanged += OnPackageReferencesChanged;
+		_prereleaseCheckButton = GetNode<CheckButton>("%PrereleaseCheckButton");
+		_prereleaseCheckButton.Toggled += OnPrereleaseToggled;
 		_installedPackagesVboxContainer.QueueFreeChildren();
 		_implicitlyInstalledPackagesItemList.QueueFreeChildren();
 		_availablePackagesItemList.QueueFreeChildren();
@@ -156,7 +164,19 @@ public partial class NugetPanel : Control
 		if (_searchResultsRequested || _tabContainer.GetCurrentTabControl() != _discoverTab) return;
 		_searchResultsRequested = true;
 		var cancellationToken = _searchResultsCancellationSeries.CreateNext();
-		_ = Task.GodotRun(() => PopulateSearchResults(cancellationToken));
+		var includePrerelease = _includePrerelease;
+		_ = Task.GodotRun(() => PopulateSearchResults(includePrerelease, cancellationToken));
+	}
+
+	/// The installed packages and the details' versions are filtered in memory - each source's latest prerelease was found with its latest stable version.
+	/// The search results are searched for again, as the sources' search decides which packages they are
+	private void OnPrereleaseToggled(bool pressed)
+	{
+		_includePrerelease = pressed;
+		if (_shownInstalledPackages is var (packages, unrestoredProjects)) RenderInstalledPackages(packages, unrestoredProjects);
+		_nugetPackageDetails.SetIncludePrerelease(pressed);
+		_searchResultsRequested = false;
+		LoadSearchResultsIfDiscoverOpen();
 	}
 
 	/// A project's reference was changed from the details pane - its project has been re-evaluated, so read the installed packages again
@@ -198,7 +218,7 @@ public partial class NugetPanel : Control
 		});
 	}
 
-	private async Task PopulateSearchResults(CancellationToken cancellationToken)
+	private async Task PopulateSearchResults(bool includePrerelease, CancellationToken cancellationToken)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetPanel)}.{nameof(PopulateSearchResults)}");
 		// The tab can be opened before the solution has loaded
@@ -206,7 +226,7 @@ public partial class NugetPanel : Control
 		try
 		{
 			// Each update is the whole list so far - the fastest source's results first, then the other sources each has them on, then the slower sources'
-			await foreach (var result in _nugetClientService.GetTop100Results(_sharpIdeSolutionAccessor.SolutionModel!.DirectoryPath, cancellationToken))
+			await foreach (var result in _nugetClientService.GetTop100Results(_sharpIdeSolutionAccessor.SolutionModel!.DirectoryPath, includePrerelease, cancellationToken))
 			{
 				await this.InvokeAsync(() =>
 				{
@@ -265,9 +285,6 @@ public partial class NugetPanel : Control
 
 	private async Task ShowInstalledPackages(List<IdePackageResult> idePackageResult, List<SharpIdeProjectModel> unrestoredProjects, bool isFirst, CancellationToken cancellationToken)
 	{
-		var transitivePackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
-		var directPackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive is false).ToList();
-		var updatePackages = directPackages.Where(HasUpdate).ToList();
 		if (_selectedPackageResult is { } selected && cancellationToken.IsCancellationRequested is false)
 		{
 			var updatedPackageResult = idePackageResult.SingleOrDefault(p => p.PackageId.Equals(selected.PackageId, StringComparison.OrdinalIgnoreCase));
@@ -281,31 +298,41 @@ public partial class NugetPanel : Control
 		await this.InvokeAsync(() =>
 		{
 			if (cancellationToken.IsCancellationRequested) return;
-			// A node can only have one parent, so the updates section has its own entries
-			SetUpdateRows(updatePackages);
-			SyncPackageEntries(_implicitlyInstalledPackagesItemList, _implicitlyInstalledEntryNodes, transitivePackages);
-			SyncPackageEntries(_installedPackagesVboxContainer, _installedEntryNodes, directPackages);
-			// Projects that aren't loaded or restored have no project.assets.json to read their packages from
-			_installedPackagesResultCountLabel.Text = unrestoredProjects.Count is 0
-				? directPackages.Count.ToString()
-				: $"{directPackages.Count} ({unrestoredProjects.Count} {(unrestoredProjects.Count is 1 ? "project" : "projects")} not restored)";
-			_installedPackagesResultCountLabel.TooltipText = unrestoredProjects.Count is 0
-				? string.Empty
-				: $"Not restored, so their packages aren't listed:\n{string.Join("\n", unrestoredProjects.Select(p => p.Name.Value))}";
-			_implicitlyInstalledPackagesResultCountLabel.Text = transitivePackages.Count.ToString();
-			_packagesToUpdateResultCountLabel.Text = updatePackages.Count.ToString();
+			_shownInstalledPackages = (idePackageResult, unrestoredProjects);
+			RenderInstalledPackages(idePackageResult, unrestoredProjects);
 		});
+	}
+
+	/// Shows the installed packages, and those with an update (which depends on whether prereleases are included). Call on the UI thread
+	private void RenderInstalledPackages(List<IdePackageResult> idePackageResult, List<SharpIdeProjectModel> unrestoredProjects)
+	{
+		var transitivePackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
+		var directPackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive is false).ToList();
+		var updatePackages = directPackages.Where(HasUpdate).ToList();
+		// A node can only have one parent, so the updates section has its own entries
+		SetUpdateRows(updatePackages);
+		SyncPackageEntries(_implicitlyInstalledPackagesItemList, _implicitlyInstalledEntryNodes, transitivePackages);
+		SyncPackageEntries(_installedPackagesVboxContainer, _installedEntryNodes, directPackages);
+		// Projects that aren't loaded or restored have no project.assets.json to read their packages from
+		_installedPackagesResultCountLabel.Text = unrestoredProjects.Count is 0
+			? directPackages.Count.ToString()
+			: $"{directPackages.Count} ({unrestoredProjects.Count} {(unrestoredProjects.Count is 1 ? "project" : "projects")} not restored)";
+		_installedPackagesResultCountLabel.TooltipText = unrestoredProjects.Count is 0
+			? string.Empty
+			: $"Not restored, so their packages aren't listed:\n{string.Join("\n", unrestoredProjects.Select(p => p.Name.Value))}";
+		_implicitlyInstalledPackagesResultCountLabel.Text = transitivePackages.Count.ToString();
+		_packagesToUpdateResultCountLabel.Text = updatePackages.Count.ToString();
 	}
 
 	/// Whether a source has a newer version than one a project references itself - implicit (transitive) references are updated through what brings them in,
 	/// and those the SDK adds through the SDK
-	private static bool HasUpdate(IdePackageResult packageResult) => GetUpdates(packageResult).Count > 0;
+	private bool HasUpdate(IdePackageResult packageResult) => GetUpdates(packageResult).Count > 0;
 
-	/// Each project reference to move to the latest version any source has
-	private static List<(SharpIdeProjectModel Project, NuGetVersion Version)> GetUpdates(IdePackageResult packageResult)
+	/// Each project reference to move to the latest version any source has - a prerelease only when prereleases are included
+	private List<(SharpIdeProjectModel Project, NuGetVersion Version)> GetUpdates(IdePackageResult packageResult)
 	{
 		if (packageResult.InstalledNugetPackageInfo is not { } installedInfo || packageResult.PackageFromSources.Count is 0) return [];
-		var latestVersion = packageResult.PackageFromSources.Max(s => s.PackageSearchMetadata.Identity.Version)!;
+		var latestVersion = packageResult.PackageFromSources.Max(s => s.GetLatestVersion(_includePrerelease))!;
 		return installedInfo.ProjectPackageReferences
 			.Where(r => r is { IsTopLevel: true, IsAutoReferenced: false } && r.InstalledVersion < latestVersion)
 			.Select(r => (r.Project, latestVersion))
@@ -317,6 +344,7 @@ public partial class NugetPanel : Control
 	{
 		var entry = _packageEntryScene.Instantiate<PackageEntry>();
 		entry.PackageResult = packageResult;
+		entry.IncludePrerelease = _includePrerelease;
 		entry.PackageSelected += OnPackageSelected;
 		return entry;
 	}
@@ -350,7 +378,7 @@ public partial class NugetPanel : Control
 	}
 
 	private void SyncPackageEntries(Container container, Dictionary<string, Control> nodes, List<IdePackageResult> packages) =>
-		SyncEntries(container, nodes, packages, CreateEntry, (node, package) => ((PackageEntry)node).SetPackageResult(package));
+		SyncEntries(container, nodes, packages, CreateEntry, (node, package) => ((PackageEntry)node).SetPackageResult(package, _includePrerelease));
 
 	/// Shows each package in a row with a checkbox, ticked if it was before. Call on the UI thread
 	private void SetUpdateRows(List<IdePackageResult> packages)
@@ -372,7 +400,7 @@ public partial class NugetPanel : Control
 			row.AddChild(checkBox);
 			row.AddChild(entry);
 			return row;
-		}, (row, package) => row.GetChild<PackageEntry>(1).SetPackageResult(package));
+		}, (row, package) => row.GetChild<PackageEntry>(1).SetPackageResult(package, _includePrerelease));
 		_updateRows.Clear();
 		_updateRows.AddRange(packages.Select(p => (_updateRowNodes[p.PackageId].GetChild<CheckBox>(0), p)));
 		// Ticked packages not (yet) listed are only forgotten once every source has answered - a slow source may yet have their update

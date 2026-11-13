@@ -20,6 +20,11 @@ public partial class PackageEntry : MarginContainer
 	private static readonly Color Source_4_Color = new Color("966a00");
 	private static readonly Color Source_5_Color = new Color("efaeae");
 	
+	/// The Prerelease toggle's red, in NugetPanel.tscn
+	private static readonly Color PrereleaseColor = new Color(0.9490196f, 0.5137255f, 0.4f);
+	/// The latest version's colour when it isn't a prerelease, as the scene sets it
+	private Color _latestVersionColor;
+
 	private static readonly ImmutableArray<Color> SourceColors =
 	[
 		Source_1_Color,
@@ -34,8 +39,10 @@ public partial class PackageEntry : MarginContainer
 	[Inject] private readonly NugetPackageIconCacheService _nugetPackageIconCacheService = null!;
 	
 	public IdePackageResult PackageResult { get; set; } = null!;
-	/// What the labels show - the sources and their latest versions, and the installed info - so an update that changes neither is skipped
-	private (InstalledNugetPackageInfo? InstalledInfo, string Sources)? _appliedValues;
+	/// Whether the latest version shown may be a prerelease. Set before the entry is added to the tree, then through SetPackageResult
+	public bool IncludePrerelease { get; set; }
+	/// What the labels show - the sources and their latest versions, the installed info, and whether prereleases are included - so an update that changes none is skipped
+	private (InstalledNugetPackageInfo? InstalledInfo, string Sources, bool IncludePrerelease)? _appliedValues;
 	/// The icon is loaded once, from the first source to have the package
 	private bool _iconRequested;
 
@@ -48,21 +55,23 @@ public partial class PackageEntry : MarginContainer
 		_sourceNamesContainer = GetNode<HBoxContainer>("%SourceNamesHBoxContainer");
 		_packageIconTextureRect = GetNode<TextureRect>("%PackageIconTextureRect");
 		_latestVersionLabel.Text = string.Empty;
+		_latestVersionColor = _latestVersionLabel.GetThemeColor(ThemeStringNames.FontColor);
 		ApplyValues();
 		_button.Pressed += () => _ = Task.GodotRun(() => PackageSelected.Invoke(PackageResult));
 	}
 
 	/// Shows the package's latest results, e.g. as more sources answer - reusing this entry rather than replacing it. Call on the UI thread
-	public void SetPackageResult(IdePackageResult packageResult)
+	public void SetPackageResult(IdePackageResult packageResult, bool includePrerelease)
 	{
 		PackageResult = packageResult;
+		IncludePrerelease = includePrerelease;
 		if (IsNodeReady()) ApplyValues();
 	}
 
 	private void ApplyValues()
 	{
 		if (PackageResult is null) return;
-		var values = (PackageResult.InstalledNugetPackageInfo, string.Join('|', PackageResult.PackageFromSources.Select(s => $"{s.Source.Source}:{s.PackageSearchMetadata.Identity.Version}")));
+		var values = (PackageResult.InstalledNugetPackageInfo, string.Join('|', PackageResult.PackageFromSources.Select(s => $"{s.Source.Source}:{s.PackageSearchMetadata.Identity.Version}:{s.LatestPrereleaseVersion}")), IncludePrerelease);
 		if (_appliedValues == values) return;
 		_appliedValues = values;
 		_packageNameLabel.Text = PackageResult.PackageId;
@@ -87,11 +96,11 @@ public partial class PackageEntry : MarginContainer
 		_sourceNamesContainer.QueueFreeChildren();
 		// No source returned the package (unreachable, or it isn't on any enabled source)
 		if (PackageResult.PackageFromSources.Count is 0) return;
-		var highestVersionPackageFromSource = PackageResult.PackageFromSources
-			.MaxBy(p => p.PackageSearchMetadata.Identity.Version);
-		if (installedPackagedInfo?.ProjectPackageReferences.TrueForAll(s => s.InstalledVersion != highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version) is true)
+		var latestVersion = PackageResult.PackageFromSources.Max(p => p.GetLatestVersion(IncludePrerelease))!;
+		if (installedPackagedInfo?.ProjectPackageReferences.TrueForAll(s => s.InstalledVersion != latestVersion) is true)
 		{
-			_latestVersionLabel.Text = highestVersionPackageFromSource.PackageSearchMetadata.Identity.Version.ToNormalizedString();
+			_latestVersionLabel.Text = latestVersion.ToNormalizedString();
+			_latestVersionLabel.AddThemeColorOverride(ThemeStringNames.FontColor, latestVersion.IsPrerelease ? PrereleaseColor : _latestVersionColor);
 		}
 
 		if (_iconRequested is false)
