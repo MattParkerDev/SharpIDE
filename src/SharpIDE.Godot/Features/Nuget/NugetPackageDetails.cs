@@ -1,4 +1,5 @@
 using Godot;
+using NuGet.Frameworks;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 using SharpIDE.Application;
@@ -16,6 +17,10 @@ public partial class NugetPackageDetails : VBoxContainer
 	private Label _packageNameLabel = null!;
 	private CustomFoldableContainer _infoFoldableContainer = null!;
 	private RichTextLabel _infoRichTextLabel = null!;
+	private CustomFoldableContainer _dependenciesFoldableContainer = null!;
+	private RichTextLabel _dependenciesRichTextLabel = null!;
+	/// The version whose details the Info and Dependencies sections show
+	private IPackageSearchMetadata? _shownMetadata;
 	/// The selected source's metadata for each version, as the version dropdown lists them
 	private List<IPackageSearchMetadata> _versionMetadata = [];
 	private List<(NuGetVersion Version, string Path)> _localInstallations = [];
@@ -48,6 +53,8 @@ public partial class NugetPackageDetails : VBoxContainer
 		_packageNameLabel = GetNode<Label>("%PackageNameLabel");
 		_infoFoldableContainer = GetNode<CustomFoldableContainer>("%InfoFoldableContainer");
 		_infoRichTextLabel = GetNode<RichTextLabel>("%InfoRichTextLabel");
+		_dependenciesFoldableContainer = GetNode<CustomFoldableContainer>("%DependenciesFoldableContainer");
+		_dependenciesRichTextLabel = GetNode<RichTextLabel>("%DependenciesRichTextLabel");
 		SetUpInfo();
 		_versionOptionButton = GetNode<OptionButton>("%VersionOptionButton");
 		_nugetSourceOptionButton = GetNode<OptionButton>("%NugetSourceOptionButton");
@@ -170,28 +177,37 @@ public partial class NugetPackageDetails : VBoxContainer
 		// Overriding a child's theme items only notifies the child, so this doesn't loop
 		ThemeChanged += ApplyInfoTheme;
 		ApplyInfoTheme();
-		ShowInfo(null);
 	}
 
-	/// The info text in the pane's label colour (a RichTextLabel's is otherwise white), with [b] in a semibold weight of the theme's font, as the Info title
+	/// The sections' text in the pane's label colour (a RichTextLabel's is otherwise white), with [b] in a semibold weight of the theme's font, as the section titles
 	private void ApplyInfoTheme()
 	{
-		_infoRichTextLabel.AddThemeColorOverride(DefaultColorName, GetThemeColor(ThemeStringNames.FontColor, Gray700LabelType));
-		_infoRichTextLabel.AddThemeFontOverride(BoldFontName, new FontVariation
+		var boldFont = new FontVariation
 		{
 			BaseFont = GetThemeDefaultFont(),
 			VariationOpentype = new global::Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("weight")] = 600 }
-		});
+		};
+		foreach (var label in (RichTextLabel[])[_infoRichTextLabel, _dependenciesRichTextLabel])
+		{
+			label.AddThemeColorOverride(DefaultColorName, GetThemeColor(ThemeStringNames.FontColor, Gray700LabelType));
+			label.AddThemeFontOverride(BoldFontName, boldFont);
+		}
+		// The version ranges are coloured from the theme
+		ShowInfo(_shownMetadata);
 	}
 
 	private static readonly StringName BoldFontName = "bold_font";
 	private static readonly StringName DefaultColorName = "default_color";
 	private static readonly StringName Gray700LabelType = "Gray700Label";
+	private static readonly StringName Gray600LabelType = "Gray600Label";
 	private const string LinkColor = "589df6";
 
-	/// Shows the version's details - its description, links, author and publish date - and where the package is restored locally. Call on the UI thread
+	/// Shows the version's details - its description, links, author and publish date, where the package is restored locally, and its dependencies for each framework.
+	/// Call on the UI thread
 	private void ShowInfo(IPackageSearchMetadata? metadata)
 	{
+		_shownMetadata = metadata;
+		ShowDependencies(metadata);
 		var description = metadata?.Description?.Trim() ?? string.Empty;
 		_infoFoldableContainer.Summary = description;
 		var text = new System.Text.StringBuilder();
@@ -221,6 +237,49 @@ public partial class NugetPackageDetails : VBoxContainer
 		_infoRichTextLabel.Text = text.ToString().TrimEnd();
 		_infoFoldableContainer.Visible =_infoRichTextLabel.Text.Length > 0;
 	}
+
+	/// Each framework the version targets, as listed in its nuspec, with the packages it depends on there and the versions it accepts
+	private void ShowDependencies(IPackageSearchMetadata? metadata)
+	{
+		var groups = metadata?.DependencySets?.ToList() ?? [];
+		_dependenciesFoldableContainer.Visible = groups.Count > 0;
+		_dependenciesFoldableContainer.Summary = string.Join(", ", groups.Select(g => FormatFramework(g.TargetFramework)));
+		var rangeColor = GetThemeColor(ThemeStringNames.FontColor, Gray600LabelType).ToHtml(false);
+		var text = new System.Text.StringBuilder();
+		foreach (var group in groups)
+		{
+			text.AppendLine(Escape(FormatFramework(group.TargetFramework)));
+			if (group.Packages.Any() is false) continue;
+			text.Append("[indent]");
+			foreach (var dependency in group.Packages)
+			{
+				var range = dependency.VersionRange.ToString("p", VersionRangeFormatter.Instance).Replace(">=", "≥").Replace("<=", "≤");
+				text.AppendLine($"{Escape(dependency.Id)} [color={rangeColor}]({Escape(range)})[/color]");
+			}
+			text.Append("[/indent]");
+		}
+		_dependenciesRichTextLabel.Text = text.ToString().TrimEnd();
+	}
+
+	/// As NuGet.org shows it - .NET 8.0 rather than net8.0, .NETStandard 2.0, .NETFramework 4.7.2
+	private static string FormatFramework(NuGetFramework framework)
+	{
+		if (framework.IsAny || framework.IsAgnostic) return "Any";
+		// net5.0 and later are .NETCoreApp underneath
+		var name = framework.Framework == FrameworkConstants.FrameworkIdentifiers.NetCoreApp && framework.Version.Major >= 5 ? ".NET" : framework.Framework;
+		var platform = framework.HasPlatform
+			? $" ({framework.Platform}{(framework.PlatformVersion > FrameworkConstants.EmptyVersion ? $" {FormatVersion(framework.PlatformVersion)}" : string.Empty)})"
+			: string.Empty;
+		return $"{name} {FormatVersion(framework.Version)}{platform}";
+	}
+
+	/// At least major.minor, without trailing zero parts - 4.7.2, 10.0.19041, 35.0
+	private static string FormatVersion(Version version) => (version.Revision, version.Build) switch
+	{
+		( > 0, _) => version.ToString(4),
+		(_, > 0) => version.ToString(3),
+		_ => version.ToString(2)
+	};
 
 	private static string Link(string text, string target, bool external = true) =>
 		$"[url=\"{target.Replace("\"", "%22")}\"][color={LinkColor}]{Escape(text)}{(external ? " ↗" : string.Empty)}[/color][/url]";

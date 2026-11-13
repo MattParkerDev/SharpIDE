@@ -116,6 +116,32 @@ fit_content = true
 context_menu_enabled = true
 selection_enabled = true
 
+[node name="DependenciesFoldableContainer" type="Container" parent="." unique_id=1310592776]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("8_fold")
+Title = "Frameworks and Dependencies"
+Summary = ".NET 10.0, .NETStandard 2.0"
+Folded = true
+
+[node name="MarginContainer" type="MarginContainer" parent="DependenciesFoldableContainer" unique_id=1765030218]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="DependenciesRichTextLabel" type="RichTextLabel" parent="DependenciesFoldableContainer/MarginContainer" unique_id=1987104263]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 2
+bbcode_enabled = true
+text = ".NET 10.0"
+fit_content = true
+context_menu_enabled = true
+selection_enabled = true
+
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=723630067]
 layout_mode = 2
 theme_override_constants/margin_top = 10
