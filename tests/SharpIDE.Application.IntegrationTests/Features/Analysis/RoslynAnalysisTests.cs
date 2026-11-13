@@ -33,7 +33,7 @@ public class RoslynAnalysisTests
 	    var analyzerFileWatcher = services.GetRequiredService<AnalyzerFileWatcher>();
 	    var vsPersistenceSolutionService = services.GetRequiredService<SharpIdeSolutionService>();
 
-	    var roslynAnalysis = new RoslynAnalysis(logger, buildService, analyzerFileWatcher);
+	    var roslynAnalysis = new RoslynAnalysis(logger, buildService, services.GetRequiredService<DesignTimeBuildService>(), analyzerFileWatcher);
 
 	    var slnFolderPath = @"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx";
 	    var fileTree = new SharpIdeFileTree();

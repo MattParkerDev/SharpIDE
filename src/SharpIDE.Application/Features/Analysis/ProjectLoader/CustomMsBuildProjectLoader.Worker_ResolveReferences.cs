@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
+using SharpIDE.MsBuildHost.Contracts;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
 
@@ -175,7 +176,7 @@ public partial class CustomMsBuildProjectLoader
 				=> new(GetProjectReferences(), GetMetadataReferences());
 		}
 
-		private async Task<ResolvedReferences> ResolveReferencesAsync(ProjectId id, ProjectFileInfo projectFileInfo, IEnumerable<MetadataReference> resolvedMetadataReferences, CancellationToken cancellationToken)
+		private async Task<ResolvedReferences> ResolveReferencesAsync(ProjectId id, ProjectFileInfoDto projectFileInfo, IEnumerable<MetadataReference> resolvedMetadataReferences, CancellationToken cancellationToken)
 		{
 			var builder = new ResolvedReferencesBuilder(resolvedMetadataReferences);
 

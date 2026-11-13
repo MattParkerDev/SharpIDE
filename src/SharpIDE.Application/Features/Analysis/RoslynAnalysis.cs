@@ -42,6 +42,7 @@ using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
+using SharpIDE.MsBuildHost.Contracts;
 using static Roslyn.Utilities.EnumerableExtensions;
 using CodeAction = Microsoft.CodeAnalysis.CodeActions.CodeAction;
 using CompletionItem = Microsoft.CodeAnalysis.Completion.CompletionItem;
@@ -53,10 +54,11 @@ using VSInternalClientCapabilities = Roslyn.LanguageServer.Protocol.VSInternalCl
 
 namespace SharpIDE.Application.Features.Analysis;
 
-public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildService, AnalyzerFileWatcher analyzerFileWatcher)
+public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService buildService, DesignTimeBuildService designTimeBuildService, AnalyzerFileWatcher analyzerFileWatcher)
 {
 	private readonly ILogger<RoslynAnalysis> _logger = logger;
 	private readonly BuildService _buildService = buildService;
+	private readonly DesignTimeBuildService _designTimeBuildService = designTimeBuildService;
 	private readonly AnalyzerFileWatcher _analyzerFileWatcher = analyzerFileWatcher;
 
 	public static AdhocWorkspace? _workspace;
@@ -74,7 +76,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static readonly ConditionalWeakTable<Compilation, CompilationWithAnalyzers> _compilationWithAnalyzersCache = new();
 
 	// Primarily used for getting the globs for a project
-	private Dictionary<ProjectId, ProjectFileInfo> _projectFileInfoMap = new();
+	private Dictionary<ProjectId, ProjectFileInfoDto> _projectFileInfoMap = new();
 
 	public TaskCompletionSource _solutionLoadedTcs = null!;
 	private SharpIdeSolutionModel? _sharpIdeSolutionModel;
@@ -115,6 +117,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task LoadSolutionCoreAsync(string solutionFilePath, CancellationToken cancellationToken)
 	{
+		// The design-time build host starts (on the first load) while the restore runs, rather than after it
+		var startDesignTimeBuildHostTask = _designTimeBuildService.StartHostAsync(solutionFilePath, cancellationToken);
 		using (var ___ = SharpIdeOtel.Source.StartActivity("RestoreSolution"))
 		{
 			// MsBuildProjectLoader doesn't do a restore which is absolutely required for resolving PackageReferences, if they have changed. I am guessing it just reads from project.assets.json
@@ -122,12 +126,13 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			await _buildService.MsBuildAsync(solutionFilePath, BuildType.Restore, BuildStartedFlags.UserFacing, cancellationToken);
 		}
 
+		await startDesignTimeBuildHostTask;
+
 		using (var ___ = SharpIdeOtel.Source.StartActivity("OpenSolution"))
 		{
 			//_msBuildProjectLoader!.LoadMetadataForReferencedProjects = true;
 
-			// This call is the expensive part - MSBuild is slow. There doesn't seem to be any incrementalism for solutions.
-			// The best we could do to speed it up is do .LoadProjectInfoAsync for the single project, and somehow munge that into the existing solution
+			// This call is the expensive part - design-time building every project
 			var (solutionInfo, projectFileInfos) = await _msBuildProjectLoader!.LoadSolutionInfoAsync(solutionFilePath, cancellationToken: cancellationToken);
 			_projectFileInfoMap = projectFileInfos;
 
@@ -189,7 +194,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		});
 		_documentMappingService = container.GetExports<IDocumentMappingService>().FirstOrDefault();
 
-		_msBuildProjectLoader = new CustomMsBuildProjectLoader(_workspace);
+		_msBuildProjectLoader = new CustomMsBuildProjectLoader(_workspace, _designTimeBuildService);
 	}
 
 	private static void LoadCodeActions()

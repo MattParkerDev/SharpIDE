@@ -55,41 +55,7 @@ public partial class BuildService
 	private async Task<IRpcBuildService> ConnectRpc(string solutionOrProjectFilePath)
 	{
 		if (_fillPipeFromLoggerTask is not null) throw new InvalidOperationException("Build logger pipe is already open, but RPC service is not initialized. This should never happen.");
-		var sharpIdeMsBuildHostDllPath = Path.Combine(AppContext.BaseDirectory, "SharpIdeMsBuildHost", "SharpIDE.MsBuildHost.dll");
-		var slnOrProjectDirectory = Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
-		var sdkVersion = await GetCorrectDotnetSdkVersion(slnOrProjectDirectory);
-		var startupInfo = new ProcessStartInfo
-		{
-			FileName = "dotnet",
-			ArgumentList = { sharpIdeMsBuildHostDllPath, sdkVersion.ToNormalizedString(), slnOrProjectDirectory },
-			RedirectStandardInput = true,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-			WindowStyle = ProcessWindowStyle.Hidden
-		};
-		var keysToRemove = startupInfo.Environment
-			.Where(s => s.Key.StartsWith("DOTNET_", StringComparison.OrdinalIgnoreCase) || s.Key.StartsWith("MSBuild", StringComparison.OrdinalIgnoreCase))
-			.Where(s => s.Key.Equals("DOTNET_CLI_TELEMETRY_OPTOUT", StringComparison.OrdinalIgnoreCase) is false) // I don't know if this affects anything in MSBuild, but let's propagate it anyway if the user has it set
-			.Select(s => s.Key)
-			.ToList();
-		keysToRemove.ForEach(s => startupInfo.Environment.Remove(s));
-		startupInfo.Environment["DOTNET_ROLL_FORWARD_TO_PRERELEASE"] = "1";
-		// ["DOTNET_ROLL_FORWARD"] = "LatestMajor" isn't necessary as it is set in the SharpIDE.MsBuildHost.runtimeconfig.json, from the <RollForward>LatestMajor</RollForward> csproj property
-		var process = Process.Start(startupInfo);
-		if (process is null) throw new InvalidOperationException("Failed to start SharpIDE.MsBuildHost");
-		// stdout is the RPC channel. Drain stderr, so the host can never block on a full stderr buffer, and so a crash's output is logged.
-		process.ErrorDataReceived += (_, e) =>
-		{
-			if (string.IsNullOrEmpty(e.Data) is false) _logger.LogWarning("SharpIDE.MsBuildHost stderr: {Line}", e.Data);
-		};
-		process.BeginErrorReadLine();
-		var handler = new LengthHeaderMessageHandler(process.StandardInput.BaseStream, process.StandardOutput.BaseStream, new NerdbankMessagePackFormatter { TypeShapeProvider = TypeShapeProvider_SharpIDE_MsBuildHost_Contracts.Default });
-		var rpc = new JsonRpc(handler);
-		rpc.Disconnected += (_, e) => OnRpcDisconnected(rpc, e);
-
-		rpc.StartListening();
+		var (process, rpc) = await MsBuildHostProcess.StartAsync(solutionOrProjectFilePath, designTime: false, _logger, OnRpcDisconnected);
 
 		var proxy = rpc.Attach<IRpcBuildService>();
 		var (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath) = await proxy.GetMsbuildInfoAsync();
@@ -143,13 +109,6 @@ public partial class BuildService
 		try { _sharpIdeMsBuildHostProcess?.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } // Already exited
 		_sharpIdeMsBuildHostProcess?.Dispose();
 		_sharpIdeMsBuildHostProcess = null;
-	}
-
-	private static async Task<NuGetVersion> GetCorrectDotnetSdkVersion(string slnOrProjectDirectory)
-	{
-		var result = await Cli.Wrap("dotnet").WithWorkingDirectory(slnOrProjectDirectory).WithArguments("--version").ExecuteBufferedAsync();
-		var sdkVersion = NuGetVersion.Parse(result.StandardOutput.Trim());
-		return sdkVersion;
 	}
 
 	private async Task<Task> OpenMsBuildLoggerPipe(IRpcBuildService rpcBuildService)

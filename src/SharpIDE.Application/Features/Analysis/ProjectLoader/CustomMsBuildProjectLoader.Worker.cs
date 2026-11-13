@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.MSBuild;
+using SharpIDE.MsBuildHost.Contracts;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
@@ -18,7 +19,7 @@ public partial class CustomMsBuildProjectLoader
 		private readonly DiagnosticReporter _diagnosticReporter;
 		private readonly PathResolver _pathResolver;
 		private readonly ProjectFileExtensionRegistry _projectFileExtensionRegistry;
-		private readonly IProjectFileInfoProvider _projectFileInfoProvider;
+		private readonly DesignTimeBuildProjectFileInfoProvider _projectFileInfoProvider;
 
 		/// <summary>
 		/// An ordered list of paths to project files that should be loaded. In the case of a solution,
@@ -29,7 +30,7 @@ public partial class CustomMsBuildProjectLoader
 		/// <summary>
 		/// Map of <see cref="ProjectId"/>s, project paths, and output file paths.
 		/// </summary>
-		private readonly ProjectMap _projectMap;
+		private readonly DesignTimeProjectMap _projectMap;
 
 		/// <summary>
 		/// Progress reporter.
@@ -51,8 +52,8 @@ public partial class CustomMsBuildProjectLoader
 		/// because it was requested.
 		/// </summary>
 		private readonly bool _preferMetadataForReferencesOfDiscoveredProjects;
-		private readonly Dictionary<ProjectId, ProjectFileInfo> _projectIdToFileInfoMap;
-		public Dictionary<ProjectId, ProjectFileInfo> ProjectFileInfos => _projectIdToFileInfoMap;
+		private readonly Dictionary<ProjectId, ProjectFileInfoDto> _projectIdToFileInfoMap;
+		public Dictionary<ProjectId, ProjectFileInfoDto> ProjectFileInfos => _projectIdToFileInfoMap;
 		private readonly Dictionary<ProjectId, List<ProjectReference>> _projectIdToProjectReferencesMap;
 		private readonly Dictionary<string, ImmutableArray<ProjectInfo>> _pathToDiscoveredProjectInfosMap;
 
@@ -61,9 +62,9 @@ public partial class CustomMsBuildProjectLoader
 			DiagnosticReporter diagnosticReporter,
 			PathResolver pathResolver,
 			ProjectFileExtensionRegistry projectFileExtensionRegistry,
-			IProjectFileInfoProvider projectFileInfoProvider,
+			DesignTimeBuildProjectFileInfoProvider projectFileInfoProvider,
 			ImmutableArray<string> requestedProjectPaths,
-			ProjectMap? projectMap,
+			DesignTimeProjectMap? projectMap,
 			IProgress<ProjectLoadProgress>? progress,
 			DiagnosticReportingOptions requestedProjectOptions,
 			DiagnosticReportingOptions discoveredProjectOptions,
@@ -75,7 +76,7 @@ public partial class CustomMsBuildProjectLoader
 			_projectFileExtensionRegistry = projectFileExtensionRegistry;
 			_projectFileInfoProvider = projectFileInfoProvider;
 			_requestedProjectPaths = requestedProjectPaths;
-			_projectMap = projectMap ?? ProjectMap.Create();
+			_projectMap = projectMap ?? new DesignTimeProjectMap();
 			_progress = progress;
 			_requestedProjectOptions = requestedProjectOptions;
 			_discoveredProjectOptions = discoveredProjectOptions;
@@ -135,7 +136,7 @@ public partial class CustomMsBuildProjectLoader
 
 			var projectFileInfos = await _projectFileInfoProvider.LoadProjectFileInfosAsync(projectPath, reportingOptions, cancellationToken).ConfigureAwait(false);
 
-			var idsAndFileInfos = new List<(ProjectId id, ProjectFileInfo fileInfo)>();
+			var idsAndFileInfos = new List<(ProjectId id, ProjectFileInfoDto fileInfo)>();
 
 			foreach (var projectFileInfo in projectFileInfos)
 			{
@@ -177,7 +178,7 @@ public partial class CustomMsBuildProjectLoader
 			return results;
 		}
 
-		private async Task<ProjectInfo> CreateProjectInfoAsync(ProjectFileInfo projectFileInfo, ProjectId projectId, bool addDiscriminator, CancellationToken cancellationToken)
+		private async Task<ProjectInfo> CreateProjectInfoAsync(ProjectFileInfoDto projectFileInfo, ProjectId projectId, bool addDiscriminator, CancellationToken cancellationToken)
 		{
 			var language = projectFileInfo.Language;
 			var projectPath = projectFileInfo.FilePath;
@@ -366,7 +367,7 @@ public partial class CustomMsBuildProjectLoader
 			return analyzerLoader;
 		}
 
-		private ImmutableArray<DocumentInfo> CreateDocumentInfos(IReadOnlyList<DocumentFileInfo> documentFileInfos, ProjectId projectId, Encoding? encoding)
+		private ImmutableArray<DocumentInfo> CreateDocumentInfos(IReadOnlyList<DocumentFileInfoDto> documentFileInfos, ProjectId projectId, Encoding? encoding)
 		{
 			var results = new FixedSizeArrayBuilder<DocumentInfo>(documentFileInfos.Count);
 

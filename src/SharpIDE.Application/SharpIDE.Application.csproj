@@ -56,7 +56,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Remote.Razor" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.Features" />
-    <!-- Roslyn's BuildHost, for design-time builds. MSBuild itself (evaluation and builds) runs in SharpIDE.MsBuildHost - nothing in this process may load Microsoft.Build*. -->
+    <!-- For the pieces of MSBuildProjectLoader CustomMsBuildProjectLoader uses (PathResolver, SolutionFileReader, ProjectFileExtensionRegistry etc). Its BuildHost isn't used - design-time builds run in SharpIDE.MsBuildHost, in its design-time role.
+         MSBuild itself (evaluation and builds) only runs in SharpIDE.MsBuildHost - nothing in this process may load Microsoft.Build*. -->
     <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
     <PackageReference Include="NeoSmart.AsyncLock" />
@@ -71,6 +72,7 @@
   <ItemGroup>
     <AdditionalFiles Include="BannedSymbols.txt" />
     <Content Remove="$(NuGetPackageRoot)\microsoft.codeanalysis.workspaces.msbuild\**\**\BuildHost-net472\**" />
+    <Content Remove="$(NuGetPackageRoot)\microsoft.codeanalysis.workspaces.msbuild\**\**\BuildHost-netcore\**" />
   </ItemGroup>
 
   <ItemGroup>

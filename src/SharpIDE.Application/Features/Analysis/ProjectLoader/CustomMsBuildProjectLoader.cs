@@ -1,43 +1,41 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.MSBuild;
 using Roslyn.Utilities;
+using SharpIDE.Application.Features.Build;
+using SharpIDE.MsBuildHost.Contracts;
 
 namespace SharpIDE.Application.Features.Analysis.ProjectLoader;
-// I really don't like having to duplicate this, but we need to use IAnalyzerAssemblyLoaderProvider rather than IAnalyzerService,
-// so that analyzers are shadow copied to prevent locking.
-// My attempts to provide a custom IAnalyzerService to the MEF composition were in vain.
-// I think this will only be temporary, as I think a more sophisticated ProjectLoader mechanism is going to be necessary.
-// see roslyn LanguageServerProjectLoader, LanguageServerProjectSystem, ProjectSystemProjectFactory
-// https://github.com/dotnet/roslyn/blob/52d073ff6f1c668e858bed838712467afcf83876/src/Workspaces/MSBuild/Core/MSBuild/MSBuildProjectLoader.cs
+// Adapted from Roslyn's MSBuildProjectLoader - https://github.com/dotnet/roslyn/blob/main/src/Workspaces/MSBuild/Core/MSBuild/MSBuildProjectLoader.cs
+// - Analyzers are loaded with IAnalyzerAssemblyLoaderProvider rather than IAnalyzerService, so they are shadow copied, to prevent locking.
+//   (My attempts to provide a custom IAnalyzerService to the MEF composition were in vain.)
+// - Projects are design-time built by our own long-lived design-time host (DesignTimeBuildService), rather than a Roslyn BuildHost started for each load.
+// see also roslyn LanguageServerProjectLoader, LanguageServerProjectSystem, ProjectSystemProjectFactory - a more incremental approach
 public partial class CustomMsBuildProjectLoader
 {
 	// the services for the projects and solutions are intended to be loaded into.
 	private readonly SolutionServices _solutionServices;
-	private readonly ImmutableArray<string> _knownCommandLineParserLanguages;
+	private readonly DesignTimeBuildService _designTimeBuildService;
 
 	private readonly DiagnosticReporter _diagnosticReporter;
-	private readonly Microsoft.Extensions.Logging.ILoggerFactory _loggerFactory;
 	private readonly PathResolver _pathResolver;
 	private readonly ProjectFileExtensionRegistry _projectFileExtensionRegistry;
 
 	// used to protect access to the following mutable state
 	private readonly NonReentrantLock _dataGuard = new();
+	private string? _solutionFilePath;
 
-	internal CustomMsBuildProjectLoader(
-		SolutionServices solutionServices,
-		DiagnosticReporter diagnosticReporter,
-		ImmutableDictionary<string, string>? properties)
+	/// <param name="properties">An optional dictionary of additional MSBuild properties and values to use when loading projects.
+	/// These are the same properties that are passed to MSBuild via the /property:&lt;n&gt;=&lt;v&gt; command line argument.</param>
+	public CustomMsBuildProjectLoader(Workspace workspace, DesignTimeBuildService designTimeBuildService, ImmutableDictionary<string, string>? properties = null)
 	{
-		_solutionServices = solutionServices;
-		_knownCommandLineParserLanguages = solutionServices.GetSupportedLanguages<ICommandLineParserService>();
-		_diagnosticReporter = diagnosticReporter;
-		_loggerFactory = new Microsoft.Extensions.Logging.LoggerFactory([new DiagnosticReporterLoggerProvider(_diagnosticReporter)]);
+		_solutionServices = workspace.Services.SolutionServices;
+		_designTimeBuildService = designTimeBuildService;
+		_diagnosticReporter = new DiagnosticReporter(workspace);
 		_pathResolver = new PathResolver(_diagnosticReporter);
-		_projectFileExtensionRegistry = new ProjectFileExtensionRegistry(diagnosticReporter, solutionServices.GetService<Microsoft.CodeAnalysis.FileBasedPrograms.IFileBasedProgramService>());
+		_projectFileExtensionRegistry = new ProjectFileExtensionRegistry(_diagnosticReporter, _solutionServices.GetService<Microsoft.CodeAnalysis.FileBasedPrograms.IFileBasedProgramService>());
 
 		Properties = ImmutableDictionary.Create<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -46,26 +44,6 @@ public partial class CustomMsBuildProjectLoader
 			Properties = Properties.AddRange(properties);
 		}
 	}
-
-	/// <summary>
-	/// Create a new instance of an <see cref="MSBuildProjectLoader"/>.
-	/// </summary>
-	/// <param name="workspace">The workspace whose services this <see cref="MSBuildProjectLoader"/> should use.</param>
-	/// <param name="properties">An optional dictionary of additional MSBuild properties and values to use when loading projects.
-	/// These are the same properties that are passed to MSBuild via the /property:&lt;n&gt;=&lt;v&gt; command line argument.</param>
-	public CustomMsBuildProjectLoader(Workspace workspace, ImmutableDictionary<string, string>? properties = null)
-		: this(workspace.Services.SolutionServices, new DiagnosticReporter(workspace), properties)
-	{
-	}
-
-	internal DiagnosticReporter Reporter
-		=> _diagnosticReporter;
-
-	internal ProjectFileExtensionRegistry ProjectFileExtensionRegistry
-		=> _projectFileExtensionRegistry;
-
-	internal Microsoft.Extensions.Logging.ILoggerFactory LoggerFactory
-		=> _loggerFactory;
 
 	/// <summary>
 	/// The MSBuild properties used when interpreting project files.
@@ -96,21 +74,10 @@ public partial class CustomMsBuildProjectLoader
 	/// <summary>
 	/// Associates a project file extension with a language name.
 	/// </summary>
-	/// <param name="projectFileExtension">The project file extension to associate with <paramref name="language"/>.</param>
-	/// <param name="language">The language to associate with <paramref name="projectFileExtension"/>. This value
-	/// should typically be taken from <see cref="LanguageNames"/>.</param>
 	public void AssociateFileExtensionWithLanguage(string projectFileExtension, string language)
 	{
-		if (projectFileExtension == null)
-		{
-			throw new ArgumentNullException(nameof(projectFileExtension));
-		}
-
-		if (language == null)
-		{
-			throw new ArgumentNullException(nameof(language));
-		}
-
+		ArgumentNullException.ThrowIfNull(projectFileExtension);
+		ArgumentNullException.ThrowIfNull(language);
 		_projectFileExtensionRegistry.AssociateFileExtensionWithLanguage(projectFileExtension, language);
 	}
 
@@ -145,17 +112,12 @@ public partial class CustomMsBuildProjectLoader
 	/// </summary>
 	/// <param name="solutionFilePath">The path to the solution file to be loaded. This may be an absolute path or a path relative to the
 	/// current working directory.</param>
-	/// <param name="progress">An optional <see cref="IProgress{T}"/> that will receive updates as the solution is loaded.</param>
-	/// <param name="binaryLogFilePath">An optional path to write an MSBuild binary log of the design-time builds to. (Not an MSBuild ILogger, so the IDE process never loads Microsoft.Build.)</param>
 	/// <param name="cancellationToken">An optional <see cref="CancellationToken"/> to allow cancellation of this operation.</param>
-	public async Task<(SolutionInfo, Dictionary<ProjectId, ProjectFileInfo> projectFileInfos)> LoadSolutionInfoAsync(
+	public async Task<(SolutionInfo, Dictionary<ProjectId, ProjectFileInfoDto> projectFileInfos)> LoadSolutionInfoAsync(
 		string solutionFilePath,
-		IProgress<ProjectLoadProgress>? progress = null,
-		string? binaryLogFilePath = null,
 		CancellationToken cancellationToken = default)
 	{
-		if (solutionFilePath == null)
-			throw new ArgumentNullException(nameof(solutionFilePath));
+		ArgumentNullException.ThrowIfNull(solutionFilePath);
 
 		var reportingMode = GetReportingModeForUnrecognizedProjects();
 		var reportingOptions = new DiagnosticReportingOptions(
@@ -175,14 +137,14 @@ public partial class CustomMsBuildProjectLoader
 
 		using (_dataGuard.DisposableWait(cancellationToken))
 		{
+			_solutionFilePath = absoluteSolutionPath;
 			SetSolutionProperties(absoluteSolutionPath);
 		}
 
-		var (projectInfos, projectFileInfos) = await LoadInfoAsync(
+		var (projectInfos, projectFileInfos) = await LoadInfosAsync(
 			[.. projectPaths],
 			projectMap: null,
-			progress,
-			binaryLogFilePath,
+			progress: null,
 			requestedProjectOptions: reportingOptions,
 			discoveredProjectOptions: reportingOptions,
 			preferMetadataForReferencesOfDiscoveredProjects: false,
@@ -196,99 +158,56 @@ public partial class CustomMsBuildProjectLoader
 			projectInfos), projectFileInfos);
 	}
 
-	/// <summary>
-	/// Loads the <see cref="ProjectInfo"/> from the specified project file and all referenced projects.
-	/// The first <see cref="ProjectInfo"/> in the result corresponds to the specified project file.
-	/// </summary>
-	/// <param name="projectFilePath">The path to the project file to be loaded. This may be an absolute path or a path relative to the
-	/// current working directory.</param>
-	/// <param name="projectMap">An optional <see cref="ProjectMap"/> that will be used to resolve project references to existing projects.
-	/// This is useful when populating a custom <see cref="Workspace"/>.</param>
-	/// <param name="progress">An optional <see cref="IProgress{T}"/> that will receive updates as the project is loaded.</param>
-	/// <param name="binaryLogFilePath">An optional path to write an MSBuild binary log of the design-time builds to.</param>
-	/// <param name="cancellationToken">An optional <see cref="CancellationToken"/> to allow cancellation of this operation.</param>
-	public async Task<ImmutableArray<ProjectInfo>> LoadProjectInfoAsync(
-		string projectFilePath,
-		ProjectMap? projectMap = null,
-		IProgress<ProjectLoadProgress>? progress = null,
-		string? binaryLogFilePath = null,
-		CancellationToken cancellationToken = default)
+	/// Loads the projects (and the projects they reference). Call LoadSolutionInfoAsync first, for the solution these projects are in.
+	internal Task<(ImmutableArray<ProjectInfo> ProjectInfos, Dictionary<ProjectId, ProjectFileInfoDto> ProjectFileInfos)> LoadProjectInfosAsync(
+		ImmutableArray<string> projectFilePaths,
+		DesignTimeProjectMap? projectMap,
+		IProgress<ProjectLoadProgress>? progress,
+		CancellationToken cancellationToken)
 	{
-		if (projectFilePath == null)
-			throw new ArgumentNullException(nameof(projectFilePath));
+		Debug.Assert(projectFilePaths.All(PathUtilities.IsAbsolute));
 
 		var reportingMode = GetReportingModeForUnrecognizedProjects();
-		var requestedProjectOptions = DiagnosticReportingOptions.ThrowForAll;
 		var discoveredProjectOptions = new DiagnosticReportingOptions(
 			onPathFailure: reportingMode,
 			onLoaderFailure: reportingMode);
 
-		if (!_pathResolver.TryGetAbsoluteProjectPath(projectFilePath, Directory.GetCurrentDirectory(), DiagnosticReportingMode.Throw, out var absoluteProjectPath))
-		{
-			return ImmutableArray<ProjectInfo>.Empty;
-		}
-
-		var (projectInfos, _) = await LoadInfoAsync(
-			[absoluteProjectPath],
+		return LoadInfosAsync(
+			projectFilePaths,
 			projectMap,
 			progress,
-			binaryLogFilePath,
-			requestedProjectOptions,
+			requestedProjectOptions: DiagnosticReportingOptions.ThrowForAll,
 			discoveredProjectOptions,
 			LoadMetadataForReferencedProjects,
 			cancellationToken);
-		return projectInfos;
 	}
 
-	internal async Task<(ImmutableArray<ProjectInfo> ProjectInfos, Dictionary<ProjectId, ProjectFileInfo> ProjectFileInfos)> LoadProjectInfosAsync(
-		ImmutableArray<string> projectFilePaths,
-		ProjectMap? projectMap,
-		IProgress<ProjectLoadProgress>? progress,
-		CancellationToken cancellationToken)
-	{
-		var buildHostProcessManager = new BuildHostProcessManager(_knownCommandLineParserLanguages, Properties, loggerFactory: _loggerFactory);
-		await using var _ = buildHostProcessManager.ConfigureAwait(false);
-
-		var projectFileInfoProvider = new BuildHostProjectFileInfoProvider(
-			_solutionServices,
-			buildHostProcessManager,
-			_projectFileExtensionRegistry,
-			_diagnosticReporter,
-			progress);
-
-		return await LoadInfosAsync(projectFilePaths, projectFileInfoProvider, projectMap, progress, cancellationToken).ConfigureAwait(false);
-	}
-
-	private async Task<(ImmutableArray<ProjectInfo> projectInfos, Dictionary<ProjectId, ProjectFileInfo> ProjectFileInfos)> LoadInfoAsync(
+	private async Task<(ImmutableArray<ProjectInfo> ProjectInfos, Dictionary<ProjectId, ProjectFileInfoDto> ProjectFileInfos)> LoadInfosAsync(
 		ImmutableArray<string> projectPaths,
-		ProjectMap? projectMap,
+		DesignTimeProjectMap? projectMap,
 		IProgress<ProjectLoadProgress>? progress,
-		string? binaryLogFilePath,
 		DiagnosticReportingOptions requestedProjectOptions,
 		DiagnosticReportingOptions discoveredProjectOptions,
 		bool preferMetadataForReferencesOfDiscoveredProjects,
 		CancellationToken cancellationToken)
 	{
-		var binLogPathProvider = binaryLogFilePath is not null
-			? new BinLogPathProvider(binaryLogFilePath)
-			: null;
-
-		var buildHostProcessManager = new BuildHostProcessManager(_knownCommandLineParserLanguages, Properties, binLogPathProvider, loggerFactory: _loggerFactory);
-		await using var _ = buildHostProcessManager.ConfigureAwait(false);
-
-		var projectFileProvider = new BuildHostProjectFileInfoProvider(
-			_solutionServices,
-			buildHostProcessManager,
+		var solutionFilePath = _solutionFilePath ?? throw new InvalidOperationException($"{nameof(LoadSolutionInfoAsync)} must be called first, for the solution the projects are in.");
+		var projectFileInfoProvider = new DesignTimeBuildProjectFileInfoProvider(
+			_designTimeBuildService,
+			solutionFilePath,
+			Properties,
 			_projectFileExtensionRegistry,
-			_diagnosticReporter,
-			progress);
+			_diagnosticReporter);
+
+		// The Worker asks for one project at a time - so build all the requested ones up front, together. Ones they reference that aren't requested (e.g. outside the solution) are built as the Worker finds them.
+		await projectFileInfoProvider.DesignTimeBuildAsync(projectPaths, cancellationToken).ConfigureAwait(false);
 
 		var worker = new Worker(
 			_solutionServices,
 			_diagnosticReporter,
 			_pathResolver,
 			_projectFileExtensionRegistry,
-			projectFileProvider,
+			projectFileInfoProvider,
 			projectPaths,
 			projectMap,
 			progress,
@@ -298,71 +217,5 @@ public partial class CustomMsBuildProjectLoader
 
 		var projectInfos = await worker.LoadAsync(cancellationToken).ConfigureAwait(false);
 		return (projectInfos, worker.ProjectFileInfos);
-	}
-
-	internal async Task<(ImmutableArray<ProjectInfo> ProjectInfos, Dictionary<ProjectId, ProjectFileInfo> ProjectFileInfos)> LoadInfosAsync(
-		ImmutableArray<string> projectFilePaths,
-		IProjectFileInfoProvider projectFileInfoProvider,
-		ProjectMap? projectMap,
-		IProgress<ProjectLoadProgress>? progress,
-		CancellationToken cancellationToken)
-	{
-		Debug.Assert(projectFilePaths.All(PathUtilities.IsAbsolute));
-
-		var reportingMode = GetReportingModeForUnrecognizedProjects();
-		var requestedProjectOptions = DiagnosticReportingOptions.ThrowForAll;
-		var discoveredProjectOptions = new DiagnosticReportingOptions(
-			onPathFailure: reportingMode,
-			onLoaderFailure: reportingMode);
-
-		var worker = new Worker(
-			_solutionServices,
-			_diagnosticReporter,
-			_pathResolver,
-			_projectFileExtensionRegistry,
-			projectFileInfoProvider,
-			projectFilePaths,
-			projectMap,
-			progress,
-			requestedProjectOptions,
-			discoveredProjectOptions,
-			LoadMetadataForReferencedProjects);
-
-		var projectInfos = await worker.LoadAsync(cancellationToken).ConfigureAwait(false);
-		return (projectInfos, worker.ProjectFileInfos);
-	}
-	internal sealed class BinLogPathProvider : IBinLogPathProvider
-	{
-		private const string DefaultFileName = "msbuild";
-		private const string DefaultExtension = ".binlog";
-
-		private readonly string _directory;
-		private readonly string _filename;
-		private readonly string _extension;
-		private int _suffix = -1;
-
-		public BinLogPathProvider(string? logFilePath)
-		{
-			logFilePath ??= DefaultFileName + DefaultExtension;
-
-			_directory = Path.GetDirectoryName(logFilePath) ?? ".";
-			_filename = Path.GetFileNameWithoutExtension(logFilePath) is { Length: > 0 } fileName
-				? fileName
-				: DefaultFileName;
-			_extension = Path.GetExtension(logFilePath) is { Length: > 0 } extension
-				? extension
-				: DefaultExtension;
-		}
-
-		public string? GetNewLogPath()
-		{
-			var suffix = Interlocked.Increment(ref _suffix);
-
-			var newPath = suffix == 0
-				? Path.Combine(_directory, _filename + _extension)
-				: Path.Combine(_directory, $"{_filename}-{suffix}{_extension}");
-
-			return Path.GetFullPath(newPath);
-		}
 	}
 }
