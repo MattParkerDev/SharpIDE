@@ -24,10 +24,12 @@ public partial class IdeWindow : Control
 
     private IdeRoot? _ideRoot;
     private SlnPicker? _slnPicker;
+    private DiAutoload _diAutoload = null!;
 
     public override void _Ready()
     {
         GD.Print("IdeWindow _Ready called");
+        _diAutoload = GetNode<DiAutoload>("/root/DiAutoload");
         //this.DiffTheme();
         //this.GenerateThemes();
         ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
@@ -130,7 +132,9 @@ public partial class IdeWindow : Control
                 _slnPicker = null;
                 return;
             }
-            ideRoot.SetSlnFilePath(slnPath);
+            // The new solution's services, so its build hosts can start now, rather than once the IdeRoot is ready. Becomes the current scope in ResetScope below.
+            var solutionServices = _diAutoload.CreateNextScope();
+            ideRoot.SetSlnFilePath(slnPath, solutionServices);
             var recentSln = Singletons.AppState.RecentSlns.SingleOrDefault(s => s.FilePath == slnPath);
             if (recentSln is not null)
             {
@@ -155,7 +159,7 @@ public partial class IdeWindow : Control
                     GetWindow().Mode = Window.ModeEnum.Maximized;
                 }
                 _ideRoot = ideRoot; // This has no DI services, until it is added to the scene tree
-                GetNode<DiAutoload>("/root/DiAutoload").ResetScope();
+                _diAutoload.ResetScope();
                 AddChild(ideRoot);
             });
         });

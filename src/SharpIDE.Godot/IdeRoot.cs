@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Godot;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
@@ -41,7 +42,6 @@ public partial class IdeRoot : Control
 	[Inject] private readonly IdeFileExternalChangeHandler _fileExternalChangeHandler = null!;
 	[Inject] private readonly IdeFileWatcher _fileWatcher = null!;
 	[Inject] private readonly BuildService _buildService = null!;
-	[Inject] private readonly DesignTimeBuildService _designTimeBuildService = null!;
 	[Inject] private readonly ProjectEvaluationService _projectEvaluationService = null!;
     [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
     [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
@@ -128,21 +128,23 @@ public partial class IdeRoot : Control
 		_navigationHistoryService.RecordNavigation(file, fileLinePosition ?? new SharpIdeFileLinePosition(0, 0));
 	}
 
-	public void SetSlnFilePath(string path)
+	/// solutionServices is the scope this node's services will be injected from, once it is added to the tree
+	public void SetSlnFilePath(string path, IServiceProvider solutionServices)
 	{
 		_ = Task.GodotRun(async () =>
 		{
 			GD.Print($"Selected: {path}");
+			// The solution's SharpIDE.MsBuildHosts are started first thing, so they warm up while the solution is read and the IDE scene readies - the same (scoped) instances are injected later.
+			// The scope is new for this solution, so they are fresh hosts.
+			// The build host for the restore before the workspace loads, the design-time host for evaluation, which needs it straight away.
+			var startBuildHostTask = solutionServices.GetRequiredService<BuildService>().StartHostAsync(path);
+			var startHostTask = solutionServices.GetRequiredService<DesignTimeBuildService>().StartHostAsync(path);
 			var timer = Stopwatch.StartNew();
 			var fileTree = new SharpIdeFileTree();
 			var (solutionModel, vsSln, solutionSerializer) = await SharpIdeSolutionService.ReadSolution(path, fileTree);
 			timer.Stop();
 			await _nodeReadyTcs.Task;
 			// Do not use injected services until after _nodeReadyTcs - Services aren't injected until _Ready
-			// The solution's SharpIDE.MsBuildHosts - this scope is new for this solution, so they are fresh hosts.
-			// The build host for the restore before the workspace loads, the design-time host for evaluation, which needs it straight away.
-			var startBuildHostTask = _buildService.StartHostAsync(path);
-			var startHostTask = _designTimeBuildService.StartHostAsync(path);
 			_logger.LogInformation("Solution model fully created in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
 			await _sharpIdeSolutionService.LoadSolution(solutionModel, path, vsSln, solutionSerializer);
 			_sharpIdeSolutionAccessor.SolutionModel = solutionModel;

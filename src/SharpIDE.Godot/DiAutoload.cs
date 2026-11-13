@@ -15,6 +15,8 @@ public partial class DiAutoload : Node
 {
     private ServiceProvider? _serviceProvider;
     private IServiceScope? _currentScope;
+    private IServiceScope? _nextScope;
+    private readonly Lock _scopeLock = new();
 
     public override void _EnterTree()
     {
@@ -48,11 +50,27 @@ public partial class DiAutoload : Node
         
     }
 
-    /// The solution has changed, so reset the scope to get new services
+    /// Creates the scope for the solution being opened, ahead of ResetScope, so its services can be used (e.g. to start its build hosts) before the IdeRoot is added to the tree.
+    /// The current scope (the previous solution's) stays alive until ResetScope. Thread safe.
+    public IServiceProvider CreateNextScope()
+    {
+        lock (_scopeLock)
+        {
+            _nextScope?.Dispose();
+            _nextScope = _serviceProvider!.CreateScope();
+            return _nextScope.ServiceProvider;
+        }
+    }
+
+    /// The solution has changed, so reset the scope to get new services - the one from CreateNextScope, if created
     public void ResetScope()
     {
-        _currentScope?.Dispose();
-        _currentScope = _serviceProvider!.CreateScope();
+        lock (_scopeLock)
+        {
+            _currentScope?.Dispose();
+            _currentScope = _nextScope ?? _serviceProvider!.CreateScope();
+            _nextScope = null;
+        }
     }
 
     private void OnNodeAdded(Node node)
