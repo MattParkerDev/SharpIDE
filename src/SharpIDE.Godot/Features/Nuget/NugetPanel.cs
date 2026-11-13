@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Godot;
+using Microsoft.CodeAnalysis.Threading;
 using NuGet.Versioning;
 using SharpIDE.Application;
 using SharpIDE.Application.Features.Evaluation;
@@ -22,9 +23,9 @@ public partial class NugetPanel : Control
 	/// Whether the Discover tab's search results have been loaded (or are loading) - they're loaded when the tab is first opened, and again on refresh while it's open
 	private bool _searchResultsRequested;
 	/// Cancels the search results still arriving when a refresh starts another load
-	private CancellationTokenSource? _searchResultsCts;
+	private readonly CancellationSeries _searchResultsCancellationSeries = new();
 	/// Cancels the installed packages' results still arriving when another solution or project is selected, or a refresh starts another load
-	private CancellationTokenSource? _installedPackagesCts;
+	private readonly CancellationSeries _installedPackagesCancellationSeries = new();
 	
 	private Label _packagesToUpdateSlnOrProjectNameLabel = null!;
 	private Label _packagesToUpdateResultCountLabel = null!;
@@ -132,15 +133,15 @@ public partial class NugetPanel : Control
 	public override void _ExitTree()
 	{
 		_activityMonitor.ActivityChanged.Unsubscribe(OnActivityChanged);
+		// Cancels the loads still running - not Dispose, as the panel may be added to the tree again (e.g. moved to another dock)
+		_installedPackagesCancellationSeries.CreateNext();
+		_searchResultsCancellationSeries.CreateNext();
 	}
 
 	private void OnSolutionOrProjectSelected(long index)
 	{
 		var slnOrProject = (ISolutionOrProject?)_projects[(int)index] ?? _solution!;
-		// Cancel runs the cancelled load's callbacks on this (the UI) thread - CancelAsync runs them off it
-		_ = _installedPackagesCts?.CancelAsync();
-		_installedPackagesCts = new CancellationTokenSource();
-		var cancellationToken = _installedPackagesCts.Token;
+		var cancellationToken = _installedPackagesCancellationSeries.CreateNext();
 		_ = Task.GodotRun(async () =>
 		{
 			if (_solution is null) throw new InvalidOperationException("Solution is null but should not be");
@@ -154,9 +155,7 @@ public partial class NugetPanel : Control
 	{
 		if (_searchResultsRequested || _tabContainer.GetCurrentTabControl() != _discoverTab) return;
 		_searchResultsRequested = true;
-		_ = _searchResultsCts?.CancelAsync();
-		_searchResultsCts = new CancellationTokenSource();
-		var cancellationToken = _searchResultsCts.Token;
+		var cancellationToken = _searchResultsCancellationSeries.CreateNext();
 		_ = Task.GodotRun(() => PopulateSearchResults(cancellationToken));
 	}
 
