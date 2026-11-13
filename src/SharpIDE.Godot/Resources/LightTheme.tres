@@ -1,9 +1,9 @@
 [gd_resource type="Theme" format=3 uid="uid://dc7l6bjhn61i5"]
 
 [ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_guqd5"]
-[ext_resource type="Texture2D" uid="uid://d0wy2vggrfgdh" path="res://Resources/close.svg" id="2_xvfqr"]
-[ext_resource type="FontVariation" uid="uid://vmgmcu8gc6nt" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="3_8xmn6"]
-[ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="4_w7sqp"]
+[ext_resource type="FontFile" path="res://Inter-VariableFont.ttf" id="2_xvfqr"]
+[ext_resource type="Texture2D" path="res://Resources/close.svg" id="3_8xmn6"]
+[ext_resource type="FontVariation" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="4_w7sqp"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acptdlg"]
 content_margin_left = 8.0
@@ -414,6 +414,12 @@ corner_radius_bottom_left = 5
 shadow_color = Color(0, 0, 0, 0.11764706)
 shadow_size = 4
 
+[sub_resource type="FontVariation" id="FontVariation_smbld"]
+base_font = ExtResource("2_xvfqr")
+variation_opentype = {
+2003265652: 600
+}
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sbtlicn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sbtlhv"]
@@ -546,7 +552,7 @@ expand_margin_right = 8.0
 expand_margin_bottom = 6.0
 
 [resource]
-default_font = ExtResource("4_w7sqp")
+default_font = ExtResource("2_xvfqr")
 AcceptDialog/styles/panel = SubResource("StyleBoxFlat_acptdlg")
 Button/styles/disabled = SubResource("StyleBoxFlat_guqd5")
 Button/styles/hover = SubResource("StyleBoxFlat_dwjdr")
@@ -639,6 +645,8 @@ PopupMenu/styles/hover = SubResource("StyleBoxFlat_popmnhv")
 PopupMenu/styles/panel = SubResource("StyleBoxFlat_popmnpn")
 PopupMenu/styles/separator = SubResource("StyleBoxLine_popmnsp")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
+RichTextLabel/colors/default_color = Color(0.17, 0.17, 0.17, 1)
+RichTextLabel/fonts/bold_font = SubResource("FontVariation_smbld")
 SubtleIconButton/base_type = &"Button"
 SubtleIconButton/colors/icon_focus_color = Color(1, 1, 1, 1)
 SubtleIconButton/colors/icon_hover_color = Color(1, 1, 1, 1)
@@ -651,7 +659,7 @@ SubtleIconButton/styles/hover = SubResource("StyleBoxFlat_sbtlhv")
 SubtleIconButton/styles/hover_pressed = SubResource("StyleBoxFlat_sbtlpr")
 SubtleIconButton/styles/normal = SubResource("StyleBoxEmpty_sbtlicn")
 SubtleIconButton/styles/pressed = SubResource("StyleBoxFlat_sbtlpr")
-TabBar/icons/close = ExtResource("2_xvfqr")
+TabBar/icons/close = ExtResource("3_8xmn6")
 TabBar/styles/tab_hovered = SubResource("StyleBoxFlat_an00s")
 TabBar/styles/tab_selected = SubResource("StyleBoxFlat_ua1vr")
 TabBar/styles/tab_unselected = SubResource("StyleBoxFlat_ml8q5")
@@ -674,10 +682,10 @@ Terminal/colors/ansi_9_color = Color(1, 0, 0, 1)
 Terminal/colors/background_color = Color(0, 0, 0, 0)
 Terminal/colors/foreground_color = Color(0.17, 0.17, 0.17, 1)
 Terminal/font_sizes/font_size = 16
-Terminal/fonts/bold_font = ExtResource("3_8xmn6")
-Terminal/fonts/bold_italics_font = ExtResource("3_8xmn6")
-Terminal/fonts/italics_font = ExtResource("3_8xmn6")
-Terminal/fonts/normal_font = ExtResource("3_8xmn6")
+Terminal/fonts/bold_font = ExtResource("4_w7sqp")
+Terminal/fonts/bold_italics_font = ExtResource("4_w7sqp")
+Terminal/fonts/italics_font = ExtResource("4_w7sqp")
+Terminal/fonts/normal_font = ExtResource("4_w7sqp")
 Terminal/styles/focus = SubResource("StyleBoxFlat_bk23l")
 Terminal/styles/normal = SubResource("StyleBoxFlat_5srvn")
 ThemeInfo/constants/IsLight1OrDark2 = 1

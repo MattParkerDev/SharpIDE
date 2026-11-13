@@ -174,31 +174,11 @@ public partial class NugetPackageDetails : VBoxContainer
 	private void SetUpInfo()
 	{
 		_infoRichTextLabel.MetaClicked += meta => OS.ShellOpen(meta.AsString());
-		// Overriding a child's theme items only notifies the child, so this doesn't loop
-		ThemeChanged += ApplyInfoTheme;
-		ApplyInfoTheme();
+		// The version ranges' grey is the theme's, so they're written again when it changes
+		ThemeChanged += () => ShowDependencies(_shownMetadata);
+		ShowInfo(null);
 	}
 
-	/// The sections' text in the pane's label colour (a RichTextLabel's is otherwise white), with [b] in a semibold weight of the theme's font, as the section titles
-	private void ApplyInfoTheme()
-	{
-		var boldFont = new FontVariation
-		{
-			BaseFont = GetThemeDefaultFont(),
-			VariationOpentype = new global::Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("weight")] = 600 }
-		};
-		foreach (var label in (RichTextLabel[])[_infoRichTextLabel, _dependenciesRichTextLabel])
-		{
-			label.AddThemeColorOverride(DefaultColorName, GetThemeColor(ThemeStringNames.FontColor, Gray700LabelType));
-			label.AddThemeFontOverride(BoldFontName, boldFont);
-		}
-		// The version ranges are coloured from the theme
-		ShowInfo(_shownMetadata);
-	}
-
-	private static readonly StringName BoldFontName = "bold_font";
-	private static readonly StringName DefaultColorName = "default_color";
-	private static readonly StringName Gray700LabelType = "Gray700Label";
 	private static readonly StringName Gray600LabelType = "Gray600Label";
 	private const string LinkColor = "589df6";
 
@@ -244,21 +224,27 @@ public partial class NugetPackageDetails : VBoxContainer
 		var groups = metadata?.DependencySets?.ToList() ?? [];
 		_dependenciesFoldableContainer.Visible = groups.Count > 0;
 		_dependenciesFoldableContainer.Summary = string.Join(", ", groups.Select(g => FormatFramework(g.TargetFramework)));
-		var rangeColor = GetThemeColor(ThemeStringNames.FontColor, Gray600LabelType).ToHtml(false);
-		var text = new System.Text.StringBuilder();
-		foreach (var group in groups)
+		var rangeColor = GetThemeColor(ThemeStringNames.FontColor, Gray600LabelType);
+		var label = _dependenciesRichTextLabel;
+		label.Clear();
+		foreach (var (index, group) in groups.Index())
 		{
-			text.AppendLine(Escape(FormatFramework(group.TargetFramework)));
+			if (index > 0) label.Newline();
+			label.AddText(FormatFramework(group.TargetFramework));
 			if (group.Packages.Any() is false) continue;
-			text.Append("[indent]");
-			foreach (var dependency in group.Packages)
+			// An indent starts its own line, so only the dependencies after the first need one
+			label.PushIndent(1);
+			foreach (var (dependencyIndex, dependency) in group.Packages.Index())
 			{
 				var range = dependency.VersionRange.ToString("p", VersionRangeFormatter.Instance).Replace(">=", "≥").Replace("<=", "≤");
-				text.AppendLine($"{Escape(dependency.Id)} [color={rangeColor}]({Escape(range)})[/color]");
+				if (dependencyIndex > 0) label.Newline();
+				label.AddText($"{dependency.Id} ");
+				label.PushColor(rangeColor);
+				label.AddText($"({range})");
+				label.Pop();
 			}
-			text.Append("[/indent]");
+			label.Pop();
 		}
-		_dependenciesRichTextLabel.Text = text.ToString().TrimEnd();
 	}
 
 	/// As NuGet.org shows it - .NET 8.0 rather than net8.0, .NETStandard 2.0, .NETFramework 4.7.2

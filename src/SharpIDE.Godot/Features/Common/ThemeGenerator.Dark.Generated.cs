@@ -739,6 +739,14 @@ public static partial class ThemeGenerator
         theme.SetColor("font_color", "Gray600Label", colors.Gray600);
         theme.SetColor("font_color", "Gray700Label", lightLabelColor);
         theme.SetColor("font_color", "Gray800Label", colors.Gray800);
+        // A RichTextLabel otherwise draws in white, with a synthesised bold - so the label colour, and a semibold weight of the UI font for [b]
+        theme.SetColor("default_color", "RichTextLabel", lightLabelColor);
+        theme.SetFont("bold_font", "RichTextLabel", new FontVariation
+        {
+	        ResourceSceneUniqueId = "FontVariation_smbld",
+	        BaseFont = theme.DefaultFont,
+	        VariationOpentype = new global::Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("weight")] = 600 }
+        });
         theme.SetColor("font_color", "IdeSidebarButton", sidebarColor);
         theme.SetColor("font_focus_color", "IdeSidebarButton", sidebarActiveColor);
         theme.SetColor("font_hover_color", "IdeSidebarButton", sidebarColor);

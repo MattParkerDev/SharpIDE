@@ -414,6 +414,12 @@ corner_radius_bottom_left = 5
 shadow_color = Color(0, 0, 0, 0.11764706)
 shadow_size = 4
 
+[sub_resource type="FontVariation" id="FontVariation_smbld"]
+base_font = ExtResource("2_amw38")
+variation_opentype = {
+2003265652: 600
+}
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_sbtlicn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sbtlhv"]
@@ -615,6 +621,8 @@ PopupMenu/styles/hover = SubResource("StyleBoxFlat_popmnhv")
 PopupMenu/styles/panel = SubResource("StyleBoxFlat_popmnpn")
 PopupMenu/styles/separator = SubResource("StyleBoxLine_popmnsp")
 PopupPanel/styles/panel = SubResource("StyleBoxFlat_amw38")
+RichTextLabel/colors/default_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+RichTextLabel/fonts/bold_font = SubResource("FontVariation_smbld")
 SubtleIconButton/base_type = &"Button"
 SubtleIconButton/colors/icon_focus_color = Color(1, 1, 1, 1)
 SubtleIconButton/colors/icon_hover_color = Color(1, 1, 1, 1)
