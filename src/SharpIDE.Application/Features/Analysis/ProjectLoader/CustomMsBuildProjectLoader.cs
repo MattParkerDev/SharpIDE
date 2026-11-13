@@ -37,7 +37,7 @@ public partial class CustomMsBuildProjectLoader
 		_diagnosticReporter = diagnosticReporter;
 		_loggerFactory = new Microsoft.Extensions.Logging.LoggerFactory([new DiagnosticReporterLoggerProvider(_diagnosticReporter)]);
 		_pathResolver = new PathResolver(_diagnosticReporter);
-		_projectFileExtensionRegistry = new ProjectFileExtensionRegistry(diagnosticReporter, null);
+		_projectFileExtensionRegistry = new ProjectFileExtensionRegistry(diagnosticReporter, solutionServices.GetService<Microsoft.CodeAnalysis.FileBasedPrograms.IFileBasedProgramService>());
 
 		Properties = ImmutableDictionary.Create<string, string>(StringComparer.OrdinalIgnoreCase);
 
