@@ -179,12 +179,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			var analysisVersion = await _roslynAnalysis.GetFileAnalysisVersion(_currentFile, newCt);
 			if (analysisVersion is not null && analysisVersion == LastAnalysedVersion) return; // Nothing this file depends on has changed
 			GD.Print($"[{_currentFile.Name.Value}] Solution altered, updating project diagnostics for file");
-			var documentSyntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile, newCt);
-			var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile, newCt);
-			await Task.WhenAll(documentSyntaxHighlighting, razorSyntaxHighlighting).WaitAsync(newCt);
+			var syntaxHighlighting = await _roslynAnalysis.GetSyntaxHighlighting(_currentFile, newCt).WaitAsync(newCt);
 			if (newCt.IsCancellationRequested) return;
 			var documentDiagnosticsTask = _roslynAnalysis.GetDocumentDiagnostics(_currentFile, newCt);
-			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await documentSyntaxHighlighting, await razorSyntaxHighlighting));
+			await this.InvokeAsync(() => SetSyntaxHighlightingModel(syntaxHighlighting));
 			var documentDiagnostics = await documentDiagnosticsTask;
 			if (newCt.IsCancellationRequested) return;
 			var documentAnalyzerDiagnosticsTask = _roslynAnalysis.GetDocumentAnalyzerDiagnostics(_currentFile, newCt);
@@ -492,8 +490,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 		// Captured before computing, so we never record a version newer than the one the results came from
 		var analysisVersion = _roslynAnalysis.GetFileAnalysisVersion(_currentFile);
-		var syntaxHighlighting = _roslynAnalysis.GetDocumentSyntaxHighlighting(_currentFile);
-		var razorSyntaxHighlighting = _roslynAnalysis.GetRazorDocumentSyntaxHighlighting(_currentFile);
+		var syntaxHighlighting = _roslynAnalysis.GetSyntaxHighlighting(_currentFile);
 		var diagnostics = _roslynAnalysis.GetDocumentDiagnostics(_currentFile);
 		var analyzerDiagnostics = _roslynAnalysis.GetDocumentAnalyzerDiagnostics(_currentFile);
 		await readFileTask;
@@ -511,8 +508,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		});
 		_ = Task.GodotRun(async () =>
 		{
-			await Task.WhenAll(syntaxHighlighting, razorSyntaxHighlighting, setTextTask); // Text must be set before setting syntax highlighting
-			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await syntaxHighlighting, await razorSyntaxHighlighting));
+			await Task.WhenAll(syntaxHighlighting, setTextTask); // Text must be set before setting syntax highlighting
+			await this.InvokeAsync(async () => SetSyntaxHighlightingModel(await syntaxHighlighting));
 			await diagnostics;
 			await this.InvokeAsync(async () => SetDiagnostics(await diagnostics));
 			await analyzerDiagnostics;
@@ -818,9 +815,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	}
 
 	[RequiresGodotUiThread]
-	private void SetSyntaxHighlightingModel(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
+	private void SetSyntaxHighlightingModel(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)
 	{
-		_syntaxHighlighter.SetHighlightingData(classifiedSpans, razorClassifiedSpans);
+		_syntaxHighlighter.SetHighlightingData(classifiedSpans);
 		//_syntaxHighlighter.ClearHighlightingCache();
 		_syntaxHighlighter.UpdateCache(); // I don't think this does anything, it will call _UpdateCache which we have not implemented
 		SyntaxHighlighter = null;

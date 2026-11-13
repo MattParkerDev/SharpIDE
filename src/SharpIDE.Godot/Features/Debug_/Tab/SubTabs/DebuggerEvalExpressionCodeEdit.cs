@@ -449,7 +449,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 
 	private void SetSyntaxHighlighting(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)
 	{
-		_syntaxHighlighter.SetHighlightingData(classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan>.Empty);
+		_syntaxHighlighter.SetHighlightingData(classifiedSpans);
 		_syntaxHighlighter.UpdateCache();
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _syntaxHighlighter;

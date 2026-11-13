@@ -173,7 +173,7 @@ offset_right = 1040.0
 offset_bottom = 355.0
 mouse_filter = 1
 position_offset = Vector2(750, 199)
-title = "GetDocumentSyntaxHighlighting"
+title = "GetSyntaxHighlighting"
 slot/0/left_enabled = true
 slot/0/left_type = 0
 slot/0/left_color = Color(1, 1, 1, 1)
@@ -186,10 +186,9 @@ slot/0/draw_stylebox = true
 
 [node name="Label" type="Label" parent="VBoxContainer/GraphEdit/GraphNode5" unique_id=1679278045]
 layout_mode = 2
-text = "GetSyntaxTreeAsync
-GetRootAsync
-GetClassifiedSpansAsync
-GetMappedLineSpan"
+text = "GetTextAsync
+ClassifierHelper.AddClassifiedSpansAsync
+ToSingleLineSpans"
 
 [node name="GraphNode6" type="GraphNode" parent="VBoxContainer/GraphEdit" unique_id=341937258]
 layout_mode = 0

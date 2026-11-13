@@ -1,9 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Godot;
 using Godot.Collections;
-using Microsoft.CodeAnalysis.Classification;
 using SharpIDE.Application.Features.Analysis;
-using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Godot.Features.CodeEditor;
 using SharpIDE.Godot.Features.IdeSettings;
 
@@ -13,11 +11,11 @@ public partial class CustomHighlighter : SyntaxHighlighter
 {
     private readonly Dictionary _emptyDict = new();
 
-    private System.Collections.Generic.Dictionary<int, ImmutableArray<SharpIdeRazorClassifiedSpan>> _razorClassifiedSpansByLine = [];
     private System.Collections.Generic.Dictionary<int, ImmutableArray<SharpIdeClassifiedSpan>> _classifiedSpansByLine = [];
 
     public EditorThemeColorSet ColourSetForTheme = null!;
-    
+    private Color[] _colorsByClassification = [];
+
     public void UpdateThemeColorCache(LightOrDarkTheme themeType)
     {
         ColourSetForTheme = themeType switch
@@ -26,23 +24,16 @@ public partial class CustomHighlighter : SyntaxHighlighter
             LightOrDarkTheme.Dark => EditorThemeColours.Dark,
             _ => throw new NotImplementedException("Unknown theme type")
         };
+        _colorsByClassification = ClassificationToColorMapper.GetColorTable(ColourSetForTheme);
     }
-    
-    
-    public void SetHighlightingData(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans, ImmutableArray<SharpIdeRazorClassifiedSpan> razorClassifiedSpans)
-    {
-        // separate each line here
-        var razorSpansForLine = razorClassifiedSpans
-            .Where(s => s.Span.Length is not 0)
-            .GroupBy(s => s.Span.LineIndex);
-        
-        _razorClassifiedSpansByLine = razorSpansForLine.ToDictionary(g => g.Key, g => g.ToImmutableArray());
 
-        var spansGroupedByFileSpan = classifiedSpans
-            .Where(s => s.ClassifiedSpan.TextSpan.Length is not 0)
-            .GroupBy(span => span.FileSpan.Start.Line);
-        
-        _classifiedSpansByLine = spansGroupedByFileSpan.ToDictionary(g => g.Key, g => g.ToImmutableArray());
+    /// <param name="classifiedSpans">Sorted, single-line, non-overlapping spans</param>
+    public void SetHighlightingData(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)
+    {
+        _classifiedSpansByLine = classifiedSpans
+            .Where(s => s.Length is not 0)
+            .GroupBy(s => s.Line)
+            .ToDictionary(g => g.Key, g => g.ToImmutableArray());
     }
 
     // Indicates that lines were removed or added, and the overall result of that is that a line (wasLineNumber), is now (becameLineNumber)
@@ -66,7 +57,6 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     private void LinesAdded(long fromLine, int difference, SharpIdeCodeEdit.LineEditOrigin origin)
     {
-        _razorClassifiedSpansByLine = Rearrange(_razorClassifiedSpansByLine, fromLine, difference, origin);
         _classifiedSpansByLine = Rearrange(_classifiedSpansByLine, fromLine, difference, origin);
         return;
 
@@ -95,7 +85,6 @@ public partial class CustomHighlighter : SyntaxHighlighter
     private void LinesRemoved(long fromLine, int numberOfLinesRemoved)
     {
         _classifiedSpansByLine = Rearrange(_classifiedSpansByLine, fromLine, numberOfLinesRemoved);
-        _razorClassifiedSpansByLine = Rearrange(_razorClassifiedSpansByLine, fromLine, numberOfLinesRemoved);
         return;
 
         static System.Collections.Generic.Dictionary<int, T> Rearrange<T>(System.Collections.Generic.Dictionary<int, T> existingDictionary, long fromLine, int numberOfLinesRemoved)
@@ -121,122 +110,28 @@ public partial class CustomHighlighter : SyntaxHighlighter
         }
     }
     
+    private static readonly StringName ColorStringName = "color";
+
     public override Dictionary _GetLineSyntaxHighlighting(int line)
     {
-        var highlights = (_classifiedSpansByLine, _razorClassifiedSpansByLine) switch
-        {
-            ({ Count: 0 }, { Count: 0 }) => _emptyDict,
-            ({ Count: > 0 }, _) => MapClassifiedSpansToHighlights(line),
-            (_, { Count: > 0 }) => MapRazorClassifiedSpansToHighlights(line),
-            _ => throw new NotImplementedException("Both ClassifiedSpans and RazorClassifiedSpans are set. This is not supported yet.")
-        };
+        if (_classifiedSpansByLine.TryGetValue(line, out var spansForLine) is false) return _emptyDict;
 
-        return highlights;
-    }
-    
-    private static readonly StringName ColorStringName = "color";
-    private Dictionary MapRazorClassifiedSpansToHighlights(int line)
-    {
+        var colors = _colorsByClassification;
+        var defaultColor = ColourSetForTheme.White;
         var highlights = new Dictionary();
-        if (_razorClassifiedSpansByLine.TryGetValue(line, out var razorSpansForLine) is false) return highlights;
-        
-        // group by span (start, length matches)
-        var spansGroupedByFileSpan = razorSpansForLine.GroupBy(span => span.Span);
-
-        foreach (var razorSpanGrouping in spansGroupedByFileSpan)
+        for (var i = 0; i < spansForLine.Length; i++)
         {
-            // Multiple classifications can apply to the same razor span (exact duplicates are already removed in RoslynAnalysis).
-            // Prefer C# over razor markup, and ignore the additive StaticSymbol classification.
-            var spans = razorSpanGrouping.ToList();
-            if (spans.Count is not 1)
+            var span = spansForLine[i];
+            highlights[span.StartCharacter] = new Dictionary { { ColorStringName, colors[(int)span.Classification] } };
+
+            // Godot applies a colour until the next entry on the line, so reset to the default colour for any gap after this span
+            var nextStart = i + 1 < spansForLine.Length ? spansForLine[i + 1].StartCharacter : int.MaxValue;
+            if (nextStart > span.EndCharacter)
             {
-                if (spans.Any(s => s.Kind is SharpIdeRazorSpanKind.Code))
-                {
-                    spans = spans.Where(s => s.Kind is SharpIdeRazorSpanKind.Code).ToList();
-                }
-                if (spans.Count is not 1 && spans.Any(s => s.CodeClassificationType != ClassificationTypeNames.StaticSymbol))
-                {
-                    spans = spans.Where(s => s.CodeClassificationType != ClassificationTypeNames.StaticSymbol).ToList();
-                }
+                highlights[span.EndCharacter] = new Dictionary { { ColorStringName, defaultColor } };
             }
-            var razorSpan = spans[0];
-            
-            int columnIndex = razorSpan.Span.CharacterIndex;
-            
-            var highlightInfo = new Dictionary
-            {
-                { ColorStringName, GetColorForRazorSpanKind(razorSpan.Kind, razorSpan.CodeClassificationType, razorSpan.VsSemanticRangeType) }
-            };
-
-            highlights[columnIndex] = highlightInfo;
         }
 
         return highlights;
     }
-    
-    private Color GetColorForRazorSpanKind(SharpIdeRazorSpanKind kind, string? codeClassificationType, string? vsSemanticRangeType)
-    {
-        return kind switch
-        {
-            SharpIdeRazorSpanKind.Code => ClassificationToColorMapper.GetColorForClassification(ColourSetForTheme, codeClassificationType!),
-            SharpIdeRazorSpanKind.Comment => ColourSetForTheme.CommentGreen, // green
-            SharpIdeRazorSpanKind.MetaCode => ColourSetForTheme.RazorMetaCodePurple, // purple
-            SharpIdeRazorSpanKind.Markup => GetColorForMarkupSpanKind(vsSemanticRangeType),
-            SharpIdeRazorSpanKind.Transition => ColourSetForTheme.RazorMetaCodePurple, // purple
-            SharpIdeRazorSpanKind.None => ColourSetForTheme.White,
-            _ => ColourSetForTheme.White
-        };
-    }
-    
-    private Color GetColorForMarkupSpanKind(string? vsSemanticRangeType)
-    {
-        return vsSemanticRangeType switch
-        {
-            "razorDirective" or "razorTransition" => ColourSetForTheme.RazorMetaCodePurple, // purple
-            "markupTagDelimiter" => ColourSetForTheme.HtmlDelimiterGray, // gray
-            "markupTextLiteral" => ColourSetForTheme.White, // white
-            "markupElement" => ColourSetForTheme.KeywordBlue, // blue
-            "razorComponentElement" => ColourSetForTheme.RazorComponentGreen, // dark green
-            "razorComponentAttribute" => ColourSetForTheme.White, // white
-            "razorComment" or "razorCommentStar" or "razorCommentTransition" => ColourSetForTheme.CommentGreen, // green
-            "markupOperator" => ColourSetForTheme.White, // white
-            "markupAttributeQuote" => ColourSetForTheme.White, // white
-            _ => ColourSetForTheme.White // default to white
-        };
-    }
-
-    
-    private Dictionary MapClassifiedSpansToHighlights(int line)
-    {
-        var highlights = new Dictionary();
-        if (_classifiedSpansByLine.TryGetValue(line, out var spansForLine) is false) return highlights;
-        
-        // consider no linq or ZLinq
-        // group by span (start, length matches)
-        var spansGroupedByFileSpan = spansForLine
-            .GroupBy(span => span.FileSpan)
-            .Select(group => (fileSpan: group.Key, classifiedSpans: group.Select(s => s.ClassifiedSpan).ToList()));
-
-        foreach (var (fileSpan, classifiedSpans) in spansGroupedByFileSpan)
-        {
-            // Ignore the additive StaticSymbol classification when there is another one for the same span
-            var classifiedSpan = classifiedSpans.Count is 1
-                ? classifiedSpans[0]
-                : classifiedSpans.FirstOrDefault(s => s.ClassificationType != ClassificationTypeNames.StaticSymbol, classifiedSpans[0]);
-            // Column index of the first character in this span
-            int columnIndex = fileSpan.Start.Character;
-
-            // Build the highlight entry
-            var highlightInfo = new Dictionary
-            {
-                { ColorStringName, ClassificationToColorMapper.GetColorForClassification(ColourSetForTheme, classifiedSpan.ClassificationType) }
-            };
-
-            highlights[columnIndex] = highlightInfo;
-        }
-
-        return highlights;
-    }
-    
-    
 }

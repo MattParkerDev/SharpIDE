@@ -78,15 +78,12 @@ public sealed class DebuggerExpressionIntelliSenseSession : IDisposable
 		var semanticModel = await document.GetRequiredSemanticModelAsync(cancellationToken);
 		var expressionSourceText = SourceText.From(expressionText);
 
-		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, expressionSpan, cancellationToken);
-		var mappedClassifiedSpans = classifiedSpans
-			.Where(span => IsWithinExpression(span.TextSpan, expressionSpan))
-			.Select(span =>
-			{
-				var localSpan = new TextSpan(span.TextSpan.Start - expressionSpan.Start, span.TextSpan.Length);
-				return new SharpIdeClassifiedSpan(expressionSourceText.GetLinePositionSpan(localSpan), span);
-			})
-			.ToImmutableArray();
+		var classifiedSpans = await SharpIdeClassifier.GetClassifiedSpansAsync(document, [expressionSpan], logger: null, cancellationToken);
+		var mappedClassifiedSpans = SharpIdeClassifier.ToSingleLineSpans(
+			expressionSourceText,
+			classifiedSpans
+				.Where(span => IsWithinExpression(span.TextSpan, expressionSpan))
+				.Select(span => span with { TextSpan = new TextSpan(span.TextSpan.Start - expressionSpan.Start, span.TextSpan.Length) }));
 
 		var diagnosticsBuilder = ImmutableArray.CreateBuilder<SharpIdeDiagnostic>();
 		foreach (var diagnostic in semanticModel.GetDiagnostics(expressionSpan, cancellationToken))

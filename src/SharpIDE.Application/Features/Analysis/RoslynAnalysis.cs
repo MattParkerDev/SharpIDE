@@ -636,17 +636,46 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return generatedDocument;
 	}
 
-	public record SharpIdeRazorMappedClassifiedSpan(SharpIdeRazorSourceSpan SourceSpanInRazor, string CsharpClassificationType);
-	public async Task<ImmutableArray<SharpIdeRazorClassifiedSpan>> GetRazorDocumentSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// Syntax highlighting for any supported document kind. Spans are sorted, single-line and non-overlapping.
+	/// </summary>
+	public async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetRazorDocumentSyntaxHighlighting)}");
+		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetSyntaxHighlighting)}");
 		await _solutionLoadedTcs.Task;
-		var timer = Stopwatch.StartNew();
-		if (fileModel.IsRazorFile is false)
+		if (fileModel.IsCsharpFile) return await GetCSharpDocumentSyntaxHighlighting(fileModel, cancellationToken);
+		if (fileModel.IsRazorFile) return await GetRazorDocumentSyntaxHighlighting(fileModel, cancellationToken);
+		return [];
+	}
+
+	private async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetCSharpDocumentSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken)
+	{
+		var project = GetProjectForSharpIdeFile(fileModel);
+		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
+		Guard.Against.Null(document, nameof(document));
+
+		var text = await document.GetTextAsync(cancellationToken);
+		var classifiedSpans = await SharpIdeClassifier.GetClassifiedSpansAsync(document, [new TextSpan(0, text.Length)], _logger, cancellationToken);
+		return SharpIdeClassifier.ToSingleLineSpans(text, classifiedSpans);
+	}
+
+	private readonly record struct RazorHighlightRange(TextSpan TextSpan, SharpIdeClassification Classification, SharpIdeClassificationModifiers Modifiers, bool FromRazor)
+	{
+		// Mirrors Razor's SemanticRange.CompareTo: when ranges start at the same position, Razor's range sorts first and wins,
+		// e.g. the tag name in <My.Cool.Component> is one Razor range, but several C# ranges (namespaces and a type name)
+		public static int Compare(RazorHighlightRange x, RazorHighlightRange y)
 		{
-			return [];
-			//throw new InvalidOperationException("File is not a .razor file");
+			var result = x.TextSpan.Start.CompareTo(y.TextSpan.Start);
+			if (result is not 0) return result;
+			if (x.FromRazor != y.FromRazor) return x.FromRazor ? -1 : 1;
+			return x.TextSpan.End.CompareTo(y.TextSpan.End);
 		}
+	}
+
+	// Mirrors RazorSemanticTokensInfoService.GetSemanticTokensAsync
+	private async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetRazorDocumentSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken)
+	{
+		var timer = Stopwatch.StartNew();
 		var project = GetProjectForSharpIdeFile(fileModel);
 		var razorDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
 
@@ -654,126 +683,102 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
+		var razorText = razorCodeDocument.Source.Text;
 
-		var razorText = await razorDocument.GetTextAsync(cancellationToken);
+		var ranges = new List<RazorHighlightRange>();
 
-		List<string> relevantTypes = ["razorDirective", "razorTransition", "markupTextLiteral", "markupTagDelimiter", "markupElement", "razorComponentElement", "razorComponentAttribute", "razorComment", "razorCommentTransition", "razorCommentStar", "markupOperator", "markupAttributeQuote"];
-		var ranges = new List<SemanticRange>();
-		CustomSemanticTokensVisitor.AddSemanticRanges(ranges, razorCodeDocument, new TextSpan(0, razorText.Length), _semanticTokensLegendService!, false);
+		// Razor and HTML ranges
+		var semanticRanges = new List<SemanticRange>();
+		SemanticTokensVisitor.AddSemanticRanges(semanticRanges, razorCodeDocument, new TextSpan(0, razorText.Length), _semanticTokensLegendService!, false);
+		var tokenTypes = _semanticTokensLegendService!.TokenTypes.All;
+		foreach (var semanticRange in semanticRanges)
+		{
+			var classification = SharpIdeClassifications.FromName(tokenTypes[semanticRange.Kind]);
+			if (classification is SharpIdeClassification.Unknown or SharpIdeClassification.Text) continue;
+			ranges.Add(new RazorHighlightRange(razorText.GetTextSpan(semanticRange.AsLinePositionSpan()), classification, SharpIdeClassificationModifiers.None, FromRazor: true));
+		}
 
-		//var allTypes = ranges.Select(s => _semanticTokensLegendService!.TokenTypes.All[s.Kind]).Distinct().ToList();
-		var semanticRangeRazorSpans = ranges
-			.Where(s => relevantTypes.Contains(_semanticTokensLegendService!.TokenTypes.All[s.Kind]))
-			.Select(s =>
-			{
-				var linePositionSpan = s.AsLinePositionSpan();
-				var textSpan = razorText.GetTextSpan(linePositionSpan);
-				var sourceSpan = new SourceSpan(
-					fileModel.Path,
-					textSpan.Start,
-					linePositionSpan.Start.Line,
-					linePositionSpan.Start.Character,
-					textSpan.Length,
-					1,
-					linePositionSpan.End.Character
-				);
-				return new SharpIdeRazorClassifiedSpan(sourceSpan.ToSharpIdeSourceSpan(), SharpIdeRazorSpanKind.Markup, null, _semanticTokensLegendService!.TokenTypes.All[s.Kind]);
-			}).ToList();
-
-		// var debugMappedBackTranslatedSemanticRanges = relevantRanges.Select(s =>
-		// {
-		// 	var textSpan = razorText.GetTextSpan(s.Range.AsLinePositionSpan());
-		// 	var text = razorText.GetSubTextString(textSpan);
-		// 	return new { text, s };
-		// }).ToList();
-		// var semanticRangesAsRazorClassifiedSpans = ranges
-		// 	.Select(s =>
-		// 	{
-		// 		var sourceSpan = new SharpIdeRazorSourceSpan(null, s.)
-		// 		var span = new SharpIdeRazorClassifiedSpan();
-		// 		return span;
-		// 	}).ToList();
-		//var test = _semanticTokensLegendService.TokenTypes.All;
-		// Razor now emits two C# documents ("sonic"): the impl document (markup/render tree, expressions etc), and the
-		// declaration document (e.g. @code block members). Each has its own source generated document, so classify both,
-		// mirroring RazorSemanticTokensInfoService.AddCSharpSemanticRangesAsync
-		List<SharpIdeRazorMappedClassifiedSpan> roslynMappedSpans = [];
-		roslynMappedSpans.AddRange(await GetMappedClassifiedSpans(
-			razorCodeDocument.GetRequiredCSharpDocument(false),
-			await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken)));
+		// C# ranges. Razor emits two C# documents: the impl document (markup/render tree, expressions etc.), and the
+		// declaration document (e.g. @code block members). Each has its own source generated document, so classify both.
+		await AddCSharpRanges(razorCodeDocument.GetRequiredCSharpDocument(false), await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken));
 
 		var declCSharpDocument = razorCodeDocument.GetCSharpDocument(true);
-		var declGeneratedDocument = declCSharpDocument is null ? null : await razorProjectSnapshot.TryGetDeclGeneratedDocumentAsync(documentSnapshot, cancellationToken);
-		if (declCSharpDocument is not null && declGeneratedDocument is not null)
+		if (declCSharpDocument is not null && await razorProjectSnapshot.TryGetDeclGeneratedDocumentAsync(documentSnapshot, cancellationToken) is { } declGeneratedDocument)
 		{
-			roslynMappedSpans.AddRange(await GetMappedClassifiedSpans(declCSharpDocument, declGeneratedDocument));
+			await AddCSharpRanges(declCSharpDocument, declGeneratedDocument);
 		}
 
-		List<SharpIdeRazorClassifiedSpan> sharpIdeRazorSpans = [
-			..roslynMappedSpans.Select(s => new SharpIdeRazorClassifiedSpan(s.SourceSpanInRazor, SharpIdeRazorSpanKind.Code, s.CsharpClassificationType)),
-			..semanticRangeRazorSpans
-		];
-		// Remove exact duplicates, which are an artifact of mapping generated C# back to razor, e.g. a component's T="Foo"
-		// is emitted several times in the generated C#, and some spans map from both the impl and declaration documents.
-		var result = sharpIdeRazorSpans.Distinct().OrderBy(s => s.Span.AbsoluteIndex).ToImmutableArray();
+		// Razor and C# ranges interleave, and can overlap. Keep the first range covering any position, which thanks to the sort order prefers Razor's.
+		// This also removes the duplicates that come from generated C# being emitted several times, or mapping from both the impl and decl documents.
+		ranges.Sort(RazorHighlightRange.Compare);
+		var result = new List<SharpIdeClassifiedSpan>(ranges.Count);
+		var coveredUpTo = 0;
+		foreach (var range in ranges)
+		{
+			var textSpan = range.TextSpan;
+			if (textSpan.End <= coveredUpTo) continue;
+			if (textSpan.Start < coveredUpTo) textSpan = TextSpan.FromBounds(coveredUpTo, textSpan.End);
+			SharpIdeClassifier.AddSingleLineSpans(razorText, new SharpIdeClassifiedTextSpan(textSpan, range.Classification, range.Modifiers), result);
+			coveredUpTo = textSpan.End;
+		}
+
 		timer.Stop();
 		_logger.LogInformation("RoslynAnalysis: Razor syntax highlighting for {FileName} took {ElapsedMilliseconds}ms", fileModel.Name.Value, timer.ElapsedMilliseconds);
-		return result;
+		return [..result];
 
-		async Task<List<SharpIdeRazorMappedClassifiedSpan>> GetMappedClassifiedSpans(RazorCSharpDocument razorCSharpDocument, SourceGeneratedDocument generatedDocument)
+		async Task AddCSharpRanges(RazorCSharpDocument razorCSharpDocument, SourceGeneratedDocument generatedDocument)
 		{
-			var generatedDocSyntaxRoot = await generatedDocument.GetSyntaxRootAsync(cancellationToken);
-			var sourceMappings = razorCSharpDocument.SourceMappingsSortedByOriginal.Select(s => s.ToSharpIdeSourceMapping()).ToImmutableArray();
-			var classifiedSpans = await Classifier.GetClassifiedSpansAsync(generatedDocument, generatedDocSyntaxRoot!.FullSpan, cancellationToken);
-			var mappedSpans = new List<SharpIdeRazorMappedClassifiedSpan>();
-			foreach (var s in classifiedSpans)
+			var mappings = razorCSharpDocument.SourceMappingsSortedByGenerated;
+			if (mappings.IsEmpty) return;
+
+			// Only classify the generated C# that maps back to the razor document, not the generated scaffolding around it
+			var generatedSpans = new List<TextSpan>(mappings.Length);
+			foreach (var mapping in mappings)
 			{
-				var genSpan = s.TextSpan;
-				var mapping = sourceMappings.FirstOrDefault(m => m.GeneratedSpan.AsTextSpan().IntersectsWith(genSpan));
-				if (mapping is null) continue;
-
-				// Translate generated span back to Razor span
-				var offset = genSpan.Start - mapping.GeneratedSpan.AbsoluteIndex;
-				var mappedStart = mapping.OriginalSpan.AbsoluteIndex + offset;
-				var razorLine = razorText.Lines.GetLineFromPosition(mappedStart);
-				var characterIndex = mappedStart - razorLine.Start;
-				var sharpIdeSpan = new SharpIdeRazorSourceSpan(
-					mapping.OriginalSpan.FilePath,
-					mappedStart,
-					razorLine.LineNumber,
-					characterIndex,
-					genSpan.Length,
-					1,
-					characterIndex + genSpan.Length
-				);
-				mappedSpans.Add(new SharpIdeRazorMappedClassifiedSpan(sharpIdeSpan, s.ClassificationType));
+				var span = new TextSpan(mapping.GeneratedSpan.AbsoluteIndex, mapping.GeneratedSpan.Length);
+				if (span.IsEmpty) continue;
+				if (generatedSpans.Count > 0 && span.Start <= generatedSpans[^1].End)
+				{
+					generatedSpans[^1] = TextSpan.FromBounds(generatedSpans[^1].Start, Math.Max(generatedSpans[^1].End, span.End));
+					continue;
+				}
+				generatedSpans.Add(span);
 			}
-			return mappedSpans;
-		}
-	}
 
-	// This is expensive for files that have just been updated, making it suboptimal for real-time highlighting
-	public async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetDocumentSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
-	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentSyntaxHighlighting)}");
-		await _solutionLoadedTcs.Task;
-		if (fileModel.IsCsharpFile is false)
+			var classifiedSpans = await SharpIdeClassifier.GetClassifiedSpansAsync(generatedDocument, [..generatedSpans], _logger, cancellationToken);
+			foreach (var classifiedSpan in classifiedSpans)
+			{
+				if (TryMapToRazorSpan(mappings, classifiedSpan.TextSpan) is not { } razorSpan) continue;
+				ranges.Add(new RazorHighlightRange(razorSpan, classifiedSpan.Classification, classifiedSpan.Modifiers, FromRazor: false));
+			}
+		}
+
+		// Strict mapping: the generated span must lie entirely within a single source mapping
+		static TextSpan? TryMapToRazorSpan(ImmutableArray<SourceMapping> mappingsSortedByGenerated, TextSpan generatedSpan)
 		{
-			//throw new InvalidOperationException("File is not a .cs");
-			return [];
+			// Find the last mapping starting at or before the span
+			int low = 0, high = mappingsSortedByGenerated.Length - 1, candidate = -1;
+			while (low <= high)
+			{
+				var mid = low + (high - low) / 2;
+				if (mappingsSortedByGenerated[mid].GeneratedSpan.AbsoluteIndex <= generatedSpan.Start)
+				{
+					candidate = mid;
+					low = mid + 1;
+				}
+				else
+				{
+					high = mid - 1;
+				}
+			}
+			if (candidate is -1) return null;
+
+			var mapping = mappingsSortedByGenerated[candidate];
+			var offset = generatedSpan.Start - mapping.GeneratedSpan.AbsoluteIndex;
+			if (generatedSpan.End > mapping.GeneratedSpan.AbsoluteIndex + mapping.GeneratedSpan.Length) return null;
+			if (offset + generatedSpan.Length > mapping.OriginalSpan.Length) return null;
+			return new TextSpan(mapping.OriginalSpan.AbsoluteIndex + offset, generatedSpan.Length);
 		}
-
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-		Guard.Against.Null(document, nameof(document));
-
-		var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
-		var root = await syntaxTree!.GetRootAsync(cancellationToken);
-
-		var classifiedSpans = await Classifier.GetClassifiedSpansAsync(document, root.FullSpan, cancellationToken);
-		//var classifiedSpans = await ClassifierHelper.GetClassifiedSpansAsync(document, root.FullSpan, ClassificationOptions.Default, true, cancellationToken);
-		var result = classifiedSpans.Select(s => new SharpIdeClassifiedSpan(syntaxTree.GetMappedLineSpan(s.TextSpan).Span, s)).ToImmutableArray();
-		return result;
 	}
 
 	public async Task<DebuggerExpressionIntelliSenseSession?> CreateDebuggerExpressionIntelliSenseSessionAsync(
