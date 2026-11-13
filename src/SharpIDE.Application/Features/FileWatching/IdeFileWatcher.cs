@@ -90,6 +90,9 @@ public sealed class IdeFileWatcher(IdeFileExternalChangeHandler changeHandler, P
 
 	private void OnEvent(string rootPath, FileSystemEventArgs e)
 	{
+		// An event for the watched root folder itself (its FullPath is the root with a trailing separator). Roots are added and removed with their projects,
+		// and changes to their contents raise their own events, so there is nothing to look at.
+		if (string.IsNullOrEmpty(e.Name)) return;
 		if (TreeMapperV2.IsInExcludedFolder(rootPath, e.FullPath))
 		{
 			// The obj/*.nuget.g.props/targets restore writes are imported by projects, though obj is otherwise ignored

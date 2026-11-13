@@ -17,6 +17,8 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 	/// The directory must already exist on disk before calling this.
 	public async Task<SharpIdeFolder> AddDirectory(SharpIdeFolder parentFolder, string directoryName)
 	{
+		// An empty name would make the added folder the parent itself, and re-add everything below it
+		ArgumentException.ThrowIfNullOrEmpty(directoryName);
 		var addedDirectoryPath = Path.Combine(parentFolder.ChildNodeBasePath, directoryName);
 		var allFiles = new ConcurrentBag<SharpIdeFile>();
 		var allFolders = new ConcurrentBag<SharpIdeFolder>();

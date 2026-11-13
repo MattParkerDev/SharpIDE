@@ -39,9 +39,13 @@ public class IdeFileExternalChangeHandler
 	}
 
 	/// Something at this path may have been created, changed or deleted - a file or a folder
-	public void PathChanged(string path) => _hintQueue.AddWork(new FileSystemHint(path));
+	public void PathChanged(string path) => _hintQueue.AddWork(new FileSystemHint(NormalizeHintPath(path)));
 	/// Applied as a rename if the old path is gone and the new one exists, so e.g. an open tab follows the file. Otherwise both paths are checked.
-	public void PathRenamed(string oldPath, string newPath) => _hintQueue.AddWork(new FileSystemHint(newPath, RenamedFromPath: oldPath));
+	public void PathRenamed(string oldPath, string newPath) => _hintQueue.AddWork(new FileSystemHint(NormalizeHintPath(newPath), RenamedFromPath: NormalizeHintPath(oldPath)));
+
+	/// FileSystemWatcher can report an event with an empty name, e.g. for the watched folder itself - its FullPath is then the folder with a trailing separator.
+	/// The model's paths have none, so "C:\Repo\" would not be found as the root "C:\Repo", and would be added as a folder below it (re-adding the whole tree).
+	private static string NormalizeHintPath(string path) => Path.TrimEndingDirectorySeparator(path);
 	/// Compare the whole tree - e.g. events were lost, or watching has just started
 	public void RescanAll() => _hintQueue.AddWork(new FileSystemHint("", RescanAll: true));
 
@@ -249,9 +253,11 @@ public class IdeFileExternalChangeHandler
 
 		private async Task AddFolder(string path)
 		{
+			var folderName = System.IO.Path.GetFileName(path);
+			if (folderName.Length is 0) return; // e.g. a drive root, or a path with a trailing separator - not a folder below a known one
 			var parent = FindFolder(System.IO.Path.GetDirectoryName(path)!);
 			if (parent is null) return;
-			await _modificationService.AddDirectory(parent, System.IO.Path.GetFileName(path));
+			await _modificationService.AddDirectory(parent, folderName);
 			_foldersByPath = null;
 			OperationCount++;
 		}
