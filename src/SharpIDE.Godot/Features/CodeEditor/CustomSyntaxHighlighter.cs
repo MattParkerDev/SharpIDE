@@ -15,6 +15,9 @@ public partial class CustomHighlighter : SyntaxHighlighter
     // All of the document's spans, sorted by line then character, and the range of them that belongs to each line that has any
     private ImmutableArray<SharpIdeClassifiedSpan> _classifiedSpans = [];
     private System.Collections.Generic.Dictionary<int, LineSpanRange> _spanRangesByLine = [];
+    // Rebuilding the line index (new highlighting data, or lines added/removed) fills this, then swaps it with _spanRangesByLine,
+    // so the two dictionaries are reused instead of allocating a new one each time
+    private System.Collections.Generic.Dictionary<int, LineSpanRange> _spareSpanRangesByLine = [];
 
     private readonly record struct LineSpanRange(int Start, int Count);
 
@@ -57,7 +60,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
     /// <param name="classifiedSpans">Sorted, single-line, non-overlapping spans</param>
     public void SetHighlightingData(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)
     {
-        var spanRangesByLine = new System.Collections.Generic.Dictionary<int, LineSpanRange>();
+        var spanRangesByLine = TakeClearedSpare();
         var lineStart = 0;
         for (var i = 1; i <= classifiedSpans.Length; i++)
         {
@@ -67,8 +70,16 @@ public partial class CustomHighlighter : SyntaxHighlighter
         }
 
         _classifiedSpans = classifiedSpans;
-        _spanRangesByLine = spanRangesByLine;
+        SwapInSpare();
     }
+
+    private System.Collections.Generic.Dictionary<int, LineSpanRange> TakeClearedSpare()
+    {
+        _spareSpanRangesByLine.Clear();
+        return _spareSpanRangesByLine;
+    }
+
+    private void SwapInSpare() => (_spanRangesByLine, _spareSpanRangesByLine) = (_spareSpanRangesByLine, _spanRangesByLine);
 
     // Indicates that lines were removed or added, and the overall result of that is that a line (wasLineNumber), is now (becameLineNumber)
     // So if you added a line above line 10, then wasLineNumber=10, becameLineNumber=11
@@ -91,12 +102,12 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     private void LinesAdded(long fromLine, int difference, SharpIdeCodeEdit.LineEditOrigin origin)
     {
-        _spanRangesByLine = Rearrange(_spanRangesByLine, fromLine, difference, origin);
+        Rearrange(_spanRangesByLine, TakeClearedSpare(), fromLine, difference, origin);
+        SwapInSpare();
         return;
 
-        static System.Collections.Generic.Dictionary<int, T> Rearrange<T>(System.Collections.Generic.Dictionary<int, T> existingDictionary, long fromLine, int difference, SharpIdeCodeEdit.LineEditOrigin origin)
+        static void Rearrange(System.Collections.Generic.Dictionary<int, LineSpanRange> existingDictionary, System.Collections.Generic.Dictionary<int, LineSpanRange> newDict, long fromLine, int difference, SharpIdeCodeEdit.LineEditOrigin origin)
         {
-            var newDict = new System.Collections.Generic.Dictionary<int, T>();
             foreach (var kvp in existingDictionary)
             {
                 // StartOfLine: the new blank line was inserted *before* the existing content on fromLine,
@@ -112,19 +123,18 @@ public partial class CustomHighlighter : SyntaxHighlighter
                 int newKey = shouldShift ? kvp.Key + difference : kvp.Key;
                 newDict[newKey] = kvp.Value;
             }
-            return newDict;
         }
     }
     
     private void LinesRemoved(long fromLine, int numberOfLinesRemoved)
     {
-        _spanRangesByLine = Rearrange(_spanRangesByLine, fromLine, numberOfLinesRemoved);
+        Rearrange(_spanRangesByLine, TakeClearedSpare(), fromLine, numberOfLinesRemoved);
+        SwapInSpare();
         return;
 
-        static System.Collections.Generic.Dictionary<int, T> Rearrange<T>(System.Collections.Generic.Dictionary<int, T> existingDictionary, long fromLine, int numberOfLinesRemoved)
+        static void Rearrange(System.Collections.Generic.Dictionary<int, LineSpanRange> existingDictionary, System.Collections.Generic.Dictionary<int, LineSpanRange> newDict, long fromLine, int numberOfLinesRemoved)
         {
             // everything from 'fromLine' onwards needs to be shifted up by numberOfLinesRemoved
-            var newDict = new System.Collections.Generic.Dictionary<int, T>();
             foreach (var kvp in existingDictionary)
             {
                 if (kvp.Key < fromLine)
@@ -140,7 +150,6 @@ public partial class CustomHighlighter : SyntaxHighlighter
                     newDict[kvp.Key - numberOfLinesRemoved] = kvp.Value;
                 } 
             }
-            return newDict;
         }
     }
     
