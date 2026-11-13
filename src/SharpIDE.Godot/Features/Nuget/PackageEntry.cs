@@ -80,11 +80,16 @@ public partial class PackageEntry : MarginContainer
 
 		_ = Task.GodotRun(async () =>
 		{
-			var (iconBytes, iconFormat) = await _nugetPackageIconCacheService.GetNugetPackageIcon(PackageResult.PackageId, PackageResult.PackageFromSources.First().PackageSearchMetadata.IconUrl);
+			var firstSource = PackageResult.PackageFromSources.First();
+			var (iconBytes, iconFormat) = await _nugetPackageIconCacheService.GetNugetPackageIcon(PackageResult.PackageId, firstSource.PackageSearchMetadata.IconUrl, firstSource.Source);
 			var imageTexture = ImageTextureHelper.GetImageTextureFromBytes(iconBytes, iconFormat);
 			if (imageTexture is not null)
 			{
-				await this.InvokeAsync(() => _packageIconTextureRect.Texture = imageTexture);
+				await this.InvokeAsync(() =>
+				{
+					// The list may have been rebuilt (e.g. another source's results arrived) and this entry freed while the icon loaded
+					if (IsInstanceValid(_packageIconTextureRect)) _packageIconTextureRect.Texture = imageTexture;
+				});
 			}
 		});
 		

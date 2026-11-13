@@ -279,7 +279,8 @@ public partial class NugetPackageDetails : VBoxContainer
 	{
 		if (_package is null || _package.PackageId.Equals(package.PackageId, StringComparison.OrdinalIgnoreCase) is false) _selectedVersion = null;
 		_package = package;
-		var iconTask = _nugetPackageIconCacheService.GetNugetPackageIcon(_package.PackageId, _package.PackageFromSources.FirstOrDefault().PackageSearchMetadata?.IconUrl);
+		var firstSource = _package.PackageFromSources.FirstOrDefault();
+		var iconTask = _nugetPackageIconCacheService.GetNugetPackageIcon(_package.PackageId, firstSource.PackageSearchMetadata?.IconUrl, firstSource.Source);
 		await this.InvokeAsync(() =>
 		{
 			_packageNameLabel.Text = package.PackageId;
