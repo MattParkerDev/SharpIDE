@@ -266,100 +266,97 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var designTimeBuildStartedUtc = DateTime.UtcNow;
 		foreach (var path in projectPathsToReload) _projectDesignTimeBuildStartedUtc[path] = designTimeBuildStartedUtc;
 		var (loadedProjectInfos, projectFileInfos) = await _msBuildProjectLoader.LoadProjectInfosAsync(projectPathsToReload.ToImmutableArray(), projectMap, null, cancellationToken);
-		foreach (var (projectId, projectFileInfo) in projectFileInfos)
-		{
-			_projectFileInfoMap[projectId] = projectFileInfo;
-		}
 		__?.Dispose();
 
-		var ___ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.Workspace.UpdateSolution");
+		using var ___ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.Workspace.UpdateSolution");
 
-		var oldProjectIdFilePathMap = oldSolution.Projects.ToDictionary(keySelector: static p => (p.FilePath!, p.Name), elementSelector: static p => p.Id);
-
-		var projectIdMap = loadedProjectInfos.ToDictionary(
-			keySelector: static info => info.Id,
-			elementSelector: info => oldProjectIdFilePathMap.GetValueOrDefault((info.FilePath!, info.Name)));
-
-		var newSolution = oldSolution;
-
-		// When we "reload" a project, we assume: no projects have been removed from the solution, and none added (TODO: Consider/handle a project gaining a project reference to a project outside of the solution)
-		// Therefore, loadedProjectInfos ⊆ (is a subset of) _workspace.CurrentSolution.Projects
-		// The ProjectIds will not match however, so we need to match on FilePath
-		// Since the ProjectIds don't match, we also need to remap all ProjectReferences to the existing ProjectIds
-		// same for documents
-		foreach (var newProjectInfo in loadedProjectInfos)
-		{
-			Contract.ThrowIfNull(newProjectInfo.FilePath);
-
-			var oldProjectId = projectIdMap[newProjectInfo.Id];
-			if (oldProjectId == null)
+		// Atomic: the transformation is re-run against the latest solution if another change (an edit, a file operation, another reload) lands first, so it can't be lost.
+		// The loaded ProjectInfos have new ProjectIds and DocumentIds - they're mapped (by path) onto the solution's existing ones, so its projects and documents keep their state.
+		// Expected to be a subset of the solution's projects, as only projects have been reloaded. A project that isn't (e.g. a newly referenced one outside the solution) is added.
+		Dictionary<ProjectId, ProjectId> appliedProjectIdMap = [];
+		_workspace.SetCurrentSolution(
+			currentSolution =>
 			{
-				newSolution = newSolution.AddProject(newProjectInfo);
+				var (newSolution, projectIdMap) = ApplyReloadedProjectInfos(currentSolution, loadedProjectInfos);
+				appliedProjectIdMap = projectIdMap;
+				return newSolution;
+			},
+			// Raised once the update is applied - by which point appliedProjectIdMap is the applied run's
+			changeKind: (_, _) => loadedProjectInfos.Length is 1
+				? (WorkspaceChangeKind.ProjectReloaded, appliedProjectIdMap[loadedProjectInfos[0].Id], null)
+				: (WorkspaceChangeKind.SolutionChanged, null, null));
+
+		// Keyed on the solution's ProjectIds, as GetProjectIdForNewFile looks them up
+		foreach (var (loadedProjectId, projectFileInfo) in projectFileInfos)
+		{
+			_projectFileInfoMap[appliedProjectIdMap.GetValueOrDefault(loadedProjectId, loadedProjectId)] = projectFileInfo;
+		}
+
+		_workspace.UpdateReferencesAfterAdd();
+		_logger.LogInformation("RoslynAnalysis: Project reloaded");
+	}
+
+	/// The reloaded projects applied to the solution - with the loaded ProjectInfos' ProjectIds (and DocumentIds, and project references) mapped onto the solution's existing ones, by path.
+	/// Documents that are still there keep their current text, which may have changes not on disk (e.g. an edit made during the reload).
+	/// Returns the loaded ProjectIds mapped to the solution's ProjectIds they were applied to.
+	private static (Solution Solution, Dictionary<ProjectId, ProjectId> ProjectIdMap) ApplyReloadedProjectInfos(Solution solution, ImmutableArray<ProjectInfo> loadedProjectInfos)
+	{
+		var existingProjectIds = solution.Projects.ToDictionary(static p => (p.FilePath!, p.Name), static p => p.Id);
+		// A project not in the solution keeps its loaded ProjectId
+		var projectIdMap = loadedProjectInfos.ToDictionary(static info => info.Id, info => existingProjectIds.GetValueOrDefault((info.FilePath!, info.Name)) ?? info.Id);
+
+		var newSolution = solution;
+		foreach (var loadedProjectInfo in loadedProjectInfos)
+		{
+			Contract.ThrowIfNull(loadedProjectInfo.FilePath);
+			var projectId = projectIdMap[loadedProjectInfo.Id];
+			if (solution.ContainsProject(projectId) is false)
+			{
+				newSolution = newSolution.AddProject(loadedProjectInfo.WithProjectReferences(loadedProjectInfo.ProjectReferences.Select(MapProjectReference)));
 				continue;
 			}
 
 			newSolution = newSolution.WithProjectInfo(ProjectInfo.Create(
-					oldProjectId,
-					newProjectInfo.Version,
-					newProjectInfo.Name,
-					newProjectInfo.AssemblyName,
-					newProjectInfo.Language,
-					newProjectInfo.FilePath,
-					newProjectInfo.OutputFilePath,
-					newProjectInfo.CompilationOptions,
-					newProjectInfo.ParseOptions,
-					MapDocuments(oldProjectId, newProjectInfo.Documents),
-					newProjectInfo.ProjectReferences.Select(MapProjectReference),
-					newProjectInfo.MetadataReferences,
-					newProjectInfo.AnalyzerReferences,
-					MapDocuments(oldProjectId, newProjectInfo.AdditionalDocuments),
+					projectId,
+					loadedProjectInfo.Version,
+					loadedProjectInfo.Name,
+					loadedProjectInfo.AssemblyName,
+					loadedProjectInfo.Language,
+					loadedProjectInfo.FilePath,
+					loadedProjectInfo.OutputFilePath,
+					loadedProjectInfo.CompilationOptions,
+					loadedProjectInfo.ParseOptions,
+					MapDocuments(projectId, loadedProjectInfo.Documents),
+					loadedProjectInfo.ProjectReferences.Select(MapProjectReference),
+					loadedProjectInfo.MetadataReferences,
+					loadedProjectInfo.AnalyzerReferences,
+					MapDocuments(projectId, loadedProjectInfo.AdditionalDocuments),
 					isSubmission: false,
 					hostObjectType: null,
-					outputRefFilePath: newProjectInfo.OutputRefFilePath)
-				.WithChecksumAlgorithm(newProjectInfo.ChecksumAlgorithm)
-				.WithAnalyzerConfigDocuments(MapDocuments(oldProjectId, newProjectInfo.AnalyzerConfigDocuments))
-				.WithCompilationOutputInfo(newProjectInfo.CompilationOutputInfo));
+					outputRefFilePath: loadedProjectInfo.OutputRefFilePath)
+				.WithChecksumAlgorithm(loadedProjectInfo.ChecksumAlgorithm)
+				.WithAnalyzerConfigDocuments(MapDocuments(projectId, loadedProjectInfo.AnalyzerConfigDocuments))
+				.WithCompilationOutputInfo(loadedProjectInfo.CompilationOutputInfo));
 		}
-		// Doesn't raise a workspace change event, for now we don't care?
-		_workspace.SetCurrentSolution(newSolution);
+		return (newSolution, projectIdMap);
 
-		// We should potentially use the below instead of SetCurrentSolution, as it is async, and potentially has better locking semantics
-		// I think we will run into this imminently, when we handle multiple rapid project reloads
-		// await _workspace.SetCurrentSolutionAsync(true,
-		// 	transformation: oldSolution =>
-		// 	{
-		// 		// Move above code in here
-		// 		return oldSolution;
-		// 	},
-		// 	changeKind: (oldSln, newSln) => (WorkspaceChangeKind.SolutionChanged, null, null),
-		// 	null, null, cancellationToken
-		// );
+		// Only C# and VB projects are loaded, so a reference can be to a project that isn't - it keeps its ProjectId
+		ProjectReference MapProjectReference(ProjectReference reference) => new(
+			projectId: projectIdMap.GetValueOrDefault(reference.ProjectId, reference.ProjectId),
+			aliases: reference.Aliases,
+			embedInteropTypes: reference.EmbedInteropTypes);
 
-		_workspace.UpdateReferencesAfterAdd();
-
-		___?.Dispose();
-		_logger.LogInformation("RoslynAnalysis: Project reloaded");
-		return;
-
-		ProjectReference MapProjectReference(ProjectReference oldRef)
+		ImmutableArray<DocumentInfo> MapDocuments(ProjectId projectId, IReadOnlyList<DocumentInfo> documents) => documents.Select(documentInfo =>
 		{
-			// Only C# and VB projects are loaded by the MSBuildProjectLoader, so some references might be missing.
-			// When a new project is added along with a new project reference the old project id is also null.
-			return new(
-				projectId: projectIdMap.TryGetValue(oldRef.ProjectId, out var oldProjectId) && oldProjectId != null ? oldProjectId : oldRef.ProjectId,
-				aliases: oldRef.Aliases,
-				embedInteropTypes: oldRef.EmbedInteropTypes);
-		}
-		ImmutableArray<DocumentInfo> MapDocuments(ProjectId mappedProjectId, IReadOnlyList<DocumentInfo> documents)
-			=> documents.Select(docInfo =>
-			{
-				// Map to a document of the same path. If there isn't one (a new document is added to the project),
-				// create a new document id with the mapped project id.
-				var mappedDocumentId = oldSolution.GetDocumentIdsWithFilePath(docInfo.FilePath).FirstOrDefault(id => id.ProjectId == mappedProjectId)
-				                       ?? DocumentId.CreateNewId(mappedProjectId);
-
-				return docInfo.WithId(mappedDocumentId);
-			}).ToImmutableArray();
+			// The solution's document at the same path, or a new one (e.g. a file added to the project)
+			var existingDocumentId = solution.GetDocumentIdsWithFilePath(documentInfo.FilePath).FirstOrDefault(id => id.ProjectId == projectId);
+			if (existingDocumentId is null) return documentInfo.WithId(DocumentId.CreateNewId(projectId));
+			// Keep the text the solution has, if it has it - it's what the editors and file watcher have kept up to date. Otherwise it's read from disk.
+			var existingDocument = solution.GetTextDocument(existingDocumentId);
+			return existingDocument is not null && existingDocument.TryGetTextVersion(out var version) && existingDocument.TryGetText(out var text)
+				? documentInfo.WithId(existingDocumentId).WithTextLoader(TextLoader.From(TextAndVersion.Create(text, version, documentInfo.FilePath)))
+				: documentInfo.WithId(existingDocumentId);
+		}).ToImmutableArray();
 	}
 
 	/// Whether the project is loaded in the workspace, and its last design-time build started before the given time - so hasn't seen changes made then
