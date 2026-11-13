@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging.Core;
@@ -166,32 +167,74 @@ public class NugetClientService
 			.ToList();
 	}
 
-	public async Task<List<IdePackageResult>> GetPackagesForInstalledPackages(string directoryPath, List<InstalledPackage> installedPackages, CancellationToken cancellationToken = default)
+	/// Every installed package, with the latest version each enabled source has. Yields a new snapshot (in installedPackages' order) each time it changes:
+	/// first straight away with no sources' results (what's installed is known locally), then as the sources answer - sources answer at very different
+	/// speeds (nuget.org in a second or two, an Azure DevOps feed in 20s), so a slow source doesn't hold back the others' results
+	public async IAsyncEnumerable<List<IdePackageResult>> GetPackagesForInstalledPackages(string directoryPath, List<InstalledPackage> installedPackages, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetClientService)}.{nameof(GetPackagesForInstalledPackages)}");
+		using var activity = SharpIdeOtel.Source.StartActivity($"{nameof(NugetClientService)}.{nameof(GetPackagesForInstalledPackages)}");
 		var packageSources = LoadEnabledPackageSources(directoryPath);
 
-		// Each source's resources once, not once per package. A source that can't be reached is left out, rather than failing every package
-		var sourcesResources = (await Task.WhenAll(packageSources.Select(source => GetSourceResources(source, cancellationToken))).ConfigureAwait(false))
-			.OfType<SourceResources>()
+		var installedInfos = installedPackages
+			.Select(p => new InstalledNugetPackageInfo(IsPrimarilyTransitive: p.ProjectPackageReferences.Any(r => r.IsTransitive is false) is false, p.ProjectPackageReferences))
+			.ToList();
+		// By installed package index, the latest from each source (by its index in packageSources, so in source order) that has it. Only touched by this method's loop
+		var found = installedPackages.Select(_ => new SortedDictionary<int, IPackageSearchMetadata>()).ToList();
+		List<IdePackageResult> Snapshot() => installedPackages
+			.Select((p, index) => new IdePackageResult(p.Name, found[index].Select(s => new IdePackageFromSourceResult(s.Value, packageSources[s.Key])).ToList(), installedInfos[index]))
 			.ToList();
 
-		var maxParallel = GetMaxParallel(packageSources);
-		var packagesResult = new IdePackageResult[installedPackages.Count];
-		await Parallel.ForEachAsync(Enumerable.Range(0, installedPackages.Count), new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = cancellationToken }, async (index, ct) =>
-		{
-			var installedPackage = installedPackages[index];
-			var isPrimarilyTransitive = installedPackage.ProjectPackageReferences.Any(p => p.IsTransitive is false) is false;
-			var installedNugetPackageInfo = new InstalledNugetPackageInfo(isPrimarilyTransitive, installedPackage.ProjectPackageReferences);
+		yield return Snapshot();
+		if (installedPackages.Count is 0 || packageSources.Count is 0) yield break;
 
-			var latestFromSources = await Task.WhenAll(sourcesResources.Select(async resources => (resources.Source, Latest: await GetLatestPackageMetadata(resources, installedPackage.Name, ct).ConfigureAwait(false)))).ConfigureAwait(false);
-			var packageFromSources = latestFromSources
-				.Where(s => s.Latest is not null)
-				.Select(s => new IdePackageFromSourceResult(s.Latest!, s.Source))
-				.ToList();
-			packagesResult[index] = new IdePackageResult(installedPackage.Name, packageFromSources, installedNugetPackageInfo);
-		}).ConfigureAwait(false);
-		return packagesResult.ToList();
+		// Each source looks up every package on its own, so a slow source only delays its own results. Per source, as before it was per package
+		var maxParallel = GetMaxParallel(packageSources);
+		var channel = Channel.CreateUnbounded<(int PackageIndex, int SourceIndex, IPackageSearchMetadata Latest)>(new UnboundedChannelOptions { SingleReader = true });
+		using var lookupsCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		var lookups = Task.WhenAll(packageSources.Select((source, sourceIndex) => Task.Run(async () =>
+		{
+			// A source that can't be reached is left out, rather than failing every package
+			if (await GetSourceResources(source, lookupsCts.Token).ConfigureAwait(false) is not { } resources) return;
+			await Parallel.ForEachAsync(Enumerable.Range(0, installedPackages.Count), new ParallelOptions { MaxDegreeOfParallelism = maxParallel, CancellationToken = lookupsCts.Token }, async (packageIndex, ct) =>
+			{
+				var latest = await GetLatestPackageMetadata(resources, installedPackages[packageIndex].Name, ct).ConfigureAwait(false);
+				if (latest is not null) channel.Writer.TryWrite((packageIndex, sourceIndex, latest));
+			}).ConfigureAwait(false);
+		}, lookupsCts.Token)));
+		_ = lookups.ContinueWith(t => channel.Writer.TryComplete(t.Exception), TaskScheduler.Default);
+
+		try
+		{
+			// Results arrive a package at a time - gather those arriving close together into one snapshot, so the list isn't rebuilt for every package
+			var batchWindow = TimeSpan.FromMilliseconds(250);
+			while (await channel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+			{
+				var batchEnd = DateTime.UtcNow + batchWindow;
+				var changed = false;
+				while (true)
+				{
+					while (channel.Reader.TryRead(out var result)) changed |= found[result.PackageIndex].TryAdd(result.SourceIndex, result.Latest);
+					var remaining = batchEnd - DateTime.UtcNow;
+					if (remaining <= TimeSpan.Zero) break;
+					using var waitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+					waitCts.CancelAfter(remaining);
+					try
+					{
+						if (await channel.Reader.WaitToReadAsync(waitCts.Token).ConfigureAwait(false) is false) break; // Every source has answered
+					}
+					catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested is false)
+					{
+						break; // The window ended
+					}
+				}
+				if (changed) yield return Snapshot();
+			}
+		}
+		finally
+		{
+			// Stopped early (cancelled, or the caller stopped enumerating) - don't leave the lookups running
+			await lookupsCts.CancelAsync().ConfigureAwait(false);
+		}
 	}
 
 	private sealed record SourceResources(PackageSource Source, FindPackageByIdResource? FindPackageById, PackageMetadataResource? PackageMetadata);

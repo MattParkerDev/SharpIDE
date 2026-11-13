@@ -23,6 +23,8 @@ public partial class NugetPanel : Control
 	private bool _searchResultsRequested;
 	/// Cancels the search results still arriving when a refresh starts another load
 	private CancellationTokenSource? _searchResultsCts;
+	/// Cancels the installed packages' results still arriving when another solution or project is selected, or a refresh starts another load
+	private CancellationTokenSource? _installedPackagesCts;
 	
 	private Label _packagesToUpdateSlnOrProjectNameLabel = null!;
 	private Label _packagesToUpdateResultCountLabel = null!;
@@ -130,11 +132,14 @@ public partial class NugetPanel : Control
 	private void OnSolutionOrProjectSelected(long index)
 	{
 		var slnOrProject = (ISolutionOrProject?)_projects[(int)index] ?? _solution!;
+		_installedPackagesCts?.Cancel();
+		_installedPackagesCts = new CancellationTokenSource();
+		var cancellationToken = _installedPackagesCts.Token;
 		_ = Task.GodotRun(async () =>
 		{
 			if (_solution is null) throw new InvalidOperationException("Solution is null but should not be");
 			_ = Task.GodotRun(() => SetSolutionOrProjectNameLabels(slnOrProject));
-			_ = Task.GodotRun(() => PopulateInstalledPackages(slnOrProject));
+			_ = Task.GodotRun(() => PopulateInstalledPackages(slnOrProject, cancellationToken));
 		});
 	}
 
@@ -226,7 +231,7 @@ public partial class NugetPanel : Control
 		}
 	}
 
-	private async Task PopulateInstalledPackages(ISolutionOrProject slnOrProject)
+	private async Task PopulateInstalledPackages(ISolutionOrProject slnOrProject, CancellationToken cancellationToken)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetPanel)}.{nameof(PopulateInstalledPackages)}");
 		var setDetailsProjectsTask = SetDetailsProjects(slnOrProject);
@@ -243,8 +248,33 @@ public partial class NugetPanel : Control
 			SharpIdeProjectModel projectModel => [projectModel],
 			_ => throw new InvalidOperationException("Unknown solution or project type")
 		};
-		var (installedPackages, unrestoredProjects) = await ProjectEvaluation.GetPackageReferencesForProjects(projects);
-		var idePackageResult = await _nugetClientService.GetPackagesForInstalledPackages(slnOrProject.DirectoryPath, installedPackages);
+		await setDetailsProjectsTask;
+		try
+		{
+			var (installedPackages, unrestoredProjects) = await ProjectEvaluation.GetPackageReferencesForProjects(projects, cancellationToken: cancellationToken);
+			var isFirst = true;
+			// Each update is the whole list - first straight away with what's installed, then with each source's latest versions as they arrive
+			await foreach (var idePackageResult in _nugetClientService.GetPackagesForInstalledPackages(slnOrProject.DirectoryPath, installedPackages, cancellationToken))
+			{
+				await ShowInstalledPackages(idePackageResult, unrestoredProjects, isFirst, cancellationToken);
+				isFirst = false;
+			}
+			await this.InvokeAsync(() =>
+			{
+				if (cancellationToken.IsCancellationRequested) return;
+				// Every source has answered - forget ticked packages no longer listed, e.g. those just updated
+				_selectedUpdatePackageIds.IntersectWith(_updateRows.Select(r => r.Package.PackageId));
+				UpdateUpdateControls();
+			});
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// A refresh, or another solution or project being selected, started another load
+		}
+	}
+
+	private async Task ShowInstalledPackages(List<IdePackageResult> idePackageResult, List<SharpIdeProjectModel> unrestoredProjects, bool isFirst, CancellationToken cancellationToken)
+	{
 		var scenes = idePackageResult.Select(s =>
 		{
 			var scene = _packageEntryScene.Instantiate<PackageEntry>();
@@ -265,16 +295,23 @@ public partial class NugetPanel : Control
 				return scene;
 			})
 			.ToList();
-		await setDetailsProjectsTask;
-		if (_selectedPackageResult is not null)
+		if (_selectedPackageResult is { } selected && cancellationToken.IsCancellationRequested is false)
 		{
-			var updatedPackageResult = idePackageResult.SingleOrDefault(p => p.PackageId.Equals(_selectedPackageResult.PackageId, StringComparison.OrdinalIgnoreCase));
-			// No longer installed anywhere (it was just removed) - still show it, as installed nowhere
-			_selectedPackageResult = updatedPackageResult ?? _selectedPackageResult with { InstalledNugetPackageInfo = null };
-			await OnPackageSelected(_selectedPackageResult);
+			var updatedPackageResult = idePackageResult.SingleOrDefault(p => p.PackageId.Equals(selected.PackageId, StringComparison.OrdinalIgnoreCase));
+			// The details are reloaded with the newly read installed info, then only when another source turns out to have the package - not for every update
+			if (isFirst || (updatedPackageResult is not null && updatedPackageResult.PackageFromSources.Count != selected.PackageFromSources.Count))
+			{
+				// No longer installed anywhere (it was just removed) - still show it, as installed nowhere
+				await OnPackageSelected(updatedPackageResult ?? selected with { InstalledNugetPackageInfo = null });
+			}
 		}
 		await this.InvokeAsync(() =>
 		{
+			if (cancellationToken.IsCancellationRequested)
+			{
+				foreach (var scene in scenes.Concat(updateScenes)) scene.QueueFree();
+				return;
+			}
 			_packagesToUpdateVboxContainer.QueueFreeChildren();
 			_installedPackagesVboxContainer.QueueFreeChildren();
 			_implicitlyInstalledPackagesItemList.QueueFreeChildren();
@@ -337,8 +374,7 @@ public partial class NugetPanel : Control
 			_packagesToUpdateVboxContainer.AddChild(row);
 			_updateRows.Add((checkBox, package));
 		}
-		// Forget packages no longer listed, e.g. those just updated
-		_selectedUpdatePackageIds.IntersectWith(_updateRows.Select(r => r.Package.PackageId));
+		// Ticked packages not (yet) listed are only forgotten once every source has answered - a slow source may yet have their update
 		UpdateUpdateControls();
 	}
 
