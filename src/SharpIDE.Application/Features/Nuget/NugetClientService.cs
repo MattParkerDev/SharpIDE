@@ -154,8 +154,8 @@ public class NugetClientService
 			{
 				metadataList.RemoveAll(m => m.Identity.Version.IsPrerelease);
 			}
-			metadataList.Reverse();
-			return metadataList;
+			// Newest first - sorted here, as sources don't all return them in the same order (nuget.org's are oldest first, but that isn't guaranteed)
+			return metadataList.OrderByDescending(m => m.Identity.Version).ToList();
 	}
 
 	/// Each version of the package restored to the global packages folder (as the directory's NuGet config sets it), newest first
