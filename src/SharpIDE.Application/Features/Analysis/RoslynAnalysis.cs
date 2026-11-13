@@ -140,7 +140,6 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			_projectDesignTimeBuildStartedUtc.Clear();
 			_solutionDesignTimeBuildStartedUtc = DateTime.UtcNow;
 			var (solutionInfo, projectFileInfos) = await _msBuildProjectLoader!.LoadSolutionInfoAsync(solutionFilePath, cancellationToken: cancellationToken);
-			_projectFileInfoMap = projectFileInfos;
 
 			var analyzerReferencePaths = solutionInfo.Projects
 				.SelectMany(p => p.AnalyzerReferences.OfType<IsolatedAnalyzerFileReference>().Select(a => a.FullPath))
@@ -149,10 +148,28 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 				.ToImmutableArray();
 			await _analyzerFileWatcher.StartWatchingFiles(analyzerReferencePaths);
 
-			// There doesn't appear to be any noticeable difference between ClearSolution + AddSolution vs OnSolutionReloaded
-			//_workspace.OnSolutionReloaded(newSolutionInfo);
-			_workspace!.ClearSolution();
-			_workspace.AddSolution(solutionInfo);
+			// Atomic: re-run against the latest solution if another change lands first.
+			// Reloading the same solution maps the loaded projects onto the existing ProjectIds and DocumentIds (by path), rather than replacing the solution (ClearSolution + AddSolution),
+			// so unchanged projects and documents keep their state - parsed trees, compilations etc. Otherwise (the first load, or another solution), it's a new solution.
+			var workspace = _workspace!;
+			Dictionary<ProjectId, ProjectId> appliedProjectIdMap = [];
+			workspace.SetCurrentSolution(
+				currentSolution =>
+				{
+					if (currentSolution.ProjectIds.Count is 0 || PathComparison.PathEquals(currentSolution.FilePath, solutionInfo.FilePath) is false)
+					{
+						appliedProjectIdMap = [];
+						using var _ = ArrayBuilder<ProjectInfo>.GetInstance(out var projectInfos);
+						projectInfos.AddRange(solutionInfo.Projects);
+						return workspace.CreateSolution(solutionInfo).AddProjects(projectInfos);
+					}
+					var (newSolution, projectIdMap) = ApplyLoadedProjectInfos(currentSolution, solutionInfo.Projects, removeOtherProjects: true);
+					appliedProjectIdMap = projectIdMap;
+					return newSolution;
+				},
+				changeKind: (oldSolution, _) => (oldSolution.ProjectIds.Count is 0 ? WorkspaceChangeKind.SolutionAdded : WorkspaceChangeKind.SolutionReloaded, null, null));
+			// Keyed on the solution's ProjectIds, as GetProjectIdForNewFile looks them up
+			_projectFileInfoMap = projectFileInfos.ToDictionary(pair => appliedProjectIdMap.GetValueOrDefault(pair.Key, pair.Key), pair => pair.Value);
 
 			// If these aren't added, IDiagnosticAnalyzerService will not return compiler analyzer diagnostics
 			// Note that we aren't currently using IDiagnosticAnalyzerService
@@ -277,7 +294,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		_workspace.SetCurrentSolution(
 			currentSolution =>
 			{
-				var (newSolution, projectIdMap) = ApplyReloadedProjectInfos(currentSolution, loadedProjectInfos);
+				var (newSolution, projectIdMap) = ApplyLoadedProjectInfos(currentSolution, loadedProjectInfos, removeOtherProjects: false);
 				appliedProjectIdMap = projectIdMap;
 				return newSolution;
 			},
@@ -296,21 +313,28 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		_logger.LogInformation("RoslynAnalysis: Project reloaded");
 	}
 
-	/// The reloaded projects applied to the solution - with the loaded ProjectInfos' ProjectIds (and DocumentIds, and project references) mapped onto the solution's existing ones, by path.
-	/// Documents that are still there keep their current text, which may have changes not on disk (e.g. an edit made during the reload).
+	/// The loaded projects applied to the solution - with the loaded ProjectInfos' ProjectIds (and DocumentIds, and project references) mapped onto the solution's existing ones, by path,
+	/// so unchanged projects and documents keep their state (and Roslyn's caches of it). A project not in the solution is added; with removeOtherProjects (a solution reload), solution projects not loaded are removed.
+	/// A document that is still there keeps its state - text (including an open file's unsaved editor text), parsed tree. Disk changes reach the workspace through the file watcher
+	/// (ExternalFilesChanged updates closed documents straight away, before a batch's reloads run), so its text is already current.
 	/// Returns the loaded ProjectIds mapped to the solution's ProjectIds they were applied to.
-	private static (Solution Solution, Dictionary<ProjectId, ProjectId> ProjectIdMap) ApplyReloadedProjectInfos(Solution solution, ImmutableArray<ProjectInfo> loadedProjectInfos)
+	private static (Solution Solution, Dictionary<ProjectId, ProjectId> ProjectIdMap) ApplyLoadedProjectInfos(Solution solution, IReadOnlyList<ProjectInfo> loadedProjectInfos, bool removeOtherProjects)
 	{
-		var existingProjectIds = solution.Projects.ToDictionary(static p => (p.FilePath!, p.Name), static p => p.Id);
+		var existingProjectIds = solution.Projects.GroupBy(static p => (p.FilePath!, p.Name)).ToDictionary(static g => g.Key, static g => g.First().Id);
 		// A project not in the solution keeps its loaded ProjectId
 		var projectIdMap = loadedProjectInfos.ToDictionary(static info => info.Id, info => existingProjectIds.GetValueOrDefault((info.FilePath!, info.Name)) ?? info.Id);
 
 		var newSolution = solution;
+		if (removeOtherProjects)
+		{
+			var loadedIds = projectIdMap.Values.ToHashSet();
+			newSolution = newSolution.RemoveProjects([.. solution.ProjectIds.Where(id => loadedIds.Contains(id) is false)]);
+		}
 		foreach (var loadedProjectInfo in loadedProjectInfos)
 		{
 			Contract.ThrowIfNull(loadedProjectInfo.FilePath);
 			var projectId = projectIdMap[loadedProjectInfo.Id];
-			if (solution.ContainsProject(projectId) is false)
+			if (newSolution.ContainsProject(projectId) is false)
 			{
 				newSolution = newSolution.AddProject(loadedProjectInfo.WithProjectReferences(loadedProjectInfo.ProjectReferences.Select(MapProjectReference)));
 				continue;
@@ -351,11 +375,11 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			// The solution's document at the same path, or a new one (e.g. a file added to the project)
 			var existingDocumentId = solution.GetDocumentIdsWithFilePath(documentInfo.FilePath).FirstOrDefault(id => id.ProjectId == projectId);
 			if (existingDocumentId is null) return documentInfo.WithId(DocumentId.CreateNewId(projectId));
-			// Keep the text the solution has, if it has it - it's what the editors and file watcher have kept up to date. Otherwise it's read from disk.
 			var existingDocument = solution.GetTextDocument(existingDocumentId);
-			return existingDocument is not null && existingDocument.TryGetTextVersion(out var version) && existingDocument.TryGetText(out var text)
-				? documentInfo.WithId(existingDocumentId).WithTextLoader(TextLoader.From(TextAndVersion.Create(text, version, documentInfo.FilePath)))
-				: documentInfo.WithId(existingDocumentId);
+			// The same text source is a no-op for WithProjectInfo, so the document's state is kept
+			return existingDocument is null
+				? documentInfo.WithId(existingDocumentId)
+				: documentInfo.WithId(existingDocumentId).WithTextLoader(existingDocument.State.TextAndVersionSource.TextLoader);
 		}).ToImmutableArray();
 	}
 
