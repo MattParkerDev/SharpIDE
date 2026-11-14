@@ -362,7 +362,7 @@ public partial class TemplateComponent : VBoxContainer
         return new Label
         {
             Text = $"{GetParameterDisplayName(parameter)}: ",
-            ThemeTypeVariation = "Gray700Label",
+            ThemeTypeVariation = ThemeVariationStringNames.Gray700Label,
             TooltipText = parameter.Description
         };
     }

@@ -11,10 +11,6 @@ namespace SharpIDE.Godot.Features.Common;
 [GlobalClass]
 public partial class CustomFoldableContainer : Container
 {
-	private static readonly StringName FoldableContainerType = "FoldableContainer";
-	private static readonly StringName Font = "font";
-	private static readonly StringName FontColor = "font_color";
-	private static readonly StringName Panel = "panel";
 
 	private readonly Button _titleBar = new() { ToggleMode = true, FocusMode = FocusModeEnum.None };
 	private readonly HBoxContainer _titleBarContent = new() { MouseFilter = MouseFilterEnum.Ignore };
@@ -25,7 +21,7 @@ public partial class CustomFoldableContainer : Container
 		MouseFilter = MouseFilterEnum.Ignore,
 		SizeFlagsHorizontal = SizeFlags.ExpandFill,
 		TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
-		ThemeTypeVariation = "Gray600Label"
+		ThemeTypeVariation = ThemeVariationStringNames.Gray600Label
 	};
 
 	[Signal] public delegate void FoldingChangedEventHandler(bool folded);
@@ -55,7 +51,7 @@ public partial class CustomFoldableContainer : Container
 	public CustomFoldableContainer()
 	{
 		_titleBarContent.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-		_titleBarContent.AddThemeConstantOverride("separation", 6);
+		_titleBarContent.AddThemeConstantOverride(ThemeStringNames.Separation, 6);
 		_titleBarContent.AddChild(_arrow);
 		_titleBarContent.AddChild(_titleLabel);
 		_titleBarContent.AddChild(_summaryLabel);
@@ -80,18 +76,18 @@ public partial class CustomFoldableContainer : Container
 
 	private void ApplyTheme()
 	{
-		_titleLabel.AddThemeFontOverride(Font, new FontVariation
+		_titleLabel.AddThemeFontOverride(ThemeStringNames.Font, new FontVariation
 		{
-			BaseFont = GetThemeFont(Font, FoldableContainerType),
+			BaseFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.FoldableContainer),
 			VariationOpentype = new global::Godot.Collections.Dictionary { [TextServerManager.GetPrimaryInterface().NameToTag("weight")] = 600 }
 		});
 		// The same whether folded or not (pressed is expanded) - the theme only styles the collapsed title bar, and Godot's default expanded one is near black
-		var titlePanel = GetThemeStylebox("title_collapsed_panel", FoldableContainerType);
-		var titleHoverPanel = GetThemeStylebox("title_collapsed_hover_panel", FoldableContainerType);
-		_titleBar.AddThemeStyleboxOverride("normal", titlePanel);
-		_titleBar.AddThemeStyleboxOverride("hover", titleHoverPanel);
-		_titleBar.AddThemeStyleboxOverride("pressed", titlePanel);
-		_titleBar.AddThemeStyleboxOverride("hover_pressed", titleHoverPanel);
+		var titlePanel = GetThemeStylebox(ThemeStringNames.FoldableContainer.TitleCollapsedPanel, GodotNodeStringNames.FoldableContainer);
+		var titleHoverPanel = GetThemeStylebox(ThemeStringNames.FoldableContainer.TitleCollapsedHoverPanel, GodotNodeStringNames.FoldableContainer);
+		_titleBar.AddThemeStyleboxOverride(ThemeStringNames.Normal, titlePanel);
+		_titleBar.AddThemeStyleboxOverride(ThemeStringNames.Hover, titleHoverPanel);
+		_titleBar.AddThemeStyleboxOverride(ThemeStringNames.Pressed, titlePanel);
+		_titleBar.AddThemeStyleboxOverride(ThemeStringNames.HoverPressed, titleHoverPanel);
 		// The bar's content isn't laid out by the button, so it takes the title panel's margins by hand
 		_titleBarContent.OffsetLeft = Math.Max(titlePanel.GetMargin(Side.Left), 6);
 		_titleBarContent.OffsetRight = -Math.Max(titlePanel.GetMargin(Side.Right), 6);
@@ -104,8 +100,8 @@ public partial class CustomFoldableContainer : Container
 		_summaryLabel.Visible = folded;
 		if (IsInsideTree())
 		{
-			_arrow.Texture = GetThemeIcon(folded ? "folded_arrow" : "expanded_arrow", FoldableContainerType);
-			_titleLabel.AddThemeColorOverride(FontColor, GetThemeColor(folded ? "collapsed_font_color" : FontColor, FoldableContainerType));
+			_arrow.Texture = GetThemeIcon(folded ? ThemeStringNames.FoldableContainer.FoldedArrow : ThemeStringNames.FoldableContainer.ExpandedArrow, GodotNodeStringNames.FoldableContainer);
+			_titleLabel.AddThemeColorOverride(ThemeStringNames.FontColor, GetThemeColor(folded ? ThemeStringNames.FoldableContainer.CollapsedFontColor : ThemeStringNames.FontColor, GodotNodeStringNames.FoldableContainer));
 		}
 		foreach (var child in ContentChildren) child.Visible = folded is false;
 		UpdateMinimumSize();
@@ -118,13 +114,13 @@ public partial class CustomFoldableContainer : Container
 	private float TitleBarHeight()
 	{
 		// The bar's content isn't a container child of the button, so its height is added by hand
-		var style = _titleBar.GetThemeStylebox(Folded ? "normal" : "pressed");
+		var style = _titleBar.GetThemeStylebox(Folded ? ThemeStringNames.Normal : ThemeStringNames.Pressed);
 		return Math.Max(_titleBarContent.GetCombinedMinimumSize().Y + style.GetMinimumSize().Y, 28);
 	}
 
 	public override Vector2 _GetMinimumSize()
 	{
-		var titleBar = _titleBarContent.GetCombinedMinimumSize() + _titleBar.GetThemeStylebox("normal").GetMinimumSize();
+		var titleBar = _titleBarContent.GetCombinedMinimumSize() + _titleBar.GetThemeStylebox(ThemeStringNames.Normal).GetMinimumSize();
 		var size = new Vector2(titleBar.X, TitleBarHeight());
 		if (Folded) return size;
 		var content = Vector2.Zero;
@@ -132,7 +128,7 @@ public partial class CustomFoldableContainer : Container
 		{
 			content = content.Max(child.GetCombinedMinimumSize());
 		}
-		content += GetThemeStylebox(Panel, FoldableContainerType).GetMinimumSize();
+		content += GetThemeStylebox(ThemeStringNames.Panel, GodotNodeStringNames.FoldableContainer).GetMinimumSize();
 		return new Vector2(Math.Max(size.X, content.X), size.Y + content.Y);
 	}
 
@@ -140,7 +136,7 @@ public partial class CustomFoldableContainer : Container
 	{
 		var titleBarHeight = TitleBarHeight();
 		FitChildInRect(_titleBar, new Rect2(0, 0, Size.X, titleBarHeight));
-		var panel = GetThemeStylebox(Panel, FoldableContainerType);
+		var panel = GetThemeStylebox(ThemeStringNames.Panel, GodotNodeStringNames.FoldableContainer);
 		var contentRect = new Rect2(
 			panel.GetMargin(Side.Left),
 			titleBarHeight + panel.GetMargin(Side.Top),
@@ -156,6 +152,6 @@ public partial class CustomFoldableContainer : Container
 	{
 		if (Folded) return;
 		var titleBarHeight = TitleBarHeight();
-		DrawStyleBox(GetThemeStylebox(Panel, FoldableContainerType), new Rect2(0, titleBarHeight, Size.X, Size.Y - titleBarHeight));
+		DrawStyleBox(GetThemeStylebox(ThemeStringNames.Panel, GodotNodeStringNames.FoldableContainer), new Rect2(0, titleBarHeight, Size.X, Size.Y - titleBarHeight));
 	}
 }

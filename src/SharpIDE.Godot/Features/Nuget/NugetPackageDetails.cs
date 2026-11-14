@@ -191,7 +191,6 @@ public partial class NugetPackageDetails : VBoxContainer
 		ShowInfo(null);
 	}
 
-	private static readonly StringName Gray600LabelType = "Gray600Label";
 	private const string LinkColor = "589df6";
 
 	/// Shows the version's details - its description, links, author and publish date, where the package is restored locally, and its dependencies for each framework.
@@ -236,7 +235,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		var groups = metadata?.DependencySets?.ToList() ?? [];
 		_dependenciesFoldableContainer.Visible = groups.Count > 0;
 		_dependenciesFoldableContainer.Summary = string.Join(", ", groups.Select(g => FormatFramework(g.TargetFramework)));
-		var rangeColor = GetThemeColor(ThemeStringNames.FontColor, Gray600LabelType);
+		var rangeColor = GetThemeColor(ThemeStringNames.FontColor, ThemeVariationStringNames.Gray600Label);
 		var label = _dependenciesRichTextLabel;
 		label.Clear();
 		foreach (var (index, group) in groups.Index())

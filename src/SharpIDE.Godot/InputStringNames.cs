@@ -42,6 +42,12 @@ public static class ThemeStringNames
     public static readonly StringName Panel = "panel";
     public static readonly StringName Separation = "separation";
 
+    public static readonly StringName Normal = "normal";
+    public static readonly StringName Hover = "hover";
+    public static readonly StringName Pressed = "pressed";
+    public static readonly StringName HoverPressed = "hover_pressed";
+    public static readonly StringName ReadOnly = "read_only";
+
     public static readonly StringName Completion = "completion";
     public static readonly StringName CompletionBackgroundColor = "completion_background_color";
     public static readonly StringName CompletionSelectedColor = "completion_selected_color";
@@ -61,15 +67,26 @@ public static class ThemeStringNames
     {
         public static readonly StringName CurrentLineColor = "current_line_color";
     }
+    public static class FoldableContainer
+    {
+        public static readonly StringName TitleCollapsedPanel = "title_collapsed_panel";
+        public static readonly StringName TitleCollapsedHoverPanel = "title_collapsed_hover_panel";
+        public static readonly StringName FoldedArrow = "folded_arrow";
+        public static readonly StringName ExpandedArrow = "expanded_arrow";
+        public static readonly StringName CollapsedFontColor = "collapsed_font_color";
+    }
 }
 
 public static class ThemeVariationStringNames
 {
+    public static readonly StringName Gray600Label = nameof(Gray600Label);
     public static readonly StringName Gray700Label = nameof(Gray700Label);
+    public static readonly StringName FlatButton = nameof(FlatButton);
 }
 
 public static class GodotNodeStringNames
 {
     public static readonly StringName CodeEdit = nameof(CodeEdit);
     public static readonly StringName Terminal = nameof(Terminal);
+    public static readonly StringName FoldableContainer = nameof(FoldableContainer);
 }

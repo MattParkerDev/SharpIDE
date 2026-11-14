@@ -40,6 +40,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private Rid _canvasItemRid;
 	private Window _completionDescriptionWindow = null!;
 	private Window _methodSignatureHelpWindow = null!;
+	private RichTextLabel _methodSignatureHelpRichTextLabel = null!;
 	private RichTextLabel _completionDescriptionLabel = null!;
 	private FindReplaceBar _findReplaceBar = null!;
 	private OptionButton _tfmOptionButton = null!;
@@ -101,6 +102,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_tfmOptionButton.ItemSelected += OnTargetFrameworkSelected;
 		_completionDescriptionWindow = GetNode<Window>("%CompletionDescriptionWindow");
 		_methodSignatureHelpWindow = GetNode<Window>("%MethodSignatureHelpWindow");
+		_methodSignatureHelpRichTextLabel = _methodSignatureHelpWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
 		_completionDescriptionLabel = _completionDescriptionWindow.GetNode<RichTextLabel>("PanelContainer/RichTextLabel");
 		_canvasItemRid = GetCanvasItem();
 		_cachedCurrentCaretLineColor = GetThemeColor(ThemeStringNames.CodeEdit.CurrentLineColor, GodotNodeStringNames.CodeEdit);
@@ -592,7 +594,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var lineHeight = GetLineHeight();
 		var vScroll = GetVScroll();
 		var wholeVScroll = Math.Floor(vScroll);
-		var styleBoxName = Editable ? "normal" : "read_only";
+		var styleBoxName = Editable ? ThemeStringNames.Normal : ThemeStringNames.ReadOnly;
 		var topMargin = GetThemeStylebox(styleBoxName, GodotNodeStringNames.CodeEdit).GetMargin(Side.Top);
 		var y = topMargin
 			+ (float)(GetScrollPosForLine(line) - wholeVScroll) * lineHeight

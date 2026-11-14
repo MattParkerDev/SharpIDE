@@ -51,7 +51,7 @@ public partial class FindReplaceBar : HBoxContainer
 	{
 		// Toggle-replace arrow button (leftmost)
 		_toggleReplaceButton = new Button();
-		_toggleReplaceButton.ThemeTypeVariation = "FlatButton";
+		_toggleReplaceButton.ThemeTypeVariation = ThemeVariationStringNames.FlatButton;
 		_toggleReplaceButton.FocusMode = FocusModeEnum.Accessibility;
 		_toggleReplaceButton.TooltipText = "Show Replace";
 		_toggleReplaceButton.Pressed += OnToggleReplacePressed;
@@ -108,7 +108,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 		// Find prev button
 		_findPrev = new Button();
-		_findPrev.ThemeTypeVariation = "FlatButton";
+		_findPrev.ThemeTypeVariation = ThemeVariationStringNames.FlatButton;
 		_findPrev.Text = "▲";
 		_findPrev.Disabled = true;
 		_findPrev.TooltipText = "Previous Match";
@@ -118,7 +118,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 		// Find next button
 		_findNext = new Button();
-		_findNext.ThemeTypeVariation = "FlatButton";
+		_findNext.ThemeTypeVariation = ThemeVariationStringNames.FlatButton;
 		_findNext.Text = "▼";
 		_findNext.Disabled = true;
 		_findNext.TooltipText = "Next Match";
@@ -171,7 +171,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 		// Hide button (rightmost)
 		_hideButton = new Button();
-		_hideButton.ThemeTypeVariation = "FlatButton";
+		_hideButton.ThemeTypeVariation = ThemeVariationStringNames.FlatButton;
 		_hideButton.Text = "✕";
 		_hideButton.TooltipText = "Hide";
 		_hideButton.FocusMode = FocusModeEnum.Accessibility;
