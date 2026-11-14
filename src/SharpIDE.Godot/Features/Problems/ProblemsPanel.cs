@@ -1,4 +1,6 @@
-﻿using System.Collections.Specialized;
+﻿using System.Collections.Concurrent;
+using System.Collections.Specialized;
+using System.Diagnostics;
 using Godot;
 using Microsoft.CodeAnalysis;
 using ObservableCollections;
@@ -42,31 +44,50 @@ public partial class ProblemsPanel : Control
         await this.InvokeAsync(() => BindToTree(_solution.AllProjects));
     }
 
+    // TreeItems can only be created via Tree.CreateItem, and the Tree is in the scene tree, so all tree work has to happen on the UI thread.
+    // To avoid a long frame when an analysis pass adds/removes thousands of diagnostics at once, collection changes are queued (from any thread),
+    // and drained on the UI thread within a per-frame time budget, so a large update is spread over several frames.
+    // The queue is FIFO, and each op reads its TreeItemContainer when it runs, so a Remove queued after an Add finds the item the Add created.
+    private readonly ConcurrentQueue<Action> _pendingTreeOps = new();
+    private readonly HashSet<TreeItem> _projectItemsToUpdateVisibility = [];
+    private const double TreeOpsBudgetMs = 4;
+
+    public override void _Process(double delta)
+    {
+        if (_pendingTreeOps.IsEmpty) return;
+        var startTimestamp = Stopwatch.GetTimestamp();
+        while (_pendingTreeOps.TryDequeue(out var op))
+        {
+            op();
+            if (Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds >= TreeOpsBudgetMs) break;
+        }
+        // Once per frame per touched project, rather than per diagnostic
+        foreach (var projectItem in _projectItemsToUpdateVisibility)
+        {
+            if (IsInstanceValid(projectItem)) projectItem.Visible = projectItem.GetFirstChild() is not null;
+        }
+        _projectItemsToUpdateVisibility.Clear();
+    }
+
     [RequiresGodotUiThread]
     private void BindToTree(ObservableHashSet<SharpIdeProjectModel> list)
     {
         var view = list.CreateView(y => new TreeItemContainer());
-        view.Unfiltered.ToList().ForEach(s => CreateProjectTreeItem(_tree, _rootItem, s.Value, s.View));
+        foreach (var s in view.Unfiltered.ToList()) EnqueueCreateProjectTreeItem(s.Value, s.View);
         var disposableBuilder = new DisposableBuilder();
-        view.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-            .Chunk(TimeSpan.FromMilliseconds(50))
-            .SubscribeAwait(async (events, ct) =>
+        view.ObserveChanged().Subscribe(e =>
+        {
+            switch (e.Action)
             {
-                await this.InvokeAsync(() =>
-                {
-                    foreach (var e in events)
-                    {
-                        switch (e.Action)
-                        {
-                            case NotifyCollectionChangedAction.Add: CreateProjectTreeItem(_tree, _rootItem, e.NewItem.Value, e.NewItem.View); break;
-                            case NotifyCollectionChangedAction.Remove: FreeTreeItem(e.OldItem.View.Value); break;
-                        }
-                    }
-                });
-
-            }, configureAwait: false).AddTo(ref disposableBuilder);
+                case NotifyCollectionChangedAction.Add: EnqueueCreateProjectTreeItem(e.NewItem.Value, e.NewItem.View); break;
+                case NotifyCollectionChangedAction.Remove: var container = e.OldItem.View; _pendingTreeOps.Enqueue(() => FreeTreeItem(container.Value)); break;
+            }
+        }).AddTo(ref disposableBuilder);
         _rootItem.SharpIdeDisposable = disposableBuilder.Build();
     }
+
+    private void EnqueueCreateProjectTreeItem(SharpIdeProjectModel project, TreeItemContainer container) =>
+        _pendingTreeOps.Enqueue(() => CreateProjectTreeItem(_tree, _rootItem, project, container));
 
     [RequiresGodotUiThread]
     private void CreateProjectTreeItem(Tree tree, TreeItem parent, SharpIdeProjectModel sharpIdeProjectModel, TreeItemContainer container)
@@ -74,32 +95,37 @@ public partial class ProblemsPanel : Control
         var treeItem = tree.CreateItem(parent);
         treeItem.SetText(0, sharpIdeProjectModel.Name.Value);
         treeItem.SetIcon(0, CsprojIcon);
-        treeItem.Visible = sharpIdeProjectModel.Diagnostics.Count is not 0;
+        treeItem.Visible = false; // Made visible once it has diagnostics
         container.Value = treeItem;
         var disposableBuilder = new DisposableBuilder();
 
         var projectDiagnosticsView = sharpIdeProjectModel.Diagnostics.CreateView(y => new TreeItemContainer());
-        projectDiagnosticsView.Unfiltered.ToList().ForEach(s => CreateDiagnosticTreeItem(_tree, treeItem, s.Value, s.View));
-        projectDiagnosticsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-            .Chunk(TimeSpan.FromMilliseconds(50))
-            .SubscribeAwait(async (innerEvents, ct) =>
+        foreach (var s in projectDiagnosticsView.Unfiltered.ToList()) EnqueueCreateDiagnosticTreeItem(treeItem, s.Value, s.View);
+        projectDiagnosticsView.ObserveChanged().Subscribe(innerEvent =>
+        {
+            switch (innerEvent.Action)
             {
-                await this.InvokeAsync(() =>
-                {
-                    foreach (var innerEvent in innerEvents)
+                case NotifyCollectionChangedAction.Add: EnqueueCreateDiagnosticTreeItem(treeItem, innerEvent.NewItem.Value, innerEvent.NewItem.View); break;
+                case NotifyCollectionChangedAction.Remove:
+                    var container = innerEvent.OldItem.View;
+                    _pendingTreeOps.Enqueue(() =>
                     {
-                        if (innerEvent.Action is not (NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove)) continue;
-                        treeItem.Visible = sharpIdeProjectModel.Diagnostics.Count is not 0;
-                        switch (innerEvent.Action)
-                        {
-                            case NotifyCollectionChangedAction.Add: CreateDiagnosticTreeItem(_tree, treeItem, innerEvent.NewItem.Value, innerEvent.NewItem.View); break;
-                            case NotifyCollectionChangedAction.Remove: FreeTreeItem(innerEvent.OldItem.View.Value); break;
-                        }
-                    }
-                });
-            }, configureAwait: false).AddTo(ref disposableBuilder);
+                        FreeTreeItem(container.Value);
+                        _projectItemsToUpdateVisibility.Add(treeItem);
+                    });
+                    break;
+            }
+        }).AddTo(ref disposableBuilder);
         treeItem.SharpIdeDisposable = disposableBuilder.Build();
     }
+
+    private void EnqueueCreateDiagnosticTreeItem(TreeItem projectItem, SharpIdeDiagnostic diagnostic, TreeItemContainer container) =>
+        _pendingTreeOps.Enqueue(() =>
+        {
+            if (IsInstanceValid(projectItem) is false) return; // The project was removed (and its item freed) before this ran
+            CreateDiagnosticTreeItem(_tree, projectItem, diagnostic, container);
+            _projectItemsToUpdateVisibility.Add(projectItem);
+        });
 
     private Callable? _diagnosticCustomDrawCallable;
     private TextLine _diagnosticTextLine = new TextLine(); // Reusing this is based on the assumption that it is called by godot in a single-threaded fashion
@@ -200,8 +226,10 @@ public partial class ProblemsPanel : Control
     [RequiresGodotUiThread]
     private void FreeTreeItem(TreeItem? treeItem)
     {
-        treeItem?.SharpIdeDisposable?.Dispose();
-        treeItem?.Free();
+        // May already be freed, if its parent (project) item was removed first, which frees its children
+        if (treeItem is null || IsInstanceValid(treeItem) is false) return;
+        treeItem.SharpIdeDisposable?.Dispose();
+        treeItem.Free();
     }
 
     private void TreeOnItemActivated()
