@@ -533,7 +533,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			return;
 
 		// Clamp columns to line length
-		int lineLength = GetLine(line).Length;
+		int lineLength = TextEditNativeLine.GetLength(this, line);
 		caretStartCol = Mathf.Clamp(caretStartCol, 0, lineLength);
 		caretEndCol   = Mathf.Clamp(caretEndCol, 0, lineLength);
 
@@ -562,7 +562,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		if (line < 0 || line >= GetLineCount()) return;
 		if (startCol > endCol) return;
-		var lineLength = GetLine(line).Length;
+		var lineLength = TextEditNativeLine.GetLength(this, line);
 		startCol = Mathf.Clamp(startCol, 0, lineLength);
 		endCol   = Mathf.Clamp(endCol,   0, lineLength);
 		var startRect = GetRectAtLineColumn(line, startCol);
@@ -611,30 +611,49 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		// We draw this ourselves, as the normal "current caret line bg color" is placed above anything drawn in _Draw, so we can't draw e.g. 'Executing line col range bg highlights' above caret line bg, but below text
 		DrawLineBackgroundColorCustom(currentCaretLine, _cachedCurrentCaretLineColor);
 
+		// _Draw runs on every caret move/blink, scroll and keystroke - only do per-line work for lines that can be on screen.
+		// The last visible line can be partially visible, hence +1. Lines hidden by folding inside this range are still skipped by the rect lookups.
+		var firstVisibleLine = GetFirstVisibleLine();
+		var lastVisibleLine = GetLastFullVisibleLine() + 1;
+
 		if (_executingLineInfo is {} linePositionSpan)
 		{
-			for (var line = linePositionSpan.Start.Line; line <= linePositionSpan.End.Line; line++)
+			var fromLine = Math.Max(linePositionSpan.Start.Line, firstVisibleLine);
+			var toLine = Math.Min(linePositionSpan.End.Line, lastVisibleLine);
+			for (var line = fromLine; line <= toLine; line++)
 			{
 				var lineStartCol = line == linePositionSpan.Start.Line ? linePositionSpan.Start.Character : 0;
-				var lineEndCol = line == linePositionSpan.End.Line ? linePositionSpan.End.Character : GetLine(line).Length;
+				var lineEndCol = line == linePositionSpan.End.Line ? linePositionSpan.End.Character : int.MaxValue; // Clamped to the line length
 				HighlightLineTextRange(line, lineStartCol, lineEndCol, _executingLineColor);
 			}
 		}
 
-		foreach (var sharpIdeDiagnostic in _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).ConcatFast(_projectDiagnosticsForFile))
+		UnderlineVisibleDiagnostics(_fileDiagnostics, firstVisibleLine, lastVisibleLine);
+		UnderlineVisibleDiagnostics(_fileAnalyzerDiagnostics, firstVisibleLine, lastVisibleLine);
+		UnderlineVisibleDiagnostics(_projectDiagnosticsForFile, firstVisibleLine, lastVisibleLine);
+		DrawCompletionsPopup();
+	}
+
+	private static readonly Color DiagnosticErrorColor = new(1, 0, 0);
+	private static readonly Color DiagnosticWarningColor = new("ffb700");
+	private static readonly Color DiagnosticOtherColor = new(0, 1, 0);
+
+	private void UnderlineVisibleDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics, int firstVisibleLine, int lastVisibleLine)
+	{
+		foreach (var sharpIdeDiagnostic in diagnostics)
 		{
 			var line = sharpIdeDiagnostic.Span.Start.Line;
+			if (line < firstVisibleLine || line > lastVisibleLine) continue;
 			var startCol = sharpIdeDiagnostic.Span.Start.Character;
 			var endCol = sharpIdeDiagnostic.Span.End.Character;
 			var color = sharpIdeDiagnostic.Severity switch
 			{
-				DiagnosticSeverity.Error => new Color(1, 0, 0),
-				DiagnosticSeverity.Warning => new Color("ffb700"),
-				_ => new Color(0, 1, 0) // Info or other
+				DiagnosticSeverity.Error => DiagnosticErrorColor,
+				DiagnosticSeverity.Warning => DiagnosticWarningColor,
+				_ => DiagnosticOtherColor // Info or other
 			};
 			UnderlineRange(line, startCol, endCol, color);
 		}
-		DrawCompletionsPopup();
 	}
 
 	// This only gets invoked if the Node is focused

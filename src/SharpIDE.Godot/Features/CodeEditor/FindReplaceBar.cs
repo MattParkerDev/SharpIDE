@@ -1,3 +1,4 @@
+using System.Text;
 using Godot;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
@@ -474,28 +475,36 @@ public partial class FindReplaceBar : HBoxContainer
 		_resultsCount = 0;
 		_resultsCountToCurrent = 0;
 
-		bool searchedStartIsSymbol = IsSymbol(searched[0]);
-		bool searchedEndIsSymbol = IsSymbol(searched[^1]);
+		// Runs on every keystroke while the bar is open, so lines are searched as Godot's native UTF-32 text rather than allocating a managed string per line.
+		// UTF-32 indices are also Godot columns, so they compare directly with _resultCol.
+		var caseSensitive = IsCaseSensitive();
+		var wholeWords = IsWholeWords();
+		var needle = ToUtf32(searched, lowercase: !caseSensitive);
+		var needleLength = needle.Length;
 
-		for (int i = 0; i < _textEditor.GetLineCount(); i++)
+		bool searchedStartIsSymbol = IsSymbol(needle[0]);
+		bool searchedEndIsSymbol = IsSymbol(needle[^1]);
+
+		var lineCount = _textEditor.GetLineCount();
+		for (int i = 0; i < lineCount; i++)
 		{
-			string lineText = _textEditor.GetLine(i);
+			using var nativeLine = TextEditNativeLine.Get(_textEditor, i);
+			var lineText = nativeLine.Span;
+			if (lineText.Length < needleLength) continue;
 			int colPos = 0;
 
 			while (true)
 			{
-				colPos = IsCaseSensitive()
-					? lineText.IndexOf(searched, colPos, System.StringComparison.Ordinal)
-					: lineText.IndexOf(searched, colPos, System.StringComparison.OrdinalIgnoreCase);
+				colPos = IndexOf(lineText, needle, colPos, caseSensitive);
 
 				if (colPos == -1) break;
 
-				if (IsWholeWords())
+				if (wholeWords)
 				{
 					if (!searchedStartIsSymbol && colPos > 0 && !IsSymbol(lineText[colPos - 1]))
-					{ colPos += searched.Length; continue; }
-					if (!searchedEndIsSymbol && colPos + searched.Length < lineText.Length && !IsSymbol(lineText[colPos + searched.Length]))
-					{ colPos += searched.Length; continue; }
+					{ colPos += needleLength; continue; }
+					if (!searchedEndIsSymbol && colPos + needleLength < lineText.Length && !IsSymbol(lineText[colPos + needleLength]))
+					{ colPos += needleLength; continue; }
 				}
 
 				_resultsCount++;
@@ -503,10 +512,10 @@ public partial class FindReplaceBar : HBoxContainer
 				if (i <= _resultLine && colPos <= _resultCol)
 					_resultsCountToCurrent = _resultsCount;
 
-				if (i == _resultLine && colPos < _resultCol && colPos + searched.Length > _resultCol)
+				if (i == _resultLine && colPos < _resultCol && colPos + needleLength > _resultCol)
 					colPos = _resultCol;
 
-				colPos += searched.Length;
+				colPos += needleLength;
 			}
 		}
 
@@ -789,5 +798,40 @@ public partial class FindReplaceBar : HBoxContainer
 	}
 
 	/// <summary>Returns true if the character is NOT a word character (letter, digit, or underscore).</summary>
-	private static bool IsSymbol(char c) => !char.IsLetterOrDigit(c) && c != '_';
+	private static bool IsSymbol(uint c) => Rune.TryCreate(c, out var rune) is false || (!Rune.IsLetterOrDigit(rune) && c != '_');
+
+	private static uint[] ToUtf32(string text, bool lowercase)
+	{
+		var result = new uint[text.EnumerateRunes().Count()];
+		var i = 0;
+		foreach (var rune in text.EnumerateRunes())
+		{
+			result[i++] = (uint)(lowercase ? Rune.ToLowerInvariant(rune) : rune).Value;
+		}
+		return result;
+	}
+
+	private static uint ToLower(uint c) => c < 128
+		? (c is >= 'A' and <= 'Z' ? c + 32 : c)
+		: Rune.TryCreate(c, out var rune) ? (uint)Rune.ToLowerInvariant(rune).Value : c;
+
+	/// <param name="needle">Already lowercased when not case sensitive</param>
+	private static int IndexOf(ReadOnlySpan<uint> haystack, ReadOnlySpan<uint> needle, int from, bool caseSensitive)
+	{
+		if (from > haystack.Length - needle.Length) return -1;
+		if (caseSensitive)
+		{
+			var index = haystack[from..].IndexOf(needle);
+			return index is -1 ? -1 : index + from;
+		}
+
+		var last = haystack.Length - needle.Length;
+		for (var start = from; start <= last; start++)
+		{
+			var j = 0;
+			while (j < needle.Length && ToLower(haystack[start + j]) == needle[j]) j++;
+			if (j == needle.Length) return start;
+		}
+		return -1;
+	}
 }
