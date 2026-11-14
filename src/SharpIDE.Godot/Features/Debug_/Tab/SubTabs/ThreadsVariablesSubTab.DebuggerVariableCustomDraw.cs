@@ -2,7 +2,8 @@
 using Godot;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
+using SharpDbg.DapProtocol;
+using SharpIDE.Application.Features.Debugging;
 
 namespace SharpIDE.Godot.Features.Debug_.Tab.SubTabs;
 
@@ -18,11 +19,12 @@ public partial class ThreadsVariablesSubTab
         if (variable is null) return;
 
         const int iconSize = 18;
-        var icon = variable.PresentationHint?.Kind switch
+        var kind = variable.PresentationHint?.Kind;
+        var icon = kind switch
         {
-            VariablePresentationHint.KindValue.Data => _arrayElementIcon,
-            VariablePresentationHint.KindValue.Property => _propertyIcon,
-            VariablePresentationHint.KindValue.Class => _staticMembersIcon,
+            _ when kind == VariablePresentationHint.KindValue.Data => _arrayElementIcon,
+            _ when kind == VariablePresentationHint.KindValue.Property => _propertyIcon,
+            _ when kind == VariablePresentationHint.KindValue.Class => _staticMembersIcon,
             _ => null
         };
         if (icon is null)
@@ -35,7 +37,7 @@ public partial class ThreadsVariablesSubTab
 
         var variableValueDisplayColour = variable switch
         {
-            _ when variable.PresentationHint?.Attributes is { } attrs && (attrs & VariablePresentationHint.AttributesValue.FailedEvaluation) != 0 => TextEditorDotnetColoursDark.ErrorRed,
+            _ when variable.PresentationHint?.Attributes is { } attrs && attrs.Contains(DebuggerPresentationHints.FailedEvaluation) => TextEditorDotnetColoursDark.ErrorRed,
             { Value: "null" } => TextEditorDotnetColoursDark.KeywordBlue,
             { Value: "true" or "false" } => TextEditorDotnetColoursDark.KeywordBlue,
             { Type: "string" or "char" } => TextEditorDotnetColoursDark.LightOrangeBrown,
@@ -67,12 +69,12 @@ public partial class ThreadsVariablesSubTab
         var isObjectType = variableTypeDisplayString is not null && variable.Value == variableTypeDisplayString; // e.g. classes value will be the class name wrapped in {}
         if (variableTypeDisplayString is not null && isObjectType is false)
         {
-            variableTypeDisplayString = $$"""{{{GetObjectNameWithoutNamespace(variable.Type)}}}""";
+            variableTypeDisplayString = $$"""{{{GetObjectNameWithoutNamespace(variable.Type!)}}}""";
             _variablesTree.DrawString(font, new Vector2(currentX, textYPos), variableTypeDisplayString, HorizontalAlignment.Left, -1, fontSize, VariableTypeColor);
             var variableTypeDrawnSize = font.GetStringSize(variableTypeDisplayString, HorizontalAlignment.Left, -1, fontSize).X;
             currentX += variableTypeDrawnSize + padding;
         }
-        var variableValueDisplayString = isObjectType ? GetObjectNameWithoutNamespace(variable.Type) : variable.Value;
+        var variableValueDisplayString = isObjectType ? GetObjectNameWithoutNamespace(variable.Type!) : variable.Value;
         _variablesTree.DrawString(font, new Vector2(currentX, textYPos), variableValueDisplayString, HorizontalAlignment.Left, -1, fontSize, variableValueDisplayColour);
     }
 

@@ -2,8 +2,7 @@ using Ardalis.GuardClauses;
 using Godot;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Threading;
-using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol;
-using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
+using SharpDbg.DapProtocol;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Run;
@@ -258,8 +257,11 @@ public partial class ThreadsVariablesSubTab : Control
 			try
 			{
 				var response = await _runService.EvaluateExpression(Project, frameId, expression);
-				resultVariable = new Variable("$result", response.Result, response.VariablesReference)
+				resultVariable = new Variable
 				{
+					Name = "$result",
+					Value = response.Result,
+					VariablesReference = response.VariablesReference,
 					Type = response.Type,
 					PresentationHint = response.PresentationHint,
 					EvaluateName = expression,
@@ -268,13 +270,16 @@ public partial class ThreadsVariablesSubTab : Control
 					MemoryReference = response.MemoryReference,
 				};
 			}
-			catch (ProtocolException exception)
+			catch (DebuggerRequestFailedException exception)
 			{
-				resultVariable = new Variable("$result", exception.Message, 0)
+				resultVariable = new Variable
 				{
+					Name = "$result",
+					Value = exception.Message,
+					VariablesReference = 0,
 					PresentationHint = new VariablePresentationHint
 					{
-						Attributes = VariablePresentationHint.AttributesValue.FailedEvaluation,
+						Attributes = [DebuggerPresentationHints.FailedEvaluation],
 					},
 				};
 			}

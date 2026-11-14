@@ -21,7 +21,6 @@
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Workspaces" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.TemplateEngine.Orchestrator.RunnableProjects" />
-    <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.Features" />
     <Publicize IncludeCompilerGeneratedMembers="false" Include="Microsoft.CodeAnalysis.CSharp.Features" />
     <DoNotPublicize Include="Microsoft.CodeAnalysis.Workspaces:System.Linq.RoslynEnumerableExtensions" />

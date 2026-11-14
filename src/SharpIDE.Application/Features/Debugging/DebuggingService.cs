@@ -1,13 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using System.Text.Json.Nodes;
 using Ardalis.GuardClauses;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol;
-using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SharpDbg.Application.Protocol;
-using SharpIDE.Application.Features.Debugging.Signing;
+using SharpDbg.DapProtocol;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -17,7 +14,7 @@ namespace SharpIDE.Application.Features.Debugging;
 #pragma warning disable VSTHRD101
 public class DebuggingService(ILogger<DebuggingService> logger)
 {
-	private readonly ConcurrentDictionary<DebuggerSessionId, (DebugProtocolHost DebugProtocolHost, IDisposable DebuggerDisposable)> _debugProtocolHosts = [];
+	private readonly ConcurrentDictionary<DebuggerSessionId, (DapConnection Connection, IDisposable DebuggerDisposable)> _debugConnections = [];
 
 	private readonly ILogger<DebuggingService> _logger = logger;
 
@@ -29,47 +26,25 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 
 		var (inputStream, outputStream, isNetCoreDbg, debuggerDisposable) = DebuggerProcessStreamHelper.NewDebuggerProcessStreamsForInfo(debuggerExecutableInfo, _logger);
 
-		var debugProtocolHost = new DebugProtocolHost(inputStream, outputStream, false);
+		// inputStream is the debug adapter's stdin, outputStream is its stdout. The connection reads from the adapter's stdout, and writes to its stdin.
+		var connection = new DapConnection(outputStream, inputStream, new DebuggerClientRequestHandler(), new DapConnectionOptions
+		{
+			Log = message => _logger.LogDebug("DAP: {Message}", message)
+		});
+		connection.RegisterRequest<HandshakeArguments>();
+		connection.ProtocolError += exception => _logger.LogError(exception, "DAP protocol error");
+
 		var initializedEventTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		debugProtocolHost.LogMessage += (sender, args) =>
-		{
-			//Console.WriteLine($"Log message: {args.Message}");
-		};
-		debugProtocolHost.EventReceived += (sender, args) =>
-		{
-			Console.WriteLine($"Event received: {args.EventType}");
-		};
-		debugProtocolHost.DispatcherError += (sender, args) =>
-		{
-			Console.WriteLine($"Dispatcher error: {args.Exception}");
-		};
-		debugProtocolHost.RequestReceived += (sender, args) =>
-		{
-			Console.WriteLine($"Request received: {args.Command}");
-		};
-		debugProtocolHost.RegisterEventType<OutputEvent>(@event =>
-		{
-			;
-		});
-		debugProtocolHost.RegisterEventType<InitializedEvent>(@event =>
-		{
-			initializedEventTcs.SetResult();
-		});
-		debugProtocolHost.RegisterClientRequestType<HandshakeRequest, HandshakeArguments, HandshakeResponse>(async void (responder) =>
-		{
-			var signatureResponse = await DebuggerHandshakeSigner.Sign(responder.Arguments.Value);
-			responder.SetResponse(new HandshakeResponse(signatureResponse));
-		});
-		debugProtocolHost.RegisterEventType<StoppedEvent>(async void (@event) =>
+		connection.OnEvent<InitializedEvent>(_ => initializedEventTcs.TrySetResult());
+		connection.OnEvent<StoppedEvent>(async void (@event) =>
 		{
 			try
 			{
-				await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // The VS Code Debug Protocol throws if you try to send a request from the dispatcher thread
-				if (@event.Reason is StoppedEvent.ReasonValue.Exception)
+				if (@event.Reason == StoppedEvent.ReasonValue.Exception)
 				{
 					Console.WriteLine("Stopped due to exception, continuing");
-					var continueRequest = new ContinueRequest { ThreadId = @event.ThreadId!.Value };
-					debugProtocolHost.SendRequestSync(continueRequest);
+					// Requests must not be sent synchronously from an event handler, as events and incoming requests share the dispatch loop
+					await SendRequestAsync(connection, new ContinueArguments { ThreadId = @event.ThreadId!.Value });
 					return;
 				}
 				var executionStopInfo = new ExecutionStopInfo { ThreadId = @event.ThreadId!.Value, Project = project };
@@ -77,12 +52,11 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 			}
 			catch (Exception e)
 			{
-				// TODO: use logger once this class is DI'd
-				Console.WriteLine($"Error handling StoppedEvent: {e}");
+				_logger.LogError(e, "Error handling StoppedEvent");
 			}
 		});
-		debugProtocolHost.VerifySynchronousOperationAllowed();
-		var initializeRequest = new InitializeRequest
+
+		var initializeArguments = new InitializeArguments
 		{
 			ClientID = "vscode",
 			ClientName = "Visual Studio Code",
@@ -94,14 +68,14 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 			SupportsVariableType = true,
 			SupportsVariablePaging = true,
 			SupportsRunInTerminalRequest = true,
-			SupportsHandshakeRequest = true
+			AdditionalProperties = new JsonObject { ["supportsHandshakeRequest"] = true }
 		};
-		debugProtocolHost.Run();
-		var response = debugProtocolHost.SendRequestSync(initializeRequest);
+		connection.Start();
+		await SendRequestAsync(connection, initializeArguments, cancellationToken);
 
-		var attachRequest = new AttachRequest
+		var attachArguments = new AttachArguments
 		{
-			ConfigurationProperties = new Dictionary<string, JToken>
+			AdditionalProperties = new JsonObject
 			{
 				["name"] = "AttachRequestName",
 				["type"] = "coreclr",
@@ -110,20 +84,13 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 				["console"] = "internalConsole", // integratedTerminal, externalTerminal, internalConsole
 			}
 		};
-		debugProtocolHost.SendRequestSync(attachRequest);
+		await SendRequestAsync(connection, attachArguments, cancellationToken);
 		// AttachRequest -> HandshakeRequest -> InitializedEvent
 		await initializedEventTcs.Task;
 
-		foreach (var breakpoint in breakpointsByFile)
+		foreach (var (file, breakpoints) in breakpointsByFile)
 		{
-			var file = breakpoint.Key;
-			var path = file.IsMetadataAsSourceFile ? file.PdbSourceFilePathForDebugger ?? throw new ArgumentNullException(nameof(file.PdbSourceFilePathForDebugger)) : file.Path;
-			var setBreakpointsRequest = new SetBreakpointsRequest
-			{
-				Source = new Source { Path = path },
-				Breakpoints = breakpoint.Value.Select(b => new SourceBreakpoint { Line = b.Line }).ToList()
-			};
-			var breakpointsResponse = debugProtocolHost.SendRequestSync(setBreakpointsRequest);
+			await SendRequestAsync(connection, CreateSetBreakpointsArguments(file, breakpoints), cancellationToken);
 		}
 
 		// netcoredbg has (a bug?) differing behaviour here compared to sharpdbg, where ConfigurationDone will never return if the runtime is paused at startup
@@ -132,17 +99,15 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		if (isNetCoreDbg)
 		{
 			await DiagnosticClientResumeRuntime(debuggeeProcessId);
-			var configurationDoneRequest = new ConfigurationDoneRequest();
-			debugProtocolHost.SendRequestSync(configurationDoneRequest);
+			await SendRequestAsync(connection, new ConfigurationDoneArguments(), cancellationToken);
 		}
 		else
 		{
-			var configurationDoneRequest = new ConfigurationDoneRequest();
-			debugProtocolHost.SendRequestSync(configurationDoneRequest);
+			await SendRequestAsync(connection, new ConfigurationDoneArguments(), cancellationToken);
 			await DiagnosticClientResumeRuntime(debuggeeProcessId);
 		}
 		var sessionId = new DebuggerSessionId(Guid.NewGuid());
-		_debugProtocolHosts[sessionId] = (debugProtocolHost, debuggerDisposable);
+		_debugConnections[sessionId] = (connection, debuggerDisposable);
 		return sessionId;
 	}
 
@@ -172,13 +137,18 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 
 	public async Task CloseDebuggerSession(DebuggerSessionId debuggerSessionId)
 	{
-		if (_debugProtocolHosts.TryRemove(debuggerSessionId, out var s))
+		if (_debugConnections.TryRemove(debuggerSessionId, out var s))
 		{
-			var (debugProtocolHost, debuggerDisposable) = s;
-			debugProtocolHost.SendRequestSync(new DisconnectRequest());
-			debugProtocolHost.Stop();
-			debugProtocolHost.WaitForReader();
-			debuggerDisposable.Dispose();
+			var (connection, debuggerDisposable) = s;
+			try
+			{
+				await SendRequestAsync(connection, new DisconnectArguments());
+			}
+			finally
+			{
+				connection.Stop();
+				debuggerDisposable.Dispose();
+			}
 		}
 		else
 		{
@@ -188,50 +158,40 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 
 	public async Task SetBreakpointsForFile(DebuggerSessionId debuggerSessionId, SharpIdeFile file, List<Breakpoint> breakpoints, CancellationToken cancellationToken = default)
 	{
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
+		var connection = GetConnection(debuggerSessionId);
+		await SendRequestAsync(connection, CreateSetBreakpointsArguments(file, breakpoints), cancellationToken);
+	}
+
+	private static SetBreakpointsArguments CreateSetBreakpointsArguments(SharpIdeFile file, List<Breakpoint> breakpoints)
+	{
 		var path = file.IsMetadataAsSourceFile ? file.PdbSourceFilePathForDebugger ?? throw new ArgumentNullException(nameof(file.PdbSourceFilePathForDebugger)) : file.Path;
-		var setBreakpointsRequest = new SetBreakpointsRequest
+		return new SetBreakpointsArguments
 		{
 			Source = new Source { Path = path },
 			Breakpoints = breakpoints.Select(b => new SourceBreakpoint { Line = b.Line }).ToList()
 		};
-		var breakpointsResponse = debugProtocolHost.SendRequestSync(setBreakpointsRequest);
 	}
 
 	public async Task StepOver(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var nextRequest = new NextRequest(threadId);
-		debugProtocolHost.SendRequestSync(nextRequest);
+		await SendRequestAsync(GetConnection(debuggerSessionId), new NextArguments { ThreadId = threadId }, cancellationToken);
 	}
 	public async Task StepInto(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var stepInRequest = new StepInRequest(threadId);
-		debugProtocolHost.SendRequestSync(stepInRequest);
+		await SendRequestAsync(GetConnection(debuggerSessionId), new StepInArguments { ThreadId = threadId }, cancellationToken);
 	}
 	public async Task StepOut(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var stepOutRequest = new StepOutRequest(threadId);
-		debugProtocolHost.SendRequestSync(stepOutRequest);
+		await SendRequestAsync(GetConnection(debuggerSessionId), new StepOutArguments { ThreadId = threadId }, cancellationToken);
 	}
 	public async Task Continue(DebuggerSessionId debuggerSessionId, int threadId, CancellationToken cancellationToken)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var continueRequest = new ContinueRequest(threadId);
-		debugProtocolHost.SendRequestSync(continueRequest);
+		await SendRequestAsync(GetConnection(debuggerSessionId), new ContinueArguments { ThreadId = threadId }, cancellationToken);
 	}
 
 	public async Task<List<ThreadModel>> GetThreadsAtStopPoint(DebuggerSessionId debuggerSessionId)
 	{
-		var threadsRequest = new ThreadsRequest();
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var threadsResponse = debugProtocolHost.SendRequestSync(threadsRequest);
+		var threadsResponse = await SendRequestAsync(GetConnection(debuggerSessionId), new ThreadsArguments());
 		var mappedThreads = threadsResponse.Threads.Select(s => new ThreadModel
 		{
 			Id = s.Id,
@@ -242,32 +202,25 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 
 	public async Task<List<StackFrameModel>> GetStackFramesForThread(DebuggerSessionId debuggerSessionId, int threadId)
 	{
-		var stackTraceRequest = new StackTraceRequest { ThreadId = threadId };
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var stackTraceResponse = debugProtocolHost.SendRequestSync(stackTraceRequest);
-		var stackFrames = stackTraceResponse.StackFrames;
-
-		var mappedStackFrames = stackFrames!.Select(frame => MapStackFrame(frame, threadId)).ToList();
+		var stackTraceResponse = await SendRequestAsync(GetConnection(debuggerSessionId), new StackTraceArguments { ThreadId = threadId });
+		var mappedStackFrames = stackTraceResponse.StackFrames.Select(frame => MapStackFrame(frame, threadId)).ToList();
 		return mappedStackFrames;
 	}
 
 	public async Task<StackFrameModel> ResolveStackFrame(DebuggerSessionId debuggerSessionId, StackFrameModel stackFrame)
 	{
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var response = debugProtocolHost.SendRequestSync(new ResolveStackFrameRequest(stackFrame.Id));
+		var response = await SendRequestAsync(GetConnection(debuggerSessionId), new ResolveStackFrameArguments { StackFrameId = stackFrame.Id });
 		return MapStackFrame(response.StackFrame, stackFrame.ThreadId);
 	}
 
 	public async Task<List<Variable>> GetVariablesForStackFrame(DebuggerSessionId debuggerSessionId, int frameId)
 	{
-		var scopesRequest = new ScopesRequest { FrameId = frameId };
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var scopesResponse = debugProtocolHost.SendRequestSync(scopesRequest);
+		var connection = GetConnection(debuggerSessionId);
+		var scopesResponse = await SendRequestAsync(connection, new ScopesArguments { FrameId = frameId });
 		var allVariables = new List<Variable>();
 		foreach (var scope in scopesResponse.Scopes)
 		{
-			var variablesRequest = new VariablesRequest { VariablesReference = scope.VariablesReference };
-			var variablesResponse = debugProtocolHost.SendRequestSync(variablesRequest);
+			var variablesResponse = await SendRequestAsync(connection, new VariablesArguments { VariablesReference = scope.VariablesReference });
 			allVariables.AddRange(variablesResponse.Variables);
 		}
 		return allVariables;
@@ -275,21 +228,34 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 
 	public async Task<List<Variable>> GetVariablesForVariablesReference(DebuggerSessionId debuggerSessionId, int variablesReference)
 	{
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var variablesRequest = new VariablesRequest { VariablesReference = variablesReference };
-		var variablesResponse = debugProtocolHost.SendRequestSync(variablesRequest);
-		return variablesResponse.Variables;
+		var variablesResponse = await SendRequestAsync(GetConnection(debuggerSessionId), new VariablesArguments { VariablesReference = variablesReference });
+		return variablesResponse.Variables.ToList();
 	}
 
+	/// <exception cref="DebuggerRequestFailedException">The debugger failed to evaluate the expression.</exception>
 	public async Task<EvaluateResponse> EvaluateExpression(DebuggerSessionId debuggerSessionId, int frameId, string expression)
 	{
-		var debugProtocolHost = _debugProtocolHosts[debuggerSessionId].DebugProtocolHost;
-		var evaluateRequest = new EvaluateRequest(expression)
+		var evaluateArguments = new EvaluateArguments
 		{
+			Expression = expression,
 			FrameId = frameId,
 			Context = EvaluateArguments.ContextValue.Watch,
 		};
-		return debugProtocolHost.SendRequestSync(evaluateRequest);
+		return await SendRequestAsync(GetConnection(debuggerSessionId), evaluateArguments);
+	}
+
+	private DapConnection GetConnection(DebuggerSessionId debuggerSessionId) => _debugConnections[debuggerSessionId].Connection;
+
+	/// <exception cref="DebuggerRequestFailedException">The debugger responded with an error.</exception>
+	private static async Task<TResponse> SendRequestAsync<TResponse>(DapConnection connection, IDapRequest<TResponse> request, CancellationToken cancellationToken = default)
+	{
+		var result = await connection.SendRequestAsync(request, cancellationToken).ConfigureAwait(false);
+		return result switch
+		{
+			DapError error => throw new DebuggerRequestFailedException(request.Command, error),
+			TResponse response => response,
+			null => throw new InvalidOperationException($"No result for request '{request.Command}'"),
+		};
 	}
 
 	private static StackFrameModel MapStackFrame(StackFrame frame, int threadId)

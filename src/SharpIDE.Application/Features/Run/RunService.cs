@@ -4,7 +4,7 @@ using System.Threading.Channels;
 using Ardalis.GuardClauses;
 using AsyncReadProcess;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages;
+using SharpDbg.DapProtocol;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Debugging;
