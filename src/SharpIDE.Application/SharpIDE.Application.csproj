@@ -44,7 +44,6 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.TemplateEngine.IDE" />
     <PackageReference Include="Microsoft.TemplateSearch.Common" />
-    <PackageReference Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" />
     <PackageReference Include="Ardalis.GuardClauses" />
     <PackageReference Include="AsyncReadProcess" />
     <PackageReference Include="Krafs.Publicizer">

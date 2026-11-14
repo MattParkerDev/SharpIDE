@@ -46,9 +46,8 @@
     <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="10.0.10" />
     <PackageVersion Include="Microsoft.TemplateEngine.IDE" Version="11.0.100" />
     <PackageVersion Include="Microsoft.TemplateSearch.Common" Version="11.0.100" />
-    <PackageVersion Include="Microsoft.VisualStudio.Shared.VSCodeDebugProtocol" Version="18.0.10427.1" />
     <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
-    <PackageVersion Include="MudBlazor" Version="9.12.0" />
+    <PackageVersion Include="MudBlazor" Version="9.13.0" />
     <PackageVersion Include="NeoSmart.AsyncLock" Version="3.2.1" />
     <PackageVersion Include="NuGet.ProjectModel" Version="8.0.0" />
     <PackageVersion Include="NuGet.Protocol" Version="8.0.0" />
@@ -59,7 +58,7 @@
     <PackageVersion Include="ParallelPipelines" Version="3.0.0" />
     <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
     <PackageVersion Include="R3" Version="1.3.1" />
-    <PackageVersion Include="SharpDbg" Version="0.1.17" />
+    <PackageVersion Include="SharpDbg" Version="0.1.18" />
     <PackageVersion Include="StreamJsonRpc" Version="2.26.150" />
     <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.3" />
     <PackageVersion Include="XtermBlazor" Version="2.4.0" />
@@ -68,8 +67,8 @@
   <ItemGroup Label="Aspire">
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.2" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.21.0" />
   </ItemGroup>
   <ItemGroup Label="Pinned Transitive Dependencies">
     <PackageVersion Include="Microsoft.CodeAnalysis.Remote.ServiceHub" Version="5.14.0-1.26561.1" />
