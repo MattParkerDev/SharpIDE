@@ -55,7 +55,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 			trigger => QueueCompletionRequest(trigger, checkTrigger: false), ApplyCompletion, preferAbove: true);
 		_symbolHoverPopup = new SymbolHoverPopup(this, preferAbove: true);
 		TextChanged += OnTextChanged;
-		SymbolHovered += (symbol, line, column) => _ = Task.GodotRun(() => OnSymbolHovered(symbol, line, column));
+		SymbolHovered += OnSymbolHovered;
 		SymbolValidate += _ => SetSymbolLookupWordAsValid(true);
 		GodotGlobalEvents.Instance.TextEditorThemeChanged.Subscribe(UpdateEditorThemeAsync);
 		GetHScrollBar().ValueChanged += _ => QueueRedraw();
@@ -414,7 +414,8 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 		_completionPopup.SetOptions(options);
 	}
 
-	private async Task OnSymbolHovered(string _, long line, long column)
+	[RequiresGodotUiThread]
+	private void OnSymbolHovered(string symbolText, long line, long column)
 	{
 		var session = _session;
 		if (session is null)
@@ -422,29 +423,27 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 			return;
 		}
 
+		// Read on the UI thread - Text is a Godot property, and the session and diagnostics are UI-thread state
 		var expressionText = Text;
 		var linePosition = new LinePosition((int) line, (int) column);
 		var cancellationToken = ReplaceCancellationTokenSource(ref _symbolCancellationTokenSource);
-		try
+		_ = Task.GodotRun(async () =>
 		{
-			var (symbol, symbolSpan) = await session.LookupSymbolAsync(expressionText, linePosition, cancellationToken);
-			var diagnostic = _diagnostics.FirstOrDefault(candidate => Contains(candidate.Span, linePosition));
-			if (symbol is null && diagnostic is null)
+			try
 			{
-				return;
-			}
-
-			await this.InvokeAsync(() =>
-			{
-				if (ReferenceEquals(session, _session) && expressionText == Text)
+				var (symbol, symbolSpan) = await session.LookupSymbolAsync(expressionText, linePosition, cancellationToken);
+				await this.InvokeAsync(() =>
 				{
+					if (cancellationToken.IsCancellationRequested || ReferenceEquals(session, _session) is false || expressionText != Text) return;
+					var diagnostic = _diagnostics.FirstOrDefault(candidate => Contains(candidate.Span, linePosition));
+					if (symbol is null && diagnostic is null) return;
 					_symbolHoverPopup.Show(symbol, symbolSpan, diagnostic, linePosition);
-				}
-			});
-		}
-		catch (Exception exception) when (exception is OperationCanceledException or ObjectDisposedException)
-		{
-		}
+				});
+			}
+			catch (Exception exception) when (exception is OperationCanceledException or ObjectDisposedException)
+			{
+			}
+		});
 	}
 
 	private void SetSyntaxHighlighting(ImmutableArray<SharpIdeClassifiedSpan> classifiedSpans)

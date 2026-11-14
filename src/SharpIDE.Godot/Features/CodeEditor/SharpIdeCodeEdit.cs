@@ -270,21 +270,33 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_editorCaretPositionService.CaretPosition = GetCaretPosition(startAt1: true);
 	}
 
-	private async void OnBreakpointToggled(long line)
+	/// The last breakpoint change sent to the debugger. Only touched on the UI thread
+	private Task _breakpointUpdate = Task.CompletedTask;
+
+	[RequiresGodotUiThread]
+	private void OnBreakpointToggled(long line)
 	{
 		if (_fileChangingSuppressBreakpointToggleEvent) return;
 		var lineInt = (int)line;
 		var breakpointAdded = IsLineBreakpointed(lineInt);
 		var lineForDebugger = lineInt + 1; // Godot is 0-indexed, Debugging is 1-indexed
-		if (breakpointAdded)
+		var file = _currentFile;
+		// Sends the file's breakpoints to each running debugger session - not on the UI thread. Each update waits for the previous one, so toggling a line
+		// on then off quickly removes the breakpoint after adding it, and the file's breakpoint list is only changed by one update at a time
+		var previousBreakpointUpdate = _breakpointUpdate;
+		_breakpointUpdate = Task.GodotRun(async () =>
 		{
-			await _runService.AddBreakpointForFile(_currentFile, lineForDebugger);
-		}
-		else
-		{
-			await _runService.RemoveBreakpointForFile(_currentFile, lineForDebugger);
-		}
-		GD.Print($"Breakpoint {(breakpointAdded ? "added" : "removed")} at line {lineForDebugger}");
+			await previousBreakpointUpdate; // Never faults - GodotRun catches
+			if (breakpointAdded)
+			{
+				await _runService.AddBreakpointForFile(file, lineForDebugger);
+			}
+			else
+			{
+				await _runService.RemoveBreakpointForFile(file, lineForDebugger);
+			}
+			GD.Print($"Breakpoint {(breakpointAdded ? "added" : "removed")} at line {lineForDebugger}");
+		});
 	}
 
 	private void OnSymbolValidate(string symbol)

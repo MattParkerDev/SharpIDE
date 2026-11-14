@@ -1,4 +1,5 @@
 ﻿using Godot;
+using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -79,31 +80,35 @@ public partial class DiAutoload : Node
         InjectDependencies(node);
     }
 
+    /// Each node type's [Inject] fields. NodeAdded fires on the UI thread for every node added to the tree - hundreds at once when e.g. a list is filled - and most
+    /// have none, so the reflection is done once per type rather than allocating the field array and checking each field's attributes every time
+    private static readonly ConcurrentDictionary<Type, FieldInfo[]> InjectableFieldsByType = new();
+
+    private static FieldInfo[] GetInjectableFields(Type type)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        return InjectableFieldsByType.GetOrAdd(type, static t => t.GetFields(flags).Where(field => Attribute.IsDefined(field, typeof(InjectAttribute))).ToArray());
+    }
+
     private void InjectDependencies(object target)
     {
-        var type = target.GetType();
-        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
-        foreach (var field in type.GetFields(flags))
+        foreach (var field in GetInjectableFields(target.GetType()))
         {
-            if (Attribute.IsDefined(field, typeof(InjectAttribute)))
+            if (_currentScope is null)
             {
-                if (_currentScope is null)
-                {
-                    GD.PrintErr("[Injector] _currentScope was null when attempting to resolve service");
-                    GetTree().Quit();
-                    return;
-                }
-                var service = _currentScope!.ServiceProvider.GetService(field.FieldType);
-                if (service is null)
-                {
-                    GD.PrintErr($"[Injector] No service registered for {field.FieldType}");
-                    GetTree().Quit();
-                    return;
-                }
-
-                field.SetValue(target, service);
+                GD.PrintErr("[Injector] _currentScope was null when attempting to resolve service");
+                GetTree().Quit();
+                return;
             }
+            var service = _currentScope!.ServiceProvider.GetService(field.FieldType);
+            if (service is null)
+            {
+                GD.PrintErr($"[Injector] No service registered for {field.FieldType}");
+                GetTree().Quit();
+                return;
+            }
+
+            field.SetValue(target, service);
         }
     }
 }
