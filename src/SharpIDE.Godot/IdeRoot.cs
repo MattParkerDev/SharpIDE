@@ -193,20 +193,16 @@ public partial class IdeRoot : Control
 
 			_ = Task.GodotRun(async () =>
 			{
-				// Preserves order of tabs
-				foreach (var (file, linePosition, isSelected) in filesToOpen)
-				{
-					await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, linePosition);
-				}
-				_navigationHistoryService.StartRecording();
-				// Select the selected tab
 				var selectedFile = filesToOpen.SingleOrDefault(f => f.isSelected);
 				// If no tab was selected, select the last one (if any) - occurs e.g. when the user last had a decompiled file open, which we currently don't persist to disk, meaning that all other file will have isSelected false
 				if (selectedFile.file is null)
 				{
-					var firstTab = filesToOpen.LastOrDefault();
-					if (firstTab.file is not null) selectedFile = firstTab;
+					var lastTab = filesToOpen.LastOrDefault();
+					if (lastTab.file is not null) selectedFile = lastTab;
 				}
+				// Tabs are restored (in order) without creating their editors - only the selected tab's editor is created, the rest are created when first shown
+				await _codeEditorPanel.RestoreTabs(filesToOpen.Select(f => (f.file, f.linePosition)).ToList(), selectedFile.file);
+				_navigationHistoryService.StartRecording();
 				if (selectedFile.file is not null) await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(selectedFile.file, selectedFile.linePosition);
 			});
 		});

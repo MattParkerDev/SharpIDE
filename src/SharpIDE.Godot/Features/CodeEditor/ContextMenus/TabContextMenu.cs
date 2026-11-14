@@ -33,22 +33,22 @@ public partial class CodeEditorPanel
 		menu.PopupHide += () => menu.QueueFree();
 		menu.IdPressed += id =>
 		{
-			var sharpIdeCodeEditContainer = (SharpIdeCodeEditContainer)_tabContainer.GetTabControl((int)tabIndex);
-			var file = sharpIdeCodeEditContainer.CodeEdit.SharpIdeFile;
+			var codeEditorTab = (CodeEditorTab)_tabContainer.GetTabControl((int)tabIndex);
+			var file = codeEditorTab.File;
 
 			var actionId = (TabContextMenuOptions)id;
 			if (actionId is TabContextMenuOptions.Close)
 			{
-				CloseTabs([sharpIdeCodeEditContainer]);
+				CloseTabs([codeEditorTab]);
 			}
 			else if (actionId is TabContextMenuOptions.CloseOtherTabs)
 			{
-				var otherTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().Except([sharpIdeCodeEditContainer]).ToList();
+				var otherTabs = GetTabs().Except([codeEditorTab]).ToList();
 				CloseTabs(otherTabs);
 			}
 			else if (actionId is TabContextMenuOptions.CloseAllTabs)
 			{
-				var allTabs = _tabContainer.GetChildren().OfType<SharpIdeCodeEditContainer>().ToList();
+				var allTabs = GetTabs().ToList();
 				CloseTabs(allTabs);
 			}
 			else if (actionId is TabContextMenuOptions.CopyFullPath)

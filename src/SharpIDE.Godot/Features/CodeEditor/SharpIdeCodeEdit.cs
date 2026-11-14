@@ -530,6 +530,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			await this.InvokeAsync(async () => SetAnalyzerDiagnostics(await analyzerDiagnostics));
 			LastAnalysedVersion = await analysisVersion;
 		});
+		await setTextTask; // Callers rely on the text being in the editor once this completes
 	}
 
 	private async Task OnFileDeleted()
