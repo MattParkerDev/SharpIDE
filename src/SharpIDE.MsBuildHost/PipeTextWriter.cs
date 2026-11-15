@@ -46,6 +46,13 @@ public class PipeTextWriter : TextWriter
 			out _);
 
 		writer.Advance(bytesUsed);
-		_ = writer.FlushAsync();
+
+		// TextWriter is synchronous, so block on the flush when the pipe applies backpressure.
+		// The reader runs on its own task (RpcBuildService), so this cannot deadlock.
+		var flush = writer.FlushAsync();
+		var result = flush.IsCompletedSuccessfully
+			? flush.Result
+			: flush.AsTask().GetAwaiter().GetResult();
+		if (result.IsCompleted) throw new InvalidOperationException("Pipe reader has completed; build output can no longer be written.");
 	}
 }
