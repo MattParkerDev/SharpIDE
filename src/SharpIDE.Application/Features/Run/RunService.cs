@@ -116,7 +116,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 				GlobalEvents.Instance.ProjectStartedRunning.InvokeParallelFireAndForget(project);
 			}
 			project.ProjectStartedRunning.InvokeParallelFireAndForget();
-			await process.WaitForExitAsync().WaitAsync(project.RunningCancellationTokenSource.Token).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			await ((Task)process.WaitForExitAsync().WaitAsync(project.RunningCancellationTokenSource.Token)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 			if (project.RunningCancellationTokenSource.IsCancellationRequested)
 			{
 				process.End();
