@@ -50,6 +50,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private ImmutableArray<SharpIdeDiagnostic> _projectDiagnosticsForFile = [];
 	/// The applicable (leaf) code actions in the popup and its submenus, indexed by menu item id
 	private readonly List<CodeAction> _currentCodeActionsInPopup = [];
+	private readonly Texture2D _errorFixIcon = ResourceLoader.Load<Texture2D>("uid://d0pts0kjxr30g");
+	private readonly Texture2D _warningFixIcon = ResourceLoader.Load<Texture2D>("uid://cy1ojaf8bavcu");
+	private readonly Texture2D _refactorIcon = ResourceLoader.Load<Texture2D>("uid://bwp3q7qxaxkq5");
 	private bool _fileChangingSuppressBreakpointToggleEvent;
 	private bool _fileDeleted;
 	// The editor owns an open file's text. These mirror Text (UI thread only): _currentSourceText is built from successive WithChanges,
@@ -879,12 +882,26 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			await this.InvokeAsync(() =>
 			{
 				ClearCodeActionsPopup();
-				AddCodeActionsToMenu(_popupMenu, codeActions);
+				foreach (var ideCodeAction in codeActions)
+				{
+					AddCodeActionToMenu(_popupMenu, ideCodeAction.CodeAction);
+					var index = _popupMenu.ItemCount - 1;
+					// A red lightbulb for error fixes, yellow for other fixes, a wrench for refactorings. Nested actions have no icon
+					_popupMenu.SetItemIcon(index, GetCodeActionIcon(ideCodeAction));
+					_popupMenu.SetItemIconMaxWidth(index, 16);
+				}
 				if (codeActions.Length is not 0) _popupMenu.SetFocusedItem(0);
 				GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
 			});
 		});
 	}
+
+	private Texture2D GetCodeActionIcon(IdeCodeAction ideCodeAction) => ideCodeAction switch
+	{
+		{ Kind: not IdeCodeActionKind.QuickFix } => _refactorIcon,
+		{ IsErrorFix: true } => _errorFixIcon,
+		_ => _warningFixIcon
+	};
 
 	private void ClearCodeActionsPopup()
 	{
@@ -897,24 +914,24 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	}
 
 	/// Code actions with nested actions (e.g. "Configure or suppress issues") cannot be applied themselves, so they are shown as submenus
-	private void AddCodeActionsToMenu(PopupMenu menu, ImmutableArray<CodeAction> codeActions)
+	private void AddCodeActionToMenu(PopupMenu menu, CodeAction codeAction)
 	{
-		foreach (var codeAction in codeActions)
+		if (codeAction.NestedActions.IsEmpty)
 		{
-			if (codeAction.NestedActions.IsEmpty)
-			{
-				menu.AddItem(codeAction.Title, _currentCodeActionsInPopup.Count);
-				_currentCodeActionsInPopup.Add(codeAction);
-				continue;
-			}
-
-			var submenu = new PopupMenu();
-			submenu.IdPressed += OnCodeFixSelected;
-			// The submenu must be a child of the PopupMenu, so it is a descendant of _popupMenu, and gets freed by ClearCodeActionsPopup
-			menu.AddChild(submenu);
-			AddCodeActionsToMenu(submenu, codeAction.NestedActions);
-			menu.AddSubmenuNodeItem(codeAction.Title, submenu);
+			menu.AddItem(codeAction.Title, _currentCodeActionsInPopup.Count);
+			_currentCodeActionsInPopup.Add(codeAction);
+			return;
 		}
+
+		var submenu = new PopupMenu();
+		submenu.IdPressed += OnCodeFixSelected;
+		// The submenu must be a child of the PopupMenu, so it is a descendant of _popupMenu, and gets freed by ClearCodeActionsPopup
+		menu.AddChild(submenu);
+		foreach (var nestedAction in codeAction.NestedActions)
+		{
+			AddCodeActionToMenu(submenu, nestedAction);
+		}
+		menu.AddSubmenuNodeItem(codeAction.Title, submenu);
 	}
 
 	private (int line, int col) GetCaretPosition(bool startAt1 = false)

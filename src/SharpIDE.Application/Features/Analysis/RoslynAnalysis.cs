@@ -33,6 +33,7 @@ using Microsoft.CodeAnalysis.Remote.Razor.SemanticTokens;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.SignatureHelp;
+using Microsoft.CodeAnalysis.Suggestions;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
@@ -840,22 +841,44 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	/// Gets the code fixes and refactorings for the selection (an empty span for just the caret), filtered and ordered the same way as the Roslyn LSP (VS Code) - e.g. error fixes first, grouped by diagnostic and priority.
 	/// Code actions with nested actions are returned as a CodeAction with NestedActions, which itself cannot be applied.
-	public async Task<ImmutableArray<CodeAction>> GetCodeActionsForDocumentAtPosition(SharpIdeFile fileModel, LinePositionSpan selection, CancellationToken cancellationToken = default)
+	public async Task<ImmutableArray<IdeCodeAction>> GetCodeActionsForDocumentAtPosition(SharpIdeFile fileModel, LinePositionSpan selection, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
 		Guard.Against.Null(document, nameof(document));
 
-		// ICodeFixService gets the diagnostics to fix from IDiagnosticAnalyzerService, so the solution level (host) analyzers must be registered for fixes to compiler and IDE diagnostics - see CreateSolutionLevelAnalyzerReferences
-		var codeActions = await CodeActionHelpers.GetCodeActionsAsync(
+		// This mirrors CodeActionHelpers.GetCodeActionsAsync, but keeps each action's kind, which it discards
+		// ICodeFixService gets the diagnostics to fix from IDiagnosticAnalyzerService, so the solution level (host) analyzers must be registered for fixes to compiler and IDE diagnostics - see SolutionLevelAnalyzerReferences
+		var actionSets = await CodeActionHelpers.GetActionSetsAsync(
 			document,
-			ProtocolConversions.LinePositionToRange(selection),
 			_codeFixService!,
 			_codeRefactoringService!,
-			fixAllScope: null,
+			ProtocolConversions.LinePositionToRange(selection),
 			cancellationToken);
-		return codeActions;
+		if (actionSets.IsDefaultOrEmpty) return [];
+
+		var codeActions = ImmutableArray.CreateBuilder<IdeCodeAction>();
+		foreach (var set in actionSets)
+		{
+			foreach (var suggestedAction in set.Actions)
+			{
+				if (CodeActionHelpers.IsCodeActionNotSupportedByLSP(suggestedAction)) continue;
+				var codeAction = CodeActionHelpers.GetNestedActionsFromActionSet(suggestedAction, fixAllScope: null);
+				var lspKind = CodeActionHelpers.GetCodeActionKindFromSuggestedActionCategoryName(set.CategoryName!, suggestedAction);
+				var isErrorFix = set.CategoryName is UnifiedPredefinedSuggestedActionCategoryNames.ErrorFix;
+				codeActions.Add(new IdeCodeAction(codeAction, ToIdeCodeActionKind(lspKind), isErrorFix));
+			}
+		}
+		return codeActions.ToImmutable();
+
+		static IdeCodeActionKind ToIdeCodeActionKind(Roslyn.LanguageServer.Protocol.CodeActionKind kind)
+		{
+			if (kind == Roslyn.LanguageServer.Protocol.CodeActionKind.QuickFix) return IdeCodeActionKind.QuickFix;
+			if (kind == Roslyn.LanguageServer.Protocol.CodeActionKind.RefactorExtract) return IdeCodeActionKind.RefactorExtract;
+			if (kind == Roslyn.LanguageServer.Protocol.CodeActionKind.RefactorInline) return IdeCodeActionKind.RefactorInline;
+			return IdeCodeActionKind.Refactor;
+		}
 	}
 
 	private static async Task<(CompletionList completions, LinePosition triggerLinePosition)> GetCompletionsAsync(Document document, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
