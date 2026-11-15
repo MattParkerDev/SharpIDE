@@ -8,6 +8,7 @@
     <RollForward>LatestMajor</RollForward>
     <SelfContained>false</SelfContained>
     <UseAppHost>false</UseAppHost>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>

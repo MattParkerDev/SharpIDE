@@ -4,6 +4,7 @@
     <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
