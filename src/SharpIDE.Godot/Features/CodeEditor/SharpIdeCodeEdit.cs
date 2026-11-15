@@ -48,7 +48,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private ImmutableArray<SharpIdeDiagnostic> _fileDiagnostics = [];
 	private ImmutableArray<SharpIdeDiagnostic> _fileAnalyzerDiagnostics = [];
 	private ImmutableArray<SharpIdeDiagnostic> _projectDiagnosticsForFile = [];
-	private ImmutableArray<CodeAction> _currentCodeActionsInPopup = [];
+	/// The applicable (leaf) code actions in the popup and its submenus, indexed by menu item id
+	private readonly List<CodeAction> _currentCodeActionsInPopup = [];
 	private bool _fileChangingSuppressBreakpointToggleEvent;
 	private bool _fileDeleted;
 	// The editor owns an open file's text. These mirror Text (UI thread only): _currentSourceText is built from successive WithChanges,
@@ -360,8 +361,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void OnCodeFixSelected(long id)
 	{
 		GD.Print($"Code fix selected: {id}");
+		if (id < 0 || id >= _currentCodeActionsInPopup.Count) return;
 		var codeAction = _currentCodeActionsInPopup[(int)id];
-		if (codeAction is null) return;
 
 		_ = Task.GodotRun(async () =>
 		{
@@ -861,30 +862,59 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void OnCodeFixesRequested()
 	{
 		var (caretLine, caretColumn) = GetCaretPosition();
+		var selection = HasSelection()
+			? new LinePositionSpan(new LinePosition(GetSelectionFromLine(), GetSelectionFromColumn()), new LinePosition(GetSelectionToLine(), GetSelectionToColumn()))
+			: new LinePositionSpan(new LinePosition(caretLine, caretColumn), new LinePosition(caretLine, caretColumn));
 		var popupMenuPosition = GetCaretDrawPos() with { X = 0 } + GetGlobalPosition();
 		_popupMenu.Position = new Vector2I((int)popupMenuPosition.X, (int)popupMenuPosition.Y);
-		_popupMenu.Clear();
-		_popupMenu.AddItem("Getting Context Actions...", 0);
+		ClearCodeActionsPopup();
+		_popupMenu.AddItem("Getting Context Actions...");
+		_popupMenu.SetItemDisabled(0, true);
 		_popupMenu.Popup();
 		GD.Print($"Code fixes requested at line {caretLine}, column {caretColumn}");
 		_ = Task.GodotRun(async () =>
 		{
-			var linePos = new LinePosition(caretLine, caretColumn);
-			var codeActions = await _roslynAnalysis.GetCodeActionsForDocumentAtPosition(_currentFile, linePos);
+			// Already ordered by Roslyn, the same as VS Code
+			var codeActions = await _roslynAnalysis.GetCodeActionsForDocumentAtPosition(_currentFile, selection);
 			await this.InvokeAsync(() =>
 			{
-				_popupMenu.Clear();
-				foreach (var (index, codeAction) in codeActions.Index())
-				{
-					_currentCodeActionsInPopup = codeActions;
-					_popupMenu.AddItem(codeAction.Title, index);
-					//_popupMenu.SetItemMetadata(menuItem, codeAction);
-				}
-
+				ClearCodeActionsPopup();
+				AddCodeActionsToMenu(_popupMenu, codeActions);
 				if (codeActions.Length is not 0) _popupMenu.SetFocusedItem(0);
 				GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
 			});
 		});
+	}
+
+	private void ClearCodeActionsPopup()
+	{
+		_currentCodeActionsInPopup.Clear();
+		_popupMenu.Clear();
+		foreach (var submenu in _popupMenu.GetChildren().OfType<PopupMenu>())
+		{
+			submenu.QueueFree();
+		}
+	}
+
+	/// Code actions with nested actions (e.g. "Configure or suppress issues") cannot be applied themselves, so they are shown as submenus
+	private void AddCodeActionsToMenu(PopupMenu menu, ImmutableArray<CodeAction> codeActions)
+	{
+		foreach (var codeAction in codeActions)
+		{
+			if (codeAction.NestedActions.IsEmpty)
+			{
+				menu.AddItem(codeAction.Title, _currentCodeActionsInPopup.Count);
+				_currentCodeActionsInPopup.Add(codeAction);
+				continue;
+			}
+
+			var submenu = new PopupMenu();
+			submenu.IdPressed += OnCodeFixSelected;
+			// The submenu must be a child of the PopupMenu, so it is a descendant of _popupMenu, and gets freed by ClearCodeActionsPopup
+			menu.AddChild(submenu);
+			AddCodeActionsToMenu(submenu, codeAction.NestedActions);
+			menu.AddSubmenuNodeItem(codeAction.Title, submenu);
+		}
 	}
 
 	private (int line, int col) GetCaretPosition(bool startAt1 = false)

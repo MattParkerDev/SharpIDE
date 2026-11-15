@@ -17,6 +17,8 @@ using Microsoft.CodeAnalysis.CSharp.DecompiledSource;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FindSymbols;
+using Microsoft.CodeAnalysis.LanguageServer;
+using Microsoft.CodeAnalysis.LanguageServer.Handler.CodeActions;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.MetadataAsSource;
 using Microsoft.CodeAnalysis.MSBuild;
@@ -35,7 +37,6 @@ using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.FileSystem;
-using SharpIDE.Application.Features.Analysis.FixLoaders;
 using SharpIDE.Application.Features.Analysis.ProjectLoader;
 using SharpIDE.Application.Features.Analysis.Razor;
 using SharpIDE.Application.Features.Analysis.WorkspaceServices;
@@ -75,8 +76,6 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static IMetadataAsSourceFileService _metadataAsSourceFileService = null!;
 	private static IImplementationAssemblyLookupService _implementationAssemblyLookupService = null!;
 	private static SignatureHelpService _signatureHelpService = null!;
-	private static HashSet<CodeRefactoringProvider> _codeRefactoringProviders = [];
-	private static HashSet<CodeFixProvider> _codeFixProviders = [];
 	private static readonly ConditionalWeakTable<Compilation, CompilationWithAnalyzers> _compilationWithAnalyzersCache = new();
 
 	// Primarily used for getting the globs for a project
@@ -93,9 +92,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			{
 				CreateWorkspace();
 				await LoadSolutionInWorkspace(solutionModel);
-				var diagnosticsTask = UpdateSolutionDiagnostics();
-				LoadCodeActions();
-				await diagnosticsTask;
+				await UpdateSolutionDiagnostics();
 			}
 			catch (Exception e)
 			{
@@ -161,7 +158,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 						appliedProjectIdMap = [];
 						using var _ = ArrayBuilder<ProjectInfo>.GetInstance(out var projectInfos);
 						projectInfos.AddRange(solutionInfo.Projects);
-						return workspace.CreateSolution(solutionInfo).AddProjects(projectInfos);
+						// The solution level analyzers are required for ICodeFixService to return fixes for compiler and IDE diagnostics
+						return workspace.CreateSolution(solutionInfo)
+							.WithAnalyzerReferences(SolutionLevelAnalyzerReferences.References)
+							.AddProjects(projectInfos);
 					}
 					var (newSolution, projectIdMap) = ApplyLoadedProjectInfos(currentSolution, solutionInfo.Projects, removeOtherProjects: true);
 					appliedProjectIdMap = projectIdMap;
@@ -170,12 +170,6 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 				changeKind: (oldSolution, _) => (oldSolution.ProjectIds.Count is 0 ? WorkspaceChangeKind.SolutionAdded : WorkspaceChangeKind.SolutionReloaded, null, null));
 			// Keyed on the solution's ProjectIds, as GetProjectIdForNewFile looks them up
 			_projectFileInfoMap = projectFileInfos.ToDictionary(pair => appliedProjectIdMap.GetValueOrDefault(pair.Key, pair.Key), pair => pair.Value);
-
-			// If these aren't added, IDiagnosticAnalyzerService will not return compiler analyzer diagnostics
-			// Note that we aren't currently using IDiagnosticAnalyzerService
-			//var solutionAnalyzerReferences = CreateSolutionLevelAnalyzerReferencesForWorkspace(_workspace);
-			//solution = solution.WithAnalyzerReferences(solutionAnalyzerReferences);
-			//_workspace.SetCurrentSolution(solution);
 		}
 
 		_solutionLoadedTcs.SetResult();
@@ -218,23 +212,6 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		_documentMappingService = container.GetExports<IDocumentMappingService>().FirstOrDefault();
 
 		_msBuildProjectLoader = new CustomMsBuildProjectLoader(_workspace, _designTimeBuildService);
-	}
-
-	private static void LoadCodeActions()
-	{
-		using var _ = SharpIdeOtel.Source.StartActivity();
-		if (_codeFixProviders.Count is not 0 || _codeRefactoringProviders.Count is not 0) return;
-		foreach (var assembly in MefHostServices.DefaultAssemblies)
-		{
-			// These could be loaded from the composition via _workspace.CurrentSolution.Services.ExportProvider.GetExports<Lazy<CodeFixProvider, CodeChangeProviderMetadata>>().ToList(),
-			// however we need all the CodeFixProviders/CodeRefactoringProviders immediately on the first code action request, so I would prefer to do it here
-			var fixers = CodeFixProviderLoader.LoadCodeFixProviders([assembly], LanguageNames.CSharp);
-			_codeFixProviders.AddRange(fixers);
-			var refactoringProviders = CodeRefactoringProviderLoader.LoadCodeRefactoringProviders([assembly], LanguageNames.CSharp);
-			_codeRefactoringProviders.AddRange(refactoringProviders);
-		}
-		_codeRefactoringProviders = _codeRefactoringProviders.DistinctBy(s => s.GetType().Name).ToHashSet();
-		_codeFixProviders = _codeFixProviders.DistinctBy(s => s.GetType().Name).ToHashSet();
 	}
 
 	/// Callers should call UpdateSolutionDiagnostics after this
@@ -861,117 +838,24 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		// return symbols;
 	}
 
-	// TODO: Pass in LinePositionSpan for refactorings that span multiple characters, e.g. extract method
-	public async Task<ImmutableArray<CodeAction>> GetCodeActionsForDocumentAtPosition(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
+	/// Gets the code fixes and refactorings for the selection (an empty span for just the caret), filtered and ordered the same way as the Roslyn LSP (VS Code) - e.g. error fixes first, grouped by diagnostic and priority.
+	/// Code actions with nested actions are returned as a CodeAction with NestedActions, which itself cannot be applied.
+	public async Task<ImmutableArray<CodeAction>> GetCodeActionsForDocumentAtPosition(SharpIdeFile fileModel, LinePositionSpan selection, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
 		Guard.Against.Null(document, nameof(document));
-		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
-		// We don't need analyzer diagnostics, as ICodeFixService does not take diagnostics to find fixes for, it takes a document and span
-		var diagnostics = semanticModel.Compilation.GetDiagnostics(cancellationToken);
-
-		var sourceText = await document.GetTextAsync(cancellationToken);
-		var position = sourceText.Lines.GetPosition(linePosition);
-		var diagnosticsAtPosition = diagnostics
-			.Where(d => d.Location.IsInSource && d.Location.SourceSpan.Contains(position))
-			.ToImmutableArray();
-
-		var arrayBuilder = ImmutableArray.CreateBuilder<CodeAction>();
-		foreach (var diagnostic in diagnosticsAtPosition)
-		{
-			var actions = await GetCodeFixesAsync(document, diagnostic, cancellationToken);
-			arrayBuilder.AddRange(actions);
-		}
-
-		var textSpan = new TextSpan(position, 0);
-		var codeActionsFromProjectAnalyzers = await GetCodeFixesFromProjectAnalyzersAsync(document, textSpan, cancellationToken);
-		arrayBuilder.AddRange(codeActionsFromProjectAnalyzers);
-
-		var linePositionSpan = new LinePositionSpan(linePosition, new LinePosition(linePosition.Line, linePosition.Character + 1));
-		var selectedSpan = sourceText.Lines.GetTextSpan(linePositionSpan);
-
-		var codeRefactorings = await GetCodeRefactoringsAsync(document, selectedSpan, cancellationToken);
-		arrayBuilder.AddRange(codeRefactorings);
-
-		return arrayBuilder.ToImmutable();
-	}
-
-	// Fixes from the MefHostServices.DefaultAssemblies
-	private static async Task<ImmutableArray<CodeAction>> GetCodeFixesAsync(Document document, Diagnostic diagnostic, CancellationToken cancellationToken = default)
-	{
-		var codeActions = new List<CodeAction>();
-		var context = new CodeFixContext(
+		// ICodeFixService gets the diagnostics to fix from IDiagnosticAnalyzerService, so the solution level (host) analyzers must be registered for fixes to compiler and IDE diagnostics - see CreateSolutionLevelAnalyzerReferences
+		var codeActions = await CodeActionHelpers.GetCodeActionsAsync(
 			document,
-			diagnostic,
-			(action, _) => codeActions.Add(action), // callback collects fixes
-			cancellationToken
-		);
-
-		var relevantProviders = _codeFixProviders.Where(provider => provider.FixableDiagnosticIds.Contains(diagnostic.Id));
-
-		foreach (var provider in relevantProviders)
-		{
-			await provider.RegisterCodeFixesAsync(context);
-		}
-
-		return codeActions.ToImmutableArray();
-	}
-
-	private static async Task<ImmutableArray<CodeAction>> GetCodeFixesFromProjectAnalyzersAsync(Document document, TextSpan span, CancellationToken cancellationToken = default)
-	{
-		// We could get the CodeFixProviders from the project's IsolatedAnalyzerFileReferences. For now, ICodeFixService handles caching them for me
-		// I also do not know why the _codeFixService does not return fixes for MefHostServices.DefaultAssemblies - I have verified that there are Lazy<CodeFixProvider, CodeChangeProviderMetadata>>'s provided by the composition for them
-		var fixCollections = await _codeFixService!.GetFixesAsync(
-			document,
-			span,
+			ProtocolConversions.LinePositionToRange(selection),
+			_codeFixService!,
+			_codeRefactoringService!,
+			fixAllScope: null,
 			cancellationToken);
-
-		var codeActions = fixCollections
-			.SelectMany(collection => collection.Fixes)
-			.Select(fix => fix.Action)
-			.Where(s => s.NestedActions.Length is 0) // Currently, nested actions are not supported
-			.ToImmutableArray();
-
 		return codeActions;
-	}
-
-	private static async Task<ImmutableArray<CodeAction>> GetCodeRefactoringsAsync(Document document, TextSpan span, CancellationToken cancellationToken = default)
-	{
-		var refactorings = await _codeRefactoringService!.GetRefactoringsAsync(
-			document,
-			span,
-			cancellationToken);
-
-		var codeActions = refactorings
-			.SelectMany(collection => collection.CodeActions)
-			.Where(s => s.action.NestedActions.Length is 0) // Currently, nested actions are not supported
-			.Select(s => s.action)
-			.ToImmutableArray();
-
-		return codeActions;
-	}
-
-	[Obsolete] // ICodeRefactoringService seems to return refactorings from DefaultAssemblies! Unlike ICodeFixService. Leaving for reference
-	private static async Task<ImmutableArray<CodeAction>> GetCodeRefactoringsFromDefaultAssembliesAsync(Document document, TextSpan span, CancellationToken cancellationToken = default)
-	{
-		var codeActions = new List<CodeAction>();
-		var refactorContext = new CodeRefactoringContext(
-			document,
-			span,
-			action => codeActions.Add(action),
-			cancellationToken
-		);
-
-		foreach (var provider in _codeRefactoringProviders)
-		{
-			await provider.ComputeRefactoringsAsync(refactorContext).ConfigureAwait(false);
-		}
-
-		return codeActions.ToImmutableArray();
 	}
 
 	private static async Task<(CompletionList completions, LinePosition triggerLinePosition)> GetCompletionsAsync(Document document, LinePosition linePosition, CompletionTrigger completionTrigger, CancellationToken cancellationToken = default)
