@@ -263,16 +263,16 @@ public partial class RunProjectsComponent : MarginContainer
 		Callable.From(_runMenuPopup.ResetSize).CallDeferred();
 	}
 
-	private async void OnRunButtonPressed()
+	private void OnRunButtonPressed()
 	{
 		if (_activeRunMenuItemContainer?.MenuItem is { } menuItem)
-			await menuItem.RunProject().ConfigureAwait(false);
+			menuItem.RunProject();
 	}
 
-	private async void OnDebugButtonPressed()
+	private void OnDebugButtonPressed()
 	{
 		if (_activeRunMenuItemContainer?.MenuItem is { } menuItem)
-			await menuItem.DebugProject().ConfigureAwait(false);
+			menuItem.DebugProject();
 	}
 
 	private async void OnStopButtonPressed()

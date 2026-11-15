@@ -37,9 +37,10 @@ public partial class CodeEditorTab : MarginContainer
 		container.CodeEdit.Solution = solution;
 		AddChild(container);
 		EditorContainer = container;
-		_loadLinePosition = PendingLinePosition;
+		var loadLinePosition = _loadLinePosition = PendingLinePosition;
 		PendingLinePosition = null;
-		_loadTask = container.CodeEdit.SetSharpIdeFile(File, _loadLinePosition);
+		// Task.Run rather than GodotRun - callers await this, so faults must propagate
+		_loadTask = Task.Run(() => container.CodeEdit.SetSharpIdeFile(File, loadLinePosition));
 		return _loadTask;
 	}
 

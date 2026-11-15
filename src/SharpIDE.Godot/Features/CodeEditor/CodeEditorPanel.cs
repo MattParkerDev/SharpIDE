@@ -169,7 +169,6 @@ public partial class CodeEditorPanel : PanelContainer
 
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var (tab, wasLoaded, loadTask) = await this.InvokeAsync(() =>
 		{
 			var tab = GetTabs().FirstOrDefault(t => t.File == file);

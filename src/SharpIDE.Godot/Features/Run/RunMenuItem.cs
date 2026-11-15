@@ -92,23 +92,20 @@ public partial class RunMenuItem : HBoxContainer
 	}
 
 	private StringName _buildAnimationName = "BuildingAnimation";
-	private async void OnRunButtonPressed()
-	{
-		await RunProject().ConfigureAwait(false);
-	}
+	private void OnRunButtonPressed() => RunProject();
 
-	public async Task RunProject()
+	[RequiresGodotUiThread]
+	public void RunProject()
 	{
 		SetAttemptingRunState();
-		await _runService.RunProject(Project, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
+		var usePty = Singletons.AppState.IdeSettings.RunUsePty;
+		_ = Task.GodotRun(() => _runService.RunProject(Project, usePty: usePty));
 	}
 
-	private async void OnDebugButtonPressed()
-	{
-		await DebugProject().ConfigureAwait(false);
-	}
+	private void OnDebugButtonPressed() => DebugProject();
 
-	public async Task DebugProject()
+	[RequiresGodotUiThread]
+	public void DebugProject()
 	{
 		var debuggerExecutableInfo = new DebuggerExecutableInfo
 		{
@@ -116,7 +113,8 @@ public partial class RunMenuItem : HBoxContainer
 			DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
 		};
 		SetAttemptingRunState();
-		await _runService.RunProject(Project, true, debuggerExecutableInfo, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
+		var usePty = Singletons.AppState.IdeSettings.RunUsePty;
+		_ = Task.GodotRun(() => _runService.RunProject(Project, true, debuggerExecutableInfo, usePty: usePty));
 	}
 
 	private void SetAttemptingRunState()

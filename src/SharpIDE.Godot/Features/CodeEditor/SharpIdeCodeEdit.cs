@@ -504,10 +504,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}).CallDeferred();
 	}
 
-	// TODO: Ensure not running on UI thread
+	/// Must not be called on the UI thread - see <see cref="CodeEditorTab.EnsureLoaded"/>
 	public async Task SetSharpIdeFile(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition = null)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding); // get off the UI thread
 		using var __ = SharpIdeOtel.Source.StartActivity($"{nameof(SharpIdeCodeEdit)}.{nameof(SetSharpIdeFile)}");
 		_currentFile = file;
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);

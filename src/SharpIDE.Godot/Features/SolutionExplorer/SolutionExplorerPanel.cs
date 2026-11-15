@@ -153,7 +153,6 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	private async Task OnFileExternallySelected(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 		var task = GodotGlobalEvents.Instance.FileSelected.InvokeParallelAsync(file, fileLinePosition);
 		if (file.IsMetadataAsSourceFile)
 		{

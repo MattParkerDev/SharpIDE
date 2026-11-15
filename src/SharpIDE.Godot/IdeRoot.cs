@@ -116,10 +116,9 @@ public partial class IdeRoot : Control
 	private void OnRebuildSlnButtonPressed() => MsBuild(BuildType.Rebuild);
 	private void OnCleanSlnButtonPressed() => MsBuild(BuildType.Clean);
 	private void OnRestoreSlnButtonPressed() => MsBuild(BuildType.Restore);
-	private async void MsBuild(BuildType buildType)
+	private void MsBuild(BuildType buildType)
 	{
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-		await _buildService.MsBuildAsync(_sharpIdeSolutionAccessor.SolutionModel.FilePath, buildType);
+		_ = Task.GodotRun(() => _buildService.MsBuildAsync(_sharpIdeSolutionAccessor.SolutionModel.FilePath, buildType));
 	}
 
 	private async Task OnSolutionExplorerPanelOnFileSelected(SharpIdeFile file, SharpIdeFileLinePosition? fileLinePosition)

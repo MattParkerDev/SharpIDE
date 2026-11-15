@@ -30,7 +30,6 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 	{
 		Guard.Against.Null(project);
 		Guard.Against.NullOrWhiteSpace(project.FilePath, nameof(project.FilePath), "Project file path cannot be null or empty.");
-		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
 		var semaphoreSlim = _projectLocks.GetOrAdd(project, new SemaphoreSlim(1, 1));
 		var waitResult = await semaphoreSlim.WaitAsync(0).ConfigureAwait(false);

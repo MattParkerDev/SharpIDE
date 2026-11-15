@@ -82,23 +82,25 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_failedHBoxContainer.Visible = stage is UpdateStage.Failed;
 	}
 
-	private async void WithFailureGuard(Func<Task> func)
+	private void WithFailureGuard(Func<Task> func)
 	{
-		try
+		_ = Task.GodotRun(async () =>
 		{
-			await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
-			await func();
-		}
-		catch (Exception ex)
-		{
-			_downloadProgress = null;
-			Callable.From(() =>
+			try
 			{
-				GD.PrintErr($"Auto-update failed: {ex}");
-				_failedLabel.Text = $"Failed: {ex.Message}";
-				SetStage(UpdateStage.Failed);
-			}).CallDeferred();
-		}
+				await func();
+			}
+			catch (Exception ex)
+			{
+				_downloadProgress = null;
+				Callable.From(() =>
+				{
+					GD.PrintErr($"Auto-update failed: {ex}");
+					_failedLabel.Text = $"Failed: {ex.Message}";
+					SetStage(UpdateStage.Failed);
+				}).CallDeferred();
+			}
+		});
 	}
 
 	private async Task OnCheckForUpdatesPressed()
