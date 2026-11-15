@@ -100,7 +100,7 @@ public partial class RunMenuItem : HBoxContainer
     public async Task RunProject()
     {
         SetAttemptingRunState();
-        await _runService.RunProject(Project).ConfigureAwait(false);
+        await _runService.RunProject(Project, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
     }
 
     private async void OnDebugButtonPressed()
@@ -116,7 +116,7 @@ public partial class RunMenuItem : HBoxContainer
             DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
         };
         SetAttemptingRunState();
-        await _runService.RunProject(Project, true, debuggerExecutableInfo).ConfigureAwait(false);
+        await _runService.RunProject(Project, true, debuggerExecutableInfo, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
     }
 
     private void SetAttemptingRunState()

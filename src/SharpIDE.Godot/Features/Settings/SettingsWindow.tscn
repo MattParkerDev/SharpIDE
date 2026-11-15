@@ -244,3 +244,28 @@ layout_mode = 2
 layout_mode = 2
 theme_type_variation = &"Gray500Label"
 text = "Sets the Font and Font Size used in terminals"
+
+[node name="VBoxContainer8" type="VBoxContainer" parent="MarginContainer/HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=769836101]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer8" unique_id=949165808]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer8/HBoxContainer" unique_id=1696728090]
+layout_mode = 2
+theme_type_variation = &"Gray800Label"
+text = "Use PTY"
+
+[node name="RunUsePtyCheckButton" type="CheckButton" parent="MarginContainer/HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer8/HBoxContainer" unique_id=1009388783]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer8" unique_id=180232339]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer8/HBoxContainer2" unique_id=186764257]
+layout_mode = 2
+theme_type_variation = &"Gray500Label"
+text = "Run and debug projects in a pseudo terminal, enabling input, Ctrl+C and terminal resizing. Applies to the next run"

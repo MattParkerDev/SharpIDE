@@ -22,6 +22,7 @@ public class IdeSettings
     public bool EditorEnableFolding { get; set; } = true;
     public string? TerminalSystemFontName { get; set; } = null;
     public int? TerminalFontSize { get; set; } = null;
+    public bool RunUsePty { get; set; } = true;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

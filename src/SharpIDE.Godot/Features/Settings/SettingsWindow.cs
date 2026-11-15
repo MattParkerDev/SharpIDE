@@ -12,6 +12,7 @@ public partial class SettingsWindow : Window
     private Button _fontPickerButton = null!;
     private Button _terminalFontPickerButton = null!;
     private CheckButton _foldCodeCheckButton = null!;
+    private CheckButton _runUsePtyCheckButton = null!;
 
     private PackedScene _fontPickerDialogScene = ResourceLoader.Load<PackedScene>("uid://bkw3m18ndkev3");
 
@@ -25,6 +26,7 @@ public partial class SettingsWindow : Window
         _fontPickerButton = GetNode<Button>("%FontPickerButton");
         _terminalFontPickerButton = GetNode<Button>("%TerminalFontPickerButton");
         _foldCodeCheckButton = GetNode<CheckButton>("%FoldCodeCheckButton");
+        _runUsePtyCheckButton = GetNode<CheckButton>("%RunUsePtyCheckButton");
         
         _uiScaleSpinBox.ValueChanged += OnUiScaleSpinBoxValueChanged;
         _debuggerFilePathLineEdit.TextChanged += OnDebuggerFilePathChanged;
@@ -33,6 +35,7 @@ public partial class SettingsWindow : Window
         _fontPickerButton.Pressed += OnFontPickerButtonPressed;
         _terminalFontPickerButton.Pressed += OnTerminalFontPickerButtonPressed;
         _foldCodeCheckButton.Toggled += OnFoldCodeCheckButtonToggled;
+        _runUsePtyCheckButton.Toggled += OnRunUsePtyCheckButtonToggled;
         AboutToPopup += OnAboutToPopup;
     }
 
@@ -50,6 +53,7 @@ public partial class SettingsWindow : Window
         _terminalFontPickerButton.Text = $"{currentTerminalThemeNormalFont.GetFontName()} | {GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal)}";
 
         _foldCodeCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.EditorEnableFolding;
+        _runUsePtyCheckButton.ButtonPressed = Singletons.AppState.IdeSettings.RunUsePty;
         var themeOptionIndex = _themeOptionButton.GetOptionIndexOrNullForString(Singletons.AppState.IdeSettings.Theme.ToString());
         if (themeOptionIndex is not null) _themeOptionButton.Selected = themeOptionIndex.Value;
     }
@@ -137,5 +141,10 @@ public partial class SettingsWindow : Window
     {
         Singletons.AppState.IdeSettings.EditorEnableFolding = value;
         GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.InvokeParallelFireAndForget(value);
+    }
+
+    private void OnRunUsePtyCheckButtonToggled(bool value)
+    {
+        Singletons.AppState.IdeSettings.RunUsePty = value;
     }
 }

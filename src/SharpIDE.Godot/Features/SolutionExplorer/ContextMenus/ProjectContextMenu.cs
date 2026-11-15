@@ -68,7 +68,7 @@ public partial class SolutionExplorerPanel
             {
                 _ = Task.GodotRun(async () =>
                 {
-                    await _runService.RunProject(project);
+                    await _runService.RunProject(project, usePty: Singletons.AppState.IdeSettings.RunUsePty);
                 });
             }
             if (actionId is ProjectContextMenuOptions.Build)

@@ -25,7 +25,8 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 	private readonly BuildService _buildService = buildService;
 	private readonly DebuggingService _debuggingService = debuggingService;
 
-	public async Task RunProject(SharpIdeProjectModel project, bool isDebug = false, DebuggerExecutableInfo? debuggerExecutableInfo = null)
+	/// <param name="usePty">Attach the process to a pseudo terminal, enabling input, Ctrl+C, terminal resizing etc. When false, output is redirected via pipes, and input is not supported</param>
+	public async Task RunProject(SharpIdeProjectModel project, bool isDebug = false, DebuggerExecutableInfo? debuggerExecutableInfo = null, bool usePty = true)
 	{
 		Guard.Against.Null(project, nameof(project));
 		Guard.Against.NullOrWhiteSpace(project.FilePath, nameof(project.FilePath), "Project file path cannot be null or empty.");
@@ -64,13 +65,13 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 				Arguments = launch.Arguments,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
-				RedirectStandardInput = true, // required when UsePty is true
-				UsePty = true,
-				TerminalSize = (DefaultTerminalCols, DefaultTerminalRows), // corrected to the actual terminal control size once the run/debug tab attaches
+				RedirectStandardInput = usePty, // required when UsePty is true
+				UsePty = usePty,
+				TerminalSize = usePty ? (DefaultTerminalCols, DefaultTerminalRows) : null, // corrected to the actual terminal control size once the run/debug tab attaches
 				EnvironmentVariables = []
 			};
 			processStartInfo.EnvironmentVariables["DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION"] = "1";
-			if (OperatingSystem.IsWindows() is false) processStartInfo.EnvironmentVariables["TERM"] = "xterm-256color";
+			if (usePty && OperatingSystem.IsWindows() is false) processStartInfo.EnvironmentVariables["TERM"] = "xterm-256color";
 			if (launchProfile is not null)
 			{
 				if (launchProfile.ApplicationUrl != null) processStartInfo.EnvironmentVariables["ASPNETCORE_URLS"] = launchProfile.ApplicationUrl;
@@ -92,7 +93,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 			process.Start();
 
-			project.ProcessStandardIo = new StandardIo(process.CombinedOutputPipeReader, process.StandardInputPipeWriter, isPty: true, resizeTerminal: process.ResizeTerminal);
+			project.ProcessStandardIo = new StandardIo(process.CombinedOutputPipeReader, process.StandardInputPipeWriter, isPty: usePty, resizeTerminal: usePty ? process.ResizeTerminal : null);
 
 			if (isDebug)
 			{
