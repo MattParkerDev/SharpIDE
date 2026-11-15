@@ -667,6 +667,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (line < firstVisibleLine || line > lastVisibleLine) continue;
 			var startCol = sharpIdeDiagnostic.Span.Start.Character;
 			var endCol = sharpIdeDiagnostic.Span.End.Character;
+			// Suggestions (e.g. IDE0028) only underline their first 2 characters, so they're less noisy, as Visual Studio does
+			if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Info)
+			{
+				endCol = sharpIdeDiagnostic.Span.End.Line == line ? Math.Min(endCol, startCol + 2) : startCol + 2;
+			}
 			var color = sharpIdeDiagnostic.Severity switch
 			{
 				DiagnosticSeverity.Error => DiagnosticErrorColor,
