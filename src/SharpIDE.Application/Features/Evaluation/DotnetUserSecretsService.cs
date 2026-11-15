@@ -10,7 +10,7 @@ public class DotnetUserSecretsService(ProjectEvaluationService projectEvaluation
 	public async Task<(Guid, string filePath)> GetOrCreateUserSecretsId(SharpIdeProjectModel projectModel)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(DotnetUserSecretsService)}.{nameof(GetOrCreateUserSecretsId)}");
-		Guard.Against.Null(projectModel, nameof(projectModel));
+		Guard.Against.Null(projectModel);
 
 		var userSecretsId = await _projectEvaluationService.GetOrCreateUserSecretsIdAsync(projectModel).ConfigureAwait(false);
 		var userSecretsFilePath = GetUserSecretsFilePath(userSecretsId);

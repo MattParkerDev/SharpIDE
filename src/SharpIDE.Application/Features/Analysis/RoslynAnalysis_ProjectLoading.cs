@@ -21,8 +21,8 @@ public partial class RoslynAnalysis
 		_logger.LogInformation("RoslynAnalysis: Reloading solution");
 		await _solutionLoadedTcs.Task;
 		_solutionLoadedTcs = new TaskCompletionSource();
-		Guard.Against.Null(_workspace, nameof(_workspace));
-		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
+		Guard.Against.Null(_workspace);
+		Guard.Against.Null(_msBuildProjectLoader);
 
 		await LoadSolutionCoreAsync(_sharpIdeSolutionModel!.FilePath, cancellationToken);
 
@@ -39,8 +39,8 @@ public partial class RoslynAnalysis
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ReloadProjects)}");
 		_logger.LogInformation("RoslynAnalysis: Reloading projects {ProjectPaths}", string.Join(", ", projectModels.Select(p => p.FilePath)));
 		await _solutionLoadedTcs.Task;
-		Guard.Against.Null(_workspace, nameof(_workspace));
-		Guard.Against.Null(_msBuildProjectLoader, nameof(_msBuildProjectLoader));
+		Guard.Against.Null(_workspace);
+		Guard.Against.Null(_msBuildProjectLoader);
 
 		await _buildService.MsBuildAsync(_sharpIdeSolutionModel!.FilePath, BuildType.Restore, BuildStartedFlags.Internal, cancellationToken);
 		var __ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(CustomMsBuildProjectLoader)}.{nameof(CustomMsBuildProjectLoader.LoadProjectInfosAsync)}");

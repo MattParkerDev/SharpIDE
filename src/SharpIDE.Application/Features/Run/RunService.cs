@@ -28,7 +28,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 	/// <param name="usePty">Attach the process to a pseudo terminal, enabling input, Ctrl+C, terminal resizing etc. When false, output is redirected via pipes, and input is not supported</param>
 	public async Task RunProject(SharpIdeProjectModel project, bool isDebug = false, DebuggerExecutableInfo? debuggerExecutableInfo = null, bool usePty = true)
 	{
-		Guard.Against.Null(project, nameof(project));
+		Guard.Against.Null(project);
 		Guard.Against.NullOrWhiteSpace(project.FilePath, nameof(project.FilePath), "Project file path cannot be null or empty.");
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
@@ -174,7 +174,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 	public async Task CancelRunningProject(SharpIdeProjectModel project)
 	{
-		Guard.Against.Null(project, nameof(project));
+		Guard.Against.Null(project);
 		if (project.Running is false) throw new InvalidOperationException($"Project {project.Name.Value} is not running.");
 		if (project.RunningCancellationTokenSource is null) throw new InvalidOperationException($"Project {project.Name.Value} does not have a running cancellation token source.");
 

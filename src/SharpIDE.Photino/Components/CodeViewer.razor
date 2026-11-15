@@ -82,7 +82,7 @@
 			return;
 		}
 
-		ArgumentNullException.ThrowIfNull(_codeEditorRef, nameof(_codeEditorRef));
+		ArgumentNullException.ThrowIfNull(_codeEditorRef);
 		var editorTextValue = await _codeEditorRef.GetValue();
 		await File.WriteAllTextAsync(_internalSelectedFile.Path, editorTextValue);
 		_fileContent = editorTextValue;

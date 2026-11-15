@@ -20,7 +20,7 @@ public static class DebuggerProcessStreamHelper
 			return (input, output, false, debugAdapterDisposable);
 		}
 		var debuggerExecutablePath = debuggerExecutableInfo.DebuggerExecutablePath;
-		Guard.Against.NullOrWhiteSpace(debuggerExecutablePath, nameof(debuggerExecutablePath), "Debugger executable path cannot be null or empty.");
+		Guard.Against.NullOrWhiteSpace(debuggerExecutablePath, "Debugger executable path cannot be null or empty.");
 		var isNetCoreDbg = Path.GetFileNameWithoutExtension(debuggerExecutablePath).Equals("netcoredbg", StringComparison.OrdinalIgnoreCase);
 
 		var process = new Process

@@ -24,7 +24,7 @@ public partial class RoslynAnalysis
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
-		Guard.Against.Null(document, nameof(document));
+		Guard.Against.Null(document);
 
 		// This mirrors CodeActionHelpers.GetCodeActionsAsync, but keeps each action's kind, which it discards
 		// ICodeFixService gets the diagnostics to fix from IDiagnosticAnalyzerService, so the solution level (host) analyzers must be registered for fixes to compiler and IDE diagnostics - see SolutionLevelAnalyzerReferences

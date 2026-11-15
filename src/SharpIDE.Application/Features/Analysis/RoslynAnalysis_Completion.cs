@@ -42,7 +42,7 @@ public partial class RoslynAnalysis
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeCompletionsForDocumentAtPosition)}");
 		await _solutionLoadedTcs.Task;
 		var document = await GetDocumentForSharpIdeFile(fileModel);
-		Guard.Against.Null(document, nameof(document));
+		Guard.Against.Null(document);
 		// The workspace may not have caught up with the editor yet (or may have moved past this text), so fork a document with the text at the time of the completion request.
 		// documentText is the editor's own SourceText, so when committing, edits typed since can be mapped forward via GetChangeRanges.
 		document = document.WithText(documentText);

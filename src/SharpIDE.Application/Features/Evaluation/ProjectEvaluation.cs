@@ -86,7 +86,7 @@ public static class ProjectEvaluation
 	public static async Task<InstalledPackagesResult> GetPackageReferencesForProjects(List<SharpIdeProjectModel> projectModels, bool includeTransitive = true, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(ProjectEvaluation)}.{nameof(GetPackageReferencesForProjects)}");
-		Guard.Against.Null(projectModels, nameof(projectModels));
+		Guard.Against.Null(projectModels);
 
 		var reads = await Task.WhenAll(projectModels.Select(project => Task.Run(() => (Project: project, LockFile: ReadAssetsFile(project)), cancellationToken))).ConfigureAwait(false);
 

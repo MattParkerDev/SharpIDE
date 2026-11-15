@@ -424,7 +424,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (newStartingIndex >= 0)
 		{
 			var sharpIdeParent = sharpIdeSolutionItemFile.Parent as SharpIdeSolutionFolder;
-			Guard.Against.Null(sharpIdeParent, nameof(sharpIdeParent));
+			Guard.Against.Null(sharpIdeParent);
 			var folderCount = sharpIdeParent.Folders.Count;
 			var projectsCount = sharpIdeParent.Projects.Count;
 			newStartingIndex += folderCount + projectsCount;
@@ -456,7 +456,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (newStartingIndex >= 0)
 		{
 			var sharpIdeParent = sharpIdeFile.Parent as SharpIdeFolder;
-			Guard.Against.Null(sharpIdeParent, nameof(sharpIdeParent));
+			Guard.Against.Null(sharpIdeParent);
 			var folderCount = sharpIdeParent.Folders.Count;
 			newStartingIndex += folderCount;
 		}
@@ -488,7 +488,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (isFile)
 		{
 			var sharpIdeParent = fileOrFolder.Parent as SharpIdeFolder;
-			Guard.Against.Null(sharpIdeParent, nameof(sharpIdeParent));
+			Guard.Against.Null(sharpIdeParent);
 			var folderCount = sharpIdeParent.Folders.Count;
 			newStartingIndex += folderCount;
 		}

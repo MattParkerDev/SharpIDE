@@ -18,7 +18,7 @@ public class InternalTerminalLoggerFactory
 		var terminal = new Terminal(output);
 		var logger = new TerminalLogger(terminal);
 		var field = typeof(TerminalLogger).GetField("_manualRefresh", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-		Guard.Against.Null(field, nameof(field));
+		Guard.Against.Null(field);
 		field.SetValue(logger, false);
 
 		logger.Parameters = parameters;

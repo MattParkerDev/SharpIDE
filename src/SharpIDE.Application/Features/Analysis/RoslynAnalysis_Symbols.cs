@@ -180,7 +180,7 @@ public partial class RoslynAnalysis
 		var semanticModelAsync = await generatedDocument.GetSemanticModelAsync(cancellationToken);
 		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModelAsync!, generatedDocSyntaxRoot!, mappedPosition);
 		if (symbol is null || linePositionSpan is null) return (null, null);
-		Guard.Against.Null(linePositionSpan, nameof(linePositionSpan));
+		Guard.Against.Null(linePositionSpan);
 		if (_documentMappingService!.TryMapToRazorDocumentRange(razorCSharpDocument, linePositionSpan.Value, MappingBehavior.Strict, out var mappedRazorLinePositionSpan) is false)
 		{
 			throw new InvalidOperationException("Failed to map C# line position span back to Razor.");
@@ -194,7 +194,7 @@ public partial class RoslynAnalysis
 		var sourceText = await document.GetTextAsync();
 		var position = sourceText.GetPosition(linePosition);
 		var semanticModel = await document.GetSemanticModelAsync();
-		Guard.Against.Null(semanticModel, nameof(semanticModel));
+		Guard.Against.Null(semanticModel);
 		var syntaxRoot = await document.GetSyntaxRootAsync();
 		return GetSymbolAtPosition(semanticModel, syntaxRoot!, position);
 	}
@@ -205,7 +205,7 @@ public partial class RoslynAnalysis
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.GetPosition(linePosition);
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-		Guard.Against.Null(semanticModel, nameof(semanticModel));
+		Guard.Against.Null(semanticModel);
 		var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken);
 		var semanticInfo = await SymbolFinder.GetSemanticInfoAtPositionAsync(semanticModel, position, document.Project.Solution.Services, cancellationToken).ConfigureAwait(false);
 		var (symbol, linePositionSpan) = GetSymbolAtPosition(semanticModel, syntaxRoot!, position);

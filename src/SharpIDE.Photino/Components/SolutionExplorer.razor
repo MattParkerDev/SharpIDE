@@ -60,7 +60,7 @@
 
 	private async Task RunProject()
 	{
-		Guard.Against.Null(_contextMenuProject, nameof(_contextMenuProject));
+		Guard.Against.Null(_contextMenuProject);
 		await RunService.RunProject(_contextMenuProject);
 	}
 

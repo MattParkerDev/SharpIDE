@@ -21,7 +21,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 	/// <returns>The debugging session ID</returns>
 	public async Task<DebuggerSessionId> Attach(int debuggeeProcessId, DebuggerExecutableInfo? debuggerExecutableInfo, Dictionary<SharpIdeFile, List<Breakpoint>> breakpointsByFile, SharpIdeProjectModel project, CancellationToken cancellationToken = default)
 	{
-		Guard.Against.NegativeOrZero(debuggeeProcessId, nameof(debuggeeProcessId), "Process ID must be a positive integer.");
+		Guard.Against.NegativeOrZero(debuggeeProcessId, "Process ID must be a positive integer.");
 		await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
 		var (inputStream, outputStream, isNetCoreDbg, debuggerDisposable) = DebuggerProcessStreamHelper.NewDebuggerProcessStreamsForInfo(debuggerExecutableInfo, _logger);

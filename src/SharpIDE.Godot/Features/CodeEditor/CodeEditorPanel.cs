@@ -259,7 +259,7 @@ public partial class CodeEditorPanel : PanelContainer
 
 	private Task OnDebuggerExecutionStopped(ExecutionStopInfo executionStopInfo)
 	{
-		Guard.Against.Null(Solution, nameof(Solution));
+		Guard.Against.Null(Solution);
 		if (_debuggerExecutionStopInfoByProject.TryGetValue(executionStopInfo.Project, out _)) throw new InvalidOperationException("Debugger is already stopped for this project.");
 		_debuggerExecutionStopInfoByProject[executionStopInfo.Project] = executionStopInfo;
 		return Task.CompletedTask;

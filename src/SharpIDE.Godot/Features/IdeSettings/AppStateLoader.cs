@@ -24,14 +24,14 @@ public static class AppStateLoader
 
 		using var stream = File.OpenRead(configFilePath);
 		var deserializedAppState = JsonSerializer.Deserialize<AppState>(stream);
-		Guard.Against.Null(deserializedAppState, nameof(deserializedAppState));
+		Guard.Against.Null(deserializedAppState);
 
 		return deserializedAppState;
 	}
 
 	public static void SaveAppStateToConfigFile(AppState appState)
 	{
-		Guard.Against.Null(appState, nameof(appState));
+		Guard.Against.Null(appState);
 		var configFilePath = GetConfigFilePath();
 		using var stream = File.Create(configFilePath);
 		JsonSerializer.Serialize(stream, appState);

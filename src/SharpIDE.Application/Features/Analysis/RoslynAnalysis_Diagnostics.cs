@@ -124,7 +124,7 @@ public partial class RoslynAnalysis
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(ComputeProjectDiagnostics)}");
 		var compilation = await project.GetCompilationAsync(cancellationToken);
-		Guard.Against.Null(compilation, nameof(compilation));
+		Guard.Against.Null(compilation);
 
 		var allDiagnostics = compilation.GetDiagnostics(cancellationToken);
 		var diagnostics = allDiagnostics
@@ -149,11 +149,11 @@ public partial class RoslynAnalysis
 		await _solutionLoadedTcs.Task;
 
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
-		Guard.Against.Null(document, nameof(document));
+		Guard.Against.Null(document);
 
 		var text = await document.GetTextAsync(cancellationToken);
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-		Guard.Against.Null(semanticModel, nameof(semanticModel));
+		Guard.Against.Null(semanticModel);
 
 		var diagnostics = semanticModel.GetDiagnostics(cancellationToken: cancellationToken);
 		diagnostics = diagnostics.Where(SharpIdeDiagnostic.ShouldShowInEditor).ToImmutableArray();
@@ -177,10 +177,10 @@ public partial class RoslynAnalysis
 		await _solutionLoadedTcs.Task;
 
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
-		Guard.Against.Null(document, nameof(document));
+		Guard.Against.Null(document);
 		var text = await document.GetTextAsync(cancellationToken);
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-		Guard.Against.Null(semanticModel, nameof(semanticModel));
+		Guard.Against.Null(semanticModel);
 
 		// Cached per Compilation: CompilationWithAnalyzers clones the compilation (losing its binding caches) and remembers which analyzers have already run on which trees.
 		// Reusing it means repeated requests against an unchanged compilation return stored results instead of re-running every analyzer from scratch.
