@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Composition.Hosting;
 using System.Diagnostics;
@@ -383,7 +384,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		_logger.LogInformation("RoslynAnalysis: Reloading {ProjectCount} projects that reference an analyzer that changed", projectsToReload.Count);
 		foreach (var project in projectsToReload)
 		{
-			var sharpIdeProjectModel = _sharpIdeSolutionModel!.AllProjects.Single(p => PathComparison.PathEquals(p.FilePath, project.FilePath));
+			var sharpIdeProjectModel = GetSharpIdeProjectModelForProject(project);
+			Guard.Against.Null(sharpIdeProjectModel);
 			await ReloadProject(sharpIdeProjectModel, cancellationToken);
 		}
 
@@ -1719,15 +1721,53 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static Project GetProjectForSharpIdeProjectModel(SharpIdeProjectModel projectModel)
 	{
 		Guard.Against.Null(projectModel);
-		var projectsForProjectPath = _workspace!.CurrentSolution.Projects.Where(s => PathComparison.PathEquals(s.FilePath, projectModel.FilePath)).ToList();
-		if (projectsForProjectPath.Count is 0) throw new InvalidOperationException($"No project found in workspace for project path '{projectModel.FilePath}'");
-		if (projectsForProjectPath.Count is 1)
+		var solution = _workspace!.CurrentSolution;
+		var projectsForProjectPath = GetWorkspaceProjectsForFilePath(solution, projectModel.FilePath);
+		if (projectsForProjectPath.Length is 0) throw new InvalidOperationException($"No project found in workspace for project path '{projectModel.FilePath}'");
+		if (projectsForProjectPath.Length is 1)
 		{
 			return projectsForProjectPath[0];
 		}
 
 		var activeTargetFramework = projectModel.TargetFramework;
 		return projectsForProjectPath.Single(project => string.Equals(project.State.NameAndFlavor.flavor, activeTargetFramework, StringComparison.OrdinalIgnoreCase));
+	}
+
+	/// Workspace project file path -> its ProjectIds (one per target framework), for the solution's ProjectIds list it was built from.
+	/// Roslyn keeps that list instance while projects are only edited, and replaces it when one is added or removed - so the index is rebuilt only then,
+	/// wherever in the workspace that happens.
+	private sealed record WorkspaceProjectIndex(IReadOnlyList<ProjectId> ProjectIds, FrozenDictionary<string, ImmutableArray<ProjectId>> ProjectIdsByFilePath);
+	private static volatile WorkspaceProjectIndex? _workspaceProjectIndex;
+
+	private static ImmutableArray<Project> GetWorkspaceProjectsForFilePath(Solution solution, string projectFilePath)
+	{
+		var index = _workspaceProjectIndex;
+		if (index is null || ReferenceEquals(index.ProjectIds, solution.ProjectIds) is false || TryGetProjects(index, out var projects) is false)
+		{
+			index = new WorkspaceProjectIndex(solution.ProjectIds, solution.Projects
+				.Where(p => p.FilePath is not null)
+				.GroupBy(p => p.FilePath!, PathComparison.Comparer)
+				.ToFrozenDictionary(g => g.Key, g => g.Select(p => p.Id).ToImmutableArray(), PathComparison.Comparer));
+			_workspaceProjectIndex = index;
+			TryGetProjects(index, out projects);
+		}
+		return projects;
+
+		// False if the index is stale - a project gone, or its path changed - without the list instance changing. Shouldn't happen, but cheap to check.
+		bool TryGetProjects(WorkspaceProjectIndex index, out ImmutableArray<Project> projects)
+		{
+			projects = [];
+			if (index.ProjectIdsByFilePath.TryGetValue(projectFilePath, out var projectIds) is false) return true;
+			var builder = ImmutableArray.CreateBuilder<Project>(projectIds.Length);
+			foreach (var projectId in projectIds)
+			{
+				var project = solution.GetProject(projectId);
+				if (project is null || PathComparison.PathEquals(project.FilePath, projectFilePath) is false) return false;
+				builder.Add(project);
+			}
+			projects = builder.MoveToImmutable();
+			return true;
+		}
 	}
 }
 
