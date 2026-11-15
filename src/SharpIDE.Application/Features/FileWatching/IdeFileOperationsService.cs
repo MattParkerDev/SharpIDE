@@ -97,6 +97,57 @@ public class IdeFileOperationsService(SharpIdeRootFolderModificationService root
 		return sharpIdeFile;
 	}
 
+	/// Creates a file at any path in the file tree, creating any folders it needs - e.g. a file added by a code action. Null if the path is outside the file tree, in which case nothing is created.
+	public async Task<SharpIdeFile?> CreateFileAtPath(string newFilePath, string contents)
+	{
+		if (File.Exists(newFilePath)) throw new InvalidOperationException($"File {newFilePath} already exists.");
+		using var _ = await _fileSystemLock.Lock.LockAsync();
+		await using var __ = _fileChangedService.BeginBatch(); // One workspace change for the file and any folders created for it
+		if (await GetOrCreateFolder(Path.GetDirectoryName(newFilePath)!) is not { } parentFolder) return null;
+		await File.WriteAllTextAsync(newFilePath, contents);
+		return await _rootFolderModificationService.CreateFile(parentFolder, newFilePath, Path.GetFileName(newFilePath), contents);
+	}
+
+	/// Moves and/or renames a file to any path in the file tree, creating any folders it needs - e.g. a file renamed by a code action. False if the path is outside the file tree, in which case nothing is moved.
+	public async Task<bool> MoveFileToPath(SharpIdeFile file, string newFilePath)
+	{
+		if (PathComparison.PathEquals(file.Path, newFilePath)) return true;
+		var newFileName = Path.GetFileName(newFilePath);
+		var newDirectoryPath = Path.GetDirectoryName(newFilePath)!;
+		if (PathComparison.PathEquals(Path.GetDirectoryName(file.Path), newDirectoryPath))
+		{
+			// Just a rename - possibly only in case, which File.Exists would report as already existing on a case-insensitive file system
+			await RenameFile(file, newFileName);
+			return true;
+		}
+		if (File.Exists(newFilePath)) throw new InvalidOperationException($"File {newFilePath} already exists.");
+		using (await _fileSystemLock.Lock.LockAsync())
+		{
+			await using var _ = _fileChangedService.BeginBatch();
+			if (await GetOrCreateFolder(newDirectoryPath) is not { } destinationFolder) return false;
+			var oldFilePath = file.Path;
+			var movedFilePath = Path.Combine(destinationFolder.ChildNodeBasePath, file.Name.Value);
+			if (File.Exists(movedFilePath)) throw new InvalidOperationException($"File {movedFilePath} already exists.");
+			File.Move(file.Path, movedFilePath);
+			await _rootFolderModificationService.MoveFile(destinationFolder, file);
+			if (file.IsCsprojFile) await _solutionService.UpdateProjectPathsAfterMove(oldFilePath, movedFilePath);
+		}
+		if (file.Name.Value != newFileName) await RenameFile(file, newFileName);
+		return true;
+	}
+
+	/// The folder in the file tree at this path, creating it (and its parents) if needed. Null if the path is outside the file tree. Call under the file system lock.
+	private async Task<SharpIdeFolder?> GetOrCreateFolder(string directoryPath)
+	{
+		var fileTree = _rootFolderModificationService.FileTree;
+		if (fileTree.FindRoot(directoryPath) is { } root) return root;
+		if (fileTree.AllFolders.FirstOrDefault(f => PathComparison.PathEquals(f.Path, directoryPath)) is { } folder) return folder;
+		if (Path.GetDirectoryName(directoryPath) is not { } parentPath || PathComparison.PathEquals(parentPath, directoryPath)) return null;
+		if (await GetOrCreateFolder(parentPath) is not { } parentFolder) return null;
+		Directory.CreateDirectory(directoryPath);
+		return await _rootFolderModificationService.AddDirectory(parentFolder, Path.GetFileName(directoryPath));
+	}
+
 	public async Task<SharpIdeFile> CopyFile(SharpIdeFolder destinationParentFolder, string sourceFilePath, string newFileName)
 	{
 		var newFilePath = Path.Combine(destinationParentFolder.Path, newFileName);

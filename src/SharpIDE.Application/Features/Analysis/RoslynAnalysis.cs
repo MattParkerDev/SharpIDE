@@ -1020,60 +1020,144 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		}
 	}
 
-	/// Returns the list of files that would be modified by applying the code action. Does not apply the changes to the workspace sln
-	public async Task<List<SharpIdeFileTextEdit>> GetCodeActionApplyChanges(CodeAction codeAction, CancellationToken cancellationToken = default)
+	/// Returns the file changes that applying the code action would make, and where to navigate afterwards. Does not apply the changes to the workspace sln
+	public async Task<CodeActionApplyChanges> GetCodeActionApplyChanges(CodeAction codeAction, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionApplyChanges)}");
 		await _solutionLoadedTcs.Task;
-		// TODO: Handle codeAction.NestedActions
-		var operations = await codeAction.GetOperationsAsync(cancellationToken);
 		var originalSolution = _workspace!.CurrentSolution;
+		var operations = await codeAction.GetOperationsAsync(originalSolution, CodeAnalysisProgress.None, cancellationToken);
 		var updatedSolution = originalSolution;
+		(DocumentId DocumentId, int Position)? navigationTarget = null;
 		foreach (var operation in operations)
 		{
-			if (operation is ApplyChangesOperation applyChangesOperation)
+			switch (operation)
 			{
-				var changes = applyChangesOperation.ChangedSolution.GetChanges(updatedSolution);
-				// Linked files are e.g. files with the same path, but different projects, ie different TFMs
-				updatedSolution = await applyChangesOperation.ChangedSolution.WithMergedLinkedFileChangesAsync(updatedSolution, changes, cancellationToken).ConfigureAwait(false);
-			}
-			else
-			{
-				throw new NotSupportedException($"Unsupported operation type: {operation.GetType().Name}");
+				case ApplyChangesOperation applyChangesOperation:
+				{
+					var changes = applyChangesOperation.ChangedSolution.GetChanges(updatedSolution);
+					// Linked files are e.g. files with the same path, but different projects, ie different TFMs
+					updatedSolution = await applyChangesOperation.ChangedSolution.WithMergedLinkedFileChangesAsync(updatedSolution, changes, cancellationToken).ConfigureAwait(false);
+					break;
+				}
+				// e.g. generate method/constructor places the caret in the generated member
+				case DocumentNavigationOperation navigationOperation:
+					navigationTarget = (navigationOperation.DocumentId, navigationOperation.Position);
+					break;
+				// e.g. introduce local/parameter - we have no inline rename session, so just put the caret on the new name
+				case StartInlineRenameSessionOperation renameOperation:
+					navigationTarget = (renameOperation.DocumentId, renameOperation.Position);
+					break;
+				// e.g. move type to file opens the new file
+				case OpenDocumentOperation openDocumentOperation:
+					navigationTarget ??= (openDocumentOperation.DocumentId, 0);
+					break;
+				default:
+					// As Roslyn's LSP does - 3rd party fixers may return operations that do more than change documents (e.g. install a package), apply only the document changes
+					_logger.LogWarning("Skipping code action operation '{OperationType}' for '{CodeActionTitle}'", operation.GetType().FullName, codeAction.Title);
+					break;
 			}
 		}
 
-		return await GetSolutionTextEdits(originalSolution, updatedSolution, cancellationToken);
+		var fileChanges = await GetSolutionFileChanges(originalSolution, updatedSolution, cancellationToken);
+		var navigation = navigationTarget is var (documentId, position) ? await GetNavigation(documentId, position) : null;
+		return new CodeActionApplyChanges(fileChanges, navigation);
+
+		async Task<SolutionFileNavigation?> GetNavigation(DocumentId documentId, int position)
+		{
+			if (updatedSolution.GetTextDocument(documentId) is not { } document) return null;
+			var oldDocument = originalSolution.GetTextDocument(documentId);
+			if (GetFilePath(document, oldDocument) is not { } filePath) return null;
+			var text = await document.GetTextAsync(cancellationToken);
+			return new SolutionFileNavigation(filePath, text.Lines.GetLinePosition(Math.Clamp(position, 0, text.Length)));
+		}
 	}
 
-	/// The minimal text edits that turn oldSolution into newSolution - one per changed file, as linked documents (e.g. one per TFM) share a file
-	private async Task<List<SharpIdeFileTextEdit>> GetSolutionTextEdits(Solution oldSolution, Solution newSolution, CancellationToken cancellationToken = default)
+	/// The file changes that turn oldSolution into newSolution - mirrors Roslyn's LSP CodeActionResolveHelper, across documents, additional documents (e.g. txt files) and analyzer config documents (.editorconfig).
+	/// Changes to project/metadata/analyzer references are not file changes, so aren't included - code actions that make them are filtered out (CodeAction.RequiresNonDocumentChange).
+	private async Task<SolutionFileChanges> GetSolutionFileChanges(Solution oldSolution, Solution newSolution, CancellationToken cancellationToken = default)
 	{
-		// TODO: Handle added and removed documents
-		var edits = new List<SharpIdeFileTextEdit>();
-		var seenFilePaths = new HashSet<string>();
-		foreach (var projectChanges in newSolution.GetChanges(oldSolution).GetProjectChanges())
+		var result = new SolutionFileChanges();
+		var solutionChanges = newSolution.GetChanges(oldSolution);
+		var projectChanges = solutionChanges.GetProjectChanges().ToList();
+		// Linked documents (e.g. one per TFM) share a file, so each file is only changed/added/removed once
+		var seenFilePaths = new HashSet<string>(PathComparison.Comparer);
+
+		foreach (var projectChange in projectChanges)
 		{
-			var changedDocumentIds = projectChanges.GetChangedDocuments(onlyGetDocumentsWithTextChanges: true).Concat(projectChanges.GetChangedAdditionalDocuments());
-			foreach (var documentId in changedDocumentIds)
+			if (projectChange.GetAddedProjectReferences().Any() || projectChange.GetRemovedProjectReferences().Any() ||
+			    projectChange.GetAddedMetadataReferences().Any() || projectChange.GetRemovedMetadataReferences().Any() ||
+			    projectChange.GetAddedAnalyzerReferences().Any() || projectChange.GetRemovedAnalyzerReferences().Any())
 			{
-				var oldDocument = oldSolution.GetTextDocument(documentId);
-				var newDocument = newSolution.GetTextDocument(documentId);
-				if (oldDocument?.FilePath is not { } filePath || newDocument is null) continue;
-				if (seenFilePaths.Add(filePath) is false) continue;
-
-				var oldText = await oldDocument.GetTextAsync(cancellationToken);
-				// For documents, Roslyn can diff the syntax trees, giving precise changes
-				var changes = (oldDocument, newDocument) is (Document oldDoc, Document newDoc)
-					? (await newDoc.GetTextChangesAsync(oldDoc, cancellationToken)).ToImmutableArray()
-					: (await newDocument.GetTextAsync(cancellationToken)).GetTextChanges(oldText).ToImmutableArray();
-				if (changes.IsEmpty) continue;
-
-				var file = _sharpIdeSolutionModel!.AllFiles[filePath];
-				edits.Add(new SharpIdeFileTextEdit(file, oldText, changes));
+				_logger.LogWarning("Ignoring reference changes to project '{ProjectName}' - only file changes are supported", projectChange.NewProject.Name);
 			}
 		}
-		return edits;
+
+		// Removed
+		foreach (var documentId in projectChanges.SelectMany(pc => pc.GetRemovedDocuments().Concat(pc.GetRemovedAdditionalDocuments()).Concat(pc.GetRemovedAnalyzerConfigDocuments())))
+		{
+			if (oldSolution.GetTextDocument(documentId)?.FilePath is not { } filePath) continue;
+			// A file removed from one project, but still in another (e.g. linked), stays on disk
+			if (newSolution.GetDocumentIdsWithFilePath(filePath).IsEmpty is false) continue;
+			if (seenFilePaths.Add(filePath)) result.RemovedFilePaths.Add(filePath);
+		}
+
+		// Added
+		foreach (var documentId in projectChanges.SelectMany(pc => pc.GetAddedDocuments().Concat(pc.GetAddedAdditionalDocuments()).Concat(pc.GetAddedAnalyzerConfigDocuments())))
+		{
+			if (newSolution.GetTextDocument(documentId) is not { } document) continue;
+			if (GetFilePath(document, oldDocument: null) is not { } filePath)
+			{
+				_logger.LogWarning("Can't determine a file path for added document '{DocumentName}' - skipping it", document.Name);
+				continue;
+			}
+			// e.g. a file added to several projects, or already in another project - it is created once, and project membership follows from the project system
+			if (oldSolution.GetDocumentIdsWithFilePath(filePath).IsEmpty is false || seenFilePaths.Add(filePath) is false) continue;
+			result.AddedFiles.Add(new FileAddition(filePath, await document.GetTextAsync(cancellationToken)));
+		}
+
+		// Changed - text and/or name (e.g. "Rename file to match type")
+		var changedDocumentIds = projectChanges.SelectMany(pc => pc.GetChangedDocuments().Concat(pc.GetChangedAdditionalDocuments()).Concat(pc.GetChangedAnalyzerConfigDocuments()));
+		foreach (var documentId in changedDocumentIds)
+		{
+			var oldDocument = oldSolution.GetTextDocument(documentId);
+			var newDocument = newSolution.GetTextDocument(documentId);
+			if (oldDocument?.FilePath is not { } filePath || newDocument is null) continue;
+			if (seenFilePaths.Add(filePath) is false) continue;
+
+			var oldText = await oldDocument.GetTextAsync(cancellationToken);
+			// For documents, Roslyn can diff the syntax trees, giving precise changes. Otherwise we would get one change spanning the whole file.
+			var changes = (oldDocument, newDocument) is (Document oldDoc, Document newDoc)
+				? (await newDoc.GetTextChangesAsync(oldDoc, cancellationToken)).ToImmutableArray()
+				: (await newDocument.GetTextAsync(cancellationToken)).GetTextChanges(oldText).ToImmutableArray();
+			// Text first, at the old path, then the rename - as LSP clients apply them
+			if (changes.IsEmpty is false) result.ChangedFiles.Add(new FileTextChange(filePath, oldText, changes));
+			if (GetFilePath(newDocument, oldDocument) is { } newFilePath && PathComparison.PathEquals(newFilePath, filePath) is false)
+			{
+				result.RenamedFiles.Add(new FileRename(filePath, newFilePath));
+			}
+		}
+
+		if (solutionChanges.GetExplicitlyChangedSourceGeneratedDocuments().Any())
+		{
+			_logger.LogWarning("Ignoring changes to source generated documents - they have no file to change");
+		}
+		return result;
+	}
+
+	/// The path of a document in a changed solution. A renamed document (e.g. "Rename file to match type") changes its name, but not necessarily its path, as in Roslyn's LSP (GetUriForRenamedDocument).
+	/// A new document may not have a path, so it goes in its project's folder, as in Roslyn's LSP (CreateUriForDocumentWithoutFilePath).
+	private static string? GetFilePath(TextDocument document, TextDocument? oldDocument)
+	{
+		if (document is SourceGeneratedDocument) return null;
+		if (oldDocument?.FilePath is { } oldFilePath)
+		{
+			if (document.Name != oldDocument.Name) return Path.Combine(Path.GetDirectoryName(document.FilePath ?? oldFilePath)!, document.Name);
+			return document.FilePath ?? oldFilePath;
+		}
+		if (document.FilePath is not null) return document.FilePath;
+		if (document.Project.FilePath is null) return null;
+		return Path.Combine([Path.GetDirectoryName(document.Project.FilePath)!, ..document.Folders, document.Name]);
 	}
 
 	public record IdeReferenceLocationResult(ReferenceLocation ReferenceLocation, SharpIdeFile? File, ISymbol? EnclosingSymbol);
@@ -1102,8 +1186,8 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return results.ToImmutableArray();
 	}
 
-	/// Returns the list of files that would be modified by applying the rename. Does not apply the changes to the workspace sln
-	public async Task<List<SharpIdeFileTextEdit>> GetRenameApplyChanges(ISymbol symbol, string newName, CancellationToken cancellationToken = default)
+	/// Returns the file changes that applying the rename would make. Does not apply the changes to the workspace sln
+	public async Task<SolutionFileChanges> GetRenameApplyChanges(ISymbol symbol, string newName, CancellationToken cancellationToken = default)
 	{
 		var symbolRenameOptions = new SymbolRenameOptions
 		{
@@ -1114,7 +1198,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		};
 		var currentSolution = _workspace!.CurrentSolution;
 		var newSolution = await Renamer.RenameSymbolAsync(currentSolution, symbol, symbolRenameOptions, newName, cancellationToken);
-		return await GetSolutionTextEdits(currentSolution, newSolution, cancellationToken);
+		return await GetSolutionFileChanges(currentSolution, newSolution, cancellationToken);
 	}
 
 	public async Task<string?> GetMetadataAsSourceFromDebuggingAssemblyAndType(string typeName, string assemblyPath, Guid mvid, string userCodeCallingAssemblyPath, CancellationToken cancellationToken = default)
@@ -1360,7 +1444,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	/// Updates several files' text in a single workspace change, so features never see a mix of old and new files.
 	/// Returns true if any document was found and its text changed.
-	public async Task<bool> UpdateDocuments(IReadOnlyCollection<(SharpIdeFile File, SourceText Text)> files)
+	public Task<bool> UpdateDocuments(IReadOnlyCollection<(SharpIdeFile File, SourceText Text)> files) => UpdateDocuments(files.Select(s => (s.File.Path, s.Text)).ToList());
+
+	/// By path - for files not in the IDE's file tree, e.g. an .editorconfig above the solution folder
+	public async Task<bool> UpdateDocuments(IReadOnlyCollection<(string FilePath, SourceText Text)> files)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(UpdateDocuments)}");
 		await _solutionLoadedTcs.Task;
@@ -1368,9 +1455,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		var currentSolution = _workspace!.CurrentSolution;
 		var changedFiles = new List<(string FilePath, SourceText Text)>(files.Count);
 		DocumentId? firstChangedDocumentId = null;
-		foreach (var (file, newText) in files)
+		foreach (var (filePath, newText) in files)
 		{
-			var documentIds = currentSolution.GetDocumentIdsWithFilePath(file.Path);
+			var documentIds = currentSolution.GetDocumentIdsWithFilePath(filePath);
 			if (documentIds.IsEmpty) continue;
 			// Skip no-ops, e.g. an editor opening a file whose text the workspace already has. Usually cheap - differing lengths return immediately.
 			if (currentSolution.GetTextDocument(documentIds[0]) is { } existingDocument &&
@@ -1379,7 +1466,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			{
 				continue;
 			}
-			changedFiles.Add((file.Path, newText));
+			changedFiles.Add((filePath, newText));
 			firstChangedDocumentId ??= documentIds[0];
 		}
 		if (changedFiles.Count is 0) return false;
@@ -1419,6 +1506,21 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		{
 			switch (operation)
 			{
+				case WorkspaceFileOperation.Add { File.IsEditorConfigFile: true } add:
+				{
+					// Applies to every project at or below its folder - as MSBuild's EditorConfigFiles, from the project's folder up
+					var directory = Path.GetDirectoryName(add.File.Path)!;
+					var documentIds = currentSolution.Projects
+						.Where(p => p.FilePath is not null && PathComparison.IsSameOrUnder(Path.GetDirectoryName(p.FilePath)!, directory))
+						.Select(p => DocumentId.CreateNewId(p.Id))
+						.ToList();
+					if (documentIds.Count is 0) break;
+					singleDocumentId = documentIds[0];
+					var text = SourceText.From(add.Content, Encoding.UTF8);
+					var (name, path) = (add.File.Name.Value, add.File.Path);
+					steps.Add(solution => AddEditorConfigToSolution(solution, documentIds, name, path, text));
+					break;
+				}
 				case WorkspaceFileOperation.Add add:
 				{
 					if (GetProjectIdForNewFile(add.File) is not { } projectId) break;
@@ -1481,6 +1583,16 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		if (isAnalyzerConfig is false) return solution.AddAdditionalDocument(documentId, name, text, filePath: filePath);
 		var loader = TextLoader.From(TextAndVersion.Create(text, VersionStamp.Create(), filePath));
 		return solution.AddAnalyzerConfigDocuments([DocumentInfo.Create(documentId, name, loader: loader, filePath: filePath)]);
+	}
+
+	private static Solution AddEditorConfigToSolution(Solution solution, IReadOnlyList<DocumentId> documentIds, string name, string filePath, SourceText text)
+	{
+		var loader = TextLoader.From(TextAndVersion.Create(text, VersionStamp.Create(), filePath));
+		var documentInfos = documentIds
+			.Where(id => solution.GetProject(id.ProjectId) is { } project && project.AnalyzerConfigDocuments.Any(d => PathComparison.PathEquals(d.FilePath, filePath)) is false)
+			.Select(id => DocumentInfo.Create(id, name, loader: loader, filePath: filePath))
+			.ToImmutableArray();
+		return documentInfos.IsEmpty ? solution : solution.AddAnalyzerConfigDocuments(documentInfos);
 	}
 
 	private static Solution RemoveFileFromSolution(Solution solution, string filePath)

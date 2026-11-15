@@ -1,16 +1,15 @@
-﻿using Microsoft.CodeAnalysis;
-using SharpIDE.Application.Features.FileWatching;
+using Microsoft.CodeAnalysis;
 
 namespace SharpIDE.Application.Features.Analysis;
 
-public class IdeRenameService(RoslynAnalysis roslynAnalysis, FileChangedService fileChangedService)
+public class IdeRenameService(RoslynAnalysis roslynAnalysis, IdeSolutionFileChangesService solutionFileChangesService)
 {
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
-	private readonly FileChangedService _fileChangedService = fileChangedService;
+	private readonly IdeSolutionFileChangesService _solutionFileChangesService = solutionFileChangesService;
 
 	public async Task ApplyRename(ISymbol symbol, string newName)
 	{
-		var edits = await _roslynAnalysis.GetRenameApplyChanges(symbol, newName);
-		await _fileChangedService.ApplyTextEdits(edits);
+		var changes = await _roslynAnalysis.GetRenameApplyChanges(symbol, newName);
+		await _solutionFileChangesService.ApplyAsync(changes);
 	}
 }

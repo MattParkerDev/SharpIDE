@@ -75,7 +75,8 @@ public class FileChangedService
 
 	public async Task SharpIdeFileAdded(SharpIdeFile file, string content)
 	{
-		if (file.IsRoslynWorkspaceFile)
+		// A new .editorconfig applies to the projects below it straight away - MSBuild would only pick it up on their next design-time build
+		if (file.IsRoslynWorkspaceFile || file.IsEditorConfigFile)
 		{
 			await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Add(file, content));
 		}
@@ -169,6 +170,20 @@ public class FileChangedService
 		await Task.WhenAll(closedFiles.Select(s => _openTabsFileManager.WriteClosedFileAsync(s.File, s.Text)));
 		if (await _roslynAnalysis.UpdateDocuments(closedFiles)) OnWorkspaceAltered();
 	}
+
+	/// Edits computed by Roslyn to files outside the IDE's file tree (e.g. an .editorconfig above the solution folder, or a linked source file) - these are never open, so are written to disk.
+	public async Task ApplyTextEditsOutsideFileTree(IReadOnlyList<(string FilePath, SourceText NewText)> edits)
+	{
+		if (edits.Count is 0) return;
+		await Task.WhenAll(edits.Select(s => File.WriteAllTextAsync(s.FilePath, s.NewText.ToString())));
+		if (await _roslynAnalysis.UpdateDocuments(edits)) OnWorkspaceAltered();
+	}
+
+	/// A file outside the IDE's file tree was deleted by the IDE
+	public Task FileOutsideFileTreeRemoved(string filePath) => ApplyOrDeferFileOperation(new WorkspaceFileOperation.Remove(filePath));
+
+	/// Waits until the text of open files changed so far has reached Roslyn - e.g. before moving a file just edited, so its text is applied at the path it had when edited
+	public Task WaitForOpenFileTextChangesAsync() => _openFileTextChangedQueue.WaitUntilCurrentBatchCompletesAsync();
 
 	private Task HandleProjectSystemFileSaved(SharpIdeFile file)
 	{

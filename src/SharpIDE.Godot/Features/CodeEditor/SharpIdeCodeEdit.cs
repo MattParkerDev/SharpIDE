@@ -372,7 +372,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 		_ = Task.GodotRun(async () =>
 		{
-			await _ideCodeActionService.ApplyCodeAction(codeAction);
+			var navigation = await _ideCodeActionService.ApplyCodeAction(codeAction);
+			// e.g. a generated member, or the file created by "Move type to file"
+			if (navigation is var (file, linePosition))
+			{
+				await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, linePosition);
+			}
 		});
 	}
 

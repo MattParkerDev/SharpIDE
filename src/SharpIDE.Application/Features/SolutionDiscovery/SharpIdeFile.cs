@@ -21,6 +21,7 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 	public bool IsCsharpFile => Path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
 	public bool IsSlnFile => Path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) || Path.EndsWith(".sln", StringComparison.OrdinalIgnoreCase);
 	public bool IsRoslynWorkspaceFile => IsCsharpFile || IsRazorFile || IsCshtmlFile;
+	public bool IsEditorConfigFile => System.IO.Path.GetFileName(Path).Equals(".editorconfig", StringComparison.OrdinalIgnoreCase);
 	public bool IsMetadataAsSourceFile { get; set; }
 	public string? PdbSourceFilePathForDebugger { get; set; }
 	public GitFileStatus GitStatus { get; set; } = GitFileStatus.Unaltered;
