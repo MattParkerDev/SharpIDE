@@ -1,14 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
-using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Run;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Application.Features.Testing.Client;
 using SharpIDE.Application.Features.Testing.Client.Dtos;
 
 namespace SharpIDE.Application.Features.Testing;
 
-public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunnerService> logger)
+public class TestRunnerService(ILogger<TestRunnerService> logger)
 {
-	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
 	private readonly ILogger<TestRunnerService> _logger = logger;
 
 	public async Task DiscoverTestsForSolution(SharpIdeSolutionModel solutionModel, Func<TestNodeUpdate[], Task> func)
@@ -88,16 +87,11 @@ public class TestRunnerService(RoslynAnalysis roslynAnalysis, ILogger<TestRunner
 
 	private async Task<TestingPlatformClient> GetInitialisedClient(SharpIdeProjectModel project)
 	{
-		var outputDllPath = await _roslynAnalysis.GetOutputDllPathForProject(project);
-		var outputExecutablePath = 0 switch
-		{
-			_ when OperatingSystem.IsWindows() => outputDllPath!.Replace(".dll", ".exe"),
-			_ when OperatingSystem.IsLinux() => outputDllPath!.Replace(".dll", ""),
-			_ when OperatingSystem.IsMacOS() => outputDllPath!.Replace(".dll", ""),
-			_ => throw new PlatformNotSupportedException("Unsupported OS for running tests.")
-		};
+		// MTP test projects are executables, so the evaluated RunCommand/RunArguments launch them - the apphost, or dotnet exec <dll> when UseAppHost is false
+		var snapshot = project.ActiveMsBuildSnapshot;
+		var launch = ProjectLaunchResolver.Resolve(project.DirectoryPath, snapshot.GetPropertyValue("OutputType"), snapshot.Properties, launchProfile: null);
 
-		var client = await TestingPlatformClientFactory.StartAsServerAndConnectToTheClientAsync(outputExecutablePath);
+		var client = await TestingPlatformClientFactory.StartAsServerAndConnectToTheClientAsync(launch);
 		await client.InitializeAsync();
 		return client;
 	}

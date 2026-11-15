@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using SharpIDE.Application.Features.Run;
 using StreamJsonRpc;
 
 namespace SharpIDE.Application.Features.Testing.Client;
@@ -20,7 +21,8 @@ public partial /* for codegen regx */ class TestingPlatformClientFactory
         { "DOTNET_MULTILEVEL_LOOKUP", "0" },
     };
 
-    public static async Task<TestingPlatformClient> StartAsServerAndConnectToTheClientAsync(string testApp)
+    /// Starts the test app (as resolved from its RunCommand/RunArguments) in server mode, appending the --server arguments to its own
+    public static async Task<TestingPlatformClient> StartAsServerAndConnectToTheClientAsync(ProjectLaunch testAppLaunch)
     {
         var environmentVariables = new Dictionary<string, string>(DefaultEnvironmentVariables);
         foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
@@ -43,14 +45,15 @@ public partial /* for codegen regx */ class TestingPlatformClientFactory
         TcpListener tcpListener = new(IPAddress.Loopback, 0);
         tcpListener.Start();
         StringBuilder builder = new();
-        ProcessConfiguration processConfig = new(testApp)
+        ProcessConfiguration processConfig = new(testAppLaunch.FileName)
         {
             OnStandardOutput = (_, output) => builder.AppendLine(CultureInfo.InvariantCulture, $"OnStandardOutput:\n{output}"),
             OnErrorOutput = (_, output) => builder.AppendLine(CultureInfo.InvariantCulture, $"OnErrorOutput:\n{output}"),
             OnExit = (_, exitCode) => builder.AppendLine(CultureInfo.InvariantCulture, $"OnExit: exit code '{exitCode}'"),
 
-            Arguments = $"--server --client-host localhost --client-port {((IPEndPoint)tcpListener.LocalEndpoint).Port}",
-            // Arguments = $"--server --client-host localhost --client-port {((IPEndPoint)tcpListener.LocalEndpoint).Port} --diagnostic --diagnostic-verbosity trace",
+            Arguments = [..testAppLaunch.Arguments, "--server", "--client-host", "localhost", "--client-port", ((IPEndPoint)tcpListener.LocalEndpoint).Port.ToString(CultureInfo.InvariantCulture)],
+            // Append "--diagnostic", "--diagnostic-verbosity", "trace" for MTP diagnostic logs
+            WorkingDirectory = testAppLaunch.WorkingDirectory,
             EnvironmentVariables = environmentVariables,
         };
 
@@ -64,7 +67,7 @@ public partial /* for codegen regx */ class TestingPlatformClientFactory
         }
         catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationTokenSource.Token)
         {
-            throw new OperationCanceledException($"Timeout on connection for command line '{processConfig.FileName} {processConfig.Arguments}'\n{builder}", ex, cancellationTokenSource.Token);
+            throw new OperationCanceledException($"Timeout on connection for command line '{processConfig.FileName} {string.Join(' ', processConfig.Arguments)}'\n{builder}", ex, cancellationTokenSource.Token);
         }
         var tcpStream = tcpClient.GetStream();
 	    var handler = new HeaderDelimitedMessageHandler(tcpStream, tcpStream, new SystemTextJsonFormatter { JsonSerializerOptions = RpcJsonSerializerOptions.Default });
@@ -78,7 +81,7 @@ public sealed class ProcessConfiguration
 
     public string FileName { get; }
 
-    public string? Arguments { get; init; }
+    public IReadOnlyList<string> Arguments { get; init; } = [];
 
     public string? WorkingDirectory { get; init; }
 
@@ -117,7 +120,6 @@ public static class ProcessFactory
         ProcessStartInfo processStartInfo = new()
         {
             FileName = fullPath,
-            Arguments = config.Arguments,
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -125,6 +127,7 @@ public static class ProcessFactory
             RedirectStandardError = true,
             RedirectStandardInput = true,
         };
+        foreach (var argument in config.Arguments) processStartInfo.ArgumentList.Add(argument);
 
         if (config.EnvironmentVariables is not null)
         {

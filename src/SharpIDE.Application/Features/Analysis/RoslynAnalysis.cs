@@ -1660,15 +1660,6 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return probableProject.Id;
 	}
 
-	public async Task<string> GetOutputDllPathForProject(SharpIdeProjectModel projectModel)
-	{
-		await _solutionLoadedTcs.Task;
-		var project = GetProjectForSharpIdeProjectModel(projectModel);
-		var outputPath = project.OutputFilePath;
-		Guard.Against.NullOrWhiteSpace(outputPath);
-		return outputPath;
-	}
-
 	/// The file's workspace document, found with Roslyn's file path index: a .cs file's Document, or a .razor/.cshtml file's AdditionalDocument.
 	/// A file is in several workspace projects when its project multi-targets (one per target framework), or when it is linked into more than one
 	/// project - this prefers the project whose folder contains the file, in its active target framework. Null if the file isn't in the workspace.
