@@ -28,7 +28,7 @@ public partial class RunPanelTab : Control
 	    Guard.Against.Null(Project.ProcessStandardIo);
 	    Guard.Against.Null(Project.ProcessStandardIo.OutputReader);
 	    Guard.Against.Null(Project.ProcessStandardIo.StdinWriter);
-	    _terminal.InputWriter = Project.ProcessStandardIo.StdinWriter;
+	    _terminal.AttachProcessIo(Project.ProcessStandardIo);
 	    _writeTask = Task.GodotRun(async () =>
 	    {
 		    var reader = Project.ProcessStandardIo.OutputReader;
@@ -39,14 +39,14 @@ public partial class RunPanelTab : Control
 			    var buffer = result.Buffer;
 			    foreach (var segment in buffer)
 			    {
-				    _terminal.Write(segment.Span);
+				    _terminal.Write(segment.Span, translateLineEndings: !Project.ProcessStandardIo.IsPty);
 			    }
 			    reader.AdvanceTo(buffer.End);
 			    if (result.IsCompleted) break;
 		    }
 		    await reader.CompleteAsync();
 		    Project.ProcessStandardIo.OutputReadComplete.SetResult();
-		    _terminal.InputWriter = null;
+		    _terminal.DetachProcessIo(Project.ProcessStandardIo);
 		    await Project.ProcessStandardIo.StdinWriter.CompleteAsync();
 		    Project.ProcessStandardIo.StdinWriteComplete.SetResult();
 	    });

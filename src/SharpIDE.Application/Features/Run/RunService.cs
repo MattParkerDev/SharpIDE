@@ -15,6 +15,8 @@ namespace SharpIDE.Application.Features.Run;
 
 public partial class RunService(ILogger<RunService> logger, RoslynAnalysis roslynAnalysis, BuildService buildService, DebuggingService debuggingService)
 {
+	private const int DefaultTerminalCols = 120;
+	private const int DefaultTerminalRows = 30;
 	private readonly ConcurrentDictionary<SharpIdeProjectModel, SemaphoreSlim> _projectLocks = [];
 	private readonly ConcurrentDictionary<SharpIdeProjectModel, DebuggerSessionId> _projectDebuggerSessionIds = [];
 
@@ -62,13 +64,13 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 				Arguments = launch.Arguments,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
-				RedirectStandardInput = false,
-				UsePty = false,
-				TerminalSize = (80, 24),
+				RedirectStandardInput = true, // required when UsePty is true
+				UsePty = true,
+				TerminalSize = (DefaultTerminalCols, DefaultTerminalRows), // corrected to the actual terminal control size once the run/debug tab attaches
 				EnvironmentVariables = []
 			};
 			processStartInfo.EnvironmentVariables["DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION"] = "1";
-			// processStartInfo.EnvironmentVariables["TERM"] = "xterm"; // may be necessary on linux/macOS
+			if (OperatingSystem.IsWindows() is false) processStartInfo.EnvironmentVariables["TERM"] = "xterm-256color";
 			if (launchProfile is not null)
 			{
 				if (launchProfile.ApplicationUrl != null) processStartInfo.EnvironmentVariables["ASPNETCORE_URLS"] = launchProfile.ApplicationUrl;
@@ -90,7 +92,7 @@ public partial class RunService(ILogger<RunService> logger, RoslynAnalysis rosly
 
 			process.Start();
 
-			project.ProcessStandardIo = new StandardIo(process.CombinedOutputPipeReader, process.StandardInputPipeWriter);
+			project.ProcessStandardIo = new StandardIo(process.CombinedOutputPipeReader, process.StandardInputPipeWriter, isPty: true, resizeTerminal: process.ResizeTerminal);
 
 			if (isDebug)
 			{

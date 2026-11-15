@@ -4,9 +4,8 @@ public partial class SharpIdeTerminal
 {
     private bool _previousArrayEndedInCr = false;
 
-    // Unfortunately, although the terminal emulator handles escape sequences etc, it does not handle interpreting \n as \r\n - that is handled by the PTY, which we currently don't use
-    // So we need to replace lone \n with \r\n ourselves
-    // TODO: Probably run processes with PTY instead, so that this is not needed, and so we can capture user input and Ctrl+C etc
+    // Although the terminal emulator handles escape sequences etc, it does not handle interpreting \n as \r\n - that is normally handled by a PTY
+    // Run/debug processes are attached to a PTY, so this is skipped for them, but output that doesn't come through one (e.g. build output) still needs lone \n replaced with \r\n
     // 🤖
     // processed should be a ReadOnlySpan, but Godot currently can't cast a ReadOnlySpan<T> to Variant, only Span<T> 
     private void ProcessLineEndings(ReadOnlySpan<byte> input, Span<byte> workingBuffer, out Span<byte> processed)

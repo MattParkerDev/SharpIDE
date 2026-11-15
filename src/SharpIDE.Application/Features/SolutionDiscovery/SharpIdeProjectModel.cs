@@ -110,10 +110,20 @@ public class SharpIdeProjectModel : ISharpIdeNode, IExpandableSharpIdeNode, IChi
 	public ObservableHashSet<SharpIdeDiagnostic> Diagnostics { get; internal set; } = [];
 }
 
-public class StandardIo(PipeReader outputReader, PipeWriter stdinWriter)
+public class StandardIo(PipeReader outputReader, PipeWriter stdinWriter, bool isPty = false, Action<int, int>? resizeTerminal = null)
 {
 	public PipeReader OutputReader { get; } = outputReader;
 	public PipeWriter StdinWriter { get; } = stdinWriter;
+	/// When true, the process is attached to a pseudo terminal, which handles line discipline (e.g. \n -> \r\n), input echo, Ctrl+C etc
+	public bool IsPty { get; } = isPty;
+
+	/// Resizes the pseudo terminal the process is attached to. No-op if the process is not attached to a PTY.
+	/// Safe to call after the process has exited - AsyncReadProcess ignores resizes of a closed PTY
+	public void ResizeTerminal(int cols, int rows)
+	{
+		if (resizeTerminal is null || cols <= 0 || rows <= 0) return;
+		resizeTerminal(cols, rows);
+	}
 
 	public TaskCompletionSource OutputReadComplete { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	public TaskCompletionSource StdinWriteComplete { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
