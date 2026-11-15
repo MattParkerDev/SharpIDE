@@ -97,6 +97,8 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	public override void _UnhandledKeyInput(InputEvent @event)
 	{
+		// Unhandled key input reaches every node, e.g. Ctrl+C typed in a terminal, so only act when the explorer has focus
+		if (this.HasFocusOrIsParentOfFocus() is false) return;
 		// Copy
 		if (@event is InputEventKey { Pressed: true, Keycode: Key.C, CtrlPressed: true })
 		{
