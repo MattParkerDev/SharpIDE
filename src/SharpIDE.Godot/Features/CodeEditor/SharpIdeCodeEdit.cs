@@ -663,8 +663,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		foreach (var sharpIdeDiagnostic in diagnostics)
 		{
-			// Hidden diagnostics are only shown by fading their code, see UpdateFadedRanges
-			if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Hidden) continue;
+			// Hidden diagnostics are only shown by fading their code, and unresolved names by colouring them red, see UpdateStyledSpans
+			if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Hidden || sharpIdeDiagnostic.IsUnresolvedSymbol) continue;
 			var line = sharpIdeDiagnostic.Span.Start.Line;
 			if (line < firstVisibleLine || line > lastVisibleLine) continue;
 			var startCol = sharpIdeDiagnostic.Span.Start.Character;
@@ -844,7 +844,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void SetDiagnostics(SharpIdeDocumentDiagnostics diagnostics)
 	{
 		_fileDiagnostics = MapOntoCurrentText(diagnostics);
-		UpdateFadedSpans(refreshHighlighting: true);
+		UpdateStyledSpans(refreshHighlighting: true);
 		QueueRedraw();
 	}
 
@@ -852,24 +852,26 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void SetAnalyzerDiagnostics(SharpIdeDocumentDiagnostics diagnostics)
 	{
 		_fileAnalyzerDiagnostics = MapOntoCurrentText(diagnostics);
-		UpdateFadedSpans(refreshHighlighting: true);
+		UpdateStyledSpans(refreshHighlighting: true);
 		QueueRedraw();
 	}
 
 	private ImmutableArray<LinePositionSpan> _fadedSpans = [];
-	/// Fades out code that diagnostics mark as unnecessary, e.g. unnecessary usings, as VS Code does
+	private ImmutableArray<LinePositionSpan> _unresolvedSymbolSpans = [];
+	/// Fades out code that diagnostics mark as unnecessary, e.g. unnecessary usings, as VS Code does,
+	/// and colours names that could not be resolved red, e.g. a type missing its using, as Rider does
 	[RequiresGodotUiThread]
-	private void UpdateFadedSpans(bool refreshHighlighting)
+	private void UpdateStyledSpans(bool refreshHighlighting)
 	{
-		var fadedSpans = _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).Concat(_projectDiagnosticsForFile)
-			.SelectMany(d => d.FadeSpans)
-			.Distinct()
-			.ToImmutableArray();
-		if (fadedSpans.SequenceEqual(_fadedSpans)) return;
+		var diagnostics = _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).Concat(_projectDiagnosticsForFile).ToList();
+		var fadedSpans = diagnostics.SelectMany(d => d.FadeSpans).Distinct().ToImmutableArray();
+		var unresolvedSymbolSpans = diagnostics.Where(d => d.IsUnresolvedSymbol).Select(d => d.Span).Distinct().ToImmutableArray();
+		if (fadedSpans.SequenceEqual(_fadedSpans) && unresolvedSymbolSpans.SequenceEqual(_unresolvedSymbolSpans)) return;
 		_fadedSpans = fadedSpans;
-		_syntaxHighlighter.SetFadedSpans(fadedSpans);
+		_unresolvedSymbolSpans = unresolvedSymbolSpans;
+		_syntaxHighlighter.SetStyledSpans(fadedSpans, unresolvedSymbolSpans);
 		if (refreshHighlighting is false) return;
-		// Godot caches each line's highlighting - reassign to re-highlight with the new faded spans
+		// Godot caches each line's highlighting - reassign to re-highlight with the new styled spans
 		SyntaxHighlighter = null;
 		SyntaxHighlighter = _syntaxHighlighter;
 	}
@@ -890,14 +892,14 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_fileAnalyzerDiagnostics = DiagnosticSpanMapper.MapForward(_fileAnalyzerDiagnostics, oldText, newText);
 		_projectDiagnosticsForFile = DiagnosticSpanMapper.MapForward(_projectDiagnosticsForFile, oldText, newText);
 		// Godot shifts its cached line highlighting itself when lines are added or removed, and re-highlights edited lines, so no refresh is needed
-		UpdateFadedSpans(refreshHighlighting: false);
+		UpdateStyledSpans(refreshHighlighting: false);
 	}
 
 	[RequiresGodotUiThread]
 	private void SetProjectDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics)
 	{
 		_projectDiagnosticsForFile = diagnostics;
-		UpdateFadedSpans(refreshHighlighting: true);
+		UpdateStyledSpans(refreshHighlighting: true);
 		QueueRedraw();
 	}
 

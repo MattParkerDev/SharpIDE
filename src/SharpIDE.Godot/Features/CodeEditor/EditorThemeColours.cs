@@ -19,12 +19,12 @@ public static class EditorThemeColours
         Gray = TextEditorDotnetColoursLight.Gray,
         Pink = TextEditorDotnetColoursLight.Pink,
         ErrorRed = TextEditorDotnetColoursLight.ErrorRed,
-        
+
         RazorComponentGreen = TextEditorDotnetColoursLight.RazorComponentGreen,
         RazorMetaCodePurple = TextEditorDotnetColoursLight.RazorMetaCodePurple,
         HtmlDelimiterGray = TextEditorDotnetColoursLight.HtmlDelimiterGray
     };
-    
+
     public static readonly EditorThemeColorSet Dark = new EditorThemeColorSet
     {
         Orange = TextEditorDotnetColoursDark.Orange,
@@ -40,7 +40,7 @@ public static class EditorThemeColours
         Gray = TextEditorDotnetColoursDark.Gray,
         Pink = TextEditorDotnetColoursDark.Pink,
         ErrorRed = TextEditorDotnetColoursDark.ErrorRed,
-        
+
         RazorComponentGreen = TextEditorDotnetColoursDark.RazorComponentGreen,
         RazorMetaCodePurple = TextEditorDotnetColoursDark.RazorMetaCodePurple,
         HtmlDelimiterGray = TextEditorDotnetColoursDark.HtmlDelimiterGray
@@ -62,7 +62,7 @@ public class EditorThemeColorSet
     public required Color Gray;
     public required Color Pink;
     public required Color ErrorRed;
-    
+
     public required Color RazorComponentGreen;
     public required Color RazorMetaCodePurple;
     public required Color HtmlDelimiterGray;
@@ -82,8 +82,8 @@ public static class TextEditorDotnetColoursDark
     public static readonly Color VariableBlue = new("9cdcfe");
     public static readonly Color Gray = new("a9a9a9");
     public static readonly Color Pink = new("c586c0");
-    public static readonly Color ErrorRed = new("da5b5a");
-    
+    public static readonly Color ErrorRed = new("ff2e27");
+
     public static readonly Color RazorComponentGreen = new("0b7f7f");
     public static readonly Color RazorMetaCodePurple = new("a699e6");
     public static readonly Color HtmlDelimiterGray = new("808080");
@@ -104,7 +104,7 @@ public static class TextEditorDotnetColoursLight
     public static readonly Color Gray = new("a9a9a9"); //
     public static readonly Color Pink = new("c586c0"); //
     public static readonly Color ErrorRed = new("da5b5a"); //
-    
+
     public static readonly Color RazorComponentGreen = new("0b7f7f");
     public static readonly Color RazorMetaCodePurple = new("826ee6");
     public static readonly Color HtmlDelimiterGray = new("808080");

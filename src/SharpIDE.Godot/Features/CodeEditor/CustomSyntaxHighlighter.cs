@@ -28,19 +28,24 @@ public partial class CustomHighlighter : SyntaxHighlighter
     /// The per-colour { "color": Color } entries we return to Godot, shared by every line and editor using the same theme.
     /// Godot only reads them, so they are created once per theme instead of once per span on every highlight call.
     /// </summary>
-    private sealed class HighlightEntries(Dictionary[] byClassification, Dictionary defaultColor, Dictionary[] fadedByClassification, Dictionary fadedDefaultColor)
+    private sealed class HighlightEntries(Dictionary[] byClassification, Dictionary defaultColor, Dictionary[] fadedByClassification, Dictionary fadedDefaultColor, Dictionary error, Dictionary fadedError)
     {
         public readonly Dictionary[] ByClassification = byClassification;
         public readonly Dictionary DefaultColor = defaultColor;
         // For code marked unnecessary, e.g. unnecessary usings
         public readonly Dictionary[] FadedByClassification = fadedByClassification;
         public readonly Dictionary FadedDefaultColor = fadedDefaultColor;
+        // For names that could not be resolved, e.g. a missing using - replaces the classification colour
+        public readonly Dictionary Error = error;
+        public readonly Dictionary FadedError = fadedError;
     }
     // Similar to VS Code's editorUnnecessaryCode.opacity
     private const float FadedAlpha = 0.55f;
 
-    // Column ranges to fade (End exclusive, int.MaxValue for the rest of the line), by line. Rare, so lines without any take the normal path.
-    private System.Collections.Generic.Dictionary<int, List<(int Start, int End)>> _fadedRangesByLine = [];
+    [Flags]
+    private enum TextStyle { None = 0, Faded = 1, Error = 2 }
+    // Column ranges to restyle (End exclusive, int.MaxValue for the rest of the line), by line. Rare, so lines without any take the normal path.
+    private System.Collections.Generic.Dictionary<int, List<(int Start, int End, TextStyle Style)>> _styledRangesByLine = [];
     private static readonly ConditionalWeakTable<EditorThemeColorSet, HighlightEntries> _highlightEntriesByTheme = new();
 
     public void UpdateThemeColorCache(LightOrDarkTheme themeType)
@@ -61,7 +66,8 @@ public partial class CustomHighlighter : SyntaxHighlighter
                 byClassification[i] = CreateEntry(colors[i]);
                 fadedByClassification[i] = CreateEntry(colors[i] with { A = colors[i].A * FadedAlpha });
             }
-            return new HighlightEntries(byClassification, CreateEntry(colorSet.White), fadedByClassification, CreateEntry(colorSet.White with { A = colorSet.White.A * FadedAlpha }));
+            return new HighlightEntries(byClassification, CreateEntry(colorSet.White), fadedByClassification, CreateEntry(colorSet.White with { A = colorSet.White.A * FadedAlpha }),
+                CreateEntry(colorSet.ErrorRed), CreateEntry(colorSet.ErrorRed with { A = colorSet.ErrorRed.A * FadedAlpha }));
 
             static Dictionary CreateEntry(Color color) => new() { { ColorStringName, color } };
         });
@@ -83,22 +89,30 @@ public partial class CustomHighlighter : SyntaxHighlighter
         SwapInSpare();
     }
 
-    /// The spans of code to fade out, e.g. unnecessary usings. Godot caches line highlighting, so callers must refresh it for already highlighted lines to change.
-    public void SetFadedSpans(IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> spans)
+    /// The spans of code to fade out (e.g. unnecessary usings), and to colour red (names that could not be resolved).
+    /// Godot caches line highlighting, so callers must refresh it for already highlighted lines to change.
+    public void SetStyledSpans(IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> fadedSpans, IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> errorSpans)
     {
-        var fadedRangesByLine = new System.Collections.Generic.Dictionary<int, List<(int Start, int End)>>();
-        foreach (var span in spans)
+        var styledRangesByLine = new System.Collections.Generic.Dictionary<int, List<(int Start, int End, TextStyle Style)>>();
+        AddRanges(fadedSpans, TextStyle.Faded);
+        AddRanges(errorSpans, TextStyle.Error);
+        _styledRangesByLine = styledRangesByLine;
+        return;
+
+        void AddRanges(IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> spans, TextStyle style)
         {
-            for (var line = span.Start.Line; line <= span.End.Line; line++)
+            foreach (var span in spans)
             {
-                var start = line == span.Start.Line ? span.Start.Character : 0;
-                var end = line == span.End.Line ? span.End.Character : int.MaxValue;
-                if (end <= start) continue;
-                if (fadedRangesByLine.TryGetValue(line, out var ranges) is false) fadedRangesByLine[line] = ranges = [];
-                ranges.Add((start, end));
+                for (var line = span.Start.Line; line <= span.End.Line; line++)
+                {
+                    var start = line == span.Start.Line ? span.Start.Character : 0;
+                    var end = line == span.End.Line ? span.End.Character : int.MaxValue;
+                    if (end <= start) continue;
+                    if (styledRangesByLine.TryGetValue(line, out var ranges) is false) styledRangesByLine[line] = ranges = [];
+                    ranges.Add((start, end, style));
+                }
             }
         }
-        _fadedRangesByLine = fadedRangesByLine;
     }
 
     private System.Collections.Generic.Dictionary<int, LineSpanRange> TakeClearedSpare()
@@ -185,7 +199,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     public override Dictionary _GetLineSyntaxHighlighting(int line)
     {
-        if (_fadedRangesByLine.TryGetValue(line, out var fadedRanges)) return GetFadedLineSyntaxHighlighting(line, fadedRanges);
+        if (_styledRangesByLine.TryGetValue(line, out var styledRanges)) return GetStyledLineSyntaxHighlighting(line, styledRanges);
         if (_spanRangesByLine.TryGetValue(line, out var range) is false) return _emptyDict;
         var spansForLine = _classifiedSpans.AsSpan(range.Start, range.Count);
 
@@ -209,9 +223,9 @@ public partial class CustomHighlighter : SyntaxHighlighter
         return highlights;
     }
 
-    /// As _GetLineSyntaxHighlighting, but with the faded ranges drawn with the faded colours. Godot applies a colour from its column until the next entry,
-    /// so an entry is needed at every point where either the classification or fading changes.
-    private Dictionary GetFadedLineSyntaxHighlighting(int line, List<(int Start, int End)> fadedRanges)
+    /// As _GetLineSyntaxHighlighting, but with the styled ranges drawn faded and/or red. Godot applies a colour from its column until the next entry,
+    /// so an entry is needed at every point where either the classification or style changes.
+    private Dictionary GetStyledLineSyntaxHighlighting(int line, List<(int Start, int End, TextStyle Style)> styledRanges)
     {
         // The classification (-1 for the default colour) starting at each column
         var classificationStarts = new SortedDictionary<int, int>();
@@ -226,7 +240,7 @@ public partial class CustomHighlighter : SyntaxHighlighter
         }
 
         var boundaries = new SortedSet<int>(classificationStarts.Keys) { 0 };
-        foreach (var (start, end) in fadedRanges)
+        foreach (var (start, end, _) in styledRanges)
         {
             boundaries.Add(start);
             if (end is not int.MaxValue) boundaries.Add(end);
@@ -238,13 +252,20 @@ public partial class CustomHighlighter : SyntaxHighlighter
         foreach (var column in boundaries)
         {
             if (classificationStarts.TryGetValue(column, out var startingClassification)) classification = startingClassification;
-            var isFaded = fadedRanges.Exists(r => r.Start <= column && column < r.End);
-            highlights[column] = (classification, isFaded) switch
+            var style = TextStyle.None;
+            foreach (var r in styledRanges)
             {
-                (-1, false) => entries.DefaultColor,
-                (-1, true) => entries.FadedDefaultColor,
-                (_, false) => entries.ByClassification[classification],
-                (_, true) => entries.FadedByClassification[classification]
+                if (r.Start <= column && column < r.End) style |= r.Style;
+            }
+            var isFaded = style.HasFlag(TextStyle.Faded);
+            highlights[column] = (style.HasFlag(TextStyle.Error), classification, isFaded) switch
+            {
+                (true, _, false) => entries.Error,
+                (true, _, true) => entries.FadedError,
+                (false, -1, false) => entries.DefaultColor,
+                (false, -1, true) => entries.FadedDefaultColor,
+                (false, _, false) => entries.ByClassification[classification],
+                (false, _, true) => entries.FadedByClassification[classification]
             };
         }
         return highlights;

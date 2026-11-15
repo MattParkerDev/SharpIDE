@@ -1,5 +1,7 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Frozen;
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 
 namespace SharpIDE.Application.Features.Analysis;
@@ -19,6 +21,7 @@ public sealed record SharpIdeDiagnostic
 		Severity = diagnostic.Severity;
 		Message = diagnostic.GetMessage();
 		FadeSpans = GetFadeSpans(span, diagnostic);
+		IsUnresolvedSymbol = GetIsUnresolvedSymbol(diagnostic);
 	}
 
 	/// init, so the editor can move a diagnostic as text is edited, before fresh diagnostics arrive
@@ -29,6 +32,31 @@ public sealed record SharpIdeDiagnostic
 	public string Message { get; }
 	/// The text to fade out, for diagnostics that mark code as unnecessary (e.g. unnecessary usings, IDE0005). Empty for other diagnostics.
 	public ImmutableArray<LinePositionSpan> FadeSpans { get; init; }
+	/// Whether this is a compiler error for a name that could not be resolved (e.g. CS0246, type or namespace not found).
+	/// The editor shows these by colouring the name red, as Rider does, rather than squiggling it.
+	/// Contextual keywords are excluded - while typing e.g. `var` on its own line, it is (correctly) reported as an unknown name, but colouring a keyword red looks wrong.
+	public bool IsUnresolvedSymbol { get; }
+
+	private static bool GetIsUnresolvedSymbol(Diagnostic diagnostic)
+	{
+		if (UnresolvedSymbolIds.Contains(diagnostic.Id) is false) return false;
+		var location = diagnostic.Location;
+		if (location.SourceTree is not { } tree || tree.TryGetText(out var text) is false) return true;
+		var name = text.ToString(location.SourceSpan);
+		return SyntaxFacts.GetContextualKeywordKind(name) is SyntaxKind.None && KeywordLikeTypeNames.Contains(name) is false;
+	}
+
+	/// Names that are used like keywords, but that Roslyn doesn't consider contextual keywords
+	private static readonly FrozenSet<string> KeywordLikeTypeNames = FrozenSet.Create("dynamic", "nint", "nuint");
+
+	private static readonly FrozenSet<string> UnresolvedSymbolIds = FrozenSet.Create(
+		"CS0103", // The name 'x' does not exist in the current context
+		"CS0117", // 'Type' does not contain a definition for 'x'
+		"CS0234", // The type or namespace name 'x' does not exist in the namespace 'Ns'
+		"CS0246", // The type or namespace name 'x' could not be found
+		"CS0426", // The type name 'x' does not exist in the type 'Type'
+		"CS1061"  // 'Type' does not contain a definition for 'x' and no accessible extension method 'x' ...
+	);
 
 	/// Hidden diagnostics are not shown, except for those that mark code as unnecessary, as their fading is visible - the same as the Roslyn LSP.
 	/// Roslyn also creates unnecessary diagnostics with no message (e.g. for remove unnecessary usings) that are not meant to be shown at all.
