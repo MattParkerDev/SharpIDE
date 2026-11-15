@@ -527,7 +527,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
 		var diagnostics = semanticModel.GetDiagnostics(cancellationToken: cancellationToken);
-		diagnostics = diagnostics.Where(d => d.Severity is not DiagnosticSeverity.Hidden).ToImmutableArray();
+		diagnostics = diagnostics.Where(SharpIdeDiagnostic.ShouldShowInEditor).ToImmutableArray();
 		var result = diagnostics
 			.Select(d =>
 			{
@@ -565,7 +565,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		// GetAllDiagnostics would also include everything already computed on this CompilationWithAnalyzers, so the two passes would duplicate each other.
 		var result = GetTreeDiagnostics(syntaxResult.SyntaxDiagnostics, tree)
 			.Concat(GetTreeDiagnostics(semanticResult.SemanticDiagnostics, tree))
-			.Where(d => d.Severity is not DiagnosticSeverity.Hidden)
+			.Where(SharpIdeDiagnostic.ShouldShowInEditor)
 			.Select(d =>
 			{
 				var mappedFileLinePositionSpan = semanticModel.SyntaxTree.GetMappedLineSpan(d.Location.SourceSpan);

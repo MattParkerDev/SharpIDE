@@ -663,6 +663,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		foreach (var sharpIdeDiagnostic in diagnostics)
 		{
+			// Hidden diagnostics are only shown by fading their code, see UpdateFadedRanges
+			if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Hidden) continue;
 			var line = sharpIdeDiagnostic.Span.Start.Line;
 			if (line < firstVisibleLine || line > lastVisibleLine) continue;
 			var startCol = sharpIdeDiagnostic.Span.Start.Character;
@@ -842,6 +844,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void SetDiagnostics(SharpIdeDocumentDiagnostics diagnostics)
 	{
 		_fileDiagnostics = MapOntoCurrentText(diagnostics);
+		UpdateFadedSpans(refreshHighlighting: true);
 		QueueRedraw();
 	}
 
@@ -849,7 +852,26 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private void SetAnalyzerDiagnostics(SharpIdeDocumentDiagnostics diagnostics)
 	{
 		_fileAnalyzerDiagnostics = MapOntoCurrentText(diagnostics);
+		UpdateFadedSpans(refreshHighlighting: true);
 		QueueRedraw();
+	}
+
+	private ImmutableArray<LinePositionSpan> _fadedSpans = [];
+	/// Fades out code that diagnostics mark as unnecessary, e.g. unnecessary usings, as VS Code does
+	[RequiresGodotUiThread]
+	private void UpdateFadedSpans(bool refreshHighlighting)
+	{
+		var fadedSpans = _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).Concat(_projectDiagnosticsForFile)
+			.SelectMany(d => d.FadeSpans)
+			.Distinct()
+			.ToImmutableArray();
+		if (fadedSpans.SequenceEqual(_fadedSpans)) return;
+		_fadedSpans = fadedSpans;
+		_syntaxHighlighter.SetFadedSpans(fadedSpans);
+		if (refreshHighlighting is false) return;
+		// Godot caches each line's highlighting - reassign to re-highlight with the new faded spans
+		SyntaxHighlighter = null;
+		SyntaxHighlighter = _syntaxHighlighter;
 	}
 
 	/// Diagnostics can take a while to compute (analyzers especially), so may be for an older text than the editor's, if the user typed in the meantime
@@ -867,12 +889,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_fileDiagnostics = DiagnosticSpanMapper.MapForward(_fileDiagnostics, oldText, newText);
 		_fileAnalyzerDiagnostics = DiagnosticSpanMapper.MapForward(_fileAnalyzerDiagnostics, oldText, newText);
 		_projectDiagnosticsForFile = DiagnosticSpanMapper.MapForward(_projectDiagnosticsForFile, oldText, newText);
+		// Godot shifts its cached line highlighting itself when lines are added or removed, and re-highlights edited lines, so no refresh is needed
+		UpdateFadedSpans(refreshHighlighting: false);
 	}
 
 	[RequiresGodotUiThread]
 	private void SetProjectDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics)
 	{
 		_projectDiagnosticsForFile = diagnostics;
+		UpdateFadedSpans(refreshHighlighting: true);
 		QueueRedraw();
 	}
 

@@ -23,9 +23,34 @@ public static class DiagnosticSpanMapper
 		foreach (var diagnostic in diagnostics)
 		{
 			if (TryMap(diagnostic.Span, oldText, newText, changes, out var mappedSpan) is false) continue;
-			builder.Add(mappedSpan == diagnostic.Span ? diagnostic : diagnostic with { Span = mappedSpan });
+			var mappedFadeSpans = MapFadeSpans(diagnostic.FadeSpans, oldText, newText, changes);
+			if (mappedSpan == diagnostic.Span && mappedFadeSpans == diagnostic.FadeSpans)
+			{
+				builder.Add(diagnostic);
+				continue;
+			}
+			builder.Add(diagnostic with { Span = mappedSpan, FadeSpans = mappedFadeSpans });
 		}
 		return builder.DrainToImmutable();
+	}
+
+	/// Returns the same array if nothing moved, so unchanged diagnostics are not reallocated on every keystroke
+	private static ImmutableArray<LinePositionSpan> MapFadeSpans(ImmutableArray<LinePositionSpan> fadeSpans, SourceText oldText, SourceText newText, IReadOnlyList<TextChangeRange> changes)
+	{
+		if (fadeSpans.IsDefaultOrEmpty) return fadeSpans;
+		ImmutableArray<LinePositionSpan>.Builder? builder = null;
+		for (var i = 0; i < fadeSpans.Length; i++)
+		{
+			var mapped = TryMap(fadeSpans[i], oldText, newText, changes, out var mappedSpan);
+			if (builder is null && mapped && mappedSpan == fadeSpans[i]) continue;
+			if (builder is null)
+			{
+				builder = ImmutableArray.CreateBuilder<LinePositionSpan>(fadeSpans.Length);
+				builder.AddRange(fadeSpans, i);
+			}
+			if (mapped) builder.Add(mappedSpan);
+		}
+		return builder?.ToImmutable() ?? fadeSpans;
 	}
 
 	private static bool TryMap(LinePositionSpan span, SourceText oldText, SourceText newText, IReadOnlyList<TextChangeRange> changes, out LinePositionSpan mappedSpan)
