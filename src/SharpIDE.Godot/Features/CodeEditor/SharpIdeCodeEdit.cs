@@ -223,6 +223,8 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	// Multi cursor gets a single line event for each
 	private void OnLinesEditedFrom(long fromLine, long toLine)
 	{
+		// Emitted for every edit (including within a line), before TextEdit redraws - move the diagnostics now, so they're drawn in the right place
+		UpdateSourceTextFromEditor();
 		if (fromLine == toLine) return;
 
 		// Consume the pre-edit snapshot captured in _GuiInput (if any).
@@ -376,21 +378,37 @@ public partial class SharpIdeCodeEdit : CodeEdit
 
 	/// Brings _currentSourceText up to date with Text, and reports the change. No managed allocation of the document - Godot's native text is diffed directly.
 	/// Called from text_changed, and before/after programmatic edits, so they never work against a stale base.
-	/// Returns true if the text had changed.
+	/// Returns true if the text had changed since it was last reported.
 	[RequiresGodotUiThread]
 	private bool SyncTextFromEditor()
 	{
-		if (_currentSourceText is null) return false; // Not loaded yet
-		if (_textMirror.Update(this) is not { } change) return false;
-		var previousSourceText = _currentSourceText;
-		_currentSourceText = _currentSourceText.WithChanges(change);
-		MapDiagnosticsForward(previousSourceText, _currentSourceText);
+		UpdateSourceTextFromEditor();
+		if (_sourceTextChangeUnreported is false) return false;
+		_sourceTextChangeUnreported = false;
 		VerifySourceTextMatchesEditor();
 		var isDirty = _pendingReloadMarksClean is false;
 		_pendingReloadMarksClean = false;
 		// Cheap and synchronous - records the text and queues the Roslyn update, which happens in order, off the UI thread
 		_fileChangedService.OpenFileTextChanged(_currentFile, _currentSourceText, isDirty);
 		return true;
+	}
+
+	/// Whether _currentSourceText has changed since it was last reported to Roslyn
+	private bool _sourceTextChangeUnreported;
+
+	/// Editor-side only: brings _currentSourceText up to date with Text, and moves the diagnostics with the edit - without reporting it to Roslyn.
+	/// Called from lines_edited_from, which (unlike text_changed) is emitted during the edit, before TextEdit draws, so squiggles and
+	/// red/faded text are drawn in the right place on the first frame. May run part-way through a complex operation, which is fine,
+	/// as SyncTextFromEditor reports the finished text.
+	[RequiresGodotUiThread]
+	private void UpdateSourceTextFromEditor()
+	{
+		if (_currentSourceText is null) return; // Not loaded yet
+		if (_textMirror.Update(this) is not { } change) return;
+		var previousSourceText = _currentSourceText;
+		_currentSourceText = _currentSourceText.WithChanges(change);
+		_sourceTextChangeUnreported = true;
+		MapDiagnosticsForward(previousSourceText, _currentSourceText);
 	}
 
 	/// Catches the editor and Roslyn silently drifting apart, e.g. a UTF-32 -> UTF-16 offset bug. Skipped for large files, as it allocates the whole document.
@@ -937,8 +955,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_fileDiagnostics = DiagnosticSpanMapper.MapForward(_fileDiagnostics, oldText, newText);
 		_fileAnalyzerDiagnostics = DiagnosticSpanMapper.MapForward(_fileAnalyzerDiagnostics, oldText, newText);
 		_projectDiagnosticsForFile = DiagnosticSpanMapper.MapForward(_projectDiagnosticsForFile, oldText, newText);
-		// Godot shifts its cached line highlighting itself when lines are added or removed, and re-highlights edited lines, so no refresh is needed
+		// Normally called during the edit (from lines_edited_from), before TextEdit draws and lazily re-highlights the edited lines - so the
+		// styled spans only need updating. Godot shifts its cached highlighting of other lines itself when lines are added or removed.
 		UpdateStyledSpans(refreshHighlighting: false);
+		QueueRedraw();
 	}
 
 	[RequiresGodotUiThread]
