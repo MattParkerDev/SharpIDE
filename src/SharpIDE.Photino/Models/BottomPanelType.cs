@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Photino.Models;
+namespace SharpIDE.Photino.Models;
 
 public enum BottomPanelType
 {

@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.Debugging;
+namespace SharpIDE.Application.Features.Debugging;
 
 public class Breakpoint
 {

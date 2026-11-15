@@ -1,4 +1,4 @@
-﻿using NuGet.Packaging.Core;
+using NuGet.Packaging.Core;
 using NuGet.ProjectModel;
 
 namespace SharpIDE.Application.Features.Evaluation;

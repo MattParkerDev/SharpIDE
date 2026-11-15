@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.Analysis.WorkspaceServices;
+namespace SharpIDE.Application.Features.Analysis.WorkspaceServices;
 
 public static class SharpIdeDecompilationConstants
 {

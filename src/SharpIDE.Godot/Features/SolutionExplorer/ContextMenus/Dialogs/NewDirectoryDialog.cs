@@ -6,42 +6,42 @@ namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 public partial class NewDirectoryDialog : ConfirmationDialog
 {
-    private LineEdit _nameLineEdit = null!;
+	private LineEdit _nameLineEdit = null!;
 
-    public SharpIdeFolder ParentFolder { get; set; } = null!;
+	public SharpIdeFolder ParentFolder { get; set; } = null!;
 
-    [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
+	[Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
 
-    public override void _Ready()
-    {
-        _nameLineEdit = GetNode<LineEdit>("%DirectoryNameLineEdit");
-        _nameLineEdit.GrabFocus();
-        _nameLineEdit.SelectAll();
-        Confirmed += OnConfirmed;
-        FocusExited += () =>
-        {
-	        // work around bug: https://github.com/godotengine/godot/issues/81370
-	        Callable.From(GrabFocus).CallDeferred();
-        };
-        _nameLineEdit.TextSubmitted += _ =>
+	public override void _Ready()
+	{
+		_nameLineEdit = GetNode<LineEdit>("%DirectoryNameLineEdit");
+		_nameLineEdit.GrabFocus();
+		_nameLineEdit.SelectAll();
+		Confirmed += OnConfirmed;
+		FocusExited += () =>
+		{
+			// work around bug: https://github.com/godotengine/godot/issues/81370
+			Callable.From(GrabFocus).CallDeferred();
+		};
+		_nameLineEdit.TextSubmitted += _ =>
 		{
 			OnConfirmed();
 			QueueFree();
 		};
-    }
+	}
 
-    private void OnConfirmed()
-    {
-        var directoryName = _nameLineEdit.Text.Trim();
-        if (string.IsNullOrEmpty(directoryName))
-        {
-            GD.PrintErr("Directory name cannot be empty.");
-            return;
-        }
+	private void OnConfirmed()
+	{
+		var directoryName = _nameLineEdit.Text.Trim();
+		if (string.IsNullOrEmpty(directoryName))
+		{
+			GD.PrintErr("Directory name cannot be empty.");
+			return;
+		}
 
-        _ = Task.GodotRun(async () =>
-        {
-           await _ideFileOperationsService.CreateDirectory(ParentFolder, directoryName);
-        });
-    }
+		_ = Task.GodotRun(async () =>
+		{
+			await _ideFileOperationsService.CreateDirectory(ParentFolder, directoryName);
+		});
+	}
 }

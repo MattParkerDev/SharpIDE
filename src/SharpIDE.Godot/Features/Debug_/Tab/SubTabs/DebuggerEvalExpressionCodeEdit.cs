@@ -231,7 +231,8 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 			var color = diagnostic.Severity switch
 			{
 				DiagnosticSeverity.Error => new Color(1, 0, 0),
-				DiagnosticSeverity.Warning => new Color("ffb700"), _ => new Color(0, 1, 0)
+				DiagnosticSeverity.Warning => new Color("ffb700"),
+				_ => new Color(0, 1, 0)
 			};
 			for (var line = diagnostic.Span.Start.Line; line <= diagnostic.Span.End.Line; line++)
 			{
@@ -425,7 +426,7 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 
 		// Read on the UI thread - Text is a Godot property, and the session and diagnostics are UI-thread state
 		var expressionText = Text;
-		var linePosition = new LinePosition((int) line, (int) column);
+		var linePosition = new LinePosition((int)line, (int)column);
 		var cancellationToken = ReplaceCancellationTokenSource(ref _symbolCancellationTokenSource);
 		_ = Task.GodotRun(async () =>
 		{
@@ -527,7 +528,9 @@ public partial class DebuggerEvalExpressionCodeEdit : CodeEdit
 
 	private static CompletionFilterReason GetFilterReason(CompletionTrigger trigger) => trigger.Kind switch
 	{
-		CompletionTriggerKind.Insertion => CompletionFilterReason.Insertion, CompletionTriggerKind.Deletion => CompletionFilterReason.Deletion, CompletionTriggerKind.InvokeAndCommitIfUnique => CompletionFilterReason.Other,
+		CompletionTriggerKind.Insertion => CompletionFilterReason.Insertion,
+		CompletionTriggerKind.Deletion => CompletionFilterReason.Deletion,
+		CompletionTriggerKind.InvokeAndCommitIfUnique => CompletionFilterReason.Other,
 		_ => throw new ArgumentOutOfRangeException(nameof(trigger.Kind), trigger.Kind, null),
 	};
 

@@ -41,7 +41,7 @@ public partial class FindReplaceBar : HBoxContainer
 
 	/// <summary>Set to true by the code editor when the caret moved due to a search result navigation.</summary>
 	public bool LineColChangedForResult;
-	
+
 	public override void _Ready()
 	{
 		BuildLayout();

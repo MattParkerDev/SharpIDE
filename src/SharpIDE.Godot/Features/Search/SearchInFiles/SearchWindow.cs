@@ -10,122 +10,122 @@ namespace SharpIDE.Godot.Features.Search;
 
 public partial class SearchWindow : PopupPanel
 {
-    private Label _resultCountLabel = null!;
-    private LineEdit _lineEdit = null!;
-    private VBoxContainer _searchResultsContainer = null!;
-    public SharpIdeSolutionModel Solution { get; set; } = null!;
+	private Label _resultCountLabel = null!;
+	private LineEdit _lineEdit = null!;
+	private VBoxContainer _searchResultsContainer = null!;
+	public SharpIdeSolutionModel Solution { get; set; } = null!;
 	private readonly PackedScene _searchResultEntryScene = ResourceLoader.Load<PackedScene>("res://Features/Search/SearchInFiles/SearchResultComponent.tscn");
 
-    private CancellationTokenSource _cancellationTokenSource = new();
-    private AsyncBatchingWorkQueue<FindInFilesSearchResult> _newFileResultToDisplayQueue = null!;
-    private int _resultCount;
-    private bool _isNewSearch;
+	private CancellationTokenSource _cancellationTokenSource = new();
+	private AsyncBatchingWorkQueue<FindInFilesSearchResult> _newFileResultToDisplayQueue = null!;
+	private int _resultCount;
+	private bool _isNewSearch;
 
-    [Inject] private readonly SearchService _searchService = null!;
-    
-    public override void _Ready()
-    {
-        _resultCountLabel = GetNode<Label>("%ResultCountLabel");
-        _resultCountLabel.Text = "";
-        _lineEdit = GetNode<LineEdit>("%SearchLineEdit");
-        _lineEdit.Text = "";
-        _searchResultsContainer = GetNode<VBoxContainer>("%SearchResultsVBoxContainer");
-        _searchResultsContainer.RemoveAndQueueFreeChildren();
-        _newFileResultToDisplayQueue = new AsyncBatchingWorkQueue<FindInFilesSearchResult>(TimeSpan.FromMilliseconds(50), RenderBatchAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
-        _lineEdit.TextChanged += OnTextChanged;
-        AboutToPopup += OnAboutToPopup;
-    }
+	[Inject] private readonly SearchService _searchService = null!;
 
-    public void SetSearchText(string searchText)
-    {
-        _lineEdit.Text = searchText;
-    }
+	public override void _Ready()
+	{
+		_resultCountLabel = GetNode<Label>("%ResultCountLabel");
+		_resultCountLabel.Text = "";
+		_lineEdit = GetNode<LineEdit>("%SearchLineEdit");
+		_lineEdit.Text = "";
+		_searchResultsContainer = GetNode<VBoxContainer>("%SearchResultsVBoxContainer");
+		_searchResultsContainer.RemoveAndQueueFreeChildren();
+		_newFileResultToDisplayQueue = new AsyncBatchingWorkQueue<FindInFilesSearchResult>(TimeSpan.FromMilliseconds(50), RenderBatchAsync, IAsynchronousOperationListener.Instance, CancellationToken.None);
+		_lineEdit.TextChanged += OnTextChanged;
+		AboutToPopup += OnAboutToPopup;
+	}
 
-    private void OnAboutToPopup()
-    {
-        _lineEdit.SelectAll();
-        Callable.From(_lineEdit.GrabFocus).CallDeferred();
+	public void SetSearchText(string searchText)
+	{
+		_lineEdit.Text = searchText;
+	}
 
-        if (string.IsNullOrEmpty(_lineEdit.Text))
-        {
-            return;
-        }
-        
-        BeginSearch(_lineEdit.Text);
-    }
+	private void OnAboutToPopup()
+	{
+		_lineEdit.SelectAll();
+		Callable.From(_lineEdit.GrabFocus).CallDeferred();
 
-    private void OnTextChanged(string newText)
-    {
-        BeginSearch(newText);
-    }
-    
-    private void BeginSearch(string searchText)
-    {
-        _resultCount = 0;
-        _cancellationTokenSource.Cancel();
-        // TODO: Investigate allocations
-        _cancellationTokenSource = new CancellationTokenSource();
-        var token = _cancellationTokenSource.Token;
-        _newFileResultToDisplayQueue.CancelExistingWork();
-        _isNewSearch = true;
-        _ = Task.GodotRun(() => Search(searchText, token));
-    }
+		if (string.IsNullOrEmpty(_lineEdit.Text))
+		{
+			return;
+		}
 
-    private async ValueTask RenderBatchAsync(ImmutableSegmentedList<FindInFilesSearchResult> batch, CancellationToken cancellationToken)
-    {
-        if (cancellationToken.IsCancellationRequested) return;
-        await this.InvokeAsync(async () =>
-        {
-            if (cancellationToken.IsCancellationRequested) return;
-            if (_isNewSearch)
-            {
-                // Delay removing old results until the first batch of new results is ready, to reduce UI flickering
-                _searchResultsContainer.RemoveAndQueueFreeChildren();
-                _resultCountLabel.Text = string.Empty;
-                _isNewSearch = false;
-            }
-            foreach (var searchResult in batch)
-            {
-                var resultNode = _searchResultEntryScene.Instantiate<SearchResultComponent>();
-                resultNode.Result = searchResult;
-                resultNode.ParentSearchWindow = this;
-                _searchResultsContainer.AddChild(resultNode);
-                _resultCount++;
-            }
-            _resultCountLabel.Text = $"{_resultCount} file(s) found";
-        });
-    }
+		BeginSearch(_lineEdit.Text);
+	}
 
-    private async Task Search(string text, CancellationToken cancellationToken)
-    {
-        var (asyncEnumerable, searchResult) = _searchService.FindInFiles(Solution, text, cancellationToken);
-        if (searchResult == SearchResult.InvalidSearch)
-        {
-            await this.InvokeAsync(() =>
-            {
-                _searchResultsContainer.RemoveAndQueueFreeChildren();
-                _resultCountLabel.Text = string.Empty;
-            });
-            return;
-        }
-        await foreach (var item in asyncEnumerable.WithCancellation(cancellationToken))
-        {
-            _newFileResultToDisplayQueue.AddWork(item);
-        }
+	private void OnTextChanged(string newText)
+	{
+		BeginSearch(newText);
+	}
 
-        if (_resultCount is 0)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                // Search was cancelled, so don't clear previous results, to prevent UI flickering
-                return;
-            }
-            // no items would have been added to the render queue, so we need to clear old results and show "0 files found" message here
-            await this.InvokeAsync(() =>
-            {
-                _searchResultsContainer.RemoveAndQueueFreeChildren();
-                _resultCountLabel.Text = "0 file(s) found";
-             });
-        }
-    }
+	private void BeginSearch(string searchText)
+	{
+		_resultCount = 0;
+		_cancellationTokenSource.Cancel();
+		// TODO: Investigate allocations
+		_cancellationTokenSource = new CancellationTokenSource();
+		var token = _cancellationTokenSource.Token;
+		_newFileResultToDisplayQueue.CancelExistingWork();
+		_isNewSearch = true;
+		_ = Task.GodotRun(() => Search(searchText, token));
+	}
+
+	private async ValueTask RenderBatchAsync(ImmutableSegmentedList<FindInFilesSearchResult> batch, CancellationToken cancellationToken)
+	{
+		if (cancellationToken.IsCancellationRequested) return;
+		await this.InvokeAsync(async () =>
+		{
+			if (cancellationToken.IsCancellationRequested) return;
+			if (_isNewSearch)
+			{
+				// Delay removing old results until the first batch of new results is ready, to reduce UI flickering
+				_searchResultsContainer.RemoveAndQueueFreeChildren();
+				_resultCountLabel.Text = string.Empty;
+				_isNewSearch = false;
+			}
+			foreach (var searchResult in batch)
+			{
+				var resultNode = _searchResultEntryScene.Instantiate<SearchResultComponent>();
+				resultNode.Result = searchResult;
+				resultNode.ParentSearchWindow = this;
+				_searchResultsContainer.AddChild(resultNode);
+				_resultCount++;
+			}
+			_resultCountLabel.Text = $"{_resultCount} file(s) found";
+		});
+	}
+
+	private async Task Search(string text, CancellationToken cancellationToken)
+	{
+		var (asyncEnumerable, searchResult) = _searchService.FindInFiles(Solution, text, cancellationToken);
+		if (searchResult == SearchResult.InvalidSearch)
+		{
+			await this.InvokeAsync(() =>
+			{
+				_searchResultsContainer.RemoveAndQueueFreeChildren();
+				_resultCountLabel.Text = string.Empty;
+			});
+			return;
+		}
+		await foreach (var item in asyncEnumerable.WithCancellation(cancellationToken))
+		{
+			_newFileResultToDisplayQueue.AddWork(item);
+		}
+
+		if (_resultCount is 0)
+		{
+			if (cancellationToken.IsCancellationRequested)
+			{
+				// Search was cancelled, so don't clear previous results, to prevent UI flickering
+				return;
+			}
+			// no items would have been added to the render queue, so we need to clear old results and show "0 files found" message here
+			await this.InvokeAsync(() =>
+			{
+				_searchResultsContainer.RemoveAndQueueFreeChildren();
+				_resultCountLabel.Text = "0 file(s) found";
+			});
+		}
+	}
 }

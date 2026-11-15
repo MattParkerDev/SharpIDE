@@ -1,4 +1,4 @@
-﻿using Microsoft.Build.Execution;
+using Microsoft.Build.Execution;
 
 namespace SharpIDE.Application.Features.Build;
 

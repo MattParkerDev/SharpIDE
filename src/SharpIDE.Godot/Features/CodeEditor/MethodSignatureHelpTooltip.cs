@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.QuickInfo.Presentation;
@@ -11,7 +11,7 @@ public static class MethodSignatureHelpTooltip
 	private static readonly FontVariation MonospaceFont = ResourceLoader.Load<FontVariation>("uid://cctwlwcoycek7");
 	private static readonly Color HrColour = new Color("4d4d4d");
 	private static readonly Color SelectedBackgroundColour = new Color("2e436e");
-	
+
 	public static void WriteToMethodSignatureHelpLabel(RichTextLabel richTextLabel, SignatureHelpItems signatureHelpItems, EditorThemeColorSet editorThemeColorSet)
 	{
 		richTextLabel.PushTable(1);
@@ -22,7 +22,7 @@ public static class MethodSignatureHelpTooltip
 			richTextLabel.PushCell();
 			var isSelectedItem = i == signatureHelpItems.SelectedItemIndex;
 			if (isSelectedItem) richTextLabel.SetCellRowBackgroundColor(SelectedBackgroundColour, SelectedBackgroundColour);
-			
+
 			var prefixQuickInfoElements = item.PrefixDisplayParts.ToInteractiveTextElements(null);
 			foreach (var quickInfoElement in prefixQuickInfoElements)
 			{
@@ -46,7 +46,7 @@ public static class MethodSignatureHelpTooltip
 					richTextLabel.Pop();
 				}
 			}
-            
+
 			var suffixQuickInfoElements = item.SuffixDisplayParts.ToInteractiveTextElements(null);
 			foreach (var quickInfoElement in suffixQuickInfoElements)
 			{

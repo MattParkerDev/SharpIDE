@@ -1,4 +1,4 @@
-﻿using CliWrap.Buffered;
+using CliWrap.Buffered;
 using Microsoft.Extensions.Configuration;
 using NuGet.Versioning;
 using Octokit;

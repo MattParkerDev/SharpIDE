@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Debugging;

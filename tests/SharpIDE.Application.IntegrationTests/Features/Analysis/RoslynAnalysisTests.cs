@@ -10,6 +10,7 @@ using SharpIDE.Application.Features.SolutionDiscovery.VsPersistence;
 [assembly: CaptureConsole]
 
 namespace SharpIDE.Application.IntegrationTests.Features.Analysis;
+
 public class RoslynAnalysisTests
 {
 	private readonly ITestOutputHelper _testOutputHelper;
@@ -21,38 +22,38 @@ public class RoslynAnalysisTests
 
 
 	[Fact]
-    public async Task GetProjectDiagnostics_NoSolutionChanges_IsSubsequentlyCheaper()
-    {
-	    // Arrange
-	    var serviceCollection = new ServiceCollection();
-	    serviceCollection.AddApplication();
+	public async Task GetProjectDiagnostics_NoSolutionChanges_IsSubsequentlyCheaper()
+	{
+		// Arrange
+		var serviceCollection = new ServiceCollection();
+		serviceCollection.AddApplication();
 
-	    var services = serviceCollection.BuildServiceProvider();
-	    var logger = services.GetRequiredService<ILogger<RoslynAnalysis>>();
-	    var buildService = services.GetRequiredService<BuildService>();
-	    var analyzerFileWatcher = services.GetRequiredService<AnalyzerFileWatcher>();
-	    var vsPersistenceSolutionService = services.GetRequiredService<SharpIdeSolutionService>();
+		var services = serviceCollection.BuildServiceProvider();
+		var logger = services.GetRequiredService<ILogger<RoslynAnalysis>>();
+		var buildService = services.GetRequiredService<BuildService>();
+		var analyzerFileWatcher = services.GetRequiredService<AnalyzerFileWatcher>();
+		var vsPersistenceSolutionService = services.GetRequiredService<SharpIdeSolutionService>();
 
-	    var roslynAnalysis = new RoslynAnalysis(logger, buildService, services.GetRequiredService<DesignTimeBuildService>(), analyzerFileWatcher);
+		var roslynAnalysis = new RoslynAnalysis(logger, buildService, services.GetRequiredService<DesignTimeBuildService>(), analyzerFileWatcher);
 
-	    var slnFolderPath = @"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx";
-	    var fileTree = new SharpIdeFileTree();
-	    var (solutionModel, _, _) = await SharpIdeSolutionService.ReadSolution(slnFolderPath, fileTree, TestContext.Current.CancellationToken);
-	    var sharpIdeApplicationProject = solutionModel.AllProjects.Single(p => p.Name.Value == "SharpIDE.Application");
+		var slnFolderPath = @"C:\Users\Matthew\Documents\Git\SharpIDE\SharpIDE.slnx";
+		var fileTree = new SharpIdeFileTree();
+		var (solutionModel, _, _) = await SharpIdeSolutionService.ReadSolution(slnFolderPath, fileTree, TestContext.Current.CancellationToken);
+		var sharpIdeApplicationProject = solutionModel.AllProjects.Single(p => p.Name.Value == "SharpIDE.Application");
 
-	    var timer = Stopwatch.StartNew();
+		var timer = Stopwatch.StartNew();
 		roslynAnalysis._solutionLoadedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-	    await roslynAnalysis.LoadSolutionInWorkspace(solutionModel, TestContext.Current.CancellationToken);
-	    timer.Stop();
-	    _testOutputHelper.WriteLine($"Solution load: {timer.ElapsedMilliseconds} ms");
+		await roslynAnalysis.LoadSolutionInWorkspace(solutionModel, TestContext.Current.CancellationToken);
+		timer.Stop();
+		_testOutputHelper.WriteLine($"Solution load: {timer.ElapsedMilliseconds} ms");
 
-	    // Act
-	    foreach (var i in Enumerable.Range(0, 3))
-	    {
-		    timer.Restart();
-		    await roslynAnalysis.GetProjectDiagnostics(sharpIdeApplicationProject, TestContext.Current.CancellationToken);
-		    timer.Stop();
-		    _testOutputHelper.WriteLine($"Diagnostics: {timer.ElapsedMilliseconds.ToString()}ms");
-	    }
-    }
+		// Act
+		foreach (var i in Enumerable.Range(0, 3))
+		{
+			timer.Restart();
+			await roslynAnalysis.GetProjectDiagnostics(sharpIdeApplicationProject, TestContext.Current.CancellationToken);
+			timer.Stop();
+			_testOutputHelper.WriteLine($"Diagnostics: {timer.ElapsedMilliseconds.ToString()}ms");
+		}
+	}
 }

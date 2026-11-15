@@ -286,15 +286,15 @@ public class FileChangedService
 		lock (_batchLock)
 		{
 			if (--_batchDepth > 0) return;
-			operations = [.._pendingFileOperations];
+			operations = [.. _pendingFileOperations];
 			_pendingFileOperations.Clear();
 			workspaceAltered = _workspaceAlteredDuringBatch;
 			_workspaceAlteredDuringBatch = false;
 			reloadSolution = _pendingSolutionReload;
 			_pendingSolutionReload = false;
-			projectsToReload = [.._pendingProjectReloads];
+			projectsToReload = [.. _pendingProjectReloads];
 			_pendingProjectReloads.Clear();
-			importFileChanges = [.._pendingImportFileChanges];
+			importFileChanges = [.. _pendingImportFileChanges];
 			_pendingImportFileChanges.Clear();
 		}
 		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) workspaceAltered = true;
@@ -329,7 +329,7 @@ public class FileChangedService
 		List<WorkspaceFileOperation> operations;
 		lock (_batchLock)
 		{
-			operations = [.._pendingFileOperations];
+			operations = [.. _pendingFileOperations];
 			_pendingFileOperations.Clear();
 		}
 		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) OnWorkspaceAltered();

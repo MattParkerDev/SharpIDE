@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -24,59 +24,59 @@ internal sealed class CSharpDecompilationService2 : IDecompilationService
 {
 	private static readonly Version s_decompilerVersion2 = typeof(CSharpDecompiler).Assembly.GetName().Version ?? throw new ArgumentNullException();
 
-    [ImportingConstructor]
-    [Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
-    public CSharpDecompilationService2()
-    {
-    }
+	[ImportingConstructor]
+	[Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
+	public CSharpDecompilationService2()
+	{
+	}
 
-    public FileVersionInfo GetDecompilerVersion()
-    {
-	    // workaround until https://github.com/dotnet/roslyn/pull/82490 is merged
-	    var fileVersionInfo = (FileVersionInfo)RuntimeHelpers.GetUninitializedObject(typeof(FileVersionInfo));
-	    var fileVersionField = typeof(FileVersionInfo).GetField("_fileVersion", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-	    fileVersionField?.SetValue(fileVersionInfo, s_decompilerVersion2.ToString());
-	    return fileVersionInfo;
-    }
+	public FileVersionInfo GetDecompilerVersion()
+	{
+		// workaround until https://github.com/dotnet/roslyn/pull/82490 is merged
+		var fileVersionInfo = (FileVersionInfo)RuntimeHelpers.GetUninitializedObject(typeof(FileVersionInfo));
+		var fileVersionField = typeof(FileVersionInfo).GetField("_fileVersion", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+		fileVersionField?.SetValue(fileVersionInfo, s_decompilerVersion2.ToString());
+		return fileVersionInfo;
+	}
 
-    public Document? PerformDecompilation(Document document, string fullName, Compilation compilation, MetadataReference? metadataReference, string? assemblyLocation)
-    {
-        var logger = new StringBuilder();
-        var resolver = new AssemblyResolver(compilation, logger);
+	public Document? PerformDecompilation(Document document, string fullName, Compilation compilation, MetadataReference? metadataReference, string? assemblyLocation)
+	{
+		var logger = new StringBuilder();
+		var resolver = new AssemblyResolver(compilation, logger);
 
-        // Load the assembly.
-        PEFile? file = null;
-        if (metadataReference is not null)
-            file = resolver.TryResolve(metadataReference, PEStreamOptions.PrefetchEntireImage);
+		// Load the assembly.
+		PEFile? file = null;
+		if (metadataReference is not null)
+			file = resolver.TryResolve(metadataReference, PEStreamOptions.PrefetchEntireImage);
 
-        if (file is null && assemblyLocation is not null)
-            file = new PEFile(assemblyLocation, PEStreamOptions.PrefetchEntireImage);
+		if (file is null && assemblyLocation is not null)
+			file = new PEFile(assemblyLocation, PEStreamOptions.PrefetchEntireImage);
 
-        if (file is null)
-            return null;
+		if (file is null)
+			return null;
 
-        using (file)
-        {
-            // Initialize a decompiler with default settings.
-            var decompilerSettings = new DecompilerSettings();
-            var decompiler = new CSharpDecompiler(file, resolver, decompilerSettings);
-            // Escape invalid identifiers to prevent Roslyn from failing to parse the generated code.
-            // (This happens for example, when there is compiler-generated code that is not yet recognized/transformed by the decompiler.)
-            decompiler.AstTransforms.Add(new EscapeInvalidIdentifiers());
+		using (file)
+		{
+			// Initialize a decompiler with default settings.
+			var decompilerSettings = new DecompilerSettings();
+			var decompiler = new CSharpDecompiler(file, resolver, decompilerSettings);
+			// Escape invalid identifiers to prevent Roslyn from failing to parse the generated code.
+			// (This happens for example, when there is compiler-generated code that is not yet recognized/transformed by the decompiler.)
+			decompiler.AstTransforms.Add(new EscapeInvalidIdentifiers());
 
-            var fullTypeName = new FullTypeName(fullName);
+			var fullTypeName = new FullTypeName(fullName);
 
-            // ILSpy only allows decompiling a type that comes from the 'Main Module'.  They will throw on anything
-            // else.  Prevent this by doing this quick check corresponding to:
-            // https://github.com/icsharpcode/ILSpy/blob/4ebe075e5859939463ae420446f024f10c3bf077/ICSharpCode.Decompiler/CSharp/CSharpDecompiler.cs#L978
-            var type = decompiler.TypeSystem.MainModule.GetTypeDefinition(fullTypeName);
-            if (type is null)
-                return null;
+			// ILSpy only allows decompiling a type that comes from the 'Main Module'.  They will throw on anything
+			// else.  Prevent this by doing this quick check corresponding to:
+			// https://github.com/icsharpcode/ILSpy/blob/4ebe075e5859939463ae420446f024f10c3bf077/ICSharpCode.Decompiler/CSharp/CSharpDecompiler.cs#L978
+			var type = decompiler.TypeSystem.MainModule.GetTypeDefinition(fullTypeName);
+			if (type is null)
+				return null;
 
-            // Try to decompile; if an exception is thrown the caller will handle it
-            var text = decompiler.DecompileTypeAsString(fullTypeName);
+			// Try to decompile; if an exception is thrown the caller will handle it
+			var text = decompiler.DecompileTypeAsString(fullTypeName);
 
-            return document.WithText(SourceText.From(text, encoding: null, checksumAlgorithm: SourceHashAlgorithms.Default));
-        }
-    }
+			return document.WithText(SourceText.From(text, encoding: null, checksumAlgorithm: SourceHashAlgorithms.Default));
+		}
+	}
 }

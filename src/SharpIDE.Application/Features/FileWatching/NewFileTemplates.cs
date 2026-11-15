@@ -1,4 +1,4 @@
-﻿using SharpIDE.Application.Features.FileSystem;
+using SharpIDE.Application.Features.FileSystem;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.FileWatching;

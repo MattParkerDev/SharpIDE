@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.QuickInfo.Presentation;
 
@@ -8,7 +8,7 @@ public static class CompletionDescriptionTooltip
 {
 	private static readonly FontVariation MonospaceFont = ResourceLoader.Load<FontVariation>("uid://cctwlwcoycek7");
 	private static readonly FontVariation MonospaceBoldFont = ResourceLoader.Load<FontVariation>("uid://bix80oipv61ew");
-	
+
 	public static RichTextLabel WriteToCompletionDescriptionLabel(RichTextLabel label, CompletionDescription completionDescription, EditorThemeColorSet editorThemeColorSet)
 	{
 		var quickInfoElements = completionDescription.TaggedParts.ToInteractiveTextElements(null);

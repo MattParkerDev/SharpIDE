@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using CliWrap;

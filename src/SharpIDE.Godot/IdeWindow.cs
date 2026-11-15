@@ -17,151 +17,151 @@ namespace SharpIDE.Godot;
 /// </summary>
 public partial class IdeWindow : Control
 {
-    private const string SlnPickerScenePath = "res://Features/SlnPicker/SlnPicker.tscn";
-    private const string IdeRootScenePath = "res://IdeRoot.tscn";
-    private PackedScene? _solutionPickerScene;
-    private PackedScene? _ideRootScene;
+	private const string SlnPickerScenePath = "res://Features/SlnPicker/SlnPicker.tscn";
+	private const string IdeRootScenePath = "res://IdeRoot.tscn";
+	private PackedScene? _solutionPickerScene;
+	private PackedScene? _ideRootScene;
 
-    private IdeRoot? _ideRoot;
-    private SlnPicker? _slnPicker;
-    private DiAutoload _diAutoload = null!;
+	private IdeRoot? _ideRoot;
+	private SlnPicker? _slnPicker;
+	private DiAutoload _diAutoload = null!;
 
-    public override void _Ready()
-    {
-        GD.Print("IdeWindow _Ready called");
-        _diAutoload = GetNode<DiAutoload>("/root/DiAutoload");
-        //this.DiffTheme();
-        //this.GenerateThemes();
-        ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
-        ResourceLoader.LoadThreadedRequest(IdeRootScenePath);
-        SetMaxFpsForMonitor();
-        Environment.SetEnvironmentVariable("DOTNET_DefaultDiagnosticPortSuspend", null); // Processes SharpIDE starts should not inherit this env var. (Would be present e.g. when SharpIDE is debugged from SharpIDE)
-        // Godot doesn't have an easy equivalent of launchsettings.json, and we also want this to be set for published builds
-        Environment.SetEnvironmentVariable("MSBUILD_PARSE_SLN_WITH_SOLUTIONPERSISTENCE", "1");
-        GD.Print($"SharpIDE running on '{RuntimeInformation.FrameworkDescription}' Runtime");
-        GodotOtelExtensions.AddServiceDefaults();
-        Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
-        GetTree().GetRoot().ContentScaleFactor = Singletons.AppState.IdeSettings.UiScale;
-        Singletons.SharpIdeVersion = NuGetVersion.Parse(FileAccess.GetFileAsString("res://version.txt").Trim());
-        UpdateGlobalThemesFromAppState();
-        SetIdeThemeFromAppState();
-        //GetWindow().SetMinSize(new Vector2I(1152, 648));
-        Callable.From(() => PickSolution(true)).CallDeferred();
-    }
+	public override void _Ready()
+	{
+		GD.Print("IdeWindow _Ready called");
+		_diAutoload = GetNode<DiAutoload>("/root/DiAutoload");
+		//this.DiffTheme();
+		//this.GenerateThemes();
+		ResourceLoader.LoadThreadedRequest(SlnPickerScenePath);
+		ResourceLoader.LoadThreadedRequest(IdeRootScenePath);
+		SetMaxFpsForMonitor();
+		Environment.SetEnvironmentVariable("DOTNET_DefaultDiagnosticPortSuspend", null); // Processes SharpIDE starts should not inherit this env var. (Would be present e.g. when SharpIDE is debugged from SharpIDE)
+																						 // Godot doesn't have an easy equivalent of launchsettings.json, and we also want this to be set for published builds
+		Environment.SetEnvironmentVariable("MSBUILD_PARSE_SLN_WITH_SOLUTIONPERSISTENCE", "1");
+		GD.Print($"SharpIDE running on '{RuntimeInformation.FrameworkDescription}' Runtime");
+		GodotOtelExtensions.AddServiceDefaults();
+		Singletons.AppState = AppStateLoader.LoadAppStateFromConfigFile();
+		GetTree().GetRoot().ContentScaleFactor = Singletons.AppState.IdeSettings.UiScale;
+		Singletons.SharpIdeVersion = NuGetVersion.Parse(FileAccess.GetFileAsString("res://version.txt").Trim());
+		UpdateGlobalThemesFromAppState();
+		SetIdeThemeFromAppState();
+		//GetWindow().SetMinSize(new Vector2I(1152, 648));
+		Callable.From(() => PickSolution(true)).CallDeferred();
+	}
 
-    public override void _ExitTree()
-    {
-        AppStateLoader.SaveAppStateToConfigFile(Singletons.AppState);
-        // GodotGlobalEvents.Instance = null!;
-        // GlobalEvents.Instance = null!;
-        // GC.Collect();
-        // GC.WaitForPendingFinalizers();
-        // GC.Collect();
-        // PrintOrphanNodes();
-    }
+	public override void _ExitTree()
+	{
+		AppStateLoader.SaveAppStateToConfigFile(Singletons.AppState);
+		// GodotGlobalEvents.Instance = null!;
+		// GlobalEvents.Instance = null!;
+		// GC.Collect();
+		// GC.WaitForPendingFinalizers();
+		// GC.Collect();
+		// PrintOrphanNodes();
+	}
 
-    private void SetMaxFpsForMonitor()
-    {
-        // Keep max fps below display refresh rate for gsync, to avoid input lag. Currently does not handle window moving across monitors
-        var refreshRate = (int)DisplayServer.ScreenGetRefreshRate();
-        var refreshRateBelowCap = refreshRate - (refreshRate * refreshRate) / 3600.0;
-        var refreshRateBelowCapRoundedDownToInt = (int)refreshRateBelowCap;
-        GD.Print($"Detected display refresh rate: {refreshRate} Hz, setting max FPS to {refreshRateBelowCapRoundedDownToInt} Hz");
-        Engine.MaxFps = refreshRateBelowCapRoundedDownToInt;
-    }
+	private void SetMaxFpsForMonitor()
+	{
+		// Keep max fps below display refresh rate for gsync, to avoid input lag. Currently does not handle window moving across monitors
+		var refreshRate = (int)DisplayServer.ScreenGetRefreshRate();
+		var refreshRateBelowCap = refreshRate - (refreshRate * refreshRate) / 3600.0;
+		var refreshRateBelowCapRoundedDownToInt = (int)refreshRateBelowCap;
+		GD.Print($"Detected display refresh rate: {refreshRate} Hz, setting max FPS to {refreshRateBelowCapRoundedDownToInt} Hz");
+		Engine.MaxFps = refreshRateBelowCapRoundedDownToInt;
+	}
 
-    private void UpdateGlobalThemesFromAppState()
-    {
-        SetThemeExtensions.EditorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
-        SetThemeExtensions.EditorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
-        SetThemeExtensions.TerminalDefaultFont = GetThemeFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal);
-        SetThemeExtensions.TerminalDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal);
-        var editorFontSize = Singletons.AppState.IdeSettings.EditorFontSize;
-        var editorFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
-        if (editorFontSize is not null) this.ThemeSetCodeEditFontSize(editorFontSize.Value);
-        if (editorFontName is not null)
-        {
-            var font = new SystemFont { FontNames = [editorFontName] };
-            this.ThemeSetCodeEditFont(font);
-        }
-        var terminalFontSize = Singletons.AppState.IdeSettings.TerminalFontSize;
-        var terminalFontName = Singletons.AppState.IdeSettings.TerminalSystemFontName;
-        if (terminalFontSize is not null) this.ThemeSetTerminalFontSize(terminalFontSize.Value);
-        if (terminalFontName is not null) this.ThemeSetTerminalFont(new SystemFont { FontNames = [terminalFontName] });
-    }
+	private void UpdateGlobalThemesFromAppState()
+	{
+		SetThemeExtensions.EditorDefaultFont = GetThemeFont(ThemeStringNames.Font, GodotNodeStringNames.CodeEdit);
+		SetThemeExtensions.EditorDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.CodeEdit);
+		SetThemeExtensions.TerminalDefaultFont = GetThemeFont(ThemeStringNames.Terminal.NormalFont, GodotNodeStringNames.Terminal);
+		SetThemeExtensions.TerminalDefaultFontSize = GetThemeFontSize(ThemeStringNames.FontSize, GodotNodeStringNames.Terminal);
+		var editorFontSize = Singletons.AppState.IdeSettings.EditorFontSize;
+		var editorFontName = Singletons.AppState.IdeSettings.EditorSystemFontName;
+		if (editorFontSize is not null) this.ThemeSetCodeEditFontSize(editorFontSize.Value);
+		if (editorFontName is not null)
+		{
+			var font = new SystemFont { FontNames = [editorFontName] };
+			this.ThemeSetCodeEditFont(font);
+		}
+		var terminalFontSize = Singletons.AppState.IdeSettings.TerminalFontSize;
+		var terminalFontName = Singletons.AppState.IdeSettings.TerminalSystemFontName;
+		if (terminalFontSize is not null) this.ThemeSetTerminalFontSize(terminalFontSize.Value);
+		if (terminalFontName is not null) this.ThemeSetTerminalFont(new SystemFont { FontNames = [terminalFontName] });
+	}
 
-    private void SetIdeThemeFromAppState()
-    {
-        var theme = Singletons.AppState.IdeSettings.Theme;
-        this.SetIdeTheme(theme);
-    }
+	private void SetIdeThemeFromAppState()
+	{
+		var theme = Singletons.AppState.IdeSettings.Theme;
+		this.SetIdeTheme(theme);
+	}
 
-    public void PickSolution(bool fullscreen = false)
-    {
-        if (_slnPicker is not null) throw new InvalidOperationException("Solution picker is already active");
-        _solutionPickerScene ??= (PackedScene)ResourceLoader.LoadThreadedGet(SlnPickerScenePath);
-        _slnPicker = _solutionPickerScene.Instantiate<SlnPicker>();
-        if (fullscreen)
-        {
-            AddChild(_slnPicker);
-        }
-        else
-        {
-            var popupWindow = GetNode<Window>("Window");
-            var windowSize = GetWindow().GetSize();
-            popupWindow.Size = windowSize with { X = windowSize.X / 2, Y = windowSize.Y / 2 };
-            popupWindow.Title = "Open Solution";
-            popupWindow.CloseRequested += () =>
-            {
-                popupWindow.Hide();
-            };
-            popupWindow.AddChild(_slnPicker);
-            popupWindow.Popup();
-        }
-        _ = Task.GodotRun(async () =>
-        {
-            var slnPathTask = _slnPicker.GetSelectedSolutionPath();
-            _ideRootScene ??= (PackedScene)ResourceLoader.LoadThreadedGet(IdeRootScenePath);
-            var ideRoot = _ideRootScene.Instantiate<IdeRoot>();
-            ideRoot.IdeWindow = this;
-            var slnPath = await slnPathTask;
-            if (slnPath is null)
-            {
-                ideRoot.QueueFree();
-                _slnPicker.QueueFree();
-                _slnPicker = null;
-                return;
-            }
-            // The new solution's services, so its build hosts can start now, rather than once the IdeRoot is ready. Becomes the current scope in ResetScope below.
-            var solutionServices = _diAutoload.CreateNextScope();
-            ideRoot.SetSlnFilePath(slnPath, solutionServices);
-            var recentSln = Singletons.AppState.RecentSlns.SingleOrDefault(s => s.FilePath == slnPath);
-            if (recentSln is not null)
-            {
-                Singletons.AppState.RecentSlns.Remove(recentSln);
-            }
-            recentSln ??= new RecentSln { FilePath = slnPath, Name = Path.GetFileName(slnPath)};
-            Singletons.AppState.RecentSlns.Add(recentSln);
+	public void PickSolution(bool fullscreen = false)
+	{
+		if (_slnPicker is not null) throw new InvalidOperationException("Solution picker is already active");
+		_solutionPickerScene ??= (PackedScene)ResourceLoader.LoadThreadedGet(SlnPickerScenePath);
+		_slnPicker = _solutionPickerScene.Instantiate<SlnPicker>();
+		if (fullscreen)
+		{
+			AddChild(_slnPicker);
+		}
+		else
+		{
+			var popupWindow = GetNode<Window>("Window");
+			var windowSize = GetWindow().GetSize();
+			popupWindow.Size = windowSize with { X = windowSize.X / 2, Y = windowSize.Y / 2 };
+			popupWindow.Title = "Open Solution";
+			popupWindow.CloseRequested += () =>
+			{
+				popupWindow.Hide();
+			};
+			popupWindow.AddChild(_slnPicker);
+			popupWindow.Popup();
+		}
+		_ = Task.GodotRun(async () =>
+		{
+			var slnPathTask = _slnPicker.GetSelectedSolutionPath();
+			_ideRootScene ??= (PackedScene)ResourceLoader.LoadThreadedGet(IdeRootScenePath);
+			var ideRoot = _ideRootScene.Instantiate<IdeRoot>();
+			ideRoot.IdeWindow = this;
+			var slnPath = await slnPathTask;
+			if (slnPath is null)
+			{
+				ideRoot.QueueFree();
+				_slnPicker.QueueFree();
+				_slnPicker = null;
+				return;
+			}
+			// The new solution's services, so its build hosts can start now, rather than once the IdeRoot is ready. Becomes the current scope in ResetScope below.
+			var solutionServices = _diAutoload.CreateNextScope();
+			ideRoot.SetSlnFilePath(slnPath, solutionServices);
+			var recentSln = Singletons.AppState.RecentSlns.SingleOrDefault(s => s.FilePath == slnPath);
+			if (recentSln is not null)
+			{
+				Singletons.AppState.RecentSlns.Remove(recentSln);
+			}
+			recentSln ??= new RecentSln { FilePath = slnPath, Name = Path.GetFileName(slnPath) };
+			Singletons.AppState.RecentSlns.Add(recentSln);
 
-            await this.InvokeAsync(() =>
-            {
-                if (fullscreen is false) _slnPicker.GetParent<Window>().Hide();
-                _slnPicker.GetParent().RemoveChild(_slnPicker);
-                _slnPicker.QueueFree();
-                _slnPicker = null;
-                if (_ideRoot is not null)
-                {
-                    RemoveChild(_ideRoot);
-                    _ideRoot.QueueFree();
-                }
-                else
-                {
-                    GetWindow().Mode = Window.ModeEnum.Maximized;
-                }
-                _ideRoot = ideRoot; // This has no DI services, until it is added to the scene tree
-                _diAutoload.ResetScope();
-                AddChild(ideRoot);
-            });
-        });
-    }
+			await this.InvokeAsync(() =>
+			{
+				if (fullscreen is false) _slnPicker.GetParent<Window>().Hide();
+				_slnPicker.GetParent().RemoveChild(_slnPicker);
+				_slnPicker.QueueFree();
+				_slnPicker = null;
+				if (_ideRoot is not null)
+				{
+					RemoveChild(_ideRoot);
+					_ideRoot.QueueFree();
+				}
+				else
+				{
+					GetWindow().Mode = Window.ModeEnum.Maximized;
+				}
+				_ideRoot = ideRoot; // This has no DI services, until it is added to the scene tree
+				_diAutoload.ResetScope();
+				AddChild(ideRoot);
+			});
+		});
+	}
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using SharpIDE.Application.Features.SolutionDiscovery;
 
 namespace SharpIDE.Application.Features.Analysis;

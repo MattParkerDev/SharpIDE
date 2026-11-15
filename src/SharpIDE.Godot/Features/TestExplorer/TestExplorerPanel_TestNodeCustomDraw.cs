@@ -1,4 +1,4 @@
-﻿using Ardalis.GuardClauses;
+using Ardalis.GuardClauses;
 using Godot;
 using SharpIDE.Application.Features.Testing.Client;
 

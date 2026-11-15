@@ -1,28 +1,28 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace SharpIDE.Godot.Features.IdeSettings;
 
 public class AppState
 {
-    public string? LastOpenSolutionFilePath { get; set; }
-    public IdeSettings IdeSettings { get; set; } = new IdeSettings();
-    public List<RecentSln> RecentSlns { get; set; } = [];
-    public DateTimeOffset? LastCheckedForUpdates { get; set; }
+	public string? LastOpenSolutionFilePath { get; set; }
+	public IdeSettings IdeSettings { get; set; } = new IdeSettings();
+	public List<RecentSln> RecentSlns { get; set; } = [];
+	public DateTimeOffset? LastCheckedForUpdates { get; set; }
 }
 
 public class IdeSettings
 {
-    public bool AutoOpenLastSolution { get; set; }
-    public string? DebuggerExecutablePath { get; set; }
-    public bool DebuggerUseSharpDbg { get; set; } = true;
-    public float UiScale { get; set; } = 1.0f;
-    public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
-    public string? EditorSystemFontName { get; set; } = null;
-    public int? EditorFontSize { get; set; } = null;
-    public bool EditorEnableFolding { get; set; } = true;
-    public string? TerminalSystemFontName { get; set; } = null;
-    public int? TerminalFontSize { get; set; } = null;
-    public bool RunUsePty { get; set; } = true;
+	public bool AutoOpenLastSolution { get; set; }
+	public string? DebuggerExecutablePath { get; set; }
+	public bool DebuggerUseSharpDbg { get; set; } = true;
+	public float UiScale { get; set; } = 1.0f;
+	public LightOrDarkTheme Theme { get; set; } = LightOrDarkTheme.Dark;
+	public string? EditorSystemFontName { get; set; } = null;
+	public int? EditorFontSize { get; set; } = null;
+	public bool EditorEnableFolding { get; set; } = true;
+	public string? TerminalSystemFontName { get; set; } = null;
+	public int? TerminalFontSize { get; set; } = null;
+	public bool RunUsePty { get; set; } = true;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -30,7 +30,7 @@ public enum LightOrDarkTheme { Light, Dark }
 
 public record RecentSln
 {
-    public required string Name { get; set; }
-    public required string FilePath { get; set; }
-    public IdeSolutionState IdeSolutionState { get; set; } = new IdeSolutionState();
+	public required string Name { get; set; }
+	public required string FilePath { get; set; }
+	public IdeSolutionState IdeSolutionState { get; set; } = new IdeSolutionState();
 }

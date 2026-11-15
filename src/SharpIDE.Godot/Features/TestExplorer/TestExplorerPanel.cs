@@ -14,8 +14,8 @@ public partial class TestExplorerPanel : Control
 	private Tree _testNodesTree = null!;
 	private Button _runAllTestsButton = null!;
 
-    private readonly Texture2D _namespaceIcon = ResourceLoader.Load<Texture2D>("uid://bob5blfjll4h3");
-    private readonly Texture2D _csharpClassIcon = ResourceLoader.Load<Texture2D>("uid://b027uufaewitj");
+	private readonly Texture2D _namespaceIcon = ResourceLoader.Load<Texture2D>("uid://bob5blfjll4h3");
+	private readonly Texture2D _csharpClassIcon = ResourceLoader.Load<Texture2D>("uid://b027uufaewitj");
 
 	private readonly Dictionary<string, TreeItem> _testNodeTreeItems = [];
 	private readonly Dictionary<SharpIdeProjectModel, TreeItem> _projectTreeItems = [];
@@ -187,7 +187,7 @@ public partial class TestExplorerPanel : Control
 		if (selected is null) return;
 		if (_testNodesTree.HasMultipleNodesSelected()) return;
 
-        var globalMousePosition = _testNodesTree.GlobalPosition + mousePosition;
+		var globalMousePosition = _testNodesTree.GlobalPosition + mousePosition;
 		var mouseButtonMask = (MouseButtonMask)mouseButtonIndex;
 
 		var testNode = selected.SharpIdeTestNode;

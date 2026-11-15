@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis.LanguageServer.Handler.SemanticTokens;
 using Microsoft.CodeAnalysis.Razor.SemanticTokens;
@@ -9,14 +9,14 @@ public static class TokenTypeProvider
 {
 	public static string[] ConstructTokenTypes(bool supportsVsExtensions)
 	{
-		string[] types = [.. SemanticTokensSchema.GetSchema(supportsVsExtensions).AllTokenTypes, ..GetStaticFieldValues(typeof(SemanticTokenTypes))];
+		string[] types = [.. SemanticTokensSchema.GetSchema(supportsVsExtensions).AllTokenTypes, .. GetStaticFieldValues(typeof(SemanticTokenTypes))];
 		//return new SemanticTokenTypes(types);
 		return types;
 	}
 
 	public static string[] ConstructTokenModifiers()
 	{
-		string[] types = [.. SemanticTokensSchema.TokenModifiers, ..GetStaticFieldValues(typeof(SemanticTokenModifiers))];
+		string[] types = [.. SemanticTokensSchema.TokenModifiers, .. GetStaticFieldValues(typeof(SemanticTokenModifiers))];
 		//return new SemanticTokenModifiers(types);
 		return types;
 	}

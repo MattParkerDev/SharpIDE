@@ -18,7 +18,7 @@ public class PTY
 	protected PTY(StringName @class) : this(ClassDB.Instantiate(@class))
 	{
 	}
-	protected PTY(Variant variant) : this((Node) variant)
+	protected PTY(Variant variant) : this((Node)variant)
 	{
 	}
 	protected PTY([NotNull] Node @object)

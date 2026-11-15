@@ -43,13 +43,13 @@ public partial class IdeRoot : Control
 	[Inject] private readonly IdeFileWatcher _fileWatcher = null!;
 	[Inject] private readonly BuildService _buildService = null!;
 	[Inject] private readonly ProjectEvaluationService _projectEvaluationService = null!;
-    [Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
-    [Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
-    [Inject] private readonly SharpIdeRootFolderModificationService _rootFolderModificationService = null!;
-    [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
-    [Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
-    [Inject] private readonly SharpIdeSolutionService _sharpIdeSolutionService = null!;
-    [Inject] private readonly ILogger<IdeRoot> _logger = null!;
+	[Inject] private readonly IdeOpenTabsFileManager _openTabsFileManager = null!;
+	[Inject] private readonly RoslynAnalysis _roslynAnalysis = null!;
+	[Inject] private readonly SharpIdeRootFolderModificationService _rootFolderModificationService = null!;
+	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
+	[Inject] private readonly IdeNavigationHistoryService _navigationHistoryService = null!;
+	[Inject] private readonly SharpIdeSolutionService _sharpIdeSolutionService = null!;
+	[Inject] private readonly ILogger<IdeRoot> _logger = null!;
 
 	public override void _EnterTree()
 	{

@@ -1,4 +1,4 @@
-﻿using CliWrap.Buffered;
+using CliWrap.Buffered;
 using ParallelPipelines.Application.Attributes;
 using ParallelPipelines.Domain.Entities;
 using ParallelPipelines.Host.Helpers;

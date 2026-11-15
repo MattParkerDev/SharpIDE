@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Godot.Features.ToolPanes;
+namespace SharpIDE.Godot.Features.ToolPanes;
 
 public enum ToolPaneLocation
 {

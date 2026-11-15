@@ -91,6 +91,6 @@ public static class SharpIdeClassifier
 		{
 			AddSingleLineSpans(text, span, result);
 		}
-		return [..result];
+		return [.. result];
 	}
 }

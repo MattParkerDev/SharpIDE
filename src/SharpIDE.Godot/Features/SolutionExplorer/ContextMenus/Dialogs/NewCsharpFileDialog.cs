@@ -6,106 +6,106 @@ namespace SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
 
 public partial class NewCsharpFileDialog : ConfirmationDialog
 {
-    private const string ClassType = "Class";
-    private const string InterfaceType = "Interface";
-    private const string RecordType = "Record";
-    private const string StructType = "Struct";
-    private const string EnumType = "Enum";
+	private const string ClassType = "Class";
+	private const string InterfaceType = "Interface";
+	private const string RecordType = "Record";
+	private const string StructType = "Struct";
+	private const string EnumType = "Enum";
 
-    private LineEdit _nameLineEdit = null!;
-    private ItemList _fileTypeItemList = null!;
+	private LineEdit _nameLineEdit = null!;
+	private ItemList _fileTypeItemList = null!;
 
-    public SharpIdeFolder ParentNode { get; set; } = null!;
+	public SharpIdeFolder ParentNode { get; set; } = null!;
 
-    [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
+	[Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
 
-    private Texture2D _classIcon = GD.Load<Texture2D>("uid://do0edciarrnp0");
+	private Texture2D _classIcon = GD.Load<Texture2D>("uid://do0edciarrnp0");
 
-    public override void _Ready()
-    {
-        _nameLineEdit = GetNode<LineEdit>("%CSharpFileNameLineEdit");
-        _nameLineEdit.GrabFocus();
-        _nameLineEdit.SelectAll();
-        _fileTypeItemList = GetNode<ItemList>("%FileTypeItemList");
-        _fileTypeItemList.AddItem(ClassType, _classIcon);
-        _fileTypeItemList.AddItem(InterfaceType, _classIcon);
-        _fileTypeItemList.AddItem(RecordType, _classIcon);
-        _fileTypeItemList.AddItem(StructType, _classIcon);
-        _fileTypeItemList.AddItem(EnumType, _classIcon);
-        _fileTypeItemList.Select(0);
-        _fileTypeItemList.ItemSelected += FileTypeItemListOnItemSelected;
-        Confirmed += OnConfirmed;
-        FocusExited += () =>
-        {
-	        // work around bug: https://github.com/godotengine/godot/issues/81370
-	        Callable.From(GrabFocus).CallDeferred();
-        };
-    }
+	public override void _Ready()
+	{
+		_nameLineEdit = GetNode<LineEdit>("%CSharpFileNameLineEdit");
+		_nameLineEdit.GrabFocus();
+		_nameLineEdit.SelectAll();
+		_fileTypeItemList = GetNode<ItemList>("%FileTypeItemList");
+		_fileTypeItemList.AddItem(ClassType, _classIcon);
+		_fileTypeItemList.AddItem(InterfaceType, _classIcon);
+		_fileTypeItemList.AddItem(RecordType, _classIcon);
+		_fileTypeItemList.AddItem(StructType, _classIcon);
+		_fileTypeItemList.AddItem(EnumType, _classIcon);
+		_fileTypeItemList.Select(0);
+		_fileTypeItemList.ItemSelected += FileTypeItemListOnItemSelected;
+		Confirmed += OnConfirmed;
+		FocusExited += () =>
+		{
+			// work around bug: https://github.com/godotengine/godot/issues/81370
+			Callable.From(GrabFocus).CallDeferred();
+		};
+	}
 
-    public override void _Input(InputEvent @event)
-    {
-        if (@event is InputEventKey { Pressed: true, Keycode: Key.Enter })
-        {
-            OnConfirmed();
-        }
-        else if (@event is InputEventKey { Pressed: true, Keycode: Key.Down })
-        {
-            var selectedIndex = _fileTypeItemList.GetSelectedItems()[0];
-            var nextIndex = (selectedIndex + 1) % _fileTypeItemList.GetItemCount();
-            _fileTypeItemList.Select(nextIndex);
-        }
-        else if (@event is InputEventKey { Pressed: true, Keycode: Key.Up })
-        {
-            var selectedIndex = _fileTypeItemList.GetSelectedItems()[0];
-            var previousIndex = (selectedIndex - 1 + _fileTypeItemList.GetItemCount()) % _fileTypeItemList.GetItemCount();
-            _fileTypeItemList.Select(previousIndex);
-        }
-    }
+	public override void _Input(InputEvent @event)
+	{
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.Enter })
+		{
+			OnConfirmed();
+		}
+		else if (@event is InputEventKey { Pressed: true, Keycode: Key.Down })
+		{
+			var selectedIndex = _fileTypeItemList.GetSelectedItems()[0];
+			var nextIndex = (selectedIndex + 1) % _fileTypeItemList.GetItemCount();
+			_fileTypeItemList.Select(nextIndex);
+		}
+		else if (@event is InputEventKey { Pressed: true, Keycode: Key.Up })
+		{
+			var selectedIndex = _fileTypeItemList.GetSelectedItems()[0];
+			var previousIndex = (selectedIndex - 1 + _fileTypeItemList.GetItemCount()) % _fileTypeItemList.GetItemCount();
+			_fileTypeItemList.Select(previousIndex);
+		}
+	}
 
-    private void FileTypeItemListOnItemSelected(long index)
-    {
-        GD.Print("Selected file type index: " + index);
-    }
+	private void FileTypeItemListOnItemSelected(long index)
+	{
+		GD.Print("Selected file type index: " + index);
+	}
 
-    private void OnConfirmed()
-    {
-        var fileName = _nameLineEdit.Text.Trim();
-        if (IsNameInvalid(fileName))
-        {
-            GD.PrintErr("File name cannot be empty.");
-            return;
-        }
+	private void OnConfirmed()
+	{
+		var fileName = _nameLineEdit.Text.Trim();
+		if (IsNameInvalid(fileName))
+		{
+			GD.PrintErr("File name cannot be empty.");
+			return;
+		}
 
-        if (!fileName.EndsWith(".cs"))
-        {
-            fileName += ".cs";
-        }
+		if (!fileName.EndsWith(".cs"))
+		{
+			fileName += ".cs";
+		}
 
-        var selectedIndex = _fileTypeItemList.GetSelectedItems().Single();
-        var selectedFileTypeDisplayName = _fileTypeItemList.GetItemText(selectedIndex);
+		var selectedIndex = _fileTypeItemList.GetSelectedItems().Single();
+		var selectedFileTypeDisplayName = _fileTypeItemList.GetItemText(selectedIndex);
 
-        var typeKeyword = GetCsharpTypeKeywordFromUiDisplayName(selectedFileTypeDisplayName);
+		var typeKeyword = GetCsharpTypeKeywordFromUiDisplayName(selectedFileTypeDisplayName);
 
-        _ = Task.GodotRun(async () =>
-        {
-           var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName, typeKeyword);
-           GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, null);
-        });
-        QueueFree();
-    }
+		_ = Task.GodotRun(async () =>
+		{
+			var sharpIdeFile = await _ideFileOperationsService.CreateCsFile(ParentNode, fileName, typeKeyword);
+			GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelFireAndForget(sharpIdeFile, null);
+		});
+		QueueFree();
+	}
 
-    private static bool IsNameInvalid(string name)
-    {
-        return string.IsNullOrWhiteSpace(name);
-    }
+	private static bool IsNameInvalid(string name)
+	{
+		return string.IsNullOrWhiteSpace(name);
+	}
 
-    private static string GetCsharpTypeKeywordFromUiDisplayName(string typeDisplayName) => typeDisplayName switch
-    {
-        ClassType => "class",
-        InterfaceType => "interface",
-        RecordType => "record",
-        StructType => "struct",
-        EnumType => "enum",
-        _ => throw new ArgumentOutOfRangeException(nameof(typeDisplayName), $"The file type '{typeDisplayName}' is not supported.")
-    };
+	private static string GetCsharpTypeKeywordFromUiDisplayName(string typeDisplayName) => typeDisplayName switch
+	{
+		ClassType => "class",
+		InterfaceType => "interface",
+		RecordType => "record",
+		StructType => "struct",
+		EnumType => "enum",
+		_ => throw new ArgumentOutOfRangeException(nameof(typeDisplayName), $"The file type '{typeDisplayName}' is not supported.")
+	};
 }

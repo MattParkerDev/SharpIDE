@@ -1,4 +1,4 @@
-﻿using Ardalis.GuardClauses;
+using Ardalis.GuardClauses;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Logging;
 

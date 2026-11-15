@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Godot.Features.SolutionExplorer.ContextMenus.Dialogs;
@@ -7,112 +7,112 @@ namespace SharpIDE.Godot.Features.SolutionExplorer;
 
 file enum FolderContextMenuOptions
 {
-    CreateNew = 1,
-    RevealInFileExplorer = 2,
-    Delete = 3,
-    Rename = 4
+	CreateNew = 1,
+	RevealInFileExplorer = 2,
+	Delete = 3,
+	Rename = 4
 }
 
 file enum CreateNewSubmenuOptions
 {
-    Directory = 1,
-    CSharpFile = 2
+	Directory = 1,
+	CSharpFile = 2
 }
 
 public partial class SolutionExplorerPanel
 {
-    [Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
+	[Inject] private readonly IdeFileOperationsService _ideFileOperationsService = null!;
 
-    private readonly PackedScene _newDirectoryDialogScene = GD.Load<PackedScene>("uid://bgi4u18y8pt4x");
-    private readonly PackedScene _newCsharpFileDialogScene = GD.Load<PackedScene>("uid://chnb7gmcdg0ww");
-    private readonly PackedScene _renameDirectoryDialogScene = GD.Load<PackedScene>("uid://btebkg8bo3b37");
-    private void OpenContextMenuFolder(SharpIdeFolder folder, TreeItem folderTreeItem)
-    {
-        var menu = new PopupMenu();
-        AddChild(menu);
+	private readonly PackedScene _newDirectoryDialogScene = GD.Load<PackedScene>("uid://bgi4u18y8pt4x");
+	private readonly PackedScene _newCsharpFileDialogScene = GD.Load<PackedScene>("uid://chnb7gmcdg0ww");
+	private readonly PackedScene _renameDirectoryDialogScene = GD.Load<PackedScene>("uid://btebkg8bo3b37");
+	private void OpenContextMenuFolder(SharpIdeFolder folder, TreeItem folderTreeItem)
+	{
+		var menu = new PopupMenu();
+		AddChild(menu);
 
-        var createNewSubmenu = new PopupMenu();
-        menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)FolderContextMenuOptions.CreateNew);
-        createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
-        createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
-        createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, folder);
+		var createNewSubmenu = new PopupMenu();
+		menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)FolderContextMenuOptions.CreateNew);
+		createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
+		createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
+		createNewSubmenu.IdPressed += id => OnCreateNewSubmenuPressed(id, folder);
 
-        menu.AddItem("Reveal in File Explorer", (int)FolderContextMenuOptions.RevealInFileExplorer);
-        menu.AddItem("Delete", (int)FolderContextMenuOptions.Delete);
-        menu.AddItem("Rename", (int)FolderContextMenuOptions.Rename);
-        menu.PopupHide += () => menu.QueueFree();
-        menu.IdPressed += id =>
-        {
-            var actionId = (FolderContextMenuOptions)id;
-            if (actionId is FolderContextMenuOptions.RevealInFileExplorer)
-            {
-                OS.ShellOpen(folder.Path);
-            }
-            else if (actionId is FolderContextMenuOptions.Delete)
-            {
-	            OpenDeleteFolderConfirmation(folder);
-            }
-            else if (actionId is FolderContextMenuOptions.Rename)
-            {
-	            OpenRenameFolderPopup(folder);
-            }
-        };
+		menu.AddItem("Reveal in File Explorer", (int)FolderContextMenuOptions.RevealInFileExplorer);
+		menu.AddItem("Delete", (int)FolderContextMenuOptions.Delete);
+		menu.AddItem("Rename", (int)FolderContextMenuOptions.Rename);
+		menu.PopupHide += () => menu.QueueFree();
+		menu.IdPressed += id =>
+		{
+			var actionId = (FolderContextMenuOptions)id;
+			if (actionId is FolderContextMenuOptions.RevealInFileExplorer)
+			{
+				OS.ShellOpen(folder.Path);
+			}
+			else if (actionId is FolderContextMenuOptions.Delete)
+			{
+				OpenDeleteFolderConfirmation(folder);
+			}
+			else if (actionId is FolderContextMenuOptions.Rename)
+			{
+				OpenRenameFolderPopup(folder);
+			}
+		};
 
-        var globalMousePosition = GetGlobalMousePosition();
-        menu.Position = new Vector2I((int)globalMousePosition.X, (int)globalMousePosition.Y);
-        menu.Popup();
-    }
+		var globalMousePosition = GetGlobalMousePosition();
+		menu.Position = new Vector2I((int)globalMousePosition.X, (int)globalMousePosition.Y);
+		menu.Popup();
+	}
 
-    private void OnCreateNewSubmenuPressed(long id, SharpIdeFolder folder)
-    {
-        var actionId = (CreateNewSubmenuOptions)id;
-        if (actionId is CreateNewSubmenuOptions.Directory)
-        {
-            var newDirectoryDialog = _newDirectoryDialogScene.Instantiate<NewDirectoryDialog>();
-            newDirectoryDialog.ParentFolder = folder;
-            AddChild(newDirectoryDialog);
-            newDirectoryDialog.PopupCentered();
-        }
-        else if (actionId is CreateNewSubmenuOptions.CSharpFile)
-        {
-            var newCsharpFileDialog = _newCsharpFileDialogScene.Instantiate<NewCsharpFileDialog>();
-            newCsharpFileDialog.ParentNode = folder;
-            AddChild(newCsharpFileDialog);
-            newCsharpFileDialog.PopupCentered();
-        }
-    }
+	private void OnCreateNewSubmenuPressed(long id, SharpIdeFolder folder)
+	{
+		var actionId = (CreateNewSubmenuOptions)id;
+		if (actionId is CreateNewSubmenuOptions.Directory)
+		{
+			var newDirectoryDialog = _newDirectoryDialogScene.Instantiate<NewDirectoryDialog>();
+			newDirectoryDialog.ParentFolder = folder;
+			AddChild(newDirectoryDialog);
+			newDirectoryDialog.PopupCentered();
+		}
+		else if (actionId is CreateNewSubmenuOptions.CSharpFile)
+		{
+			var newCsharpFileDialog = _newCsharpFileDialogScene.Instantiate<NewCsharpFileDialog>();
+			newCsharpFileDialog.ParentNode = folder;
+			AddChild(newCsharpFileDialog);
+			newCsharpFileDialog.PopupCentered();
+		}
+	}
 
-    private void OpenRenameFolderPopup(SharpIdeFolder folder)
-    {
-	    var renameDirectoryDialog = _renameDirectoryDialogScene.Instantiate<RenameDirectoryDialog>();
-	    renameDirectoryDialog.Folder = folder;
-	    AddChild(renameDirectoryDialog);
-	    renameDirectoryDialog.PopupCentered();
-    }
+	private void OpenRenameFolderPopup(SharpIdeFolder folder)
+	{
+		var renameDirectoryDialog = _renameDirectoryDialogScene.Instantiate<RenameDirectoryDialog>();
+		renameDirectoryDialog.Folder = folder;
+		AddChild(renameDirectoryDialog);
+		renameDirectoryDialog.PopupCentered();
+	}
 
-    private void OpenDeleteFolderConfirmation(SharpIdeFolder folder)
-    {
-	    var confirmedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-	    var confirmationDialog = new ConfirmationDialog();
-	    confirmationDialog.Title = "Delete";
-	    confirmationDialog.DialogText = $"Delete '{folder.Name.Value}' file?";
-	    confirmationDialog.Confirmed += () =>
-	    {
-		    confirmedTcs.SetResult(true);
-	    };
-	    confirmationDialog.Canceled += () =>
-	    {
-		    confirmedTcs.SetResult(false);
-	    };
-	    AddChild(confirmationDialog);
-	    confirmationDialog.PopupCentered();
-	    _ = Task.GodotRun(async () =>
-	    {
-		    var confirmed = await confirmedTcs.Task;
-		    if (confirmed)
-		    {
-			    await _ideFileOperationsService.DeleteDirectory(folder);
-		    }
-	    });
-    }
+	private void OpenDeleteFolderConfirmation(SharpIdeFolder folder)
+	{
+		var confirmedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var confirmationDialog = new ConfirmationDialog();
+		confirmationDialog.Title = "Delete";
+		confirmationDialog.DialogText = $"Delete '{folder.Name.Value}' file?";
+		confirmationDialog.Confirmed += () =>
+		{
+			confirmedTcs.SetResult(true);
+		};
+		confirmationDialog.Canceled += () =>
+		{
+			confirmedTcs.SetResult(false);
+		};
+		AddChild(confirmationDialog);
+		confirmationDialog.PopupCentered();
+		_ = Task.GodotRun(async () =>
+		{
+			var confirmed = await confirmedTcs.Task;
+			if (confirmed)
+			{
+				await _ideFileOperationsService.DeleteDirectory(folder);
+			}
+		});
+	}
 }

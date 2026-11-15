@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.SolutionDiscovery;
 

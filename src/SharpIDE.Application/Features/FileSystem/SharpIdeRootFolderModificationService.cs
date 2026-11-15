@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.SolutionDiscovery;
@@ -27,7 +27,7 @@ public class SharpIdeRootFolderModificationService(FileChangedService fileChange
 		var correctInsertionPosition = GetInsertionPosition(parentFolder, sharpIdeFolder);
 		parentFolder.Folders.Insert(correctInsertionPosition, sharpIdeFolder);
 
-		FileTree.AllFolders.AddRange((IEnumerable<SharpIdeFolder>)[sharpIdeFolder, ..allFolders]);
+		FileTree.AllFolders.AddRange((IEnumerable<SharpIdeFolder>)[sharpIdeFolder, .. allFolders]);
 		foreach (var sharpIdeFile in allFiles)
 		{
 			var success = FileTree.AllFiles.TryAdd(sharpIdeFile.Path, sharpIdeFile);

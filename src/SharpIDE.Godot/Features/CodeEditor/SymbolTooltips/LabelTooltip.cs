@@ -6,22 +6,22 @@ namespace SharpIDE.Godot.Features.CodeEditor;
 
 public static partial class SymbolInfoComponents
 {
-    public static RichTextLabel GetLabelSymbolInfo(ILabelSymbol symbol)
-    {
-        var label = new RichTextLabel();
-        label.PushColor(TextEditorDotnetColoursDark.White);
-        label.PushFont(MonospaceFont);
-        label.AddText("label ");
-        label.AddLabelName(symbol);
-        label.Pop();
-        label.Pop();
-        return label;
-    }
+	public static RichTextLabel GetLabelSymbolInfo(ILabelSymbol symbol)
+	{
+		var label = new RichTextLabel();
+		label.PushColor(TextEditorDotnetColoursDark.White);
+		label.PushFont(MonospaceFont);
+		label.AddText("label ");
+		label.AddLabelName(symbol);
+		label.Pop();
+		label.Pop();
+		return label;
+	}
 
-    private static void AddLabelName(this RichTextLabel label, ILabelSymbol symbol)
-    {
-        label.PushColor(TextEditorDotnetColoursDark.White);
-        label.AddText(symbol.Name);
-        label.Pop();
-    }
+	private static void AddLabelName(this RichTextLabel label, ILabelSymbol symbol)
+	{
+		label.PushColor(TextEditorDotnetColoursDark.White);
+		label.AddText(symbol.Name);
+		label.Pop();
+	}
 }

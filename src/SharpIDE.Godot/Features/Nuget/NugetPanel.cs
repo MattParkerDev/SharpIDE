@@ -26,19 +26,19 @@ public partial class NugetPanel : Control
 	private readonly CancellationSeries _searchResultsCancellationSeries = new();
 	/// Cancels the installed packages' results still arriving when another solution or project is selected, or a refresh starts another load
 	private readonly CancellationSeries _installedPackagesCancellationSeries = new();
-	
+
 	private Label _packagesToUpdateSlnOrProjectNameLabel = null!;
 	private Label _packagesToUpdateResultCountLabel = null!;
 	private Label _installedPackagesSlnOrProjectNameLabel = null!;
 	private Label _installedPackagesResultCountLabel = null!;
 	private Label _implicitlyInstalledPackagesSlnOrProjectNameLabel = null!;
 	private Label _implicitlyInstalledPackagesResultCountLabel = null!;
-	
+
 	private ProgressBar _packagesToUpdateProgressBar = null!;
 	private ProgressBar _installedPackagesProgressBar = null!;
 	private ProgressBar _implicitlyInstalledPackagesProgressBar = null!;
 	private ProgressBar _packageSearchProgressBar = null!;
-	
+
 	private NugetPackageDetails _nugetPackageDetails = null!;
 
 	private CheckBox _packagesToUpdateSelectAllCheckBox = null!;
@@ -61,12 +61,12 @@ public partial class NugetPanel : Control
 	private bool _includePrerelease;
 	/// The installed packages last shown, so toggling prereleases redraws them without asking the sources again. Only touched on the UI thread
 	private (List<IdePackageResult> Packages, List<SharpIdeProjectModel> UnrestoredProjects)? _shownInstalledPackages;
-	
+
 	[Inject] private readonly NugetClientService _nugetClientService = null!;
 	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
 	[Inject] private readonly ActivityMonitor _activityMonitor = null!;
 	[Inject] private readonly PackageReferenceService _packageReferenceService = null!;
-	
+
 	private readonly PackedScene _packageEntryScene = ResourceLoader.Load<PackedScene>("uid://cqc2xlt81ju8s");
 	private readonly Texture2D _csprojIcon = ResourceLoader.Load<Texture2D>("uid://cqt30ma6xgder");
 
@@ -86,7 +86,7 @@ public partial class NugetPanel : Control
 		_packagesToUpdateUpdateButton = GetNode<Button>("%PackagesToUpdateUpdateButton");
 		_packagesToUpdateSelectAllCheckBox.Toggled += OnSelectAllUpdatesToggled;
 		_packagesToUpdateUpdateButton.Pressed += UpdateSelectedPackages;
-		_installedPackagesVboxContainer =GetNode<VBoxContainer>("%InstalledPackagesVBoxContainer");
+		_installedPackagesVboxContainer = GetNode<VBoxContainer>("%InstalledPackagesVBoxContainer");
 		_implicitlyInstalledPackagesItemList = GetNode<VBoxContainer>("%ImplicitlyInstalledPackagesVBoxContainer");
 		_availablePackagesItemList = GetNode<VBoxContainer>("%AvailablePackagesVBoxContainer");
 		_solutionOrProjectOptionButton = GetNode<OptionButton>("%SolutionOrProjectOptionButton");
@@ -119,7 +119,7 @@ public partial class NugetPanel : Control
 		_implicitlyInstalledPackagesItemList.QueueFreeChildren();
 		_availablePackagesItemList.QueueFreeChildren();
 		_activityMonitor.ActivityChanged.Subscribe(OnActivityChanged);
-		
+
 		_ = Task.GodotRun(_AsyncReady);
 	}
 
@@ -127,7 +127,7 @@ public partial class NugetPanel : Control
 	{
 		await _sharpIdeSolutionAccessor.SolutionReadyTcs.Task;
 		_solution = _sharpIdeSolutionAccessor.SolutionModel;
-		_projects = [null!, .._solution!.AllProjects.OrderBy(s => s.Name.Value)]; // So that index 0 is solution // Probably should use Item Metadata instead of this
+		_projects = [null!, .. _solution!.AllProjects.OrderBy(s => s.Name.Value)]; // So that index 0 is solution // Probably should use Item Metadata instead of this
 		await this.InvokeAsync(() =>
 		{
 			foreach (var project in _projects.Skip(1))
@@ -484,7 +484,7 @@ public partial class NugetPanel : Control
 		AddChild(dialog);
 		dialog.PopupCentered(new Vector2I(700, 0));
 	}
-	
+
 	private async Task OnActivityChanged(Activity activity)
 	{
 		var isOccurring = !activity.IsStopped;

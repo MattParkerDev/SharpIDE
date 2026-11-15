@@ -62,15 +62,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private readonly TextEditNativeTextMirror _textMirror = new();
 	private SourceText? _currentSourceText;
 	private bool _pendingReloadMarksClean; // The next text change is a reload from disk, so leaves the file not dirty
-	// Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
-	// can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
+										   // Captured in _GuiInput *before* a line-modifying keystroke is processed, so that OnLinesEditedFrom
+										   // can determine the correct LineEditOrigin from pre-edit state rather than post-edit state.
 	private (int line, int col, string lineText)? _pendingLineEditOrigin;
 	private IDisposable? _projectDiagnosticsObserveDisposable;
 	private Color _cachedCurrentCaretLineColor;
 	private readonly Color _breakpointLineColor = new Color("3a2323");
 	private readonly Color _executingLineColor = new Color("665001");
 	private LinePositionSpan? _executingLineInfo; // Used for drawing orange executing background highlighting
-	// Hidden tabs don't re-analyse on SolutionAltered; they set this and refresh when they become visible. Only read/written on the UI thread.
+												  // Hidden tabs don't re-analyse on SolutionAltered; they set this and refresh when they become visible. Only read/written on the UI thread.
 	private bool _analysisStale;
 	// The workspace version the current highlighting/diagnostics were computed against. If unchanged, a refresh would produce identical results.
 	// Written from the thread pool by overlapping refreshes, and a nullable struct this size isn't written atomically, hence the lock.
@@ -135,7 +135,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var vScrollBar = GetVScrollBar();
 		hScrollBar.ValueChanged += OnCodeEditScrolled;
 		vScrollBar.ValueChanged += OnCodeEditScrolled;
-		AddCommentDelimiter("#","", true);
+		AddCommentDelimiter("#", "", true);
 		SetCodeRegionTags("region", "endregion");
 		GodotGlobalEvents.Instance.TextEditorCodeFoldingChanged.Subscribe(SetCodeFoldingAsync);
 		SetCodeFolding(Singletons.AppState.IdeSettings.EditorEnableFolding);
@@ -175,7 +175,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (_currentFile is null) return;
 			if (_fileDeleted) return;
 			var newCt = _solutionAlteredCancellationTokenSeries.CreateNext(); // Also cancels any in-flight refresh, including one for a tab that has since been hidden
-			// Check visibility and mark stale in one UI-thread step, so we can't race with OnVisibilityChanged
+																			  // Check visibility and mark stale in one UI-thread step, so we can't race with OnVisibilityChanged
 			var (isVisible, hasFocus) = await this.InvokeAsync(() =>
 			{
 				var visible = IsVisibleInTree();
@@ -239,7 +239,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			var (_, snapCol, snapText) = snapshot.Value;
 			var clampedCol = Math.Min(snapCol, snapText.Length);
 			var textBeforeCaret = snapText.AsSpan()[..clampedCol];
-			var textAfterCaret  = snapText.AsSpan()[clampedCol..];
+			var textAfterCaret = snapText.AsSpan()[clampedCol..];
 
 			if (textBeforeCaret.IsEmpty || textBeforeCaret.IsWhiteSpace())
 				origin = LineEditOrigin.StartOfLine;
@@ -265,7 +265,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		if (_currentFile is not null)
 		{
 			if (_fileDeleted is false) SyncTextFromEditor(); // Capture an edit whose text_changed hasn't been handled yet
-			// Saves unsaved changes, so Roslyn (which has the editor's text) and disk agree once the editor is gone
+															 // Saves unsaved changes, so Roslyn (which has the editor's text) and disk agree once the editor is gone
 			_ = _openTabsFileManager.CloseFileAsync(_currentFile, saveIfDirty: _fileDeleted is false);
 		}
 		_textMirror.Dispose();
@@ -511,7 +511,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var readFileTask = _openTabsFileManager.GetFileTextAsync(file);
 		_currentFile.EditRequested.Subscribe(OnEditRequested);
 		_currentFile.FileDeleted.Subscribe(OnFileDeleted);
-		if (Solution!.GetProjectByContainingFolder(_currentFile) is {} project)
+		if (Solution!.GetProjectByContainingFolder(_currentFile) is { } project)
 		{
 			_project = project;
 			_projectDiagnosticsObserveDisposable = project.Diagnostics.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
@@ -580,7 +580,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		// Clamp columns to line length
 		int lineLength = TextEditNativeLine.GetLength(this, line);
 		caretStartCol = Mathf.Clamp(caretStartCol, 0, lineLength);
-		caretEndCol   = Mathf.Clamp(caretEndCol, 0, lineLength);
+		caretEndCol = Mathf.Clamp(caretEndCol, 0, lineLength);
 
 		// GetRectAtLineColumn returns the rectangle for the character before the column passed in, or the first character if the column is 0.
 		var startRect = GetRectAtLineColumn(line, caretStartCol);
@@ -595,7 +595,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 		var endPos = endRect.End;
 		startPos.Y -= 3;
-		endPos.Y   -= 3;
+		endPos.Y -= 3;
 		if (caretStartCol == caretEndCol)
 		{
 			endPos.X += 10;
@@ -609,12 +609,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		if (startCol > endCol) return;
 		var lineLength = TextEditNativeLine.GetLength(this, line);
 		startCol = Mathf.Clamp(startCol, 0, lineLength);
-		endCol   = Mathf.Clamp(endCol,   0, lineLength);
+		endCol = Mathf.Clamp(endCol, 0, lineLength);
 		var startRect = GetRectAtLineColumn(line, startCol);
-		var endRect   = GetRectAtLineColumn(line, endCol);
-		float left  = startCol == 0 ? startRect.Position.X : startRect.End.X;
+		var endRect = GetRectAtLineColumn(line, endCol);
+		float left = startCol == 0 ? startRect.Position.X : startRect.End.X;
 		float right = startCol == endCol ? endRect.End.X + 10 : endRect.End.X;
-		float top   = startRect.Position.Y;
+		float top = startRect.Position.Y;
 		float height = startRect.Size.Y;
 		var rect = new Rect2(left, top, right - left, height);
 		RenderingServer.Singleton.CanvasItemAddRect(_canvasItemRid, rect, color);
@@ -661,7 +661,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var firstVisibleLine = GetFirstVisibleLine();
 		var lastVisibleLine = GetLastFullVisibleLine() + 1;
 
-		if (_executingLineInfo is {} linePositionSpan)
+		if (_executingLineInfo is { } linePositionSpan)
 		{
 			var fromLine = Math.Max(linePositionSpan.Start.Line, firstVisibleLine);
 			var toLine = Math.Min(linePositionSpan.End.Line, lastVisibleLine);
@@ -739,7 +739,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 						endCol = span.End.Line == line ? Math.Min(endCol, startCol + 2) : startCol + 2;
 					}
 					if (endCol < startCol) continue; // Nothing would be drawn
-					// Overlap is judged by what's drawn. A zero-width squiggle is still drawn, so give it a width of 1.
+													 // Overlap is judged by what's drawn. A zero-width squiggle is still drawn, so give it a width of 1.
 					squiggleArray[count] = new Squiggle(line, startCol, endCol, Math.Max(endCol, startCol + 1), sharpIdeDiagnostic.Severity, count);
 					count++;
 				}
@@ -770,12 +770,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 					break;
 				// Forward-delete at end of line merges the next line up — line removed
 				case Key.Delete when !HasSelection():
-				{
-					var lineText = GetLine(caretLine);
-					if (caretCol == lineText.Length && caretLine < GetLineCount() - 1)
-						_pendingLineEditOrigin = (caretLine, caretCol, lineText);
-					break;
-				}
+					{
+						var lineText = GetLine(caretLine);
+						if (caretCol == lineText.Length && caretLine < GetLineCount() - 1)
+							_pendingLineEditOrigin = (caretLine, caretCol, lineText);
+						break;
+					}
 			}
 		}
 

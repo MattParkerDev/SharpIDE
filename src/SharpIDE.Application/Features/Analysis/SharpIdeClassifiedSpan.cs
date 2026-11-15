@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using Microsoft.CodeAnalysis.Classification;
 
 namespace SharpIDE.Application.Features.Analysis;

@@ -23,7 +23,7 @@ public partial class RunProjectsComponent : MarginContainer
 	private readonly PackedScene _runMenuItemScene = ResourceLoader.Load<PackedScene>("res://Features/Run/RunMenuItem.tscn");
 	private readonly StringName _buildAnimationName = "BuildingAnimation";
 
-    [Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
+	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
 	public override void _Ready()
 	{
 		_runMenuPopup = GetNode<Popup>("%RunMenuPopup");

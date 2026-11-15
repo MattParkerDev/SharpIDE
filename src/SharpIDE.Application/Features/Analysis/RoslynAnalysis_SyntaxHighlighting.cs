@@ -97,7 +97,7 @@ public partial class RoslynAnalysis
 
 		timer.Stop();
 		_logger.LogInformation("RoslynAnalysis: Razor syntax highlighting for {FileName} took {ElapsedMilliseconds}ms", fileModel.Name.Value, timer.ElapsedMilliseconds);
-		return [..result];
+		return [.. result];
 
 		async Task AddCSharpRanges(RazorCSharpDocument razorCSharpDocument, SourceGeneratedDocument generatedDocument)
 		{
@@ -118,7 +118,7 @@ public partial class RoslynAnalysis
 				generatedSpans.Add(span);
 			}
 
-			var classifiedSpans = await SharpIdeClassifier.GetClassifiedSpansAsync(generatedDocument, [..generatedSpans], _logger, cancellationToken);
+			var classifiedSpans = await SharpIdeClassifier.GetClassifiedSpansAsync(generatedDocument, [.. generatedSpans], _logger, cancellationToken);
 			foreach (var classifiedSpan in classifiedSpans)
 			{
 				if (TryMapToRazorSpan(mappings, classifiedSpan.TextSpan) is not { } razorSpan) continue;

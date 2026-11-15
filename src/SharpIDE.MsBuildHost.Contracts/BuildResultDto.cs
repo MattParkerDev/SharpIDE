@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.MsBuildHost.Contracts;
+namespace SharpIDE.MsBuildHost.Contracts;
 
 public enum BuildTypeDto
 {

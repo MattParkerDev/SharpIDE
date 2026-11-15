@@ -1,4 +1,4 @@
-﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Attributes;
 using Microsoft.CodeAnalysis.MSBuild;
 
 namespace Roslyn.Benchmarks;

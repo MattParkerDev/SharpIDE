@@ -12,30 +12,30 @@ public partial class AutoUpdateComponent : VBoxContainer
 	private HBoxContainer _checkForUpdatesHBoxContainer = null!;
 	private Button _checkForUpdatesButton = null!;
 	private Label _lastCheckedAtLabel = null!;
-	
+
 	private HBoxContainer _downloadUpdateHBoxContainer = null!;
 	private Button _downloadUpdateButton = null!;
 	private Label _newerVersionLabel = null!;
-	
+
 	private HBoxContainer _noUpdatesFoundHBoxContainer = null!;
 	private HBoxContainer _checkingForUpdatesHBoxContainer = null!;
-	
+
 	private HBoxContainer _downloadingUpdateHBoxContainer = null!;
 	private ProgressBar _downloadProgressBar = null!;
 	private Label _downloadProgressLabel = null!;
-	
+
 	private VBoxContainer _finishUpdateAndRestartVBoxContainer = null!;
 	private Button _finishUpdateAndRestartButton = null!;
 	private LinkButton _updaterLogLinkButton = null!;
-	
+
 	private HBoxContainer _updatingAndRestartingHBoxContainer = null!;
-	
+
 	private HBoxContainer _failedHBoxContainer = null!;
 	private Label _failedLabel = null!;
 
 	private Release? _pendingRelease;
 	private string? _pendingArchivePath;
-	
+
 	public override void _Ready()
 	{
 		_lastCheckedAtLabel = GetNode<Label>("%LastCheckedAtLabel");
@@ -51,7 +51,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 		_finishUpdateAndRestartVBoxContainer = GetNode<VBoxContainer>("%FinishUpdateAndRestartVBoxContainer");
 		_updatingAndRestartingHBoxContainer = GetNode<HBoxContainer>("%UpdatingAndRestartingHBoxContainer");
 		_failedHBoxContainer = GetNode<HBoxContainer>("%FailedHBoxContainer");
-		
+
 		_checkForUpdatesButton = GetNode<Button>("%CheckForUpdatesButton");
 		_downloadUpdateButton = GetNode<Button>("%DownloadUpdateButton");
 		_finishUpdateAndRestartButton = GetNode<Button>("%FinishUpdateAndRestartButton");
@@ -66,7 +66,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 			if (File.Exists(logFilePath) is false) File.OpenWrite(logFilePath).Dispose();
 			OS.ShellShowInFileManager(logFilePath);
 		};
-		
+
 		UpdateLastCheckedAtLabel();
 	}
 
@@ -113,12 +113,12 @@ public partial class AutoUpdateComponent : VBoxContainer
 			var extraTimeToWait = TimeSpan.FromSeconds(1) - timer.Elapsed;
 			await Task.Delay(extraTimeToWait);
 		}
-		
+
 		Singletons.AppState.LastCheckedForUpdates = DateTimeOffset.UtcNow;
 		await this.InvokeAsync(() =>
 		{
 			UpdateLastCheckedAtLabel();
-		
+
 			if (release is null)
 			{
 				SetStage(UpdateStage.NoUpdateFound);
@@ -167,7 +167,7 @@ public partial class AutoUpdateComponent : VBoxContainer
 	private async Task OnFinishUpdateAndRestartPressed()
 	{
 		if (_pendingArchivePath is null) return;
-		
+
 		await this.InvokeAsync(() => SetStage(UpdateStage.Installing));
 		await AutoUpdate.StartUpdaterProcess(_pendingArchivePath);
 		await this.InvokeAsync(() => GetTree().Quit());

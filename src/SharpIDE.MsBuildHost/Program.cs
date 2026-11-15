@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Ardalis.GuardClauses;
 using PolyType.SourceGenerator;
 using SharpIDE.MsBuildHost;

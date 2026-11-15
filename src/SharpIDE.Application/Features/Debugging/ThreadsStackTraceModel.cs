@@ -1,4 +1,4 @@
-﻿using SharpDbg.Infrastructure.Debugger;
+using SharpDbg.Infrastructure.Debugger;
 
 namespace SharpIDE.Application.Features.Debugging;
 

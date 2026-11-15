@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Ardalis.GuardClauses;
 using SharpIDE.Application.Features.Debugging;
 using SharpIDE.Application.Features.SolutionDiscovery;

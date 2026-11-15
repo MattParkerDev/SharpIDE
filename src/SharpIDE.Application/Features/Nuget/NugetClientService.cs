@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using NuGet.Common;
@@ -148,17 +148,17 @@ public class NugetClientService
 	/// Every listed version, prereleases included, newest first - whether prereleases are shown is decided by the caller, in memory
 	public async Task<List<IPackageSearchMetadata>> GetAllVersionsOfPackageInSource(string packageId, PackageSource source, CancellationToken cancellationToken = default)
 	{
-			var repository = Repository.Factory.GetCoreV3(source);
-			var packageMetadataResource = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
+		var repository = Repository.Factory.GetCoreV3(source);
+		var packageMetadataResource = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
 
-			var metadata = await packageMetadataResource.GetMetadataAsync(
-				packageId, includePrerelease: true, includeUnlisted: false,
-				_sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false);
+		var metadata = await packageMetadataResource.GetMetadataAsync(
+			packageId, includePrerelease: true, includeUnlisted: false,
+			_sourceCacheContext, _nugetLogger, cancellationToken).ConfigureAwait(false);
 
-			//var packageByIdResource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken).ConfigureAwait(false);
-			var metadataList = metadata.ToList();
-			// Newest first - sorted here, as sources don't all return them in the same order (nuget.org's are oldest first, but that isn't guaranteed)
-			return metadataList.OrderByDescending(m => m.Identity.Version).ToList();
+		//var packageByIdResource = await repository.GetResourceAsync<FindPackageByIdResource>(cancellationToken).ConfigureAwait(false);
+		var metadataList = metadata.ToList();
+		// Newest first - sorted here, as sources don't all return them in the same order (nuget.org's are oldest first, but that isn't guaranteed)
+		return metadataList.OrderByDescending(m => m.Identity.Version).ToList();
 	}
 
 	/// Each version of the package restored to the global packages folder (as the directory's NuGet config sets it), newest first

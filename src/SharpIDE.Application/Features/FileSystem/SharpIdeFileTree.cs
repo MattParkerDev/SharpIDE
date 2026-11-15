@@ -52,7 +52,7 @@ public sealed class SharpIdeFileTree
 				if (roots.Any(r => PathComparison.IsSameOrUnder(r.Path, rootPath))) continue;
 				roots.Add(AddRoot(rootPath));
 			}
-			Roots = [..roots];
+			Roots = [.. roots];
 		}
 		RootsChanged?.Invoke();
 	}

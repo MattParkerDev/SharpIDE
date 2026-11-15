@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.Events;
+namespace SharpIDE.Application.Features.Events;
 
 public class EventWrapper<TReturn>(Func<TReturn> @event) : EventWrapperBase<Func<TReturn>>(@event) where TReturn : Task
 {

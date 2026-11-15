@@ -404,7 +404,7 @@ public sealed class PackageReferenceEditor(Func<string, CancellationToken, Task<
 			}
 		}
 
-		private IEnumerable<Project> All => _innerProjects.Count is 0 ? [Outer] : [Outer, .._innerProjects];
+		private IEnumerable<Project> All => _innerProjects.Count is 0 ? [Outer] : [Outer, .. _innerProjects];
 
 		/// The items of the type for the package across the evaluations, one per element that defines them
 		public List<ProjectItem> ItemsOf(string itemType, string packageId) => All

@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.Testing.Client;
+namespace SharpIDE.Application.Features.Testing.Client;
 
 public class ExecutionStates
 {

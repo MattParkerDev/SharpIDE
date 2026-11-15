@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 
 using Microsoft.CodeAnalysis;
 
@@ -6,29 +6,29 @@ namespace SharpIDE.Godot.Features.CodeEditor;
 
 public static partial class SymbolInfoComponents
 {
-    public static RichTextLabel GetEnumValueSymbolInfo(IFieldSymbol symbol)
-    {
-        if (symbol is { ContainingType.TypeKind: not TypeKind.Enum })
-        {
-            throw new ArgumentException("The containing type of the symbol must be an enum type.", nameof(symbol));
-        }
+	public static RichTextLabel GetEnumValueSymbolInfo(IFieldSymbol symbol)
+	{
+		if (symbol is { ContainingType.TypeKind: not TypeKind.Enum })
+		{
+			throw new ArgumentException("The containing type of the symbol must be an enum type.", nameof(symbol));
+		}
 
-        var label = new RichTextLabel();
-        label.PushColor(TextEditorDotnetColoursDark.White);
-        label.PushFont(MonospaceFont);
-        label.AddAttributes(symbol);
-        label.AddFieldName(symbol);
-        label.AddText(" = ");
-        label.PushColor(TextEditorDotnetColoursDark.NumberGreen);
-        label.AddText($"{symbol.ConstantValue}");
-        label.Pop();
-        label.AddText(";");
-        label.AddContainingNamespaceAndClass(symbol);
-        label.Newline();
-        label.Pop();
-        label.AddDocs(symbol);
-        
-        label.Pop();
-        return label;
-    }
+		var label = new RichTextLabel();
+		label.PushColor(TextEditorDotnetColoursDark.White);
+		label.PushFont(MonospaceFont);
+		label.AddAttributes(symbol);
+		label.AddFieldName(symbol);
+		label.AddText(" = ");
+		label.PushColor(TextEditorDotnetColoursDark.NumberGreen);
+		label.AddText($"{symbol.ConstantValue}");
+		label.Pop();
+		label.AddText(";");
+		label.AddContainingNamespaceAndClass(symbol);
+		label.Newline();
+		label.Pop();
+		label.AddDocs(symbol);
+
+		label.Pop();
+		return label;
+	}
 }

@@ -1,4 +1,4 @@
-﻿using Deploy.Steps;
+using Deploy.Steps;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using ParallelPipelines.Host;

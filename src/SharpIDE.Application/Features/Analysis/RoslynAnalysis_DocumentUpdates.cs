@@ -36,8 +36,8 @@ public partial class RoslynAnalysis
 			if (documentIds.IsEmpty) continue;
 			// Skip no-ops, e.g. an editor opening a file whose text the workspace already has. Usually cheap - differing lengths return immediately.
 			if (currentSolution.GetTextDocument(documentIds[0]) is { } existingDocument &&
-			    existingDocument.TryGetText(out var existingText) &&
-			    (ReferenceEquals(existingText, newText) || existingText.ContentEquals(newText)))
+				existingDocument.TryGetText(out var existingText) &&
+				(ReferenceEquals(existingText, newText) || existingText.ContentEquals(newText)))
 			{
 				continue;
 			}
@@ -82,56 +82,56 @@ public partial class RoslynAnalysis
 			switch (operation)
 			{
 				case WorkspaceFileOperation.Add { File.IsEditorConfigFile: true } add:
-				{
-					// Applies to every project at or below its folder - as MSBuild's EditorConfigFiles, from the project's folder up
-					var directory = Path.GetDirectoryName(add.File.Path)!;
-					var documentIds = currentSolution.Projects
-						.Where(p => p.FilePath is not null && PathComparison.IsSameOrUnder(Path.GetDirectoryName(p.FilePath)!, directory))
-						.Select(p => DocumentId.CreateNewId(p.Id))
-						.ToList();
-					if (documentIds.Count is 0) break;
-					singleDocumentId = documentIds[0];
-					var text = SourceText.From(add.Content, Encoding.UTF8);
-					var (name, path) = (add.File.Name.Value, add.File.Path);
-					steps.Add(solution => AddEditorConfigToSolution(solution, documentIds, name, path, text));
-					break;
-				}
-				case WorkspaceFileOperation.Add add:
-				{
-					if (GetProjectIdForNewFile(add.File) is not { } projectId) break;
-					var documentId = DocumentId.CreateNewId(projectId);
-					singleDocumentId = documentId;
-					var text = SourceText.From(add.Content, Encoding.UTF8);
-					var (name, path, isCsharp) = (add.File.Name.Value, add.File.Path, add.File.IsCsharpFile);
-					steps.Add(solution => AddFileToSolution(solution, documentId, name, path, text, isCsharp));
-					break;
-				}
-				case WorkspaceFileOperation.Remove remove:
-				{
-					singleDocumentId = currentSolution.GetDocumentIdsWithFilePath(remove.FilePath).FirstOrDefault();
-					var path = remove.FilePath;
-					steps.Add(solution => RemoveFileFromSolution(solution, path));
-					break;
-				}
-				case WorkspaceFileOperation.Move move:
-				{
-					var existingIds = currentSolution.GetDocumentIdsWithFilePath(move.OldFilePath);
-					singleDocumentId = existingIds.FirstOrDefault();
-					// Other files (e.g. a txt AdditionalFile, or .editorconfig) came from the project's evaluation - keep them in their project
-					var targetProjectId = move.File.IsRoslynWorkspaceFile ? GetProjectIdForNewFile(move.File) : existingIds.FirstOrDefault()?.ProjectId;
-					// Only needed if it can't stay the same document - e.g. moved to another project, or it's an additional document
-					SourceText? text = null;
-					if (existingIds.IsEmpty || existingIds.Any(id => id.ProjectId != targetProjectId || currentSolution.ContainsDocument(id) is false))
 					{
-						text = existingIds.IsEmpty is false && currentSolution.GetTextDocument(existingIds[0]) is { } existingDocument
-							? await existingDocument.GetTextAsync()
-							: File.Exists(move.File.Path) ? SourceText.From(await File.ReadAllTextAsync(move.File.Path), Encoding.UTF8) : null;
+						// Applies to every project at or below its folder - as MSBuild's EditorConfigFiles, from the project's folder up
+						var directory = Path.GetDirectoryName(add.File.Path)!;
+						var documentIds = currentSolution.Projects
+							.Where(p => p.FilePath is not null && PathComparison.IsSameOrUnder(Path.GetDirectoryName(p.FilePath)!, directory))
+							.Select(p => DocumentId.CreateNewId(p.Id))
+							.ToList();
+						if (documentIds.Count is 0) break;
+						singleDocumentId = documentIds[0];
+						var text = SourceText.From(add.Content, Encoding.UTF8);
+						var (name, path) = (add.File.Name.Value, add.File.Path);
+						steps.Add(solution => AddEditorConfigToSolution(solution, documentIds, name, path, text));
+						break;
 					}
-					var newDocumentId = targetProjectId is null ? null : DocumentId.CreateNewId(targetProjectId);
-					var (oldPath, name, path, isCsharp) = (move.OldFilePath, move.File.Name.Value, move.File.Path, move.File.IsCsharpFile);
-					steps.Add(solution => MoveFileInSolution(solution, oldPath, name, path, isCsharp, targetProjectId, newDocumentId, text));
-					break;
-				}
+				case WorkspaceFileOperation.Add add:
+					{
+						if (GetProjectIdForNewFile(add.File) is not { } projectId) break;
+						var documentId = DocumentId.CreateNewId(projectId);
+						singleDocumentId = documentId;
+						var text = SourceText.From(add.Content, Encoding.UTF8);
+						var (name, path, isCsharp) = (add.File.Name.Value, add.File.Path, add.File.IsCsharpFile);
+						steps.Add(solution => AddFileToSolution(solution, documentId, name, path, text, isCsharp));
+						break;
+					}
+				case WorkspaceFileOperation.Remove remove:
+					{
+						singleDocumentId = currentSolution.GetDocumentIdsWithFilePath(remove.FilePath).FirstOrDefault();
+						var path = remove.FilePath;
+						steps.Add(solution => RemoveFileFromSolution(solution, path));
+						break;
+					}
+				case WorkspaceFileOperation.Move move:
+					{
+						var existingIds = currentSolution.GetDocumentIdsWithFilePath(move.OldFilePath);
+						singleDocumentId = existingIds.FirstOrDefault();
+						// Other files (e.g. a txt AdditionalFile, or .editorconfig) came from the project's evaluation - keep them in their project
+						var targetProjectId = move.File.IsRoslynWorkspaceFile ? GetProjectIdForNewFile(move.File) : existingIds.FirstOrDefault()?.ProjectId;
+						// Only needed if it can't stay the same document - e.g. moved to another project, or it's an additional document
+						SourceText? text = null;
+						if (existingIds.IsEmpty || existingIds.Any(id => id.ProjectId != targetProjectId || currentSolution.ContainsDocument(id) is false))
+						{
+							text = existingIds.IsEmpty is false && currentSolution.GetTextDocument(existingIds[0]) is { } existingDocument
+								? await existingDocument.GetTextAsync()
+								: File.Exists(move.File.Path) ? SourceText.From(await File.ReadAllTextAsync(move.File.Path), Encoding.UTF8) : null;
+						}
+						var newDocumentId = targetProjectId is null ? null : DocumentId.CreateNewId(targetProjectId);
+						var (oldPath, name, path, isCsharp) = (move.OldFilePath, move.File.Name.Value, move.File.Path, move.File.IsCsharpFile);
+						steps.Add(solution => MoveFileInSolution(solution, oldPath, name, path, isCsharp, targetProjectId, newDocumentId, text));
+						break;
+					}
 			}
 		}
 		if (steps.Count is 0) return false;
@@ -175,9 +175,9 @@ public partial class RoslynAnalysis
 		var documentIds = solution.GetDocumentIdsWithFilePath(filePath);
 		if (documentIds.IsEmpty) return solution;
 		return solution
-			.RemoveDocuments([..documentIds.Where(solution.ContainsDocument)])
-			.RemoveAdditionalDocuments([..documentIds.Where(solution.ContainsAdditionalDocument)])
-			.RemoveAnalyzerConfigDocuments([..documentIds.Where(solution.ContainsAnalyzerConfigDocument)]);
+			.RemoveDocuments([.. documentIds.Where(solution.ContainsDocument)])
+			.RemoveAdditionalDocuments([.. documentIds.Where(solution.ContainsAdditionalDocument)])
+			.RemoveAnalyzerConfigDocuments([.. documentIds.Where(solution.ContainsAnalyzerConfigDocument)]);
 	}
 
 	private static Solution MoveFileInSolution(Solution solution, string oldFilePath, string name, string filePath, bool isCsharp, ProjectId? targetProjectId, DocumentId? newDocumentId, SourceText? text)

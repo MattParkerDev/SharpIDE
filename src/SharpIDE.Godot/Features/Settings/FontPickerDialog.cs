@@ -7,7 +7,7 @@ public partial class FontPickerDialog : Window
 	// Godot Signals don't support nullable value types, e.g. 'int?'
 	[Signal]
 	public delegate void FontSelectedEventHandler(FontPickerResult result);
-	
+
 	private ItemList _systemFontItemList = null!;
 	private ItemList _fontSizeItemList = null!;
 	private CodeEdit _previewCodeEdit = null!;
@@ -124,7 +124,7 @@ public partial class FontPickerDialog : Window
 		_previewCodeEdit.AddThemeFontSizeOverride(ThemeStringNames.FontSize, DefaultFontSize);
 		_systemFontItemList.Select(0);
 		_fontSizeItemList.Select(0);
-		
+
 		_systemFontItemList.EnsureCurrentIsVisible();
 		_fontSizeItemList.EnsureCurrentIsVisible();
 	}

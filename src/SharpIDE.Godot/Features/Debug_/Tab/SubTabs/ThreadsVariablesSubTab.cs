@@ -32,11 +32,11 @@ public partial class ThreadsVariablesSubTab : Control
 	public SharpIdeProjectModel Project { get; set; } = null!;
 	// private ThreadModel? _selectedThread = null!; // null when not at a stop point
 
-    [Inject] private readonly RunService _runService = null!;
-    [Inject] private readonly SharpIdeSolutionAccessor _solutionAccessor = null!;
+	[Inject] private readonly RunService _runService = null!;
+	[Inject] private readonly SharpIdeSolutionAccessor _solutionAccessor = null!;
 
-    private Callable? _debuggerVariableCustomDrawCallable;
-    private readonly Dictionary<TreeItem, Variable> _variableReferenceLookup = []; // primarily used for DebuggerVariableCustomDraw
+	private Callable? _debuggerVariableCustomDrawCallable;
+	private readonly Dictionary<TreeItem, Variable> _variableReferenceLookup = []; // primarily used for DebuggerVariableCustomDraw
 
 	public override void _Ready()
 	{

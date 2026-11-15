@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
@@ -7,307 +7,307 @@ namespace SharpIDE.Godot.Features.CodeEditor;
 
 public static partial class SymbolInfoComponents
 {
-    public static RichTextLabel GetMethodSymbolInfo(IMethodSymbol methodSymbol)
-    {
-        var label = new RichTextLabel();
-        label.PushColor(TextEditorDotnetColoursDark.White);
-        label.PushFont(MonospaceFont);
-        label.AddAttributes(methodSymbol);
-        label.AddAccessibilityModifier(methodSymbol);
-        label.AddMethodStaticModifier(methodSymbol);
-        label.AddVirtualModifier(methodSymbol);
-        label.AddAbstractModifier(methodSymbol);
-        label.AddSealedModifier(methodSymbol);
-        label.AddOverrideModifier(methodSymbol);
-        label.AddMethodAsyncModifier(methodSymbol);
-        label.AddMethodReturnType(methodSymbol);
-        label.AddText(" ");
-        label.AddMethodName(methodSymbol);
-        label.AddTypeParameters(methodSymbol);
-        label.AddText("(");
-        label.AddParameters(methodSymbol);
-        label.AddText(")");
-        label.AddTypeParameterConstraints(methodSymbol.TypeParameters);
-        label.AddContainingNamespaceAndClass(methodSymbol);
-        label.Newline();
-        label.AddTypeParameterArguments(methodSymbol);
-        label.Pop(); // font
-        label.AddDocs(methodSymbol);
-        label.Pop(); // default white
-        return label;
-    }
-    
-    private static void AddMethodStaticModifier(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        if (methodSymbol.IsStatic || methodSymbol.ReducedFrom?.IsStatic is true)
-        {
-            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-            label.AddText("static");
-            label.Pop();
-            label.AddText(" ");
-        }
-    }
-    
-    private static void AddMethodAsyncModifier(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        if (methodSymbol.IsAsync)
-        {
-            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-            label.AddText("async");
-            label.Pop();
-            label.AddText(" ");
-        }
-    }
-    
-    private static void AddMethodReturnType(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        if (methodSymbol.ReturnsVoid)
-        {
-            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-            label.AddText("void");
-            label.Pop();
-            return;
-        }
-        
-        label.AddType(methodSymbol.ReturnType);
-    }
-    
-    private static void AddMethodName(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        label.PushColor(TextEditorDotnetColoursDark.Yellow);
-        label.AddText(methodSymbol.Name);
-        label.Pop();
-    }
-    
-    private static void AddTypeParameters(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        if (methodSymbol.TypeParameters.Length == 0) return;
-        label.PushColor(TextEditorDotnetColoursDark.White);
-        label.AddText("<");
-        label.Pop();
-        foreach (var (index, typeParameter) in methodSymbol.TypeParameters.Index())
-        {
-            label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
-            label.AddText(typeParameter.Name);
-            label.Pop();
-            if (index < methodSymbol.TypeParameters.Length - 1)
-            {
-                label.AddText(", ");
-            }
-        }
-        label.PushColor(TextEditorDotnetColoursDark.White);
-        label.AddText(">");
-        label.Pop();
-    }
-    
-    private static void AddParameters(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        if (methodSymbol.IsExtensionMethod)
-        {
-            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-            label.AddText("this");
-            label.Pop();
-            label.AddText(" ");
-        }
-        
-        var parameters = methodSymbol.ReducedFrom?.Parameters ?? methodSymbol.Parameters;
-        foreach (var (index, parameterSymbol) in parameters.Index())
-        {
-            var attributes = parameterSymbol.GetAttributes();
-            if (attributes.Length is not 0)
-            {
-                foreach (var (attrIndex, attribute) in attributes.Index())
-                {
-                    label.AddAttribute(attribute, false);
-                }
-            }
-            if (parameterSymbol.RefKind != RefKind.None) // ref, in, out
-            {
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText(parameterSymbol.RefKind.ToString().ToLower());
-                label.Pop();
-                label.AddText(" ");
-            }
-            else if (parameterSymbol.IsParams)
-            {
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("params");
-                label.Pop();
-                label.AddText(" ");
-            }
-            label.AddType(parameterSymbol.Type);
-            label.AddText(" ");
-            label.PushColor(TextEditorDotnetColoursDark.VariableBlue);
-            label.AddText(parameterSymbol.Name);
-            label.Pop();
-            // default value
-            if (parameterSymbol.HasExplicitDefaultValue)
-            {
-                label.AddText(" = ");
-                if (parameterSymbol.ExplicitDefaultValue is null)
-                {
-                    label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                    label.AddText("null");
-                    label.Pop();
-                }
-                else if (parameterSymbol.Type.TypeKind == TypeKind.Enum)
-                {
-                    var explicitDefaultValue = parameterSymbol.ExplicitDefaultValue;
-                    // Find the enum field with the same constant value
-                    var enumMember = parameterSymbol.Type.GetMembers()
-                        .OfType<IFieldSymbol>()
-                        .FirstOrDefault(f => f.HasConstantValue && Equals(f.ConstantValue, explicitDefaultValue));
+	public static RichTextLabel GetMethodSymbolInfo(IMethodSymbol methodSymbol)
+	{
+		var label = new RichTextLabel();
+		label.PushColor(TextEditorDotnetColoursDark.White);
+		label.PushFont(MonospaceFont);
+		label.AddAttributes(methodSymbol);
+		label.AddAccessibilityModifier(methodSymbol);
+		label.AddMethodStaticModifier(methodSymbol);
+		label.AddVirtualModifier(methodSymbol);
+		label.AddAbstractModifier(methodSymbol);
+		label.AddSealedModifier(methodSymbol);
+		label.AddOverrideModifier(methodSymbol);
+		label.AddMethodAsyncModifier(methodSymbol);
+		label.AddMethodReturnType(methodSymbol);
+		label.AddText(" ");
+		label.AddMethodName(methodSymbol);
+		label.AddTypeParameters(methodSymbol);
+		label.AddText("(");
+		label.AddParameters(methodSymbol);
+		label.AddText(")");
+		label.AddTypeParameterConstraints(methodSymbol.TypeParameters);
+		label.AddContainingNamespaceAndClass(methodSymbol);
+		label.Newline();
+		label.AddTypeParameterArguments(methodSymbol);
+		label.Pop(); // font
+		label.AddDocs(methodSymbol);
+		label.Pop(); // default white
+		return label;
+	}
 
-                    if (enumMember != null)
-                    {
-                        label.PushColor(TextEditorDotnetColoursDark.InterfaceGreen);
-                        label.AddText(parameterSymbol.Type.Name);
-                        label.Pop();
-                        label.PushColor(TextEditorDotnetColoursDark.White);
-                        label.AddText(".");
-                        label.Pop();
-                        label.PushColor(TextEditorDotnetColoursDark.White);
-                        label.AddText(enumMember.Name);
-                        label.Pop();
-                    }
-                    else
-                    {
-                        label.PushColor(TextEditorDotnetColoursDark.InterfaceGreen);
-                        label.AddText(parameterSymbol.Type.Name);
-                        label.Pop();
-                        label.AddText($"({explicitDefaultValue})");
-                    }
-                }
-                else if (parameterSymbol.ExplicitDefaultValue is string str)
-                {
-                    label.PushColor(TextEditorDotnetColoursDark.LightOrangeBrown);
-                    label.AddText($"""
+	private static void AddMethodStaticModifier(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		if (methodSymbol.IsStatic || methodSymbol.ReducedFrom?.IsStatic is true)
+		{
+			label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+			label.AddText("static");
+			label.Pop();
+			label.AddText(" ");
+		}
+	}
+
+	private static void AddMethodAsyncModifier(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		if (methodSymbol.IsAsync)
+		{
+			label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+			label.AddText("async");
+			label.Pop();
+			label.AddText(" ");
+		}
+	}
+
+	private static void AddMethodReturnType(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		if (methodSymbol.ReturnsVoid)
+		{
+			label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+			label.AddText("void");
+			label.Pop();
+			return;
+		}
+
+		label.AddType(methodSymbol.ReturnType);
+	}
+
+	private static void AddMethodName(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		label.PushColor(TextEditorDotnetColoursDark.Yellow);
+		label.AddText(methodSymbol.Name);
+		label.Pop();
+	}
+
+	private static void AddTypeParameters(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		if (methodSymbol.TypeParameters.Length == 0) return;
+		label.PushColor(TextEditorDotnetColoursDark.White);
+		label.AddText("<");
+		label.Pop();
+		foreach (var (index, typeParameter) in methodSymbol.TypeParameters.Index())
+		{
+			label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
+			label.AddText(typeParameter.Name);
+			label.Pop();
+			if (index < methodSymbol.TypeParameters.Length - 1)
+			{
+				label.AddText(", ");
+			}
+		}
+		label.PushColor(TextEditorDotnetColoursDark.White);
+		label.AddText(">");
+		label.Pop();
+	}
+
+	private static void AddParameters(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		if (methodSymbol.IsExtensionMethod)
+		{
+			label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+			label.AddText("this");
+			label.Pop();
+			label.AddText(" ");
+		}
+
+		var parameters = methodSymbol.ReducedFrom?.Parameters ?? methodSymbol.Parameters;
+		foreach (var (index, parameterSymbol) in parameters.Index())
+		{
+			var attributes = parameterSymbol.GetAttributes();
+			if (attributes.Length is not 0)
+			{
+				foreach (var (attrIndex, attribute) in attributes.Index())
+				{
+					label.AddAttribute(attribute, false);
+				}
+			}
+			if (parameterSymbol.RefKind != RefKind.None) // ref, in, out
+			{
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText(parameterSymbol.RefKind.ToString().ToLower());
+				label.Pop();
+				label.AddText(" ");
+			}
+			else if (parameterSymbol.IsParams)
+			{
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("params");
+				label.Pop();
+				label.AddText(" ");
+			}
+			label.AddType(parameterSymbol.Type);
+			label.AddText(" ");
+			label.PushColor(TextEditorDotnetColoursDark.VariableBlue);
+			label.AddText(parameterSymbol.Name);
+			label.Pop();
+			// default value
+			if (parameterSymbol.HasExplicitDefaultValue)
+			{
+				label.AddText(" = ");
+				if (parameterSymbol.ExplicitDefaultValue is null)
+				{
+					label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+					label.AddText("null");
+					label.Pop();
+				}
+				else if (parameterSymbol.Type.TypeKind == TypeKind.Enum)
+				{
+					var explicitDefaultValue = parameterSymbol.ExplicitDefaultValue;
+					// Find the enum field with the same constant value
+					var enumMember = parameterSymbol.Type.GetMembers()
+						.OfType<IFieldSymbol>()
+						.FirstOrDefault(f => f.HasConstantValue && Equals(f.ConstantValue, explicitDefaultValue));
+
+					if (enumMember != null)
+					{
+						label.PushColor(TextEditorDotnetColoursDark.InterfaceGreen);
+						label.AddText(parameterSymbol.Type.Name);
+						label.Pop();
+						label.PushColor(TextEditorDotnetColoursDark.White);
+						label.AddText(".");
+						label.Pop();
+						label.PushColor(TextEditorDotnetColoursDark.White);
+						label.AddText(enumMember.Name);
+						label.Pop();
+					}
+					else
+					{
+						label.PushColor(TextEditorDotnetColoursDark.InterfaceGreen);
+						label.AddText(parameterSymbol.Type.Name);
+						label.Pop();
+						label.AddText($"({explicitDefaultValue})");
+					}
+				}
+				else if (parameterSymbol.ExplicitDefaultValue is string str)
+				{
+					label.PushColor(TextEditorDotnetColoursDark.LightOrangeBrown);
+					label.AddText($"""
                                    "{str}"
                                    """);
-                    label.Pop();
-                }
-                else if (parameterSymbol.ExplicitDefaultValue is bool b)
-                {
-                    label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                    label.AddText(b ? "true" : "false");
-                    label.Pop();
-                }
-                else
-                {
-                    label.AddText(parameterSymbol.ExplicitDefaultValue.ToString() ?? "unknown");
-                }
-            }
+					label.Pop();
+				}
+				else if (parameterSymbol.ExplicitDefaultValue is bool b)
+				{
+					label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+					label.AddText(b ? "true" : "false");
+					label.Pop();
+				}
+				else
+				{
+					label.AddText(parameterSymbol.ExplicitDefaultValue.ToString() ?? "unknown");
+				}
+			}
 
-            if (index < parameters.Length - 1)
-            {
-                label.AddText(", ");
-            }
-        }
-    }
-    
-    private static void AddTypeParameterArguments(this RichTextLabel label, IMethodSymbol methodSymbol)
-    {
-        if (methodSymbol.TypeArguments.Length == 0) return;
-        label.Newline(); // TODO: Make this only 0.5 lines high
-        var typeParameters = methodSymbol.TypeParameters;
-        var typeArguments = methodSymbol.TypeArguments;
-        if (typeParameters.Length != typeArguments.Length) throw new Exception("Type parameters and type arguments length mismatch.");
-        foreach (var (index, (typeArgument, typeParameter)) in methodSymbol.TypeArguments.Zip(typeParameters).Index())
-        {
-            label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
-            label.AddType(typeParameter);
-            label.Pop();
-            label.AddText(" is ");
-            label.AddType(typeArgument);
-            if (index < methodSymbol.TypeArguments.Length - 1)
-            {
-                label.Newline();
-            }
-        }
-    }
+			if (index < parameters.Length - 1)
+			{
+				label.AddText(", ");
+			}
+		}
+	}
 
-    private static void AddTypeParameterConstraints(this RichTextLabel label, ImmutableArray<ITypeParameterSymbol> typeParameters)
-    {
-        foreach (var typeParameter in typeParameters)
-        {
-            var hasConstraints = typeParameter.HasReferenceTypeConstraint || typeParameter.HasValueTypeConstraint || typeParameter.HasUnmanagedTypeConstraint || typeParameter.HasNotNullConstraint || typeParameter.HasConstructorConstraint || typeParameter.AllowsRefLikeType || typeParameter.ConstraintTypes.Length > 0;
-            if (hasConstraints is false) continue;
-            
-            label.AddText(" ");
-            label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-            label.AddText("where");
-            label.Pop();
-            label.AddText(" ");
-            label.AddTypeParameter(typeParameter);
-            label.AddText(" : ");
-            var firstConstraintAdded = false;
+	private static void AddTypeParameterArguments(this RichTextLabel label, IMethodSymbol methodSymbol)
+	{
+		if (methodSymbol.TypeArguments.Length == 0) return;
+		label.Newline(); // TODO: Make this only 0.5 lines high
+		var typeParameters = methodSymbol.TypeParameters;
+		var typeArguments = methodSymbol.TypeArguments;
+		if (typeParameters.Length != typeArguments.Length) throw new Exception("Type parameters and type arguments length mismatch.");
+		foreach (var (index, (typeArgument, typeParameter)) in methodSymbol.TypeArguments.Zip(typeParameters).Index())
+		{
+			label.PushColor(TextEditorDotnetColoursDark.ClassGreen);
+			label.AddType(typeParameter);
+			label.Pop();
+			label.AddText(" is ");
+			label.AddType(typeArgument);
+			if (index < methodSymbol.TypeArguments.Length - 1)
+			{
+				label.Newline();
+			}
+		}
+	}
 
-            if (typeParameter.HasReferenceTypeConstraint)
-            {
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("class");
-                label.Pop();
-            }
+	private static void AddTypeParameterConstraints(this RichTextLabel label, ImmutableArray<ITypeParameterSymbol> typeParameters)
+	{
+		foreach (var typeParameter in typeParameters)
+		{
+			var hasConstraints = typeParameter.HasReferenceTypeConstraint || typeParameter.HasValueTypeConstraint || typeParameter.HasUnmanagedTypeConstraint || typeParameter.HasNotNullConstraint || typeParameter.HasConstructorConstraint || typeParameter.AllowsRefLikeType || typeParameter.ConstraintTypes.Length > 0;
+			if (hasConstraints is false) continue;
 
-            if (typeParameter.HasValueTypeConstraint)
-            {
-                MaybeAddComma();
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("struct");
-                label.Pop();
-            }
+			label.AddText(" ");
+			label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+			label.AddText("where");
+			label.Pop();
+			label.AddText(" ");
+			label.AddTypeParameter(typeParameter);
+			label.AddText(" : ");
+			var firstConstraintAdded = false;
 
-            if (typeParameter.HasUnmanagedTypeConstraint)
-            {
-                MaybeAddComma();
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("unmanaged");
-                label.Pop();
-            }
+			if (typeParameter.HasReferenceTypeConstraint)
+			{
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("class");
+				label.Pop();
+			}
 
-            if (typeParameter.HasNotNullConstraint)
-            {
-                MaybeAddComma();
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("notnull");
-                label.Pop();
-            }
+			if (typeParameter.HasValueTypeConstraint)
+			{
+				MaybeAddComma();
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("struct");
+				label.Pop();
+			}
 
-            foreach (var typeParameterConstraintType in typeParameter.ConstraintTypes)
-            {
-                MaybeAddComma();
-                label.AddType(typeParameterConstraintType);
-            }
+			if (typeParameter.HasUnmanagedTypeConstraint)
+			{
+				MaybeAddComma();
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("unmanaged");
+				label.Pop();
+			}
 
-            if (typeParameter.HasConstructorConstraint)
-            {
-                MaybeAddComma();
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("new");
-                label.Pop();
-                label.AddText("()");
-            }
+			if (typeParameter.HasNotNullConstraint)
+			{
+				MaybeAddComma();
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("notnull");
+				label.Pop();
+			}
 
-            if (typeParameter.AllowsRefLikeType)
-            {
-                MaybeAddComma();
-                label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
-                label.AddText("allows ref struct");
-                label.Pop();
-            }
-            continue;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void MaybeAddComma()
-            {
-                if (firstConstraintAdded is false)
-                {
-                    firstConstraintAdded = true;
-                }
-                else
-                {
-                    label.AddText(", ");
-                }
-            }
-        }
-    }
+			foreach (var typeParameterConstraintType in typeParameter.ConstraintTypes)
+			{
+				MaybeAddComma();
+				label.AddType(typeParameterConstraintType);
+			}
+
+			if (typeParameter.HasConstructorConstraint)
+			{
+				MaybeAddComma();
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("new");
+				label.Pop();
+				label.AddText("()");
+			}
+
+			if (typeParameter.AllowsRefLikeType)
+			{
+				MaybeAddComma();
+				label.PushColor(TextEditorDotnetColoursDark.KeywordBlue);
+				label.AddText("allows ref struct");
+				label.Pop();
+			}
+			continue;
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			void MaybeAddComma()
+			{
+				if (firstConstraintAdded is false)
+				{
+					firstConstraintAdded = true;
+				}
+				else
+				{
+					label.AddText(", ");
+				}
+			}
+		}
+	}
 }

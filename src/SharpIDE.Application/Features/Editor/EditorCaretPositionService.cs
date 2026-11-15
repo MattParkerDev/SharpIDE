@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.Editor;
+namespace SharpIDE.Application.Features.Editor;
 
 /// <summary>
 /// Used by code editor windows to report the current caret position for display elsewhere in the UI

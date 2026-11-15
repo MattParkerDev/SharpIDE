@@ -8,7 +8,7 @@ public partial class SlnPickerTitleBar : MarginContainer
 	private Control _leftSpacer = null!;
 	private Control _rightSpacer = null!;
 	private Window _window = null!;
-	
+
 	private static bool ExtendToTitleEnabled => DisplayServer.HasFeature(DisplayServer.Feature.ExtendToTitle) && DisplayServer.WindowGetFlag(DisplayServer.WindowFlags.ExtendToTitle);
 
 	public override void _Ready()
@@ -24,7 +24,7 @@ public partial class SlnPickerTitleBar : MarginContainer
 		}
 		else if (OS.GetName() == "Windows")
 		{
-			DisplayServer.WindowSetWindowButtonsOffset(new Vector2I(46/2, 44/2)); // Taller, like firefox
+			DisplayServer.WindowSetWindowButtonsOffset(new Vector2I(46 / 2, 44 / 2)); // Taller, like firefox
 		}
 		_leftSpacer = GetNode<Control>("%LeftSpacer");
 		_rightSpacer = GetNode<Control>("%RightSpacer");
@@ -66,7 +66,7 @@ public partial class SlnPickerTitleBar : MarginContainer
 			}
 		}
 	}
-	
+
 	public override void _ExitTree()
 	{
 		if (ExtendToTitleEnabled is false) return;
@@ -74,7 +74,7 @@ public partial class SlnPickerTitleBar : MarginContainer
 		_window.TitlebarChanged -= UpdateDragArea;
 		Resized -= UpdateDragArea;
 		_window = null!;
-		
+
 		RequestReady();
 	}
 }

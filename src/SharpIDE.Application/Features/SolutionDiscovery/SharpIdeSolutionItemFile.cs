@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using SharpIDE.Application.Features.FileSystem;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery;

@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.CodeAnalysis.MSBuild;
 
 namespace SharpIDE.Application.Features.Analysis;
 

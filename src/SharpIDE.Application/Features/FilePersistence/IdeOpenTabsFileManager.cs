@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
 using SharpIDE.Application.Features.FileWatching;

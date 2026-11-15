@@ -129,11 +129,13 @@ namespace SharpIDE.Application.Features.Analysis.WorkspaceServices
 				foreach (var s in fileGroups.AsValueEnumerable().SelectMany(f => f)) processedTypes.Add(s);
 				Parallel.ForEach(
 					Partitioner.Create(fileGroups, loadBalance: true),
-					new ParallelOptions {
+					new ParallelOptions
+					{
 						MaxDegreeOfParallelism = this.MaxDegreeOfParallelism,
 						CancellationToken = cancellationToken
 					},
-					file => {
+					file =>
+					{
 						try
 						{
 							var decompiler = CreateDecompiler(ts);

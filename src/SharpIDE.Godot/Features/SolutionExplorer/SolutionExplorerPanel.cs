@@ -211,89 +211,89 @@ public partial class SolutionExplorerPanel : MarginContainer
 		// the Tree has been removed from the scene tree in _Ready, so we can operate on it off the ui thread, then add it back
 		_tree.Clear();
 
-	    // Root
-	    var rootItem = _tree.CreateItem();
-	    rootItem.SetText(0, solution.Name);
-	    rootItem.SetIcon(0, SlnIcon);
-	    rootItem.SharpIdeNode = solution;
-	    _rootItem = rootItem;
+		// Root
+		var rootItem = _tree.CreateItem();
+		rootItem.SetText(0, solution.Name);
+		rootItem.SetIcon(0, SlnIcon);
+		rootItem.SharpIdeNode = solution;
+		_rootItem = rootItem;
 
-	    var disposableBuilder = new DisposableBuilder();
+		var disposableBuilder = new DisposableBuilder();
 
-	    // Observe Projects
-	    var projectsView = solution.Projects.CreateView(y => new TreeItemContainer());
+		// Observe Projects
+		var projectsView = solution.Projects.CreateView(y => new TreeItemContainer());
 		projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, rootItem, s.Value));
-	    projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-	        .SubscribeAwait(async (e, ct) => await (e.Action switch
-	        {
-			    NotifyCollectionChangedAction.Add => this.InvokeAsync(() => e.NewItem.View.Value = CreateProjectTreeItem(_tree, _rootItem, e.NewItem.Value, e.NewStartingIndex)),
-	            NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
-	            _ => Task.CompletedTask
-	        }), configureAwait: false).AddTo(ref disposableBuilder);
+		projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (e, ct) => await (e.Action switch
+			{
+				NotifyCollectionChangedAction.Add => this.InvokeAsync(() => e.NewItem.View.Value = CreateProjectTreeItem(_tree, _rootItem, e.NewItem.Value, e.NewStartingIndex)),
+				NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
+				_ => Task.CompletedTask
+			}), configureAwait: false).AddTo(ref disposableBuilder);
 
-	    // Observe Solution Folders
-	    var foldersView = solution.SlnFolders.CreateView(y => new TreeItemContainer());
-	    foldersView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSlnFolderTreeItem(_tree, rootItem, s.Value));
-	    foldersView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-	        .SubscribeAwait(async (e, ct) => await (e.Action switch
-	        {
-	            NotifyCollectionChangedAction.Add => this.InvokeAsync(() => e.NewItem.View.Value = CreateSlnFolderTreeItem(_tree, _rootItem, e.NewItem.Value)),
-	            NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
-	            _ => Task.CompletedTask
-	        }), configureAwait: false).AddTo(ref disposableBuilder);
+		// Observe Solution Folders
+		var foldersView = solution.SlnFolders.CreateView(y => new TreeItemContainer());
+		foldersView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSlnFolderTreeItem(_tree, rootItem, s.Value));
+		foldersView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (e, ct) => await (e.Action switch
+			{
+				NotifyCollectionChangedAction.Add => this.InvokeAsync(() => e.NewItem.View.Value = CreateSlnFolderTreeItem(_tree, _rootItem, e.NewItem.Value)),
+				NotifyCollectionChangedAction.Remove => FreeTreeItem(e.OldItem.View.Value),
+				_ => Task.CompletedTask
+			}), configureAwait: false).AddTo(ref disposableBuilder);
 
-	    rootItem.SetCollapsedRecursive(true);
-	    rootItem.Collapsed = false;
-	    rootItem.SharpIdeDisposable = disposableBuilder.Build();
-	    await this.InvokeAsync(() =>
-	    {
-		    AddChild(_tree);
-	    });
+		rootItem.SetCollapsedRecursive(true);
+		rootItem.Collapsed = false;
+		rootItem.SharpIdeDisposable = disposableBuilder.Build();
+		await this.InvokeAsync(() =>
+		{
+			AddChild(_tree);
+		});
 	}
 
 	[RequiresGodotUiThread]
 	private TreeItem CreateSlnFolderTreeItem(Tree tree, TreeItem parent, SharpIdeSolutionFolder slnFolder)
 	{
-	    var folderItem = tree.CreateItem(parent);
-        folderItem.SetText(0, slnFolder.Name);
-        folderItem.SetIcon(0, SlnFolderIcon);
-        folderItem.SharpIdeNode = slnFolder;
+		var folderItem = tree.CreateItem(parent);
+		folderItem.SetText(0, slnFolder.Name);
+		folderItem.SetIcon(0, SlnFolderIcon);
+		folderItem.SharpIdeNode = slnFolder;
 
-        var disposableBuilder = new DisposableBuilder();
+		var disposableBuilder = new DisposableBuilder();
 
-        // Observe folder sub-collections
-        var subFoldersView = slnFolder.Folders.CreateView(y => new TreeItemContainer());
-        subFoldersView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSlnFolderTreeItem(_tree, folderItem, s.Value));
+		// Observe folder sub-collections
+		var subFoldersView = slnFolder.Folders.CreateView(y => new TreeItemContainer());
+		subFoldersView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSlnFolderTreeItem(_tree, folderItem, s.Value));
 
-        subFoldersView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-            .SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
-            {
-                NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSlnFolderTreeItem(_tree, folderItem, innerEvent.NewItem.Value)),
-                NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
-                _ => Task.CompletedTask
-            }), configureAwait: false).AddTo(ref disposableBuilder);
+		subFoldersView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
+			{
+				NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSlnFolderTreeItem(_tree, folderItem, innerEvent.NewItem.Value)),
+				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
+				_ => Task.CompletedTask
+			}), configureAwait: false).AddTo(ref disposableBuilder);
 
-        var projectsView = slnFolder.Projects.CreateView(y => new TreeItemContainer());
-        projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value));
-        projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-            .SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
-            {
-                NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateProjectTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
-                NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
-                _ => Task.CompletedTask
-            }), configureAwait: false).AddTo(ref disposableBuilder);
+		var projectsView = slnFolder.Projects.CreateView(y => new TreeItemContainer());
+		projectsView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateProjectTreeItem(_tree, folderItem, s.Value));
+		projectsView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
+			{
+				NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateProjectTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
+				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
+				_ => Task.CompletedTask
+			}), configureAwait: false).AddTo(ref disposableBuilder);
 
-        var filesView = slnFolder.Files.CreateView(y => new TreeItemContainer());
-        filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSolutionItemFileTreeItem(_tree, folderItem, s.Value));
-        filesView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
-            .SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
-            {
-                NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSolutionItemFileTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
-                NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
-                _ => Task.CompletedTask
-            }), configureAwait: false).AddTo(ref disposableBuilder);
-        folderItem.SharpIdeDisposable = disposableBuilder.Build();
-        return folderItem;
+		var filesView = slnFolder.Files.CreateView(y => new TreeItemContainer());
+		filesView.Unfiltered.ToList().ForEach(s => s.View.Value = CreateSolutionItemFileTreeItem(_tree, folderItem, s.Value));
+		filesView.ObserveChanged().SubscribeOnThreadPool().ObserveOnThreadPool()
+			.SubscribeAwait(async (innerEvent, ct) => await (innerEvent.Action switch
+			{
+				NotifyCollectionChangedAction.Add => this.InvokeAsync(() => innerEvent.NewItem.View.Value = CreateSolutionItemFileTreeItem(_tree, folderItem, innerEvent.NewItem.Value, innerEvent.NewStartingIndex)),
+				NotifyCollectionChangedAction.Remove => FreeTreeItem(innerEvent.OldItem.View.Value),
+				_ => Task.CompletedTask
+			}), configureAwait: false).AddTo(ref disposableBuilder);
+		folderItem.SharpIdeDisposable = disposableBuilder.Build();
+		return folderItem;
 	}
 
 	[RequiresGodotUiThread]
@@ -320,7 +320,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		if (projectModel.IsLoading is false && projectModel.IsInvalid) projectItem.SetSuffix(0, " ·  load failed");
 		projectItem.SharpIdeNode = projectModel;
 
-        var disposableBuilder = new DisposableBuilder();
+		var disposableBuilder = new DisposableBuilder();
 
 		projectModel.ActiveMsBuildProjectLoadResult.SubscribeOnThreadPool().ObserveOnThreadPool().SubscribeAwait(async (loadResult, ct) =>
 		{
@@ -431,7 +431,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 		}
 		var fileItem = tree.CreateItem(parent, newStartingIndex);
 		fileItem.SetText(0, sharpIdeSolutionItemFile.Name);
-		if (sharpIdeSolutionItemFile.File is {} file)
+		if (sharpIdeSolutionItemFile.File is { } file)
 		{
 			fileItem.SetIconsForFileExtension(file);
 			if (GitColours.GetColorForGitFileStatus(file.GitStatus) is { } notnullColor) fileItem.SetCustomColor(0, notnullColor);
@@ -501,10 +501,10 @@ public partial class SolutionExplorerPanel : MarginContainer
 
 	private async Task FreeTreeItem(TreeItem? item)
 	{
-	    await this.InvokeAsync(() =>
-	    {
-		    item?.SharpIdeDisposable?.Dispose();
-		    item?.Free();
-	    });
+		await this.InvokeAsync(() =>
+		{
+			item?.SharpIdeDisposable?.Dispose();
+			item?.Free();
+		});
 	}
 }

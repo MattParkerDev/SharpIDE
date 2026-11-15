@@ -73,12 +73,12 @@ public partial class RoslynAnalysis
 			switch (operation)
 			{
 				case ApplyChangesOperation applyChangesOperation:
-				{
-					var changes = applyChangesOperation.ChangedSolution.GetChanges(updatedSolution);
-					// Linked files are e.g. files with the same path, but different projects, ie different TFMs
-					updatedSolution = await applyChangesOperation.ChangedSolution.WithMergedLinkedFileChangesAsync(updatedSolution, changes, cancellationToken).ConfigureAwait(false);
-					break;
-				}
+					{
+						var changes = applyChangesOperation.ChangedSolution.GetChanges(updatedSolution);
+						// Linked files are e.g. files with the same path, but different projects, ie different TFMs
+						updatedSolution = await applyChangesOperation.ChangedSolution.WithMergedLinkedFileChangesAsync(updatedSolution, changes, cancellationToken).ConfigureAwait(false);
+						break;
+					}
 				// e.g. generate method/constructor places the caret in the generated member
 				case DocumentNavigationOperation navigationOperation:
 					navigationTarget = (navigationOperation.DocumentId, navigationOperation.Position);
@@ -125,8 +125,8 @@ public partial class RoslynAnalysis
 		foreach (var projectChange in projectChanges)
 		{
 			if (projectChange.GetAddedProjectReferences().Any() || projectChange.GetRemovedProjectReferences().Any() ||
-			    projectChange.GetAddedMetadataReferences().Any() || projectChange.GetRemovedMetadataReferences().Any() ||
-			    projectChange.GetAddedAnalyzerReferences().Any() || projectChange.GetRemovedAnalyzerReferences().Any())
+				projectChange.GetAddedMetadataReferences().Any() || projectChange.GetRemovedMetadataReferences().Any() ||
+				projectChange.GetAddedAnalyzerReferences().Any() || projectChange.GetRemovedAnalyzerReferences().Any())
 			{
 				_logger.LogWarning("Ignoring reference changes to project '{ProjectName}' - only file changes are supported", projectChange.NewProject.Name);
 			}
@@ -196,6 +196,6 @@ public partial class RoslynAnalysis
 		}
 		if (document.FilePath is not null) return document.FilePath;
 		if (document.Project.FilePath is null) return null;
-		return Path.Combine([Path.GetDirectoryName(document.Project.FilePath)!, ..document.Folders, document.Name]);
+		return Path.Combine([Path.GetDirectoryName(document.Project.FilePath)!, .. document.Folders, document.Name]);
 	}
 }

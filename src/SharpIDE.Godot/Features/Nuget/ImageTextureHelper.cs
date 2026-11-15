@@ -1,4 +1,4 @@
-﻿using Godot;
+using Godot;
 using SharpIDE.Application.Features.Nuget;
 
 namespace SharpIDE.Godot.Features.Nuget;

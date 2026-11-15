@@ -1,4 +1,4 @@
-﻿using R3;
+using R3;
 
 namespace SharpIDE.Application.Features.SolutionDiscovery;
 

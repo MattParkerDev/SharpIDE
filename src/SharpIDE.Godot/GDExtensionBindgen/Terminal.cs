@@ -18,7 +18,7 @@ public class Terminal
 	protected Terminal(StringName @class) : this(ClassDB.Instantiate(@class))
 	{
 	}
-	protected Terminal(Variant variant) : this((Control) variant)
+	protected Terminal(Variant variant) : this((Control)variant)
 	{
 	}
 	public Terminal([NotNull] Control @object)

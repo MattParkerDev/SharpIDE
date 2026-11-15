@@ -63,7 +63,7 @@ public static class TextDiff
 		const int blockSize = 64;
 		// Compare in vectorised blocks first, then finish element by element
 		while (suffix + blockSize <= maxSuffix &&
-		       a.Slice(a.Length - suffix - blockSize, blockSize).SequenceEqual(b.Slice(b.Length - suffix - blockSize, blockSize)))
+			   a.Slice(a.Length - suffix - blockSize, blockSize).SequenceEqual(b.Slice(b.Length - suffix - blockSize, blockSize)))
 		{
 			suffix += blockSize;
 		}

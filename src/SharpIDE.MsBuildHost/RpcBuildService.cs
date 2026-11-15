@@ -27,7 +27,7 @@ public class RpcBuildService : IRpcBuildService
 	{
 		var targetsToBuild = TargetsToBuild(buildType);
 		var buildRequest = new BuildRequestData(
-			projectFullPath : solutionOrProjectFilePath,
+			projectFullPath: solutionOrProjectFilePath,
 			globalProperties: new Dictionary<string, string?>(),
 			toolsVersion: null,
 			targetsToBuild: targetsToBuild,
@@ -56,7 +56,7 @@ public class RpcBuildService : IRpcBuildService
 			targetsToBuild: ["Build", "ComputeRunArguments"],
 			hostServices: null,
 			flags: BuildRequestDataFlags.ProvideSubsetOfStateAfterBuild | BuildRequestDataFlags.SkipNonexistentTargets,
-			requestedProjectState: new RequestedProjectState { PropertyFilters = [..RunPropertyNames] });
+			requestedProjectState: new RequestedProjectState { PropertyFilters = [.. RunPropertyNames] });
 		var buildResult = await BuildManager.DefaultBuildManager.BuildAsync(CreateBuildParameters(), buildRequest, cancellationToken).ConfigureAwait(false);
 
 		var projectState = buildResult.ProjectStateAfterBuild;

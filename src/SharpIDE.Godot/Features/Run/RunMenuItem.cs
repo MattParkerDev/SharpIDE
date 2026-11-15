@@ -7,131 +7,131 @@ namespace SharpIDE.Godot.Features.Run;
 
 public partial class RunMenuItem : HBoxContainer
 {
-    public SharpIdeProjectModel Project { get; set; } = null!;
-    public event Action<RunMenuItem>? Selected;
-    public event Action<RunMenuItem>? BuildingStateChanged;
-    public bool IsBuilding { get; private set; }
-    private Button _selectProjectButton = null!;
-    private Button _runButton = null!;
-    private Button _debugButton = null!;
-    private Button _stopButton = null!;
-    private Control _animatedTextureParentControl = null!;
-    private AnimationPlayer _buildAnimationPlayer = null!;
+	public SharpIdeProjectModel Project { get; set; } = null!;
+	public event Action<RunMenuItem>? Selected;
+	public event Action<RunMenuItem>? BuildingStateChanged;
+	public bool IsBuilding { get; private set; }
+	private Button _selectProjectButton = null!;
+	private Button _runButton = null!;
+	private Button _debugButton = null!;
+	private Button _stopButton = null!;
+	private Control _animatedTextureParentControl = null!;
+	private AnimationPlayer _buildAnimationPlayer = null!;
 
-    [Inject] private readonly RunService _runService = null!;
-    public override void _Ready()
-    {
-        _selectProjectButton = GetNode<Button>("%SelectProjectButton");
-        _selectProjectButton.Text = Project.Name.Value;
-        _selectProjectButton.Pressed += () => Selected?.Invoke(this);
-        _runButton = GetNode<Button>("RunButton");
-        _runButton.Pressed += OnRunButtonPressed;
-        _stopButton = GetNode<Button>("StopButton");
-        _stopButton.Pressed += OnStopButtonPressed;
-        _debugButton = GetNode<Button>("DebugButton");
-        _debugButton.Pressed += OnDebugButtonPressed;
-        _animatedTextureParentControl = GetNode<Control>("%AnimatedTextureParentControl");
-        _buildAnimationPlayer = GetNode<AnimationPlayer>("AnimationPlayer");
-        Project.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
-        Project.ProjectStoppedRunning.Subscribe(OnProjectStoppedRunning);
-        Project.ProjectRunFailed.Subscribe(OnProjectRunFailed);
-        Project.Name.Skip(1).Subscribe(name => _selectProjectButton.Text = name).AddTo(this);
-    }
+	[Inject] private readonly RunService _runService = null!;
+	public override void _Ready()
+	{
+		_selectProjectButton = GetNode<Button>("%SelectProjectButton");
+		_selectProjectButton.Text = Project.Name.Value;
+		_selectProjectButton.Pressed += () => Selected?.Invoke(this);
+		_runButton = GetNode<Button>("RunButton");
+		_runButton.Pressed += OnRunButtonPressed;
+		_stopButton = GetNode<Button>("StopButton");
+		_stopButton.Pressed += OnStopButtonPressed;
+		_debugButton = GetNode<Button>("DebugButton");
+		_debugButton.Pressed += OnDebugButtonPressed;
+		_animatedTextureParentControl = GetNode<Control>("%AnimatedTextureParentControl");
+		_buildAnimationPlayer = GetNode<AnimationPlayer>("AnimationPlayer");
+		Project.ProjectStartedRunning.Subscribe(OnProjectStartedRunning);
+		Project.ProjectStoppedRunning.Subscribe(OnProjectStoppedRunning);
+		Project.ProjectRunFailed.Subscribe(OnProjectRunFailed);
+		Project.Name.Skip(1).Subscribe(name => _selectProjectButton.Text = name).AddTo(this);
+	}
 
-    public override void _ExitTree()
-    {
-        Project.ProjectStartedRunning.Unsubscribe(OnProjectStartedRunning);
-        Project.ProjectStoppedRunning.Unsubscribe(OnProjectStoppedRunning);
-        Project.ProjectRunFailed.Unsubscribe(OnProjectRunFailed);
-    }
+	public override void _ExitTree()
+	{
+		Project.ProjectStartedRunning.Unsubscribe(OnProjectStartedRunning);
+		Project.ProjectStoppedRunning.Unsubscribe(OnProjectStoppedRunning);
+		Project.ProjectRunFailed.Unsubscribe(OnProjectRunFailed);
+	}
 
-    private async Task OnProjectRunFailed()
-    {
-        await this.InvokeAsync(() =>
-        {
-            _stopButton.Visible = false;
-            _debugButton.Visible = true;
-            _runButton.Visible = true;
-            _animatedTextureParentControl.Visible = false;
-            _buildAnimationPlayer.Stop();
-            SetBuildingState(false);
-        });
-    }
+	private async Task OnProjectRunFailed()
+	{
+		await this.InvokeAsync(() =>
+		{
+			_stopButton.Visible = false;
+			_debugButton.Visible = true;
+			_runButton.Visible = true;
+			_animatedTextureParentControl.Visible = false;
+			_buildAnimationPlayer.Stop();
+			SetBuildingState(false);
+		});
+	}
 
-    private async Task OnProjectStoppedRunning()
-    {
-        await this.InvokeAsync(() =>
-        {
-            _stopButton.Visible = false;
-            _debugButton.Visible = true;
-            _runButton.Visible = true;
-        });
-    }
+	private async Task OnProjectStoppedRunning()
+	{
+		await this.InvokeAsync(() =>
+		{
+			_stopButton.Visible = false;
+			_debugButton.Visible = true;
+			_runButton.Visible = true;
+		});
+	}
 
-    private async Task OnProjectStartedRunning()
-    {
-        await this.InvokeAsync(() =>
-        {
-            _runButton.Visible = false;
-            _debugButton.Visible = false;
-            _stopButton.Visible = true;
-            _animatedTextureParentControl.Visible = false;
-            _buildAnimationPlayer.Stop();
-            SetBuildingState(false);
-        });
-    }
+	private async Task OnProjectStartedRunning()
+	{
+		await this.InvokeAsync(() =>
+		{
+			_runButton.Visible = false;
+			_debugButton.Visible = false;
+			_stopButton.Visible = true;
+			_animatedTextureParentControl.Visible = false;
+			_buildAnimationPlayer.Stop();
+			SetBuildingState(false);
+		});
+	}
 
-    private async void OnStopButtonPressed()
-    {
-        await StopProject().ConfigureAwait(false);
-    }
+	private async void OnStopButtonPressed()
+	{
+		await StopProject().ConfigureAwait(false);
+	}
 
-    public async Task StopProject()
-    {
-        await _runService.CancelRunningProject(Project).ConfigureAwait(false);
-    }
+	public async Task StopProject()
+	{
+		await _runService.CancelRunningProject(Project).ConfigureAwait(false);
+	}
 
-    private StringName _buildAnimationName = "BuildingAnimation";
-    private async void OnRunButtonPressed()
-    {
-        await RunProject().ConfigureAwait(false);
-    }
+	private StringName _buildAnimationName = "BuildingAnimation";
+	private async void OnRunButtonPressed()
+	{
+		await RunProject().ConfigureAwait(false);
+	}
 
-    public async Task RunProject()
-    {
-        SetAttemptingRunState();
-        await _runService.RunProject(Project, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
-    }
+	public async Task RunProject()
+	{
+		SetAttemptingRunState();
+		await _runService.RunProject(Project, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
+	}
 
-    private async void OnDebugButtonPressed()
-    {
-        await DebugProject().ConfigureAwait(false);
-    }
+	private async void OnDebugButtonPressed()
+	{
+		await DebugProject().ConfigureAwait(false);
+	}
 
-    public async Task DebugProject()
-    {
-        var debuggerExecutableInfo = new DebuggerExecutableInfo
-        {
-            UseInMemorySharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
-            DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
-        };
-        SetAttemptingRunState();
-        await _runService.RunProject(Project, true, debuggerExecutableInfo, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
-    }
+	public async Task DebugProject()
+	{
+		var debuggerExecutableInfo = new DebuggerExecutableInfo
+		{
+			UseInMemorySharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
+			DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
+		};
+		SetAttemptingRunState();
+		await _runService.RunProject(Project, true, debuggerExecutableInfo, usePty: Singletons.AppState.IdeSettings.RunUsePty).ConfigureAwait(false);
+	}
 
-    private void SetAttemptingRunState()
-    {
-        _runButton.Visible = false;
-        _debugButton.Visible = false;
-        _animatedTextureParentControl.Visible = true;
-        _buildAnimationPlayer.Play(_buildAnimationName);
-        SetBuildingState(true);
-    }
+	private void SetAttemptingRunState()
+	{
+		_runButton.Visible = false;
+		_debugButton.Visible = false;
+		_animatedTextureParentControl.Visible = true;
+		_buildAnimationPlayer.Play(_buildAnimationName);
+		SetBuildingState(true);
+	}
 
-    private void SetBuildingState(bool isBuilding)
-    {
-        if (IsBuilding == isBuilding) return;
-        IsBuilding = isBuilding;
-        BuildingStateChanged?.Invoke(this);
-    }
+	private void SetBuildingState(bool isBuilding)
+	{
+		if (IsBuilding == isBuilding) return;
+		IsBuilding = isBuilding;
+		BuildingStateChanged?.Invoke(this);
+	}
 }

@@ -83,7 +83,7 @@ public partial class RoslynAnalysis
 
 		var sharpIdeSignatureHelpItems = new SharpIdeSignatureHelpItems
 		{
-			Items =  signatureHelpItems,
+			Items = signatureHelpItems,
 			ApplicableSpan = mappedLinePositionSpan
 		};
 
@@ -146,37 +146,37 @@ public partial class RoslynAnalysis
 	}
 
 	private static ImmutableArray<SharpIdeCompletionItem> FilterCompletionList(CompletionList completionList, TextSpan filterSpan, CompletionTrigger completionTrigger, CompletionFilterReason filterReason, SourceText sourceText)
-    {
-        var filterText = sourceText.GetSubText(filterSpan).ToString();
+	{
+		var filterText = sourceText.GetSubText(filterSpan).ToString();
 
-        // Use pattern matching to determine which items are most relevant out of the calculated items.
-        using var _ = ArrayBuilder<MatchResult>.GetInstance(out var matchResultsBuilder);
-        var index = 0;
-        using var helper = new PatternMatchHelper(filterText);
-        foreach (var item in completionList.ItemsList)
-        {
-            if (helper.TryCreateMatchResult(
-                item,
-                completionTrigger.Kind,
-                filterReason,
-                recentItemIndex: -1,
-                includeMatchSpans: true,
-                index,
-                out var matchResult))
-            {
-                matchResultsBuilder.Add(matchResult);
-                index++;
-            }
-        }
+		// Use pattern matching to determine which items are most relevant out of the calculated items.
+		using var _ = ArrayBuilder<MatchResult>.GetInstance(out var matchResultsBuilder);
+		var index = 0;
+		using var helper = new PatternMatchHelper(filterText);
+		foreach (var item in completionList.ItemsList)
+		{
+			if (helper.TryCreateMatchResult(
+				item,
+				completionTrigger.Kind,
+				filterReason,
+				recentItemIndex: -1,
+				includeMatchSpans: true,
+				index,
+				out var matchResult))
+			{
+				matchResultsBuilder.Add(matchResult);
+				index++;
+			}
+		}
 
-        // Next, we sort the list based on the pattern matching result.
-        matchResultsBuilder.Sort(MatchResult.SortingComparer);
+		// Next, we sort the list based on the pattern matching result.
+		matchResultsBuilder.Sort(MatchResult.SortingComparer);
 
-        var filteredList = matchResultsBuilder.SelectAsArray(matchResult =>
-	        new SharpIdeCompletionItem(matchResult.CompletionItem, matchResult.PatternMatch?.MatchedSpans));
+		var filteredList = matchResultsBuilder.SelectAsArray(matchResult =>
+			new SharpIdeCompletionItem(matchResult.CompletionItem, matchResult.PatternMatch?.MatchedSpans));
 
-        return filteredList;
-    }
+		return filteredList;
+	}
 
 	/// The change for committing a completion item, relative to the text of <paramref name="document"/> (the document the completion list was computed for).
 	/// NewCaretPosition is in the coordinates of that text with the change applied.

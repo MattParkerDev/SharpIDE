@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.Debugging.Signing;
+namespace SharpIDE.Application.Features.Debugging.Signing;
 
 public static class DebuggerHandshakeSigner
 {

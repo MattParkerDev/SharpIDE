@@ -45,11 +45,11 @@ public partial class NugetPackageDetails : VBoxContainer
 
 	/// Raised off the UI thread once a project's reference to the package has been changed
 	public event Func<Task>? PackageReferencesChanged;
-	
+
 	private readonly Texture2D _defaultIconTextureRect = ResourceLoader.Load<Texture2D>("uid://b5ih61vdjv5e6");
 	private readonly Texture2D _warningIconTextureRect = ResourceLoader.Load<Texture2D>("uid://pd3h5qfjn8pb");
 	private readonly PackedScene _packageDetailsProjectEntryScene = ResourceLoader.Load<PackedScene>("uid://5uan5u23cr2s");
-	
+
 	[Inject] private readonly NugetPackageIconCacheService _nugetPackageIconCacheService = null!;
 	[Inject] private readonly NugetClientService _nugetClientService = null!;
 	[Inject] private readonly SharpIdeSolutionAccessor _sharpIdeSolutionAccessor = null!;
@@ -226,7 +226,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		}
 
 		_infoRichTextLabel.Text = text.ToString().TrimEnd();
-		_infoFoldableContainer.Visible =_infoRichTextLabel.Text.Length > 0;
+		_infoFoldableContainer.Visible = _infoRichTextLabel.Text.Length > 0;
 	}
 
 	/// Each framework the version targets, as listed in its nuspec, with the packages it depends on there and the versions it accepts
@@ -303,7 +303,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		await this.InvokeAsync(() =>
 		{
 			_packageIconTextureRect.Texture = imageTexture;
-			
+
 			_versionOptionButton.Clear();
 			_nugetSourceOptionButton.Clear();
 			foreach (var packageFromSource in package.PackageFromSources)
@@ -328,7 +328,7 @@ public partial class NugetPackageDetails : VBoxContainer
 		}
 		await OnNugetSourceSelected(0);
 	}
-	
+
 	public async Task SetProjects(HashSet<SharpIdeProjectModel> projects)
 	{
 		var scenes = projects.Select(s =>
@@ -369,7 +369,7 @@ public partial class NugetPackageDetails : VBoxContainer
 			DisplayRelevantButtons();
 		});
 	}
-	
+
 	private async Task OnNugetSourceSelected(long sourceIndex)
 	{
 		// Another source (or package) selected while this one's versions load replaces them - they'd otherwise be shown if they arrived last

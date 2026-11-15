@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.CodeAnalysis;

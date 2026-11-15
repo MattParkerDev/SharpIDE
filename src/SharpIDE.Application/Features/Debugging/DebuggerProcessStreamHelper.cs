@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Ardalis.GuardClauses;
 using Microsoft.Extensions.Logging;
 using SharpDbg.InMemory;
@@ -10,7 +10,7 @@ public static class DebuggerProcessStreamHelper
 {
 	public static (Stream Input, Stream Output, bool IsNetCoreDbg, IDisposable DebuggerDisposable) NewDebuggerProcessStreamsForInfo(DebuggerExecutableInfo? debuggerExecutableInfoNullable, ILogger<DebuggingService> logger)
 	{
-		if (debuggerExecutableInfoNullable is not {} debuggerExecutableInfo) throw new ArgumentNullException(nameof(debuggerExecutableInfoNullable), "Debugger executable info cannot be null.");
+		if (debuggerExecutableInfoNullable is not { } debuggerExecutableInfo) throw new ArgumentNullException(nameof(debuggerExecutableInfoNullable), "Debugger executable info cannot be null.");
 		if (debuggerExecutableInfo.UseInMemorySharpDbg)
 		{
 			var (input, output, debugAdapterDisposable) = SharpDbgInMemory.NewDebugAdapterStreams(s =>

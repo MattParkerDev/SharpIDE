@@ -1,4 +1,4 @@
-﻿using R3;
+using R3;
 using SharpIDE.Application.Features.Analysis;
 using SharpIDE.Application.Features.SolutionDiscovery;
 

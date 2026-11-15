@@ -32,7 +32,7 @@ public static class SharpIdeMsbuildLocator
 			FileName = "/bin/zsh",
 			ArgumentList = { "-l", "-c", "printenv PATH" },
 			RedirectStandardOutput = true,
-			RedirectStandardError =  true,
+			RedirectStandardError = true,
 			UseShellExecute = false,
 		};
 		using var process = Process.Start(processStartInfo);

@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis.SignatureHelp;
+using Microsoft.CodeAnalysis.SignatureHelp;
 using Microsoft.CodeAnalysis.Text;
 
 namespace SharpIDE.Application.Features.Analysis;

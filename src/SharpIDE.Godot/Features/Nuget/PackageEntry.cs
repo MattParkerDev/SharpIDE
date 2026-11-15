@@ -13,13 +13,13 @@ public partial class PackageEntry : MarginContainer
 	private Label _latestVersionLabel = null!;
 	private HBoxContainer _sourceNamesContainer = null!;
 	private TextureRect _packageIconTextureRect = null!;
-	
+
 	private static readonly Color Source_1_Color = new Color("629655");
 	private static readonly Color Source_2_Color = new Color("008989");
 	private static readonly Color Source_3_Color = new Color("8d75a8");
 	private static readonly Color Source_4_Color = new Color("966a00");
 	private static readonly Color Source_5_Color = new Color("efaeae");
-	
+
 	/// The Prerelease toggle's red, in NugetPanel.tscn
 	private static readonly Color PrereleaseColor = new Color(0.9490196f, 0.5137255f, 0.4f);
 	/// The latest version's colour when it isn't a prerelease, as the scene sets it
@@ -35,9 +35,9 @@ public partial class PackageEntry : MarginContainer
 	];
 
 	public event Func<IdePackageResult, Task> PackageSelected = null!;
-	
+
 	[Inject] private readonly NugetPackageIconCacheService _nugetPackageIconCacheService = null!;
-	
+
 	public IdePackageResult PackageResult { get; set; } = null!;
 	/// Whether the latest version shown may be a prerelease. Set before the entry is added to the tree, then through SetPackageResult
 	public bool IncludePrerelease { get; set; }
@@ -122,7 +122,7 @@ public partial class PackageEntry : MarginContainer
 				}
 			});
 		}
-		
+
 		foreach (var (index, packageFromSource) in PackageResult.PackageFromSources.Index())
 		{
 			var label = new Label { Text = packageFromSource.Source.Name };
@@ -131,11 +131,11 @@ public partial class PackageEntry : MarginContainer
 			_sourceNamesContainer.AddChild(label);
 		}
 	}
-	
+
 	private string GetInstalledVersionsText(InstalledNugetPackageInfo? packageInfo)
 	{
 		if (packageInfo is null) return string.Empty;
-		
+
 		var versions = packageInfo.ProjectPackageReferences
 			.Select(p => p.InstalledVersion.ToNormalizedString())
 			.Distinct()

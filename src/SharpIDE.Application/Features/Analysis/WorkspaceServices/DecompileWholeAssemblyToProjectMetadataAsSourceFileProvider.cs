@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Composition;
 using System.IO.Compression;
 using System.Reflection.Metadata;
@@ -219,7 +219,7 @@ internal sealed class DecompileWholeAssemblyToProjectMetadataAsSourceFileProvide
 					.Cast<CustomDebugInformation?>()
 					.FirstOrDefault();
 
-				if (nullableEmbeddedSourceHandle is not {} embeddedSourceHandle || embeddedSourceHandle.Kind.IsNil)
+				if (nullableEmbeddedSourceHandle is not { } embeddedSourceHandle || embeddedSourceHandle.Kind.IsNil)
 				{
 					continue;
 				}

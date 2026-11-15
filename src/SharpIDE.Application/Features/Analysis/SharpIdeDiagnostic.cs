@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -91,7 +91,7 @@ public sealed record SharpIdeDiagnostic
 		if (other is null) return false;
 		if (ReferenceEquals(this, other)) return true;
 		return Span == other.Span && FilePath == other.FilePath && Id == other.Id && Severity == other.Severity && Message == other.Message
-		       && FadeSpans.AsSpan().SequenceEqual(other.FadeSpans.AsSpan());
+			   && FadeSpans.AsSpan().SequenceEqual(other.FadeSpans.AsSpan());
 	}
 
 	public override int GetHashCode() => HashCode.Combine(Span, FilePath, Id, Severity, Message, FadeSpans.Length);

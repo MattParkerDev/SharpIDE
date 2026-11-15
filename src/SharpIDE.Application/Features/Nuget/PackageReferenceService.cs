@@ -49,7 +49,7 @@ public class PackageReferenceService(BuildService buildService, ProjectEvaluatio
 		// The host's evaluations still hold the files as they were - and on failure, the files may have been put back over a change made meanwhile
 		if (result.ChangedFiles.Count > 0)
 		{
-			await _projectEvaluationService.ReloadForChangedFilesAsync([..result.ChangedFiles, project.FilePath], CancellationToken.None).ConfigureAwait(false);
+			await _projectEvaluationService.ReloadForChangedFilesAsync([.. result.ChangedFiles, project.FilePath], CancellationToken.None).ConfigureAwait(false);
 		}
 		return new PackageReferenceChangeResult(result.Success, result.Error, result.ChangedFiles, result.Errors);
 	}

@@ -7,12 +7,12 @@ namespace SharpIDE.Godot.Features.Debug_;
 
 public partial class DebugPanel : Control
 {
-    private TabBar _tabBar = null!;
+	private TabBar _tabBar = null!;
 	private MarginContainer _tabsPanel = null!;
-	
+
 	[Export]
 	public Texture2D RunningIcon { get; set; } = null!;
-	
+
 	private PackedScene _debugPanelTabScene = GD.Load<PackedScene>("res://Features/Debug_/Tab/DebugPanelTab.tscn");
 	public override void _Ready()
 	{
@@ -57,7 +57,7 @@ public partial class DebugPanel : Control
 			existingRunPanelTab.StartProjectProcessIo();
 			return;
 		}
-		
+
 		var debugPanelTab = _debugPanelTabScene.Instantiate<DebugPanelTab>();
 		debugPanelTab.Project = projectModel;
 		_tabBar.AddTab(projectModel.Name.Value);
@@ -69,7 +69,7 @@ public partial class DebugPanel : Control
 		OnTabBarTabClicked(debugPanelTab.TabBarTab);
 		debugPanelTab.StartProjectProcessIo();
 	}
-	
+
 	public void ProjectStoppedDebugging(SharpIdeProjectModel projectModel)
 	{
 		var debugPanelTab = _tabsPanel.GetChildren().OfType<DebugPanelTab>().Single(s => s.Project == projectModel);

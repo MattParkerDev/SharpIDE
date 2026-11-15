@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable disable
@@ -14,12 +14,12 @@ namespace Microsoft.DotNet.Cli.Commands.New;
 /// </summary>
 internal class BuiltInTemplatePackageProviderFactory(string sdkDirectory) : ITemplatePackageProviderFactory
 {
-    public static readonly Guid FactoryId = new("{4B11226E-4594-43A4-B843-EB97447B6455}");
+	public static readonly Guid FactoryId = new("{4B11226E-4594-43A4-B843-EB97447B6455}");
 
-    public string DisplayName => ".NET SDK";
+	public string DisplayName => ".NET SDK";
 
-    public Guid Id { get => FactoryId; }
+	public Guid Id { get => FactoryId; }
 
-    public ITemplatePackageProvider CreateProvider(IEngineEnvironmentSettings settings)
-        => new BuiltInTemplatePackageProvider(this, sdkDirectory);
+	public ITemplatePackageProvider CreateProvider(IEngineEnvironmentSettings settings)
+		=> new BuiltInTemplatePackageProvider(this, sdkDirectory);
 }

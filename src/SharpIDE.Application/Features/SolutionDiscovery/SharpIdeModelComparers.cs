@@ -1,4 +1,4 @@
-﻿namespace SharpIDE.Application.Features.SolutionDiscovery;
+namespace SharpIDE.Application.Features.SolutionDiscovery;
 
 public class SharpIdeFileComparer : IComparer<SharpIdeFile>
 {
