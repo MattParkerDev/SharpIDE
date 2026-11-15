@@ -20,6 +20,8 @@ using ICSharpCode.Decompiler.TypeSystem;
 using ICSharpCode.Decompiler.Util;
 using SequencePoint = ICSharpCode.Decompiler.DebugInfo.SequencePoint;
 
+#nullable disable
+
 namespace SharpIDE.Application.Features.Analysis.WorkspaceServices
 {
 	public class PortablePdbWriter2
@@ -474,3 +476,5 @@ namespace SharpIDE.Application.Features.Analysis.WorkspaceServices
 			DebugInfoGenerator DebugInfoGen);
 	}
 }
+
+#nullable restore
