@@ -10,7 +10,6 @@ using ICSharpCode.Decompiler.DebugInfo;
 using ICSharpCode.Decompiler.Metadata;
 using ICSharpCode.Decompiler.Semantics;
 using ICSharpCode.Decompiler.TypeSystem;
-using NuGet.Packaging;
 
 namespace SharpIDE.Application.Features.Analysis.WorkspaceServices
 {
