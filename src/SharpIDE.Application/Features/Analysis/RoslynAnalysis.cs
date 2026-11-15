@@ -77,7 +77,6 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private static IMetadataAsSourceFileService _metadataAsSourceFileService = null!;
 	private static IImplementationAssemblyLookupService _implementationAssemblyLookupService = null!;
 	private static SignatureHelpService _signatureHelpService = null!;
-	private static readonly ConditionalWeakTable<Compilation, CompilationWithAnalyzers> _compilationWithAnalyzersCache = new();
 
 	// Primarily used for getting the globs for a project
 	private Dictionary<ProjectId, ProjectFileInfoDto> _projectFileInfoMap = new();
@@ -512,16 +511,18 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return diagnostics;
 	}
 
-	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
+	/// Compiler diagnostics. Cheap - Roslyn caches them per compilation.
+	public async Task<SharpIdeDocumentDiagnostics> GetDocumentDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
-		if (fileModel.IsRoslynWorkspaceFile is false) return [];
-		if (fileModel.IsMetadataAsSourceFile) return []; // Due to the current nature of IMetadataAsSourceFileService, which only decompiles a single document (not the whole project), if this was enabled, we would get error diagnostics for missing references to other "files" in the same dll
+		if (fileModel.IsRoslynWorkspaceFile is false) return SharpIdeDocumentDiagnostics.Empty;
+		if (fileModel.IsMetadataAsSourceFile) return SharpIdeDocumentDiagnostics.Empty; // Due to the current nature of IMetadataAsSourceFileService, which only decompiles a single document (not the whole project), if this was enabled, we would get error diagnostics for missing references to other "files" in the same dll
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentDiagnostics)}");
 		await _solutionLoadedTcs.Task;
 
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
 		Guard.Against.Null(document, nameof(document));
 
+		var text = await document.GetTextAsync(cancellationToken);
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
@@ -534,44 +535,78 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
 			})
 			.ToImmutableArray();
-		return result;
+		return new SharpIdeDocumentDiagnostics(result, text);
 	}
 
-	public async Task<ImmutableArray<SharpIdeDiagnostic>> GetDocumentAnalyzerDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
+	/// Analyzer diagnostics - from the project's analyzers, and the solution level analyzers (the IDE code style analyzers, e.g. IDE0028). Compiler diagnostics are excluded, see GetDocumentDiagnostics.
+	/// This gives the same results as IDiagnosticAnalyzerService (which the Roslyn LSP uses), but is ~40% faster, as IDiagnosticAnalyzerService always runs analyzers non-concurrently.
+	public async Task<SharpIdeDocumentDiagnostics> GetDocumentAnalyzerDiagnostics(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
-		if (fileModel.IsRoslynWorkspaceFile is false) return [];
-		if (fileModel.IsMetadataAsSourceFile) return []; // Decompiled/SourceLink files should not/will not have analyzers
+		if (fileModel.IsRoslynWorkspaceFile is false) return SharpIdeDocumentDiagnostics.Empty;
+		if (fileModel.IsMetadataAsSourceFile) return SharpIdeDocumentDiagnostics.Empty; // Decompiled/SourceLink files should not/will not have analyzers
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetDocumentAnalyzerDiagnostics)}");
 		await _solutionLoadedTcs.Task;
 
 		var document = await GetDocumentForSharpIdeFile(fileModel, cancellationToken);
 		Guard.Against.Null(document, nameof(document));
-
+		var text = await document.GetTextAsync(cancellationToken);
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 		Guard.Against.Null(semanticModel, nameof(semanticModel));
 
 		// Cached per Compilation: CompilationWithAnalyzers clones the compilation (losing its binding caches) and remembers which analyzers have already run on which trees.
 		// Reusing it means repeated requests against an unchanged compilation return stored results instead of re-running every analyzer from scratch.
-		var compilationWithAnalyzers = _compilationWithAnalyzersCache.GetValue(semanticModel.Compilation, compilation =>
-		{
-			var projectAnalyzers = document.Project.AnalyzerReferences
-				.OfType<IsolatedAnalyzerFileReference>()
-				.SelectMany(r => r.GetAnalyzers(document.Project.Language))
-				.ToImmutableArray();
-			return compilation.WithAnalyzers(projectAnalyzers);
-		});
+		var project = document.Project;
+		var compilationWithAnalyzers = _compilationWithAnalyzersCache.GetValue(semanticModel.Compilation, compilation => CreateCompilationWithAnalyzers(compilation, project));
 
-		var analysisResult = await compilationWithAnalyzers.GetAnalysisResultAsync(semanticModel, null, cancellationToken);
-		var diagnostics = analysisResult.GetAllDiagnostics();
-		diagnostics = diagnostics.Where(d => d.Severity is not DiagnosticSeverity.Hidden).ToImmutableArray();
-		var result = diagnostics
+		var tree = semanticModel.SyntaxTree;
+		var syntaxResult = await compilationWithAnalyzers.GetAnalysisResultAsync(tree, cancellationToken);
+		var semanticResult = await compilationWithAnalyzers.GetAnalysisResultAsync(semanticModel, filterSpan: null, cancellationToken);
+		// Only take each pass's own kind of diagnostics for this tree, as Roslyn's DocumentAnalysisExecutor does.
+		// GetAllDiagnostics would also include everything already computed on this CompilationWithAnalyzers, so the two passes would duplicate each other.
+		var result = GetTreeDiagnostics(syntaxResult.SyntaxDiagnostics, tree)
+			.Concat(GetTreeDiagnostics(semanticResult.SemanticDiagnostics, tree))
+			.Where(d => d.Severity is not DiagnosticSeverity.Hidden)
 			.Select(d =>
 			{
 				var mappedFileLinePositionSpan = semanticModel.SyntaxTree.GetMappedLineSpan(d.Location.SourceSpan);
 				return new SharpIdeDiagnostic(mappedFileLinePositionSpan.Span, d, mappedFileLinePositionSpan.Path);
 			})
 			.ToImmutableArray();
-		return result;
+		return new SharpIdeDocumentDiagnostics(result, text);
+
+		static IEnumerable<Diagnostic> GetTreeDiagnostics(ImmutableDictionary<SyntaxTree, ImmutableDictionary<DiagnosticAnalyzer, ImmutableArray<Diagnostic>>> diagnosticsByTree, SyntaxTree tree)
+			=> diagnosticsByTree.TryGetValue(tree, out var diagnosticsByAnalyzer) ? diagnosticsByAnalyzer.Values.SelectMany(d => d) : [];
+	}
+
+	private static readonly ConditionalWeakTable<Compilation, CompilationWithAnalyzers> _compilationWithAnalyzersCache = new();
+
+	/// Mirrors IDiagnosticAnalyzerService's CreateCompilationWithAnalyzersAsync, except that analyzers run concurrently.
+	/// The options matter: project analyzers get the project's options, including AdditionalFiles (e.g. BannedSymbols.txt for the banned API analyzer) and .editorconfig.
+	/// Host (solution level) analyzers get the host options, which are .editorconfig, falling back to the IDE's options.
+	private static CompilationWithAnalyzers CreateCompilationWithAnalyzers(Compilation compilation, Project project)
+	{
+		var projectAnalyzers = project.AnalyzerReferences
+			.OfType<IsolatedAnalyzerFileReference>()
+			.SelectMany(r => r.GetAnalyzers(project.Language))
+			.ToHashSet();
+		// The compiler analyzer is excluded, as compiler diagnostics come from GetDocumentDiagnostics
+		var hostAnalyzers = SolutionLevelAnalyzerReferences.References
+			.SelectMany(r => r.GetAnalyzers(project.Language))
+			.Where(a => a.IsCompilerAnalyzer() is false);
+		var analyzers = projectAnalyzers.Concat(hostAnalyzers).ToImmutableArray();
+
+		var hostAnalyzerOptions = project.State.HostAnalyzerOptions;
+		var projectAnalyzerOptions = project.State.ProjectAnalyzerOptions;
+		return compilation.WithAnalyzers(analyzers, new CompilationWithAnalyzersOptions(
+			options: hostAnalyzerOptions,
+			onAnalyzerException: null,
+			concurrentAnalysis: true,
+			logAnalyzerExecutionTime: false,
+			reportSuppressedDiagnostics: false,
+			analyzerExceptionFilter: null,
+			getAnalyzerConfigOptionsProvider: analyzer => projectAnalyzers.Contains(analyzer)
+				? projectAnalyzerOptions.AnalyzerConfigOptionsProvider
+				: hostAnalyzerOptions.AnalyzerConfigOptionsProvider));
 	}
 
 	/// Returns a version that changes whenever anything that could affect this file's highlighting or diagnostics changes:

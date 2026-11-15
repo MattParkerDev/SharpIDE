@@ -19,7 +19,8 @@ public sealed record SharpIdeDiagnostic
 		Message = diagnostic.GetMessage();
 	}
 
-	public LinePositionSpan Span { get; }
+	/// init, so the editor can move a diagnostic as text is edited, before fresh diagnostics arrive
+	public LinePositionSpan Span { get; init; }
 	public string FilePath { get; }
 	public string Id { get; }
 	public DiagnosticSeverity Severity { get; }

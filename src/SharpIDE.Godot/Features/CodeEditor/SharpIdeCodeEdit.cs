@@ -381,7 +381,9 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	{
 		if (_currentSourceText is null) return false; // Not loaded yet
 		if (_textMirror.Update(this) is not { } change) return false;
+		var previousSourceText = _currentSourceText;
 		_currentSourceText = _currentSourceText.WithChanges(change);
+		MapDiagnosticsForward(previousSourceText, _currentSourceText);
 		VerifySourceTextMatchesEditor();
 		var isDirty = _pendingReloadMarksClean is false;
 		_pendingReloadMarksClean = false;
@@ -832,17 +834,34 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	}
 
 	[RequiresGodotUiThread]
-	private void SetDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics)
+	private void SetDiagnostics(SharpIdeDocumentDiagnostics diagnostics)
 	{
-		_fileDiagnostics = diagnostics;
+		_fileDiagnostics = MapOntoCurrentText(diagnostics);
 		QueueRedraw();
 	}
 
 	[RequiresGodotUiThread]
-	private void SetAnalyzerDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics)
+	private void SetAnalyzerDiagnostics(SharpIdeDocumentDiagnostics diagnostics)
 	{
-		_fileAnalyzerDiagnostics = diagnostics;
+		_fileAnalyzerDiagnostics = MapOntoCurrentText(diagnostics);
 		QueueRedraw();
+	}
+
+	/// Diagnostics can take a while to compute (analyzers especially), so may be for an older text than the editor's, if the user typed in the meantime
+	[RequiresGodotUiThread]
+	private ImmutableArray<SharpIdeDiagnostic> MapOntoCurrentText(SharpIdeDocumentDiagnostics diagnostics)
+	{
+		if (diagnostics.Text is null || _currentSourceText is null) return diagnostics.Diagnostics;
+		return DiagnosticSpanMapper.MapForward(diagnostics.Diagnostics, diagnostics.Text, _currentSourceText);
+	}
+
+	/// Keeps the squiggles on the code they belong to as the user types (e.g. pressing enter pushes them down), until fresh diagnostics arrive
+	[RequiresGodotUiThread]
+	private void MapDiagnosticsForward(SourceText oldText, SourceText newText)
+	{
+		_fileDiagnostics = DiagnosticSpanMapper.MapForward(_fileDiagnostics, oldText, newText);
+		_fileAnalyzerDiagnostics = DiagnosticSpanMapper.MapForward(_fileAnalyzerDiagnostics, oldText, newText);
+		_projectDiagnosticsForFile = DiagnosticSpanMapper.MapForward(_projectDiagnosticsForFile, oldText, newText);
 	}
 
 	[RequiresGodotUiThread]
