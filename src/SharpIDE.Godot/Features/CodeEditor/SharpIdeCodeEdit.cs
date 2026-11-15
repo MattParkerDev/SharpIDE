@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Immutable;
 using Godot;
 using Microsoft.CodeAnalysis;
@@ -649,9 +650,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			}
 		}
 
-		UnderlineVisibleDiagnostics(_fileDiagnostics, firstVisibleLine, lastVisibleLine);
-		UnderlineVisibleDiagnostics(_fileAnalyzerDiagnostics, firstVisibleLine, lastVisibleLine);
-		UnderlineVisibleDiagnostics(_projectDiagnosticsForFile, firstVisibleLine, lastVisibleLine);
+		UnderlineVisibleDiagnostics(firstVisibleLine, lastVisibleLine);
 		DrawCompletionsPopup();
 	}
 
@@ -659,28 +658,73 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	private static readonly Color DiagnosticWarningColor = new("ffb700");
 	private static readonly Color DiagnosticOtherColor = new(0, 1, 0);
 
-	private void UnderlineVisibleDiagnostics(ImmutableArray<SharpIdeDiagnostic> diagnostics, int firstVisibleLine, int lastVisibleLine)
+	/// A squiggle to draw on one line. End is where it's drawn to; OverlapEnd is how far it reaches on the line, for overlap checks.
+	private readonly record struct Squiggle(int Line, int Start, int End, int OverlapEnd, DiagnosticSeverity Severity, int Order);
+
+	/// Where squiggles overlap (e.g. CS0219 and IDE0059 on an unused variable), only the most severe is drawn - and only one of equal severity
+	private void UnderlineVisibleDiagnostics(int firstVisibleLine, int lastVisibleLine)
 	{
-		foreach (var sharpIdeDiagnostic in diagnostics)
+		var squiggleArray = ArrayPool<Squiggle>.Shared.Rent(_fileDiagnostics.Length + _fileAnalyzerDiagnostics.Length + _projectDiagnosticsForFile.Length);
+		try
 		{
-			// Hidden diagnostics are only shown by fading their code, and unresolved names by colouring them red, see UpdateStyledSpans
-			if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Hidden || sharpIdeDiagnostic.IsUnresolvedSymbol) continue;
-			var line = sharpIdeDiagnostic.Span.Start.Line;
-			if (line < firstVisibleLine || line > lastVisibleLine) continue;
-			var startCol = sharpIdeDiagnostic.Span.Start.Character;
-			var endCol = sharpIdeDiagnostic.Span.End.Character;
-			// Suggestions (e.g. IDE0028) only underline their first 2 characters, so they're less noisy, as Visual Studio does
-			if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Info)
+			var count = 0;
+			AddSquiggles(_fileDiagnostics);
+			AddSquiggles(_fileAnalyzerDiagnostics);
+			AddSquiggles(_projectDiagnosticsForFile);
+			var squiggles = squiggleArray.AsSpan(0, count);
+			// Most severe first, then in the order added, so ties keep the first
+			squiggles.Sort(static (a, b) => a.Severity != b.Severity ? b.Severity.CompareTo(a.Severity) : a.Order.CompareTo(b.Order));
+
+			// Compacts the squiggles to draw into the front of the span
+			var drawnCount = 0;
+			foreach (var squiggle in squiggles)
 			{
-				endCol = sharpIdeDiagnostic.Span.End.Line == line ? Math.Min(endCol, startCol + 2) : startCol + 2;
+				var overlaps = false;
+				foreach (var drawn in squiggles[..drawnCount])
+				{
+					if (drawn.Line == squiggle.Line && drawn.Start < squiggle.OverlapEnd && squiggle.Start < drawn.OverlapEnd)
+					{
+						overlaps = true;
+						break;
+					}
+				}
+				if (overlaps) continue;
+				squiggles[drawnCount++] = squiggle;
+				var color = squiggle.Severity switch
+				{
+					DiagnosticSeverity.Error => DiagnosticErrorColor,
+					DiagnosticSeverity.Warning => DiagnosticWarningColor,
+					_ => DiagnosticOtherColor // Info or other
+				};
+				UnderlineRange(squiggle.Line, squiggle.Start, squiggle.End, color);
 			}
-			var color = sharpIdeDiagnostic.Severity switch
+
+			void AddSquiggles(ImmutableArray<SharpIdeDiagnostic> diagnostics)
 			{
-				DiagnosticSeverity.Error => DiagnosticErrorColor,
-				DiagnosticSeverity.Warning => DiagnosticWarningColor,
-				_ => DiagnosticOtherColor // Info or other
-			};
-			UnderlineRange(line, startCol, endCol, color);
+				foreach (var sharpIdeDiagnostic in diagnostics)
+				{
+					// Hidden diagnostics are only shown by fading their code, and unresolved names by colouring them red, see UpdateStyledSpans
+					if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Hidden || sharpIdeDiagnostic.IsUnresolvedSymbol) continue;
+					var span = sharpIdeDiagnostic.Span;
+					var line = span.Start.Line;
+					if (line < firstVisibleLine || line > lastVisibleLine) continue;
+					var startCol = span.Start.Character;
+					var endCol = span.End.Character;
+					// Suggestions (e.g. IDE0028) only underline their first 2 characters, so they're less noisy, as Visual Studio does
+					if (sharpIdeDiagnostic.Severity is DiagnosticSeverity.Info)
+					{
+						endCol = span.End.Line == line ? Math.Min(endCol, startCol + 2) : startCol + 2;
+					}
+					if (endCol < startCol) continue; // Nothing would be drawn
+					// Overlap is judged by what's drawn. A zero-width squiggle is still drawn, so give it a width of 1.
+					squiggleArray[count] = new Squiggle(line, startCol, endCol, Math.Max(endCol, startCol + 1), sharpIdeDiagnostic.Severity, count);
+					count++;
+				}
+			}
+		}
+		finally
+		{
+			ArrayPool<Squiggle>.Shared.Return(squiggleArray);
 		}
 	}
 
