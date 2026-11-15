@@ -434,8 +434,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	public async Task UpdateProjectDiagnosticsForFile(SharpIdeFile sharpIdeFile, CancellationToken cancellationToken = default)
 	{
-		var project = GetRequiredSharpIdeProjectForSharpIdeFile(sharpIdeFile);
-		Guard.Against.Null(project);
+		// Files outside any project (e.g. a solution-level .editorconfig) have no project diagnostics of their own -
+		// the projects they affect are updated by the solution-wide pass
+		var project = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
+		if (project is null) return;
 		await UpdateProjectDiagnostics(project, cancellationToken);
 	}
 
@@ -1684,18 +1686,10 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return outputPath;
 	}
 
-	private SharpIdeProjectModel? GetSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
-	{
-		var containingProjectFolder = sharpIdeFile.GetContainingProjectFolder();
-		if (containingProjectFolder is null) return null;
-		var sharpIdeProject = _sharpIdeSolutionModel!.GetProjectForContainingFolderPath(containingProjectFolder);
-		return sharpIdeProject;
-	}
+	private SharpIdeProjectModel? GetSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile) => _sharpIdeSolutionModel!.GetProjectForFile(sharpIdeFile);
 	private SharpIdeProjectModel GetRequiredSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
 	{
-		var containingProjectFolder = sharpIdeFile.GetContainingProjectFolder();
-		Guard.Against.Null(containingProjectFolder);
-		var sharpIdeProject = _sharpIdeSolutionModel!.GetProjectForContainingFolderPath(containingProjectFolder);
+		var sharpIdeProject = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
 		Guard.Against.Null(sharpIdeProject);
 		return sharpIdeProject;
 	}

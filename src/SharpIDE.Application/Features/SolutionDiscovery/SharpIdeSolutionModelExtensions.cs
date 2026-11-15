@@ -5,13 +5,6 @@ namespace SharpIDE.Application.Features.SolutionDiscovery;
 
 public static class SharpIdeSolutionModelExtensions
 {
-	public static SharpIdeProjectModel? GetProjectForContainingFolderPath(this SharpIdeSolutionModel solution, SharpIdeFolder folder)
-	{
-		// First, not Single - two csproj files may share a folder
-		var sharpIdeProject = solution.AllProjects.FirstOrDefault(s => PathComparison.PathEquals(s.DirectoryPath, folder.Path));
-		return sharpIdeProject;
-	}
-
 	public static void UpdateFromNewSolution(this SharpIdeSolutionModel sharpIdeSolutionModel, SharpIdeSolutionModel newSharpIdeSolutionModel)
 	{
 		// TODO: Need to insert new nodes in correct position
@@ -21,6 +14,7 @@ public static class SharpIdeSolutionModelExtensions
 		sharpIdeSolutionModel.AllProjects.RemoveRange(sharpIdeSolutionModel.AllProjects.set);
 		foreach (var project in CollectAllProjects(sharpIdeSolutionModel))
 			sharpIdeSolutionModel.AllProjects.Add(project);
+		sharpIdeSolutionModel.RebuildProjectsByDirectory();
 	}
 
 	private static void UpdateSlnFolderFromNew(this SharpIdeSolutionFolder existing, SharpIdeSolutionFolder updated)

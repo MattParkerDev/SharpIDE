@@ -47,23 +47,3 @@ public class SharpIdeFile : ISharpIdeNode, IChildSharpIdeNode, IFileOrFolder
 		allFiles.Add(this);
 	}
 }
-
-public static class SharpIdeFileExtensions
-{
-	extension(SharpIdeFile file)
-	{
-		public SharpIdeFolder? GetContainingProjectFolder()
-		{
-			var current = file.Parent;
-			while (current is SharpIdeFolder folder)
-			{
-				if (folder.IsCsprojRootFolder)
-				{
-					return folder;
-				}
-				current = folder.Parent;
-			}
-			return null;
-		}
-	}
-}

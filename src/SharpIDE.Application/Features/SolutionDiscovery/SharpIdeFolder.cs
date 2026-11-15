@@ -11,7 +11,6 @@ public class SharpIdeFolder : ISharpIdeNode, IExpandableSharpIdeNode, IChildShar
 	public required string Path { get; set; }
 	public string ChildNodeBasePath => Path;
 	public required ReactiveProperty<string> Name { get; set; }
-	public bool IsCsprojRootFolder => Files.Any(f => f.Extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase));
 	public ObservableList<SharpIdeFile> Files { get; set; } = null!;
 	public ObservableList<SharpIdeFolder> Folders { get; set; } = null!;
 	public bool Expanded { get; set; }
