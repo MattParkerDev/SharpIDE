@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Buffers;
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Godot;
 using Godot.Collections;
@@ -91,15 +92,15 @@ public partial class CustomHighlighter : SyntaxHighlighter
 
     /// The spans of code to fade out (e.g. unnecessary usings), and to colour red (names that could not be resolved).
     /// Godot caches line highlighting, so callers must refresh it for already highlighted lines to change.
-    public void SetStyledSpans(IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> fadedSpans, IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> errorSpans)
+    public void SetStyledSpans(ReadOnlySpan<Microsoft.CodeAnalysis.Text.LinePositionSpan> fadedSpans, ReadOnlySpan<Microsoft.CodeAnalysis.Text.LinePositionSpan> errorSpans)
     {
         var styledRangesByLine = new System.Collections.Generic.Dictionary<int, List<(int Start, int End, TextStyle Style)>>();
-        AddRanges(fadedSpans, TextStyle.Faded);
-        AddRanges(errorSpans, TextStyle.Error);
+        AddRanges(styledRangesByLine, fadedSpans, TextStyle.Faded);
+        AddRanges(styledRangesByLine, errorSpans, TextStyle.Error);
         _styledRangesByLine = styledRangesByLine;
         return;
 
-        void AddRanges(IEnumerable<Microsoft.CodeAnalysis.Text.LinePositionSpan> spans, TextStyle style)
+        static void AddRanges(System.Collections.Generic.Dictionary<int, List<(int Start, int End, TextStyle Style)>> styledRangesByLine, ReadOnlySpan<Microsoft.CodeAnalysis.Text.LinePositionSpan> spans, TextStyle style)
         {
             foreach (var span in spans)
             {
@@ -227,47 +228,66 @@ public partial class CustomHighlighter : SyntaxHighlighter
     /// so an entry is needed at every point where either the classification or style changes.
     private Dictionary GetStyledLineSyntaxHighlighting(int line, List<(int Start, int End, TextStyle Style)> styledRanges)
     {
-        // The classification (-1 for the default colour) starting at each column
-        var classificationStarts = new SortedDictionary<int, int>();
-        if (_spanRangesByLine.TryGetValue(line, out var range))
-        {
-            foreach (var span in _classifiedSpans.AsSpan(range.Start, range.Count))
-            {
-                if (span.Length is 0) continue;
-                classificationStarts[span.StartCharacter] = (int)span.Classification;
-                classificationStarts.TryAdd(span.EndCharacter, -1); // Reset to the default colour for any gap - a following span starting here overwrites it
-            }
-        }
+        var spansForLine = _spanRangesByLine.TryGetValue(line, out var range) ? _classifiedSpans.AsSpan(range.Start, range.Count) : [];
 
-        var boundaries = new SortedSet<int>(classificationStarts.Keys) { 0 };
-        foreach (var (start, end, _) in styledRanges)
+        // Every column where the colour may change: 0, each classified span's start and end, and each styled range's start and end
+        var boundaryArray = ArrayPool<int>.Shared.Rent(1 + 2 * (spansForLine.Length + styledRanges.Count));
+        try
         {
-            boundaries.Add(start);
-            if (end is not int.MaxValue) boundaries.Add(end);
-        }
-
-        var entries = _highlightEntries;
-        var highlights = new Dictionary();
-        var classification = -1;
-        foreach (var column in boundaries)
-        {
-            if (classificationStarts.TryGetValue(column, out var startingClassification)) classification = startingClassification;
-            var style = TextStyle.None;
-            foreach (var r in styledRanges)
+            var count = 0;
+            boundaryArray[count++] = 0;
+            foreach (var span in spansForLine)
             {
-                if (r.Start <= column && column < r.End) style |= r.Style;
+                boundaryArray[count++] = span.StartCharacter;
+                boundaryArray[count++] = span.EndCharacter;
             }
-            var isFaded = style.HasFlag(TextStyle.Faded);
-            highlights[column] = (style.HasFlag(TextStyle.Error), classification, isFaded) switch
+            foreach (var (start, end, _) in styledRanges)
             {
-                (true, _, false) => entries.Error,
-                (true, _, true) => entries.FadedError,
-                (false, -1, false) => entries.DefaultColor,
-                (false, -1, true) => entries.FadedDefaultColor,
-                (false, _, false) => entries.ByClassification[classification],
-                (false, _, true) => entries.FadedByClassification[classification]
-            };
+                boundaryArray[count++] = start;
+                if (end is not int.MaxValue) boundaryArray[count++] = end;
+            }
+            var boundaries = boundaryArray.AsSpan(0, count);
+            boundaries.Sort();
+
+            var entries = _highlightEntries;
+            var highlights = new Dictionary();
+            Dictionary? previousEntry = null;
+            var spanIndex = 0;
+            var previousColumn = -1;
+            foreach (var column in boundaries)
+            {
+                if (column == previousColumn) continue;
+                previousColumn = column;
+
+                // The spans are sorted and non-overlapping, so the span covering this column (if any) is the first one not ending at or before it
+                while (spanIndex < spansForLine.Length && spansForLine[spanIndex].EndCharacter <= column) spanIndex++;
+                var classification = spanIndex < spansForLine.Length && spansForLine[spanIndex].StartCharacter <= column ? (int)spansForLine[spanIndex].Classification : -1;
+
+                var style = TextStyle.None;
+                foreach (var r in styledRanges)
+                {
+                    if (r.Start <= column && column < r.End) style |= r.Style;
+                }
+                var isFaded = (style & TextStyle.Faded) is not 0;
+                var entry = ((style & TextStyle.Error) is not 0, classification, isFaded) switch
+                {
+                    (true, _, false) => entries.Error,
+                    (true, _, true) => entries.FadedError,
+                    (false, -1, false) => entries.DefaultColor,
+                    (false, -1, true) => entries.FadedDefaultColor,
+                    (false, _, false) => entries.ByClassification[classification],
+                    (false, _, true) => entries.FadedByClassification[classification]
+                };
+                // Godot keeps applying the previous colour, so an entry for the same colour is redundant
+                if (ReferenceEquals(entry, previousEntry)) continue;
+                previousEntry = entry;
+                highlights[column] = entry;
+            }
+            return highlights;
         }
-        return highlights;
+        finally
+        {
+            ArrayPool<int>.Shared.Return(boundaryArray);
+        }
     }
 }

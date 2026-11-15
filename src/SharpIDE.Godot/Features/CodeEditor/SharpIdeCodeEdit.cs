@@ -863,13 +863,15 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	[RequiresGodotUiThread]
 	private void UpdateStyledSpans(bool refreshHighlighting)
 	{
-		var diagnostics = _fileDiagnostics.Concat(_fileAnalyzerDiagnostics).Concat(_projectDiagnosticsForFile).ToList();
-		var fadedSpans = diagnostics.SelectMany(d => d.FadeSpans).Distinct().ToImmutableArray();
-		var unresolvedSymbolSpans = diagnostics.Where(d => d.IsUnresolvedSymbol).Select(d => d.Span).Distinct().ToImmutableArray();
-		if (fadedSpans.SequenceEqual(_fadedSpans) && unresolvedSymbolSpans.SequenceEqual(_unresolvedSymbolSpans)) return;
-		_fadedSpans = fadedSpans;
-		_unresolvedSymbolSpans = unresolvedSymbolSpans;
-		_syntaxHighlighter.SetStyledSpans(fadedSpans, unresolvedSymbolSpans);
+		// This runs on every keystroke, so collect into pooled arrays, and only allocate when the spans actually changed.
+		// The same diagnostic can appear in more than one list (e.g. compiler diagnostics in both file and project diagnostics) - duplicate spans don't change the styling.
+		var diagnostics = _fileDiagnostics.AsValueEnumerable().Concat(_fileAnalyzerDiagnostics.AsValueEnumerable()).Concat(_projectDiagnosticsForFile.AsValueEnumerable());
+		using var fadedSpans = diagnostics.SelectMany(static d => d.FadeSpans.AsValueEnumerable()).ToArrayPool();
+		using var unresolvedSymbolSpans = diagnostics.Where(static d => d.IsUnresolvedSymbol).Select(static d => d.Span).ToArrayPool();
+		if (fadedSpans.Span.SequenceEqual(_fadedSpans.AsSpan()) && unresolvedSymbolSpans.Span.SequenceEqual(_unresolvedSymbolSpans.AsSpan())) return;
+		_fadedSpans = [.. fadedSpans.Span];
+		_unresolvedSymbolSpans = [.. unresolvedSymbolSpans.Span];
+		_syntaxHighlighter.SetStyledSpans(_fadedSpans.AsSpan(), _unresolvedSymbolSpans.AsSpan());
 		if (refreshHighlighting is false) return;
 		// Godot caches each line's highlighting - reassign to re-highlight with the new styled spans
 		SyntaxHighlighter = null;
