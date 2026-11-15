@@ -104,8 +104,8 @@ public partial class RoslynAnalysis
 
 		async Task<SolutionFileNavigation?> GetNavigation(DocumentId documentId, int position)
 		{
-			if (updatedSolution.GetTextDocument(documentId) is not { } document) return null;
-			var oldDocument = originalSolution.GetTextDocument(documentId);
+			if (await updatedSolution.GetTextDocumentAsync(documentId, cancellationToken) is not { } document) return null;
+			var oldDocument = await originalSolution.GetTextDocumentAsync(documentId, cancellationToken);
 			if (GetFilePath(document, oldDocument) is not { } filePath) return null;
 			var text = await document.GetTextAsync(cancellationToken);
 			return new SolutionFileNavigation(filePath, text.Lines.GetLinePosition(Math.Clamp(position, 0, text.Length)));
@@ -135,7 +135,7 @@ public partial class RoslynAnalysis
 		// Removed
 		foreach (var documentId in projectChanges.SelectMany(pc => pc.GetRemovedDocuments().Concat(pc.GetRemovedAdditionalDocuments()).Concat(pc.GetRemovedAnalyzerConfigDocuments())))
 		{
-			if (oldSolution.GetTextDocument(documentId)?.FilePath is not { } filePath) continue;
+			if ((await oldSolution.GetTextDocumentAsync(documentId, cancellationToken))?.FilePath is not { } filePath) continue;
 			// A file removed from one project, but still in another (e.g. linked), stays on disk
 			if (newSolution.GetDocumentIdsWithFilePath(filePath).IsEmpty is false) continue;
 			if (seenFilePaths.Add(filePath)) result.RemovedFilePaths.Add(filePath);
@@ -144,7 +144,7 @@ public partial class RoslynAnalysis
 		// Added
 		foreach (var documentId in projectChanges.SelectMany(pc => pc.GetAddedDocuments().Concat(pc.GetAddedAdditionalDocuments()).Concat(pc.GetAddedAnalyzerConfigDocuments())))
 		{
-			if (newSolution.GetTextDocument(documentId) is not { } document) continue;
+			if (await newSolution.GetTextDocumentAsync(documentId, cancellationToken) is not { } document) continue;
 			if (GetFilePath(document, oldDocument: null) is not { } filePath)
 			{
 				_logger.LogWarning("Can't determine a file path for added document '{DocumentName}' - skipping it", document.Name);
@@ -159,8 +159,8 @@ public partial class RoslynAnalysis
 		var changedDocumentIds = projectChanges.SelectMany(pc => pc.GetChangedDocuments().Concat(pc.GetChangedAdditionalDocuments()).Concat(pc.GetChangedAnalyzerConfigDocuments()));
 		foreach (var documentId in changedDocumentIds)
 		{
-			var oldDocument = oldSolution.GetTextDocument(documentId);
-			var newDocument = newSolution.GetTextDocument(documentId);
+			var oldDocument = await oldSolution.GetTextDocumentAsync(documentId, cancellationToken);
+			var newDocument = await newSolution.GetTextDocumentAsync(documentId, cancellationToken);
 			if (oldDocument?.FilePath is not { } filePath || newDocument is null) continue;
 			if (seenFilePaths.Add(filePath) is false) continue;
 

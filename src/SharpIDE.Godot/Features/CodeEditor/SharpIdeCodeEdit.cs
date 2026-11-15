@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections.Immutable;
+using Ardalis.GuardClauses;
 using Godot;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -394,6 +395,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		var isDirty = _pendingReloadMarksClean is false;
 		_pendingReloadMarksClean = false;
 		// Cheap and synchronous - records the text and queues the Roslyn update, which happens in order, off the UI thread
+		Guard.Against.Null(_currentSourceText);
 		_fileChangedService.OpenFileTextChanged(_currentFile, _currentSourceText, isDirty);
 		return true;
 	}

@@ -11,10 +11,8 @@ public static class ThemeDiffer
 
 	extension(Node node)
 	{
-		[Obsolete]
-		public void DiffTheme()
+		public static void DiffTheme()
 		{
-			return;
 			var darkTheme = SetThemeExtensions.DarkTheme;
 			var lightTheme = SetThemeExtensions.LightTheme;
 			var themeTypes = darkTheme.GetTypeList()

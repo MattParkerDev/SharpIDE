@@ -105,7 +105,7 @@ public partial class RoslynAnalysis
 		await _solutionLoadedTcs.Task;
 		var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace();
 		var documentId = metadataAsSourceWorkspace!.CurrentSolution.GetDocumentIdsWithFilePath(filePath).SingleOrDefault();
-		var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId);
+		var document = await metadataAsSourceWorkspace.CurrentSolution.GetDocumentAsync(documentId, cancellationToken: cancellationToken);
 		if (document is null) return null;
 		await DecompileWholeAssemblyToProjectMetadataAsSourceFileProvider.WriteFileToDiskAsync(document, cancellationToken);
 		return document.FilePath;

@@ -282,18 +282,18 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 	private static ManagedStackFrameInfo? ParseStackFrameName(string name)
 	{
 		return null;
-		var methodName = name.Split('!')[1].Split('(')[0];
-		var className = methodName.Split('.').Reverse().Skip(1).First();
-		var namespaceName = methodName.Split('.').AsValueEnumerable().Reverse().Skip(2).Reverse().JoinToString(".");
-		var assemblyName = name.Split('!')[0];
-		methodName = methodName.Split('.').Reverse().First();
-		var managedStackFrameInfo = new ManagedStackFrameInfo
-		{
-			MethodName = methodName,
-			ClassName = className,
-			Namespace = namespaceName,
-			AssemblyName = assemblyName
-		};
-		return managedStackFrameInfo;
+		// var methodName = name.Split('!')[1].Split('(')[0];
+		// var className = methodName.Split('.').Reverse().Skip(1).First();
+		// var namespaceName = methodName.Split('.').AsValueEnumerable().Reverse().Skip(2).Reverse().JoinToString(".");
+		// var assemblyName = name.Split('!')[0];
+		// methodName = methodName.Split('.').Reverse().First();
+		// var managedStackFrameInfo = new ManagedStackFrameInfo
+		// {
+		// 	MethodName = methodName,
+		// 	ClassName = className,
+		// 	Namespace = namespaceName,
+		// 	AssemblyName = assemblyName
+		// };
+		// return managedStackFrameInfo;
 	}
 }

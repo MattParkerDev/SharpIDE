@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Ardalis.GuardClauses;
 using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging.Core;
@@ -150,6 +151,7 @@ public class NugetClientService
 	{
 		var repository = Repository.Factory.GetCoreV3(source);
 		var packageMetadataResource = await repository.GetResourceAsync<PackageMetadataResource>(cancellationToken).ConfigureAwait(false);
+		Guard.Against.Null(packageMetadataResource);
 
 		var metadata = await packageMetadataResource.GetMetadataAsync(
 			packageId, includePrerelease: true, includeUnlisted: false,

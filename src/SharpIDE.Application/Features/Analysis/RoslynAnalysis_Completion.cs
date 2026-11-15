@@ -3,6 +3,7 @@ using Ardalis.GuardClauses;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.Completion;
+using Microsoft.CodeAnalysis.LanguageService;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Microsoft.CodeAnalysis.SignatureHelp;
@@ -53,7 +54,7 @@ public partial class RoslynAnalysis
 	public static async Task<CompletionDescription> GetCompletionDescription(Document document, CompletionItem completionItem, CancellationToken cancellationToken = default)
 	{
 		var completionService = CompletionService.GetService(document) ?? throw new InvalidOperationException("Completion service is not available for the document.");
-		return (await completionService.GetDescriptionAsync(document, completionItem, cancellationToken))!;
+		return (await completionService.GetDescriptionAsync(document, completionItem, CompletionOptions.Default, SymbolDescriptionOptions.Default, cancellationToken))!;
 	}
 
 	public async Task<SharpIdeSignatureHelpItems?> GetMethodSignatureInfo(SharpIdeFile file, LinePosition linePosition, CancellationToken cancellationToken = default)
@@ -102,7 +103,7 @@ public partial class RoslynAnalysis
 
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.Lines.GetPosition(linePosition);
-		var completions = await completionService.GetCompletionsAsync(document, position, completionTrigger, cancellationToken: cancellationToken);
+		var completions = await completionService.GetCompletionsAsync(document, position, CompletionOptions.Default, document.Project.Solution.Options, completionTrigger, cancellationToken: cancellationToken);
 		var triggerLinePosition = sourceText.GetLinePosition(completions.Span.Start);
 		return (completions, triggerLinePosition);
 	}

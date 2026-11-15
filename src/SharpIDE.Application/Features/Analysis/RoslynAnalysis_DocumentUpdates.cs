@@ -35,7 +35,7 @@ public partial class RoslynAnalysis
 			var documentIds = currentSolution.GetDocumentIdsWithFilePath(filePath);
 			if (documentIds.IsEmpty) continue;
 			// Skip no-ops, e.g. an editor opening a file whose text the workspace already has. Usually cheap - differing lengths return immediately.
-			if (currentSolution.GetTextDocument(documentIds[0]) is { } existingDocument &&
+			if (await currentSolution.GetTextDocumentAsync(documentIds[0]) is { } existingDocument &&
 				existingDocument.TryGetText(out var existingText) &&
 				(ReferenceEquals(existingText, newText) || existingText.ContentEquals(newText)))
 			{
@@ -123,7 +123,7 @@ public partial class RoslynAnalysis
 						SourceText? text = null;
 						if (existingIds.IsEmpty || existingIds.Any(id => id.ProjectId != targetProjectId || currentSolution.ContainsDocument(id) is false))
 						{
-							text = existingIds.IsEmpty is false && currentSolution.GetTextDocument(existingIds[0]) is { } existingDocument
+							text = existingIds.IsEmpty is false && await currentSolution.GetTextDocumentAsync(existingIds[0]) is { } existingDocument
 								? await existingDocument.GetTextAsync()
 								: File.Exists(move.File.Path) ? SourceText.From(await File.ReadAllTextAsync(move.File.Path), Encoding.UTF8) : null;
 						}
