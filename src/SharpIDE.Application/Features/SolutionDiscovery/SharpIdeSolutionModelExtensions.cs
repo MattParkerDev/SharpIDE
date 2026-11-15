@@ -14,7 +14,7 @@ public static class SharpIdeSolutionModelExtensions
 		sharpIdeSolutionModel.AllProjects.RemoveRange(sharpIdeSolutionModel.AllProjects.set);
 		foreach (var project in CollectAllProjects(sharpIdeSolutionModel))
 			sharpIdeSolutionModel.AllProjects.Add(project);
-		sharpIdeSolutionModel.RebuildProjectsByDirectory();
+		sharpIdeSolutionModel.RebuildProjectLookups();
 	}
 
 	private static void UpdateSlnFolderFromNew(this SharpIdeSolutionFolder existing, SharpIdeSolutionFolder updated)

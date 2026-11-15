@@ -436,7 +436,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		// Files outside any project (e.g. a solution-level .editorconfig) have no project diagnostics of their own -
 		// the projects they affect are updated by the solution-wide pass
-		var project = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
+		await _solutionLoadedTcs.Task;
+		var workspaceProject = TryGetTextDocumentForSharpIdeFile(sharpIdeFile)?.Project;
+		var project = workspaceProject is null ? null : GetSharpIdeProjectModelForProject(workspaceProject);
 		if (project is null) return;
 		await UpdateProjectDiagnostics(project, cancellationToken);
 	}
@@ -618,33 +620,25 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	{
 		if (fileModel.IsRoslynWorkspaceFile is false) return null;
 		await _solutionLoadedTcs.Task;
-		Project project;
-		try
-		{
-			project = GetProjectForSharpIdeFile(fileModel);
-		}
-		catch (Exception e) when (e is InvalidOperationException or ArgumentException)
-		{
-			return null;
-		}
+		var project = TryGetTextDocumentForSharpIdeFile(fileModel)?.Project;
+		if (project is null) return null;
 		// Deliberately not GetDependentSemanticVersionAsync - that only tracks top-level (signature) changes, so it would not change for method body edits
 		return await project.GetDependentVersionAsync(cancellationToken);
 	}
 
 	private async Task<Document> GetDocumentForSharpIdeFile(SharpIdeFile fileModel, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = fileModel.IsCsharpFile ? project.Documents.SingleOrDefault(s => PathComparison.PathEquals(s.FilePath, fileModel.Path))
-				: await GetRazorSourceGeneratedDocumentInProjectForSharpIdeFile(project, fileModel, cancellationToken);
-		Guard.Against.Null(document, nameof(document));
-		return document;
+		var textDocument = GetRequiredTextDocumentForSharpIdeFile(fileModel);
+		return textDocument switch
+		{
+			Document document => document,
+			_ => await GetRazorSourceGeneratedDocument(textDocument, cancellationToken)
+		};
 	}
 
-	private static async Task<SourceGeneratedDocument> GetRazorSourceGeneratedDocumentInProjectForSharpIdeFile(Project project, SharpIdeFile fileModel, CancellationToken cancellationToken = default)
+	private static async Task<SourceGeneratedDocument> GetRazorSourceGeneratedDocument(TextDocument razorDocument, CancellationToken cancellationToken = default)
 	{
-		var razorDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-
-		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
+		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(razorDocument.Project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
 
 		var generatedDocument = await razorProjectSnapshot.GetRequiredGeneratedDocumentAsync(documentSnapshot, cancellationToken);
@@ -665,9 +659,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetCSharpDocumentSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-		Guard.Against.Null(document, nameof(document));
+		var document = GetRequiredCSharpDocumentForSharpIdeFile(fileModel);
 
 		var text = await document.GetTextAsync(cancellationToken);
 		var classifiedSpans = await SharpIdeClassifier.GetClassifiedSpansAsync(document, [new TextSpan(0, text.Length)], _logger, cancellationToken);
@@ -691,10 +683,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	private async Task<ImmutableArray<SharpIdeClassifiedSpan>> GetRazorDocumentSyntaxHighlighting(SharpIdeFile fileModel, CancellationToken cancellationToken)
 	{
 		var timer = Stopwatch.StartNew();
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var razorDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
+		var razorDocument = GetRequiredTextDocumentForSharpIdeFile(fileModel);
 
-		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
+		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(razorDocument.Project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(razorDocument);
 
 		var razorCodeDocument = await razorProjectSnapshot.GetRequiredCodeDocumentAsync(documentSnapshot, cancellationToken);
@@ -808,9 +799,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 			return null;
 		}
 
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-		Guard.Against.Null(document);
+		var document = GetRequiredCSharpDocumentForSharpIdeFile(fileModel);
 		return await DebuggerExpressionIntelliSenseSession.CreateAsync(document, debuggerStoppedPosition, cancellationToken);
 	}
 
@@ -1307,11 +1296,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan)> LookupSymbolInRazor(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
+		var additionalDocument = GetRequiredTextDocumentForSharpIdeFile(fileModel);
 
-		var additionalDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-
-		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
+		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(additionalDocument.Project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
 
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
@@ -1334,9 +1321,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan)> LookupSymbolInCs(SharpIdeFile fileModel, LinePosition linePosition)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-		Guard.Against.Null(document, nameof(document));
+		var document = GetRequiredCSharpDocumentForSharpIdeFile(fileModel);
 		var sourceText = await document.GetTextAsync();
 		var position = sourceText.GetPosition(linePosition);
 		var semanticModel = await document.GetSemanticModelAsync();
@@ -1347,9 +1332,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan, TokenSemanticInfo? semanticInfo)> LookupSymbolSemanticInfoInCs(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
-		var document = project.Documents.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-		Guard.Against.Null(document, nameof(document));
+		var document = GetRequiredCSharpDocumentForSharpIdeFile(fileModel);
 		var sourceText = await document.GetTextAsync(cancellationToken);
 		var position = sourceText.GetPosition(linePosition);
 		var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
@@ -1362,11 +1345,9 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 
 	private async Task<(ISymbol? symbol, LinePositionSpan? linePositionSpan, TokenSemanticInfo? semanticInfo)> LookupSymbolSemanticInfoInRazor(SharpIdeFile fileModel, LinePosition linePosition, CancellationToken cancellationToken = default)
 	{
-		var project = GetProjectForSharpIdeFile(fileModel);
+		var additionalDocument = GetRequiredTextDocumentForSharpIdeFile(fileModel);
 
-		var additionalDocument = project.AdditionalDocuments.Single(s => PathComparison.PathEquals(s.FilePath, fileModel.Path));
-
-		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(project);
+		var razorProjectSnapshot = _snapshotManager!.GetSnapshot(additionalDocument.Project);
 		var documentSnapshot = razorProjectSnapshot.GetDocument(additionalDocument);
 
 		var razorText = await additionalDocument.GetTextAsync(cancellationToken);
@@ -1629,7 +1610,7 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 	/// The project a file at this path belongs to, by its containing project folder and that project's globs. Null if none.
 	private ProjectId? GetProjectIdForNewFile(SharpIdeFile fileModel)
 	{
-		var sharpIdeProject = GetSharpIdeProjectForSharpIdeFile(fileModel);
+		var sharpIdeProject = _sharpIdeSolutionModel!.GetProjectByContainingFolder(fileModel);
 		if (sharpIdeProject is null) return null;
 		var probableProject = GetProjectForSharpIdeProjectModel(sharpIdeProject);
 		// This file probably belongs to this project, but we need to check its path against the globs for the project to make sure
@@ -1686,27 +1667,53 @@ public partial class RoslynAnalysis(ILogger<RoslynAnalysis> logger, BuildService
 		return outputPath;
 	}
 
-	private SharpIdeProjectModel? GetSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile) => _sharpIdeSolutionModel!.GetProjectForFile(sharpIdeFile);
-	private SharpIdeProjectModel GetRequiredSharpIdeProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
-	{
-		var sharpIdeProject = GetSharpIdeProjectForSharpIdeFile(sharpIdeFile);
-		Guard.Against.Null(sharpIdeProject);
-		return sharpIdeProject;
-	}
-
-	private Project GetProjectForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	/// The file's workspace document, found with Roslyn's file path index: a .cs file's Document, or a .razor/.cshtml file's AdditionalDocument.
+	/// A file is in several workspace projects when its project multi-targets (one per target framework), or when it is linked into more than one
+	/// project - this prefers the project whose folder contains the file, in its active target framework. Null if the file isn't in the workspace.
+	private TextDocument? TryGetTextDocumentForSharpIdeFile(SharpIdeFile sharpIdeFile)
 	{
 		if (sharpIdeFile.IsMetadataAsSourceFile)
 		{
-			var metadataAsSourceWorkspace = _metadataAsSourceFileService.TryGetWorkspace() ?? throw new InvalidOperationException("Metadata as source workspace is not available");
-			var documentId = metadataAsSourceWorkspace.CurrentSolution.GetDocumentIdsWithFilePath(sharpIdeFile.Path).SingleOrDefault() ?? throw new InvalidOperationException($"Document with path '{sharpIdeFile.Path}' not found in metadata as source workspace");
-			var document = metadataAsSourceWorkspace.CurrentSolution.GetDocument(documentId) ?? throw new InvalidOperationException($"Document with id '{documentId}' not found in metadata as source workspace");
-			var metadataAsSourceProject = document.Project;
-			return metadataAsSourceProject;
+			var metadataAsSourceSolution = _metadataAsSourceFileService.TryGetWorkspace()?.CurrentSolution;
+			var metadataAsSourceDocumentId = metadataAsSourceSolution?.GetDocumentIdsWithFilePath(sharpIdeFile.Path).SingleOrDefault();
+			return metadataAsSourceDocumentId is null ? null : metadataAsSourceSolution!.GetDocument(metadataAsSourceDocumentId);
 		}
-		var sharpIdeProjectModel = GetRequiredSharpIdeProjectForSharpIdeFile(sharpIdeFile);
-		var project = GetProjectForSharpIdeProjectModel(sharpIdeProjectModel);
-		return project;
+
+		var solution = _workspace!.CurrentSolution;
+		Func<DocumentId, bool> isExpectedKind = sharpIdeFile.IsCsharpFile ? solution.ContainsDocument : solution.ContainsAdditionalDocument;
+		var documentIds = solution.GetDocumentIdsWithFilePath(sharpIdeFile.Path).Where(isExpectedKind).ToList();
+		if (documentIds.Count is 0) return null;
+		if (documentIds.Count is 1) return solution.GetTextDocument(documentIds[0]);
+
+		var folderProjectFilePath = _sharpIdeSolutionModel!.GetProjectByContainingFolder(sharpIdeFile)?.FilePath;
+		var best = documentIds.MaxBy(documentId =>
+		{
+			var project = solution.GetProject(documentId.ProjectId)!;
+			return (PathComparison.PathEquals(project.FilePath, folderProjectFilePath) ? 2 : 0) + (IsActiveTargetFramework(project) ? 1 : 0);
+		});
+		return solution.GetTextDocument(best!);
+	}
+
+	private TextDocument GetRequiredTextDocumentForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	{
+		return TryGetTextDocumentForSharpIdeFile(sharpIdeFile) ?? throw new InvalidOperationException($"No document found in workspace for '{sharpIdeFile.Path}'");
+	}
+
+	private Document GetRequiredCSharpDocumentForSharpIdeFile(SharpIdeFile sharpIdeFile)
+	{
+		return GetRequiredTextDocumentForSharpIdeFile(sharpIdeFile) as Document ?? throw new InvalidOperationException($"'{sharpIdeFile.Path}' is not a C# document");
+	}
+
+	/// The project a workspace project was loaded from. Several workspace projects map to one when it multi-targets.
+	private SharpIdeProjectModel? GetSharpIdeProjectModelForProject(Project project) => _sharpIdeSolutionModel!.GetProjectByFilePath(project.FilePath);
+
+	/// True if the project isn't multi-targeted, or this is the target framework selected in the IDE
+	private bool IsActiveTargetFramework(Project project)
+	{
+		var flavor = project.State.NameAndFlavor.flavor;
+		if (flavor is null) return true;
+		var activeTargetFramework = GetSharpIdeProjectModelForProject(project)?.TargetFramework;
+		return string.Equals(flavor, activeTargetFramework, StringComparison.OrdinalIgnoreCase);
 	}
 
 	private static Project GetProjectForSharpIdeProjectModel(SharpIdeProjectModel projectModel)

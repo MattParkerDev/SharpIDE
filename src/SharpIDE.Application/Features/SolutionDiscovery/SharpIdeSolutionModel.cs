@@ -35,30 +35,39 @@ public class SharpIdeSolutionModel : ISharpIdeNode, IExpandableSharpIdeNode, ISo
 		Projects = new ObservableList<SharpIdeProjectModel>(intermediateModel.Projects.Select(s => new SharpIdeProjectModel(s, allProjects, allFiles, allFolders, this, fileTree)));
 		SlnFolders = new ObservableList<SharpIdeSolutionFolder>(intermediateModel.SolutionFolders.Select(s => new SharpIdeSolutionFolder(s, allProjects, allFiles, allFolders, this, fileTree)));
 		AllProjects = new ObservableHashSet<SharpIdeProjectModel>(allProjects);
-		RebuildProjectsByDirectory();
+		RebuildProjectLookups();
 	}
 
-	/// Project directory path -> project, so a file's project is found with a few hash lookups rather than scanning folders and projects
-	private volatile FrozenDictionary<string, SharpIdeProjectModel> _projectsByDirectory = FrozenDictionary<string, SharpIdeProjectModel>.Empty;
+	private sealed record ProjectLookups(FrozenDictionary<string, SharpIdeProjectModel> ByDirectory, FrozenDictionary<string, SharpIdeProjectModel> ByFilePath);
+	/// Swapped as a whole, so readers never see the two dictionaries out of step
+	private volatile ProjectLookups _projectLookups = new(FrozenDictionary<string, SharpIdeProjectModel>.Empty, FrozenDictionary<string, SharpIdeProjectModel>.Empty);
 
 	/// Must be called whenever AllProjects changes
-	internal void RebuildProjectsByDirectory()
+	internal void RebuildProjectLookups()
 	{
-		var projectsByDirectory = new Dictionary<string, SharpIdeProjectModel>(PathComparison.Comparer);
-		// TryAdd - first wins, as two csproj files may share a folder
+		var byDirectory = new Dictionary<string, SharpIdeProjectModel>(PathComparison.Comparer);
+		var byFilePath = new Dictionary<string, SharpIdeProjectModel>(PathComparison.Comparer);
 		// .ToList to avoid 'Object synchronization method was called from an unsynchronized block of code'
-		foreach (var project in AllProjects.ToList()) projectsByDirectory.TryAdd(project.DirectoryPath, project);
-		_projectsByDirectory = projectsByDirectory.ToFrozenDictionary(PathComparison.Comparer);
+		foreach (var project in AllProjects.ToList())
+		{
+			byDirectory.TryAdd(project.DirectoryPath, project); // First wins, as two csproj files may share a folder
+			byFilePath.TryAdd(project.FilePath, project);
+		}
+		_projectLookups = new ProjectLookups(byDirectory.ToFrozenDictionary(PathComparison.Comparer), byFilePath.ToFrozenDictionary(PathComparison.Comparer));
 	}
 
-	/// The project whose folder most closely contains the file, or null if the file isn't in a project (e.g. a solution-level .editorconfig)
-	public SharpIdeProjectModel? GetProjectForFile(SharpIdeFile file)
+	public SharpIdeProjectModel? GetProjectByFilePath(string? projectFilePath) => projectFilePath is null ? null : _projectLookups.ByFilePath.GetValueOrDefault(projectFilePath);
+
+	/// The project whose folder most closely contains the file, or null if none does (e.g. a solution-level .editorconfig).
+	/// Only a guess - it misses files linked in from elsewhere, and includes files the project's globs exclude. For a file already in the workspace,
+	/// RoslynAnalysis resolves its actual project(s) from the workspace instead.
+	public SharpIdeProjectModel? GetProjectByContainingFolder(SharpIdeFile file)
 	{
-		var projectsByDirectory = _projectsByDirectory;
+		var byDirectory = _projectLookups.ByDirectory;
 		var current = file.Parent;
 		while (current is SharpIdeFolder folder)
 		{
-			if (projectsByDirectory.TryGetValue(folder.Path, out var project)) return project;
+			if (byDirectory.TryGetValue(folder.Path, out var project)) return project;
 			current = folder.Parent;
 		}
 		return null;
