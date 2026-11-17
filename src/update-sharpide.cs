@@ -1,6 +1,7 @@
 ﻿#!/usr/bin/env dotnet
 
 #:property TargetFramework=net10.0
+#:property RollForward=Major
 
 using System.Diagnostics;
 using System.Formats.Tar;
