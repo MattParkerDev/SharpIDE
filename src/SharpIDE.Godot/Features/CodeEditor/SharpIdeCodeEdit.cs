@@ -370,6 +370,11 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		GD.Print($"Code fix selected: {id}");
 		if (id < 0 || id >= _currentCodeActionsInPopup.Count) return;
 		var codeAction = _currentCodeActionsInPopup[(int)id];
+		if (IdeCodeActionService.IsFixAll(codeAction))
+		{
+			ApplyFixAllCodeAction(codeAction);
+			return;
+		}
 
 		_ = Task.GodotRun(async () =>
 		{
@@ -378,6 +383,35 @@ public partial class SharpIdeCodeEdit : CodeEdit
 			if (navigation is var (file, linePosition))
 			{
 				await GodotGlobalEvents.Instance.FileExternallySelected.InvokeParallelAsync(file, linePosition);
+			}
+		});
+	}
+
+	/// Fix all (in a document, project or solution) can take a while, so shows a modal progress window, which blocks input to the IDE until the fixes are applied, or cancelled
+	[RequiresGodotUiThread]
+	private void ApplyFixAllCodeAction(CodeAction codeAction)
+	{
+		var progress = new CodeActionProgress();
+		var cancellationTokenSource = new CancellationTokenSource();
+		var progressWindow = new CodeActionProgressWindow();
+		progressWindow.Setup("Fix All", progress, cancellationTokenSource);
+		// The root window, rather than this editor, so the whole IDE is blocked, and the window outlives this editor if e.g. a fix closes its tab
+		GetTree().Root.AddChild(progressWindow);
+
+		_ = Task.GodotRun(async () =>
+		{
+			try
+			{
+				await _ideCodeActionService.ApplyCodeAction(codeAction, progress, cancellationTokenSource.Token);
+			}
+			catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+			{
+				GD.Print($"Fix all '{codeAction.Title}' cancelled");
+			}
+			finally
+			{
+				await progressWindow.InvokeAsync(() => progressWindow.Close());
+				cancellationTokenSource.Dispose();
 			}
 		});
 	}

@@ -3,6 +3,7 @@ using Ardalis.GuardClauses;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.CodeActions;
+using Microsoft.CodeAnalysis.CodeFixesAndRefactorings;
 using Microsoft.CodeAnalysis.LanguageServer;
 using Microsoft.CodeAnalysis.LanguageServer.Handler.CodeActions;
 using Microsoft.CodeAnalysis.Suggestions;
@@ -42,13 +43,48 @@ public partial class RoslynAnalysis
 			foreach (var suggestedAction in set.Actions)
 			{
 				if (CodeActionHelpers.IsCodeActionNotSupportedByLSP(suggestedAction)) continue;
-				var codeAction = CodeActionHelpers.GetNestedActionsFromActionSet(suggestedAction, fixAllScope: null);
 				var lspKind = CodeActionHelpers.GetCodeActionKindFromSuggestedActionCategoryName(set.CategoryName!, suggestedAction);
 				var isErrorFix = set.CategoryName is UnifiedPredefinedSuggestedActionCategoryNames.ErrorFix;
-				codeActions.Add(new IdeCodeAction(codeAction, ToIdeCodeActionKind(lspKind), isErrorFix));
+				var kind = ToIdeCodeActionKind(lspKind);
+				codeActions.Add(new IdeCodeAction(GetCodeActionWithNestedActions(suggestedAction), kind, isErrorFix));
+				if (GetFixAllCodeAction(suggestedAction) is { } fixAllCodeAction)
+				{
+					codeActions.Add(new IdeCodeAction(fixAllCodeAction, kind, isErrorFix));
+				}
 			}
 		}
 		return codeActions.ToImmutable();
+
+		// Mirrors CodeActionHelpers.GetNestedActionsFromActionSet, but adds every fix all scope, rather than just one - each nested action that supports fix all is followed by its "Fix All" action
+		static CodeAction GetCodeActionWithNestedActions(SuggestedAction suggestedAction)
+		{
+			var codeAction = suggestedAction.CodeAction;
+			if (suggestedAction.NestedActionSets.IsEmpty) return codeAction;
+			var nestedActions = ImmutableArray.CreateBuilder<CodeAction>();
+			foreach (var nestedSet in suggestedAction.NestedActionSets)
+			{
+				foreach (var nestedAction in nestedSet.Actions)
+				{
+					nestedActions.Add(GetCodeActionWithNestedActions(nestedAction));
+					if (GetFixAllCodeAction(nestedAction) is { } nestedFixAllCodeAction) nestedActions.Add(nestedFixAllCodeAction);
+				}
+			}
+			return CodeAction.Create(codeAction.Title, nestedActions.ToImmutable(), codeAction.IsInlinable, codeAction.Priority);
+		}
+
+		// "Fix All: <title>", with a nested action per scope (document, project, solution, containing member/type), as the Roslyn LSP offers them.
+		// Roslyn has already worked out the fix all flavors (states) for each action, so this is cheap - nothing is fixed until one is applied
+		static CodeAction? GetFixAllCodeAction(SuggestedAction suggestedAction)
+		{
+			if (suggestedAction.Flavors is not { Actions.IsDefaultOrEmpty: false } flavors) return null;
+			var title = suggestedAction.CodeAction.Title;
+			var scopeActions = flavors.Actions
+				.Where(a => a.RefactorOrFixAllState is not null)
+				.Select(CodeAction (a) => new RefactorOrFixAllCodeAction(a.RefactorOrFixAllState!, showPreviewChangesDialog: false))
+				.ToImmutableArray();
+			if (scopeActions.IsEmpty) return null;
+			return CodeAction.Create(string.Format(FeaturesResources.Fix_All_0, title), scopeActions, isInlinable: false, suggestedAction.CodeAction.Priority);
+		}
 
 		static IdeCodeActionKind ToIdeCodeActionKind(Roslyn.LanguageServer.Protocol.CodeActionKind kind)
 		{
@@ -59,13 +95,16 @@ public partial class RoslynAnalysis
 		}
 	}
 
+	/// Whether the code action fixes (or refactors) every occurrence in a document, project or solution - which can take a while, so is worth showing progress for
+	public static bool IsFixAllCodeAction(CodeAction codeAction) => codeAction is RefactorOrFixAllCodeAction;
+
 	/// Returns the file changes that applying the code action would make, and where to navigate afterwards. Does not apply the changes to the workspace sln
-	public async Task<CodeActionApplyChanges> GetCodeActionApplyChanges(CodeAction codeAction, CancellationToken cancellationToken = default)
+	public async Task<CodeActionApplyChanges> GetCodeActionApplyChanges(CodeAction codeAction, IProgress<CodeAnalysisProgress>? progress = null, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionApplyChanges)}");
 		await _solutionLoadedTcs.Task;
 		var originalSolution = _workspace!.CurrentSolution;
-		var operations = await codeAction.GetOperationsAsync(originalSolution, CodeAnalysisProgress.None, cancellationToken);
+		var operations = await codeAction.GetOperationsAsync(originalSolution, progress ?? CodeAnalysisProgress.None, cancellationToken);
 		var updatedSolution = originalSolution;
 		(DocumentId DocumentId, int Position)? navigationTarget = null;
 		foreach (var operation in operations)
