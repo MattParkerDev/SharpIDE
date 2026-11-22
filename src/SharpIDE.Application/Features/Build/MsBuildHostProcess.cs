@@ -4,6 +4,7 @@ using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using PolyType.SourceGenerator;
+using SharpIDE.Application.Features.Run;
 using StreamJsonRpc;
 
 namespace SharpIDE.Application.Features.Build;
@@ -29,13 +30,7 @@ internal static class MsBuildHostProcess
 			WindowStyle = ProcessWindowStyle.Hidden
 		};
 		if (designTime) startupInfo.ArgumentList.Add("--design-time");
-		var keysToRemove = startupInfo.Environment
-			.Where(s => s.Key.StartsWith("DOTNET_", StringComparison.OrdinalIgnoreCase) || s.Key.StartsWith("MSBuild", StringComparison.OrdinalIgnoreCase))
-			.Where(s => s.Key.Equals("DOTNET_CLI_TELEMETRY_OPTOUT", StringComparison.OrdinalIgnoreCase) is false) // I don't know if this affects anything in MSBuild, but let's propagate it anyway if the user has it set
-			.Select(s => s.Key)
-			.ToList();
-		keysToRemove.ForEach(s => startupInfo.Environment.Remove(s));
-		startupInfo.Environment["DOTNET_ROLL_FORWARD_TO_PRERELEASE"] = "1";
+		ChildProcessEnvironment.ConfigureForSharpIdeHelperProcess(startupInfo, removeMsBuildVariables: true);
 		// ["DOTNET_ROLL_FORWARD"] = "LatestMajor" isn't necessary as it is set in the SharpIDE.MsBuildHost.runtimeconfig.json, from the <RollForward>LatestMajor</RollForward> csproj property
 		var process = Process.Start(startupInfo);
 		if (process is null) throw new InvalidOperationException("Failed to start SharpIDE.MsBuildHost");
