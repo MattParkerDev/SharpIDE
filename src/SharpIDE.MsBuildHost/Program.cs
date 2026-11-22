@@ -10,7 +10,7 @@ Guard.Against.NullOrWhiteSpace(sdkVersion);
 var projectOrSlnDirectory = new DirectoryInfo(args[1]);
 if (projectOrSlnDirectory.Exists is false) throw new DirectoryNotFoundException($"Project or sln directory '{projectOrSlnDirectory.FullName}' does not exist.");
 
-SharpIdeMsbuildLocator.Register(sdkVersion, projectOrSlnDirectory.FullName);
+await SharpIdeMsbuildLocator.Register(sdkVersion, projectOrSlnDirectory.FullName);
 
 if (args.Contains("--diag"))
 {
