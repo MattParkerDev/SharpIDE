@@ -1,6 +1,6 @@
-using CliWrap;
-using CliWrap.Buffered;
+using System.Diagnostics;
 using NuGet.Versioning;
+using SharpIDE.Application.Extensions;
 
 namespace SharpIDE.Application.Features.DotnetNew;
 
@@ -10,7 +10,7 @@ public static class SharpIdeDotnetSdkDirectoryLocator
 {
 	public static async Task<IReadOnlyList<DotnetTemplateSdk>> GetInstalledSdks(string workingDirectory, CancellationToken cancellationToken = default)
 	{
-		var result = await Cli.Wrap("dotnet").WithWorkingDirectory(workingDirectory).WithArguments("--list-sdks").ExecuteBufferedAsync(cancellationToken);
+		var result = await Process.RunAndCaptureTextInDirAsync("dotnet", ["--list-sdks"], workingDirectory, cancellationToken);
 		return ParseInstalledSdks(result.StandardOutput);
 	}
 
@@ -31,7 +31,7 @@ public static class SharpIdeDotnetSdkDirectoryLocator
 	public static async Task<DotnetTemplateSdk> ResolveSdk(string workingDirectory, IReadOnlyList<DotnetTemplateSdk> installedSdks, CancellationToken cancellationToken = default)
 	{
 		// Let dotnet implement global.json lookup, rollForward and allowPrerelease.
-		var result = await Cli.Wrap("dotnet").WithWorkingDirectory(workingDirectory).WithArguments("--version").ExecuteBufferedAsync(cancellationToken);
+		var result = await Process.RunAndCaptureTextInDirAsync("dotnet", ["--version"], workingDirectory, cancellationToken);
 		var version = result.StandardOutput.Trim();
 		return installedSdks.FirstOrDefault(sdk => sdk.Version == version)
 			?? throw new InvalidOperationException($"Resolved SDK {version} was not found in dotnet --list-sdks.");

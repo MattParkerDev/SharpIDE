@@ -1,9 +1,8 @@
 using System.Diagnostics;
-using CliWrap;
-using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using PolyType.SourceGenerator;
+using SharpIDE.Application.Extensions;
 using SharpIDE.Application.Features.Run;
 using StreamJsonRpc;
 
@@ -49,7 +48,7 @@ internal static class MsBuildHostProcess
 
 	private static async Task<NuGetVersion> GetCorrectDotnetSdkVersion(string slnOrProjectDirectory)
 	{
-		var result = await Cli.Wrap("dotnet").WithWorkingDirectory(slnOrProjectDirectory).WithArguments("--version").ExecuteBufferedAsync();
+		var result = await Process.RunAndCaptureTextInDirAsync("dotnet", ["--version"], slnOrProjectDirectory);
 		return NuGetVersion.Parse(result.StandardOutput.Trim());
 	}
 }

@@ -2,11 +2,11 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using Ardalis.GuardClauses;
-using CliWrap;
 using Godot;
 using Microsoft.CodeAnalysis;
 using NuGet.Versioning;
 using Octokit;
+using SharpIDE.Application.Extensions;
 using Environment = System.Environment;
 using HttpClient = System.Net.Http.HttpClient;
 using ProductHeaderValue = Octokit.ProductHeaderValue;
@@ -83,7 +83,7 @@ public static class AutoUpdate
 		}
 
 		// Pre-build the updater cs file based app
-		await Cli.Wrap("dotnet").WithArguments(["build", Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs")]).ExecuteAsync();
+		await Process.Run2Async("dotnet", ["build", Path.Combine(AppContext.BaseDirectory, "update-sharpide.cs")], true);
 		return uncompressedReleaseArchive.FullName;
 	}
 

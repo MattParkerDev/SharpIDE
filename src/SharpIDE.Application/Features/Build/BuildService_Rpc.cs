@@ -1,13 +1,8 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net.Sockets;
-using CliWrap;
-using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 using NeoSmart.AsyncLock;
-using NuGet.Versioning;
-using PolyType.SourceGenerator;
-using SharpIDE.Application.Features.Events;
 using SharpIDE.MsBuildHost.Contracts;
 using StreamJsonRpc;
 
