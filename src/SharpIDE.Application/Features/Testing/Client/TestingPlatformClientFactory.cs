@@ -44,12 +44,28 @@ public partial /* for codegen regx */ class TestingPlatformClientFactory
 		// environmentVariables.Add(EnvironmentVariableConstants.TESTINGPLATFORM_LAUNCH_ATTACH_DEBUGGER, "1");
 		TcpListener tcpListener = new(IPAddress.Loopback, 0);
 		tcpListener.Start();
-		StringBuilder builder = new();
+		// Output is only captured until the server connects, for the timeout message. The stdout and stderr events fire on different threads.
+		// Null once capturing stops, so the captured output can be collected.
+		StringBuilder? startupOutput = new();
+		Lock startupOutputLock = new();
+		void AppendStartupOutput(string text)
+		{
+			lock (startupOutputLock) startupOutput?.AppendLine(text);
+		}
+		string GetStartupOutput()
+		{
+			lock (startupOutputLock) return startupOutput?.ToString() ?? "";
+		}
+		void StopCapturingStartupOutput()
+		{
+			lock (startupOutputLock) startupOutput = null;
+		}
 		ProcessConfiguration processConfig = new(testAppLaunch.FileName)
 		{
-			OnStandardOutput = (_, output) => builder.AppendLine(CultureInfo.InvariantCulture, $"OnStandardOutput:\n{output}"),
-			OnErrorOutput = (_, output) => builder.AppendLine(CultureInfo.InvariantCulture, $"OnErrorOutput:\n{output}"),
-			OnExit = (_, exitCode) => builder.AppendLine(CultureInfo.InvariantCulture, $"OnExit: exit code '{exitCode}'"),
+			// The handlers must stay subscribed after capturing stops, so the test host's stdout/stderr keep being drained
+			OnStandardOutput = (_, output) => AppendStartupOutput($"OnStandardOutput:\n{output}"),
+			OnErrorOutput = (_, output) => AppendStartupOutput($"OnErrorOutput:\n{output}"),
+			OnExit = (_, exitCode) => AppendStartupOutput(string.Create(CultureInfo.InvariantCulture, $"OnExit: exit code '{exitCode}'")),
 
 			Arguments = [.. testAppLaunch.Arguments, "--server", "--client-host", "localhost", "--client-port", ((IPEndPoint)tcpListener.LocalEndpoint).Port.ToString(CultureInfo.InvariantCulture)],
 			// Append "--diagnostic", "--diagnostic-verbosity", "trace" for MTP diagnostic logs
@@ -67,7 +83,11 @@ public partial /* for codegen regx */ class TestingPlatformClientFactory
 		}
 		catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationTokenSource.Token)
 		{
-			throw new OperationCanceledException($"Timeout on connection for command line '{processConfig.FileName} {string.Join(' ', processConfig.Arguments)}'\n{builder}", ex, cancellationTokenSource.Token);
+			throw new OperationCanceledException($"Timeout on connection for command line '{processConfig.FileName} {string.Join(' ', processConfig.Arguments)}'\n{GetStartupOutput()}", ex, cancellationTokenSource.Token);
+		}
+		finally
+		{
+			StopCapturingStartupOutput();
 		}
 		var tcpStream = tcpClient.GetStream();
 		var handler = new HeaderDelimitedMessageHandler(tcpStream, tcpStream, new SystemTextJsonFormatter { JsonSerializerOptions = RpcJsonSerializerOptions.Default });
