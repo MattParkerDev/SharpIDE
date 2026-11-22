@@ -3,7 +3,10 @@ using Ardalis.GuardClauses;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.CodeActions;
+using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeFixesAndRefactorings;
+using Microsoft.CodeAnalysis.CodeRefactorings;
+using Microsoft.CodeAnalysis.LanguageService;
 using Microsoft.CodeAnalysis.LanguageServer;
 using Microsoft.CodeAnalysis.LanguageServer.Handler.CodeActions;
 using Microsoft.CodeAnalysis.Suggestions;
@@ -19,7 +22,6 @@ namespace SharpIDE.Application.Features.Analysis;
 public partial class RoslynAnalysis
 {
 	/// Gets the code fixes and refactorings for the selection (an empty span for just the caret), filtered and ordered the same way as the Roslyn LSP (VS Code) - e.g. error fixes first, grouped by diagnostic and priority.
-	/// Code actions with nested actions are returned as a CodeAction with NestedActions, which itself cannot be applied.
 	public async Task<ImmutableArray<IdeCodeAction>> GetCodeActionsForDocumentAtPosition(SharpIdeFile fileModel, LinePositionSpan selection, CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(RoslynAnalysis)}.{nameof(GetCodeActionsForDocumentAtPosition)}");
@@ -37,6 +39,7 @@ public partial class RoslynAnalysis
 			cancellationToken);
 		if (actionSets.IsDefaultOrEmpty) return [];
 
+		var containerTitles = new Dictionary<(DocumentId, int Position, bool IsMember), string?>();
 		var codeActions = ImmutableArray.CreateBuilder<IdeCodeAction>();
 		foreach (var set in actionSets)
 		{
@@ -45,46 +48,112 @@ public partial class RoslynAnalysis
 				if (CodeActionHelpers.IsCodeActionNotSupportedByLSP(suggestedAction)) continue;
 				var lspKind = CodeActionHelpers.GetCodeActionKindFromSuggestedActionCategoryName(set.CategoryName!, suggestedAction);
 				var isErrorFix = set.CategoryName is UnifiedPredefinedSuggestedActionCategoryNames.ErrorFix;
-				var kind = ToIdeCodeActionKind(lspKind);
-				codeActions.Add(new IdeCodeAction(GetCodeActionWithNestedActions(suggestedAction), kind, isErrorFix));
-				if (GetFixAllCodeAction(suggestedAction) is { } fixAllCodeAction)
-				{
-					codeActions.Add(new IdeCodeAction(fixAllCodeAction, kind, isErrorFix));
-				}
+				codeActions.Add(new IdeCodeAction(await ToItem(suggestedAction), ToIdeCodeActionKind(lspKind), isErrorFix));
 			}
 		}
 		return codeActions.ToImmutable();
 
-		// Mirrors CodeActionHelpers.GetNestedActionsFromActionSet, but adds every fix all scope, rather than just one - each nested action that supports fix all is followed by its "Fix All" action
-		static CodeAction GetCodeActionWithNestedActions(SuggestedAction suggestedAction)
+		// Mirrors CodeActionHelpers.GetNestedActionsFromActionSet, but rather than adding a "Fix All" action alongside each action (for one scope), nests every scope under the action
+		async Task<IdeCodeActionItem> ToItem(SuggestedAction suggestedAction)
 		{
 			var codeAction = suggestedAction.CodeAction;
-			if (suggestedAction.NestedActionSets.IsEmpty) return codeAction;
-			var nestedActions = ImmutableArray.CreateBuilder<CodeAction>();
-			foreach (var nestedSet in suggestedAction.NestedActionSets)
+			if (suggestedAction.NestedActionSets.IsEmpty is false)
 			{
-				foreach (var nestedAction in nestedSet.Actions)
+				var children = ImmutableArray.CreateBuilder<IdeCodeActionItem>();
+				foreach (var nestedAction in suggestedAction.NestedActionSets.SelectMany(s => s.Actions))
 				{
-					nestedActions.Add(GetCodeActionWithNestedActions(nestedAction));
-					if (GetFixAllCodeAction(nestedAction) is { } nestedFixAllCodeAction) nestedActions.Add(nestedFixAllCodeAction);
+					children.Add(await ToItem(nestedAction));
 				}
+				return new IdeCodeActionItem(codeAction.Title, null, children.ToImmutable());
 			}
-			return CodeAction.Create(codeAction.Title, nestedActions.ToImmutable(), codeAction.IsInlinable, codeAction.Priority);
+			return new IdeCodeActionItem(codeAction.Title, codeAction, await GetFixAllItems(suggestedAction));
 		}
 
-		// "Fix All: <title>", with a nested action per scope (document, project, solution, containing member/type), as the Roslyn LSP offers them.
-		// Roslyn has already worked out the fix all flavors (states) for each action, so this is cheap - nothing is fixed until one is applied
-		static CodeAction? GetFixAllCodeAction(SuggestedAction suggestedAction)
+		// Cheap - Roslyn has already computed the fix all states, nothing is fixed until one is applied
+		async Task<ImmutableArray<IdeCodeActionItem>> GetFixAllItems(SuggestedAction suggestedAction)
 		{
-			if (suggestedAction.Flavors is not { Actions.IsDefaultOrEmpty: false } flavors) return null;
-			var title = suggestedAction.CodeAction.Title;
-			var scopeActions = flavors.Actions
-				.Where(a => a.RefactorOrFixAllState is not null)
-				.Select(CodeAction (a) => new RefactorOrFixAllCodeAction(a.RefactorOrFixAllState!, showPreviewChangesDialog: false))
-				.ToImmutableArray();
-			if (scopeActions.IsEmpty) return null;
-			return CodeAction.Create(string.Format(FeaturesResources.Fix_All_0, title), scopeActions, isInlinable: false, suggestedAction.CodeAction.Priority);
+			if (suggestedAction.Flavors is not { Actions.IsDefaultOrEmpty: false } flavors) return [];
+			var items = ImmutableArray.CreateBuilder<IdeCodeActionItem>();
+			foreach (var state in flavors.Actions.Select(a => a.RefactorOrFixAllState).OfType<IRefactorOrFixAllState>().OrderBy(s => GetScopeOrder(s.Scope)))
+			{
+				var title = await GetScopeTitle(state);
+				items.Add(new IdeCodeActionItem(title, new RefactorOrFixAllCodeAction(state, showPreviewChangesDialog: false, title: $"{suggestedAction.CodeAction.Title} {title}"), []));
+			}
+			return items.ToImmutable();
 		}
+
+		async Task<string> GetScopeTitle(IRefactorOrFixAllState state) => state.Scope switch
+		{
+			FixAllScope.ContainingMember => $"in {await GetContainerTitle(state, isMember: true) ?? "member"}",
+			FixAllScope.ContainingType => $"in {await GetContainerTitle(state, isMember: false) ?? "type"}",
+			FixAllScope.Document => "in Document",
+			FixAllScope.Project => "in Project",
+			FixAllScope.Solution => "in Solution",
+			_ => $"in {state.Scope}"
+		};
+
+		// Found the same way Roslyn finds the spans to fix (AbstractFixAllSpanMappingService)
+		async Task<string?> GetContainerTitle(IRefactorOrFixAllState state, bool isMember)
+		{
+			if (state.Document is not { } containerDocument) return null;
+			var position = state switch
+			{
+				FixAllState { DiagnosticSpan: { } diagnosticSpan } => diagnosticSpan.Start,
+				RefactorAllState refactorAllState => refactorAllState._selectionSpan.Start,
+				_ => (await containerDocument.GetTextAsync(cancellationToken)).Lines.GetPosition(selection.Start)
+			};
+			var key = (containerDocument.Id, position, isMember);
+			if (containerTitles.TryGetValue(key, out var cachedTitle)) return cachedTitle;
+
+			var root = await containerDocument.GetRequiredSyntaxRootAsync(cancellationToken);
+			var syntaxFacts = containerDocument.GetRequiredLanguageService<ISyntaxFactsService>();
+			var declaration = isMember ? syntaxFacts.GetContainingMemberDeclaration(root, position) : syntaxFacts.GetContainingTypeDeclaration(root, position);
+			string? title = null;
+			if (declaration is not null)
+			{
+				var semanticModel = await containerDocument.GetRequiredSemanticModelAsync(cancellationToken);
+				title = DescribeSymbol(semanticModel.GetDeclaredSymbol(declaration, cancellationToken));
+			}
+			containerTitles[key] = title;
+			return title;
+		}
+
+		static string? DescribeSymbol(ISymbol? symbol) => symbol switch
+		{
+			IMethodSymbol { MethodKind: MethodKind.Constructor or MethodKind.StaticConstructor } method => $"constructor '{method.ContainingType.Name}'",
+			IMethodSymbol { MethodKind: MethodKind.Destructor } method => $"finalizer '{method.ContainingType.Name}'",
+			IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator or MethodKind.Conversion } => "operator",
+			IMethodSymbol { AssociatedSymbol: { } associatedSymbol } => DescribeSymbol(associatedSymbol),
+			IMethodSymbol method => $"method '{method.Name}'",
+			IPropertySymbol { IsIndexer: true } => "indexer",
+			IPropertySymbol property => $"property '{property.Name}'",
+			IEventSymbol @event => $"event '{@event.Name}'",
+			IFieldSymbol field => $"field '{field.Name}'",
+			INamedTypeSymbol type => $"{GetTypeKindName(type)} '{type.Name}'",
+			_ => null
+		};
+
+		static string GetTypeKindName(INamedTypeSymbol type) => type switch
+		{
+			{ IsRecord: true, TypeKind: TypeKind.Struct } => "record struct",
+			{ IsRecord: true } => "record",
+			{ TypeKind: TypeKind.Class } => "class",
+			{ TypeKind: TypeKind.Struct } => "struct",
+			{ TypeKind: TypeKind.Interface } => "interface",
+			{ TypeKind: TypeKind.Enum } => "enum",
+			{ TypeKind: TypeKind.Delegate } => "delegate",
+			_ => "type"
+		};
+
+		static int GetScopeOrder(FixAllScope scope) => scope switch
+		{
+			FixAllScope.ContainingMember => 0,
+			FixAllScope.ContainingType => 1,
+			FixAllScope.Document => 2,
+			FixAllScope.Project => 3,
+			FixAllScope.Solution => 4,
+			_ => 5
+		};
 
 		static IdeCodeActionKind ToIdeCodeActionKind(Roslyn.LanguageServer.Protocol.CodeActionKind kind)
 		{
@@ -95,7 +164,6 @@ public partial class RoslynAnalysis
 		}
 	}
 
-	/// Whether the code action fixes (or refactors) every occurrence in a document, project or solution - which can take a while, so is worth showing progress for
 	public static bool IsFixAllCodeAction(CodeAction codeAction) => codeAction is RefactorOrFixAllCodeAction;
 
 	/// Returns the file changes that applying the code action would make, and where to navigate afterwards. Does not apply the changes to the workspace sln

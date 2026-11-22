@@ -8,7 +8,6 @@ public class IdeCodeActionService(RoslynAnalysis roslynAnalysis, IdeSolutionFile
 	private readonly RoslynAnalysis _roslynAnalysis = roslynAnalysis;
 	private readonly IdeSolutionFileChangesService _solutionFileChangesService = solutionFileChangesService;
 
-	/// Whether the code action fixes every occurrence in a document, project or solution - long running, so worth showing progress for
 	public static bool IsFixAll(CodeAction codeAction) => RoslynAnalysis.IsFixAllCodeAction(codeAction);
 
 	/// Applies the code action's file changes (edits, and added, removed and renamed files - including .editorconfig).

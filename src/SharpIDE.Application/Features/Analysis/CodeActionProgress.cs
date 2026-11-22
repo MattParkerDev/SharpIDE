@@ -2,12 +2,10 @@ using Microsoft.CodeAnalysis;
 
 namespace SharpIDE.Application.Features.Analysis;
 
-/// A point-in-time view of a code action's progress. Total is 0 when the amount of work isn't known (an indeterminate progress bar).
-/// IsApplying is whether the changes are being applied, rather than computed - they can no longer be cancelled.
+/// Total is 0 when the amount of work isn't known
 public readonly record struct CodeActionProgressSnapshot(string? Description, int Completed, int Total, bool IsApplying);
 
-/// Collects the progress Roslyn reports while computing a code action (e.g. fix all), and the progress of applying its changes.
-/// Reported from any thread - the UI reads Snapshot when it redraws, rather than being called for every report.
+/// Reported from any thread - the UI polls Snapshot
 public sealed class CodeActionProgress : IProgress<CodeAnalysisProgress>
 {
 	private readonly Lock _lock = new();
@@ -24,7 +22,7 @@ public sealed class CodeActionProgress : IProgress<CodeAnalysisProgress>
 		}
 	}
 
-	/// Mirrors how VS's progress tracker interprets CodeAnalysisProgress - Clear restarts the bar for a new phase (e.g. fixing, then cleaning up the fixed documents)
+	/// Clear starts a new phase, e.g. fixing, then cleaning up the fixed documents
 	public void Report(CodeAnalysisProgress value)
 	{
 		lock (_lock)
@@ -40,7 +38,6 @@ public sealed class CodeActionProgress : IProgress<CodeAnalysisProgress>
 		}
 	}
 
-	/// The changes have been computed, and are now being applied - with no known amount of work
 	public void StartApplying(string description)
 	{
 		lock (_lock)

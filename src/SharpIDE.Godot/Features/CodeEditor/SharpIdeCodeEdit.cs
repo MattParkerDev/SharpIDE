@@ -118,6 +118,7 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		_findReplaceBar = GetNode<FindReplaceBar>("%FindReplaceBar");
 		_findReplaceBar.SetTextEdit(this);
 		_popupMenu.IdPressed += OnCodeFixSelected;
+		_popupMenu.WindowInput += @event => OnCodeActionsMenuInput(_popupMenu, @event);
 		CustomCodeCompletionRequested.Subscribe(OnCodeCompletionRequested);
 		CodeFixesRequested += OnCodeFixesRequested;
 		BreakpointToggled += OnBreakpointToggled;
@@ -365,10 +366,12 @@ public partial class SharpIdeCodeEdit : CodeEdit
 	}
 
 	// TODO: This is now significantly slower, invoke -> text updated in editor
+	private ulong _lastCodeFixSelectedFrame = ulong.MaxValue;
 	private void OnCodeFixSelected(long id)
 	{
 		GD.Print($"Code fix selected: {id}");
 		if (id < 0 || id >= _currentCodeActionsInPopup.Count) return;
+		_lastCodeFixSelectedFrame = Engine.GetProcessFrames();
 		var codeAction = _currentCodeActionsInPopup[(int)id];
 		if (IdeCodeActionService.IsFixAll(codeAction))
 		{
@@ -387,15 +390,14 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		});
 	}
 
-	/// Fix all (in a document, project or solution) can take a while, so shows a modal progress window, which blocks input to the IDE until the fixes are applied, or cancelled
 	[RequiresGodotUiThread]
 	private void ApplyFixAllCodeAction(CodeAction codeAction)
 	{
 		var progress = new CodeActionProgress();
 		var cancellationTokenSource = new CancellationTokenSource();
 		var progressWindow = new CodeActionProgressWindow();
-		progressWindow.Setup("Fix All", progress, cancellationTokenSource);
-		// The root window, rather than this editor, so the whole IDE is blocked, and the window outlives this editor if e.g. a fix closes its tab
+		progressWindow.Setup(codeAction.Title, progress, cancellationTokenSource);
+		// The root, so the whole IDE is blocked, and the window outlives this editor
 		GetTree().Root.AddChild(progressWindow);
 
 		_ = Task.GodotRun(async () =>
@@ -1041,11 +1043,10 @@ public partial class SharpIdeCodeEdit : CodeEdit
 				ClearCodeActionsPopup();
 				foreach (var ideCodeAction in codeActions)
 				{
-					AddCodeActionToMenu(_popupMenu, ideCodeAction.CodeAction);
-					var index = _popupMenu.ItemCount - 1;
-					// A red lightbulb for error fixes, yellow for other fixes, a wrench for refactorings. Nested actions have no icon
-					_popupMenu.SetItemIcon(index, GetCodeActionIcon(ideCodeAction));
-					_popupMenu.SetItemIconMaxWidth(index, 16);
+					// A red lightbulb for error fixes, yellow for other fixes, a wrench for refactorings. Nested actions have no icon, except fix all scopes
+					var icon = GetCodeActionIcon(ideCodeAction);
+					AddCodeActionToMenu(_popupMenu, ideCodeAction.Item, icon);
+					SetCodeActionItemIcon(_popupMenu, _popupMenu.ItemCount - 1, icon);
 				}
 				if (codeActions.Length is not 0) _popupMenu.SetFocusedItem(0);
 				GD.Print($"Code fixes found: {codeActions.Length}, displaying menu");
@@ -1070,25 +1071,73 @@ public partial class SharpIdeCodeEdit : CodeEdit
 		}
 	}
 
-	/// Code actions with nested actions (e.g. "Configure or suppress issues") cannot be applied themselves, so they are shown as submenus
-	private void AddCodeActionToMenu(PopupMenu menu, CodeAction codeAction)
+	/// Not -1, which Godot replaces with the item's index
+	private const int ContainerOnlyItemId = int.MaxValue;
+
+	private static void SetCodeActionItemIcon(PopupMenu menu, int index, Texture2D icon)
 	{
-		if (codeAction.NestedActions.IsEmpty)
+		menu.SetItemIcon(index, icon);
+		menu.SetItemIconMaxWidth(index, 16);
+	}
+
+	private void AddCodeActionToMenu(PopupMenu menu, IdeCodeActionItem item, Texture2D icon)
+	{
+		var id = ContainerOnlyItemId;
+		if (item.CodeAction is not null)
 		{
-			menu.AddItem(codeAction.Title, _currentCodeActionsInPopup.Count);
-			_currentCodeActionsInPopup.Add(codeAction);
+			id = _currentCodeActionsInPopup.Count;
+			_currentCodeActionsInPopup.Add(item.CodeAction);
+		}
+		if (item.Children.IsEmpty)
+		{
+			menu.AddItem(item.Title, id);
 			return;
 		}
 
 		var submenu = new PopupMenu();
 		submenu.IdPressed += OnCodeFixSelected;
+		submenu.WindowInput += @event => OnCodeActionsMenuInput(submenu, @event);
 		// The submenu must be a child of the PopupMenu, so it is a descendant of _popupMenu, and gets freed by ClearCodeActionsPopup
 		menu.AddChild(submenu);
-		foreach (var nestedAction in codeAction.NestedActions)
+		foreach (var child in item.Children)
 		{
-			AddCodeActionToMenu(submenu, nestedAction);
+			AddCodeActionToMenu(submenu, child, icon);
+			if (item.CodeAction is not null) SetCodeActionItemIcon(submenu, submenu.ItemCount - 1, icon);
 		}
-		menu.AddSubmenuNodeItem(codeAction.Title, submenu);
+		menu.AddSubmenuNodeItem(item.Title, submenu, id);
+	}
+
+	private bool _codeActionsMenuLeftMousePressed;
+	/// Godot's PopupMenu only opens a submenu when its item is clicked or Enter is pressed, and doesn't report it - so the item's own code action is applied here.
+	/// window_input is emitted after the PopupMenu has handled the event
+	private void OnCodeActionsMenuInput(PopupMenu menu, InputEvent @event)
+	{
+		var isActivation = false;
+		if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left } mouseButton)
+		{
+			// Only a click that started on the menu - not the release of the click that opened it
+			if (mouseButton.Pressed) _codeActionsMenuLeftMousePressed = true;
+			else if (_codeActionsMenuLeftMousePressed)
+			{
+				_codeActionsMenuLeftMousePressed = false;
+				isActivation = true;
+			}
+		}
+		else if (@event.IsActionPressed(InputStringNames.UiAccept, exactMatch: true))
+		{
+			isActivation = true;
+		}
+		if (isActivation is false) return;
+
+		var index = menu.GetFocusedItem();
+		if (index < 0 || menu.GetItemSubmenuNode(index) is not { } submenu) return;
+		var id = menu.GetItemId(index);
+		if (id < 0 || id >= _currentCodeActionsInPopup.Count) return;
+		// Enter on an item whose submenu is already open activates the item itself, which already applied it (id_pressed is emitted before window_input)
+		if (_lastCodeFixSelectedFrame == Engine.GetProcessFrames()) return;
+		submenu.Hide();
+		_popupMenu.Hide();
+		OnCodeFixSelected(id);
 	}
 
 	private (int line, int col) GetCaretPosition(bool startAt1 = false)

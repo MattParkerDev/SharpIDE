@@ -3,10 +3,7 @@ using SharpIDE.Application.Features.Analysis;
 
 namespace SharpIDE.Godot.Features.CodeEditor;
 
-/// A modal window, centred on the IDE, showing the progress of a long running code action (e.g. fix all in solution).
-/// It is exclusive, so blocks all mouse and keyboard input to the IDE while it is open - the files being fixed can't be edited underneath it.
-/// Cancel (or closing the window) cancels the code action while its changes are still being computed; once they are being applied, it can't be cancelled.
-/// Frees itself when closed.
+/// Exclusive, so blocks all input to the IDE while open. Frees itself when closed.
 public partial class CodeActionProgressWindow : Window
 {
 	private readonly Label _descriptionLabel = new();
@@ -17,7 +14,6 @@ public partial class CodeActionProgressWindow : Window
 	private CancellationTokenSource _cancellationTokenSource = null!;
 	private CodeActionProgressSnapshot? _lastSnapshot;
 
-	/// Call once, before adding the window to the tree
 	public void Setup(string title, CodeActionProgress progress, CancellationTokenSource cancellationTokenSource)
 	{
 		_progress = progress;
@@ -63,14 +59,14 @@ public partial class CodeActionProgressWindow : Window
 		_cancelButton.GrabFocus();
 	}
 
-	/// Polls the progress each frame - reports come from Roslyn's threads, often many per frame
+	// Polled, as reports come from Roslyn's threads, often many per frame
 	public override void _Process(double delta)
 	{
 		var snapshot = _progress.Snapshot;
 		if (snapshot == _lastSnapshot) return;
 		_lastSnapshot = snapshot;
 		if (snapshot.Description is { } description) _descriptionLabel.Text = description;
-		// Once the changes are being applied, cancelling would leave them half applied - so it is no longer offered
+		// Cancelling now would leave the changes half applied
 		if (snapshot.IsApplying) _cancelButton.Disabled = true;
 		if (snapshot.Total is 0)
 		{
