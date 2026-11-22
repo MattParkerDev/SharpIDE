@@ -23,7 +23,9 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 	{
 		Guard.Against.NegativeOrZero(debuggeeProcessId, "Process ID must be a positive integer.");
 
+		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 		var (inputStream, outputStream, isNetCoreDbg, debuggerDisposable) = DebuggerProcessStreamHelper.NewDebuggerProcessStreamsForInfo(debuggerExecutableInfo, _logger);
+		_logger.LogInformation("Debugger process started in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
 
 		// inputStream is the debug adapter's stdin, outputStream is its stdout. The connection reads from the adapter's stdout, and writes to its stdin.
 		var connection = new DapConnection(outputStream, inputStream, new DebuggerClientRequestHandler(), new DapConnectionOptions
@@ -71,6 +73,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		};
 		connection.Start();
 		await SendRequestAsync(connection, initializeArguments, cancellationToken);
+		_logger.LogInformation("Debugger responded to initialize {ElapsedMs}ms after starting", stopwatch.ElapsedMilliseconds);
 
 		var attachArguments = new AttachArguments
 		{
@@ -86,6 +89,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 		await SendRequestAsync(connection, attachArguments, cancellationToken);
 		// AttachRequest -> HandshakeRequest -> InitializedEvent
 		await initializedEventTcs.Task;
+		_logger.LogInformation("Debugger attached to process {DebuggeeProcessId} {ElapsedMs}ms after starting", debuggeeProcessId, stopwatch.ElapsedMilliseconds);
 
 		foreach (var (file, breakpoints) in breakpointsByFile)
 		{
@@ -105,6 +109,7 @@ public class DebuggingService(ILogger<DebuggingService> logger)
 			await SendRequestAsync(connection, new ConfigurationDoneArguments(), cancellationToken);
 			await DiagnosticClientResumeRuntime(debuggeeProcessId);
 		}
+		_logger.LogInformation("Debugger session ready (breakpoints set, runtime resumed) {ElapsedMs}ms after starting", stopwatch.ElapsedMilliseconds);
 		var sessionId = new DebuggerSessionId(Guid.NewGuid());
 		_debugConnections[sessionId] = (connection, debuggerDisposable);
 		return sessionId;

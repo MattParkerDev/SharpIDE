@@ -14,6 +14,7 @@ public static class DebuggerProcessStreamHelper
 		var debuggerExecutablePath = debuggerExecutableInfo.DebuggerExecutablePath;
 		Guard.Against.NullOrWhiteSpace(debuggerExecutablePath, "Debugger executable path cannot be null or empty.");
 		var isNetCoreDbg = Path.GetFileNameWithoutExtension(debuggerExecutablePath).Equals("netcoredbg", StringComparison.OrdinalIgnoreCase);
+		logger.LogInformation("Starting debugger process '{DebuggerExecutablePath}'", debuggerExecutablePath);
 
 		var process = new Process
 		{
@@ -37,6 +38,7 @@ public static class DebuggerProcessStreamHelper
 	{
 		var sharpDbgDllPath = Path.Combine(AppContext.BaseDirectory, "SharpDbg", "SharpDbg.Cli.dll");
 		if (File.Exists(sharpDbgDllPath) is false) throw new FileNotFoundException("The bundled SharpDbg debugger was not found", sharpDbgDllPath);
+		logger.LogInformation("Starting debugger process 'dotnet {SharpDbgDllPath}'", sharpDbgDllPath);
 		var startInfo = new ProcessStartInfo
 		{
 			FileName = "dotnet",
