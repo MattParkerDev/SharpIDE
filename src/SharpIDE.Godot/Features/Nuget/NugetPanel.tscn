@@ -66,7 +66,8 @@ layout_mode = 2
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer" unique_id=1156420518]
 layout_mode = 2
 
-[node name="LineEdit" type="LineEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer" unique_id=2038570593]
+[node name="SearchLineEdit" type="LineEdit" parent="VBoxContainer/MarginContainer2/HSplitContainer/VBoxContainer/HBoxContainer" unique_id=2038570593]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Search for a package"

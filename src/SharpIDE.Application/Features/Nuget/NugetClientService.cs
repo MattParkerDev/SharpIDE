@@ -30,7 +30,7 @@ public class NugetClientService
 	/// Whether the other sources have a package is looked up as soon as it makes the top 100 - a lookup is far faster than a slow source's search.
 	/// Unlike the installed packages, this depends on includePrerelease - the source's search decides which packages are the top 100, and with prereleases,
 	/// includes those with only prereleases
-	public async IAsyncEnumerable<List<IdePackageResult>> GetTop100Results(string directoryPath, bool includePrerelease, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<List<IdePackageResult>> GetTop100Results(string directoryPath, bool includePrerelease, string? searchTerm, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetClientService)}.{nameof(GetTop100Results)}");
 		var packageSources = LoadEnabledPackageSources(directoryPath);
@@ -41,7 +41,7 @@ public class NugetClientService
 		var lookedUpPackageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		// Search for top packages (no search term = all), all sources at once
-		var searches = packageSources.Select(async (source, index) => (SourceIndex: index, Results: await SearchTopPackages(source, includePrerelease, cancellationToken).ConfigureAwait(false))).ToList();
+		var searches = packageSources.Select(async (source, index) => (SourceIndex: index, Results: await SearchTopPackages(source, includePrerelease, searchTerm, cancellationToken).ConfigureAwait(false))).ToList();
 		var lookups = new List<Task<List<(string PackageId, int SourceIndex, LatestFromSource Latest)>>>();
 		string? lastYieldedSignature = null;
 
@@ -112,7 +112,7 @@ public class NugetClientService
 		return foundInOtherSources.ToList();
 	}
 
-	private async Task<IReadOnlyList<IPackageSearchMetadata>> SearchTopPackages(PackageSource source, bool includePrerelease, CancellationToken cancellationToken)
+	private async Task<IReadOnlyList<IPackageSearchMetadata>> SearchTopPackages(PackageSource source, bool includePrerelease, string? searchTerm, CancellationToken cancellationToken)
 	{
 		try
 		{
@@ -121,7 +121,7 @@ public class NugetClientService
 			if (searchResource is null) return [];
 
 			var results = await searchResource.SearchAsync(
-				searchTerm: string.Empty,
+				searchTerm: searchTerm ?? string.Empty,
 				filters: new SearchFilter(includePrerelease: includePrerelease),
 				skip: 0,
 				take: 100,

@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using Godot;
+using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Threading;
 using NuGet.Versioning;
 using SharpIDE.Application;
 using SharpIDE.Application.Features.Evaluation;
+using SharpIDE.Application.Features.FileWatching;
 using SharpIDE.Application.Features.Nuget;
 using SharpIDE.Application.Features.SolutionDiscovery;
 using SharpIDE.Godot.Features.ActivityListener;
@@ -55,6 +57,10 @@ public partial class NugetPanel : Control
 	private bool _updatingPackages;
 
 	private SharpIdeSolutionModel? _solution;
+
+	private LineEdit _searchLineEdit = null!;
+	private AsyncBatchingWorkQueue _searchTextChangedQueue = null!;
+	private string? _searchText;
 
 	private CheckButton _prereleaseCheckButton = null!;
 	/// Whether prerelease versions are shown, and offered as updates. Only touched on the UI thread
@@ -115,6 +121,10 @@ public partial class NugetPanel : Control
 		_nugetPackageDetails.PackageReferencesChanged += OnPackageReferencesChanged;
 		_prereleaseCheckButton = GetNode<CheckButton>("%PrereleaseCheckButton");
 		_prereleaseCheckButton.Toggled += OnPrereleaseToggled;
+		_searchLineEdit = GetNode<LineEdit>("%SearchLineEdit");
+		_searchTextChangedQueue = new AsyncBatchingWorkQueue(TimeSpan.FromMilliseconds(300), ProcessSearchTextChanged, IAsynchronousOperationListener.Instance, CancellationToken.None);
+		_searchLineEdit.TextChanged += _ => _searchTextChangedQueue.AddWork();
+		_searchLineEdit.TextSubmitted += OnSearchTextChanged;
 		_installedPackagesVboxContainer.QueueFreeChildren();
 		_implicitlyInstalledPackagesItemList.QueueFreeChildren();
 		_availablePackagesItemList.QueueFreeChildren();
@@ -165,7 +175,23 @@ public partial class NugetPanel : Control
 		_searchResultsRequested = true;
 		var cancellationToken = _searchResultsCancellationSeries.CreateNext();
 		var includePrerelease = _includePrerelease;
-		_ = Task.GodotRun(() => PopulateSearchResults(includePrerelease, cancellationToken));
+		var searchText = _searchText;
+		_ = Task.GodotRun(() => PopulateSearchResults(includePrerelease, searchText, cancellationToken));
+	}
+
+	private async ValueTask ProcessSearchTextChanged(CancellationToken cancellationToken)
+	{
+		await this.InvokeAsync(() => OnSearchTextChanged(_searchLineEdit.Text));
+	}
+
+	private void OnSearchTextChanged(string text)
+	{
+		var searchText = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+		if (searchText == _searchText) return;
+		_searchText = searchText;
+		if (_shownInstalledPackages is var (packages, unrestoredProjects)) RenderInstalledPackages(packages, unrestoredProjects);
+		_searchResultsRequested = false;
+		LoadSearchResultsIfDiscoverOpen();
 	}
 
 	/// The installed packages and the details' versions are filtered in memory - each source's latest prerelease was found with its latest stable version.
@@ -218,7 +244,7 @@ public partial class NugetPanel : Control
 		});
 	}
 
-	private async Task PopulateSearchResults(bool includePrerelease, CancellationToken cancellationToken)
+	private async Task PopulateSearchResults(bool includePrerelease, string? searchText, CancellationToken cancellationToken)
 	{
 		using var _ = SharpIdeOtel.Source.StartActivity($"{nameof(NugetPanel)}.{nameof(PopulateSearchResults)}");
 		// The tab can be opened before the solution has loaded
@@ -226,7 +252,7 @@ public partial class NugetPanel : Control
 		try
 		{
 			// Each update is the whole list so far - the fastest source's results first, then the other sources each has them on, then the slower sources'
-			await foreach (var result in _nugetClientService.GetTop100Results(_sharpIdeSolutionAccessor.SolutionModel!.DirectoryPath, includePrerelease, cancellationToken))
+			await foreach (var result in _nugetClientService.GetTop100Results(_sharpIdeSolutionAccessor.SolutionModel!.DirectoryPath, includePrerelease, searchText, cancellationToken))
 			{
 				await this.InvokeAsync(() =>
 				{
@@ -306,6 +332,7 @@ public partial class NugetPanel : Control
 	/// Shows the installed packages, and those with an update (which depends on whether prereleases are included). Call on the UI thread
 	private void RenderInstalledPackages(List<IdePackageResult> idePackageResult, List<SharpIdeProjectModel> unrestoredProjects)
 	{
+		if (_searchText is not null) idePackageResult = idePackageResult.Where(p => p.PackageId.Contains(_searchText, StringComparison.OrdinalIgnoreCase)).ToList();
 		var transitivePackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive).ToList();
 		var directPackages = idePackageResult.Where(s => s.InstalledNugetPackageInfo!.IsPrimarilyTransitive is false).ToList();
 		var updatePackages = directPackages.Where(HasUpdate).ToList();
