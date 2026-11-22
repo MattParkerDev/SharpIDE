@@ -56,6 +56,12 @@ public sealed class SymbolHoverPopup
 		tooltipWindow.AddChild(timer);
 		timer.Timeout += () =>
 		{
+			// Unsubscribe first: freeing a window under the mouse emits a final MouseExited,
+			// which would otherwise call StartTimer on the already-freed timer.
+			tooltipWindow.MouseExited -= StartTimer;
+			tooltipWindow.MouseEntered -= StopTimer;
+			hoverBridgeWindow.MouseExited -= StartTimer;
+			hoverBridgeWindow.MouseEntered -= StopTimer;
 			tooltipWindow.QueueFree();
 			hoverBridgeWindow.QueueFree();
 			_closeTimer = null;
