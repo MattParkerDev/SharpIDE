@@ -1,9 +1,9 @@
 [gd_resource type="Theme" format=3 uid="uid://dc7l6bjhn61i5"]
 
 [ext_resource type="FontVariation" uid="uid://cctwlwcoycek7" path="res://Features/CodeEditor/Resources/CascadiaFontVariation.tres" id="1_guqd5"]
-[ext_resource type="FontFile" path="res://Inter-VariableFont.ttf" id="2_xvfqr"]
-[ext_resource type="Texture2D" path="res://Resources/close.svg" id="3_8xmn6"]
-[ext_resource type="FontVariation" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="4_w7sqp"]
+[ext_resource type="FontFile" uid="uid://38igu11xwba6" path="res://Inter-VariableFont.ttf" id="2_xvfqr"]
+[ext_resource type="Texture2D" uid="uid://d0wy2vggrfgdh" path="res://Resources/close.svg" id="3_8xmn6"]
+[ext_resource type="FontVariation" uid="uid://vmgmcu8gc6nt" path="res://addons/godot_xterm/themes/fonts/regular.tres" id="4_w7sqp"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acptdlg"]
 content_margin_left = 8.0
