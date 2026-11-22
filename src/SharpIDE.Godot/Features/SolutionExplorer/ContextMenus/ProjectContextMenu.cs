@@ -79,7 +79,7 @@ public partial class SolutionExplorerPanel
 			{
 				var debuggerExecutableInfo = new DebuggerExecutableInfo
 				{
-					UseInMemorySharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
+					UseSharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
 					DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
 				};
 				var usePty = Singletons.AppState.IdeSettings.RunUsePty;

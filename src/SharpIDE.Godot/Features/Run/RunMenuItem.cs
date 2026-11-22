@@ -109,7 +109,7 @@ public partial class RunMenuItem : HBoxContainer
 	{
 		var debuggerExecutableInfo = new DebuggerExecutableInfo
 		{
-			UseInMemorySharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
+			UseSharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
 			DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
 		};
 		SetAttemptingRunState();

@@ -67,6 +67,13 @@
     <PackageReference Include="ZLinq" />
   </ItemGroup>
 
+  <!-- SharpDbg runs out of process: roslyn's expression evaluator is built against internal Roslyn APIs, so it must load the exact Roslyn version it was built with, not SharpIDE's.
+       The SharpDbg.Cli tool package is a complete framework-dependent app (including dbgshim for every RID), copied as-is into a SharpDbg subfolder and started with 'dotnet SharpDbg.Cli.dll' -->
+  <ItemGroup>
+    <PackageDownload Include="SharpDbg.Cli" Version="[$(SharpDbgVersion)]" />
+    <None Include="$(NuGetPackageRoot)sharpdbg.cli/$(SharpDbgVersion)/tools/net11.0/any/**/*" Exclude="$(NuGetPackageRoot)sharpdbg.cli/$(SharpDbgVersion)/tools/net11.0/any/DotnetToolSettings.xml" Link="SharpDbg/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <AdditionalFiles Include="BannedSymbols.txt" />
     <Content Remove="$(NuGetPackageRoot)\microsoft.codeanalysis.workspaces.msbuild\**\**\BuildHost-net472\**" />
