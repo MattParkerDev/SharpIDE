@@ -17,6 +17,7 @@ file enum ProjectContextMenuOptions
 	Restore = 5,
 	DotnetUserSecrets = 6,
 	Remove = 7,
+	Debug = 8,
 }
 
 file enum CreateNewSubmenuOptions
@@ -28,6 +29,7 @@ file enum CreateNewSubmenuOptions
 public partial class SolutionExplorerPanel
 {
 	private Texture2D _runIcon = ResourceLoader.Load<Texture2D>("uid://bkty6563cthj8");
+	private Texture2D _debugIcon = ResourceLoader.Load<Texture2D>("uid://c7cmou8hipsvc");
 
 	[Inject] private readonly BuildService _buildService = null!;
 	[Inject] private readonly RunService _runService = null!;
@@ -49,6 +51,8 @@ public partial class SolutionExplorerPanel
 		{
 			menu.AddIconItem(_runIcon, "Run", (int)ProjectContextMenuOptions.Run);
 			menu.SetItemIconMaxWidth(menu.GetItemIndex((int)ProjectContextMenuOptions.Run), 20);
+			menu.AddIconItem(_debugIcon, "Debug", (int)ProjectContextMenuOptions.Debug);
+			menu.SetItemIconMaxWidth(menu.GetItemIndex((int)ProjectContextMenuOptions.Debug), 20);
 			menu.AddSeparator();
 		}
 
@@ -71,7 +75,20 @@ public partial class SolutionExplorerPanel
 					await _runService.RunProject(project, usePty: Singletons.AppState.IdeSettings.RunUsePty);
 				});
 			}
-			if (actionId is ProjectContextMenuOptions.Build)
+			else if (actionId is ProjectContextMenuOptions.Debug)
+			{
+				var debuggerExecutableInfo = new DebuggerExecutableInfo
+				{
+					UseInMemorySharpDbg = Singletons.AppState.IdeSettings.DebuggerUseSharpDbg,
+					DebuggerExecutablePath = Singletons.AppState.IdeSettings.DebuggerExecutablePath
+				};
+				var usePty = Singletons.AppState.IdeSettings.RunUsePty;
+				_ = Task.GodotRun(async () =>
+				{
+					await _runService.RunProject(project, true, debuggerExecutableInfo, usePty: usePty);
+				});
+			}
+			else if (actionId is ProjectContextMenuOptions.Build)
 			{
 				_ = Task.GodotRun(async () => await MsBuildProject(project, BuildType.Build));
 			}
