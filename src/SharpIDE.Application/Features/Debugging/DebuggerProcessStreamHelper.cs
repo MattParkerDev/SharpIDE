@@ -50,6 +50,14 @@ public static class DebuggerProcessStreamHelper
 			CreateNoWindow = true,
 			WindowStyle = ProcessWindowStyle.Hidden
 		};
+		// Don't let SharpDbg inherit SharpIDE's runtime configuration, as for SharpIDE.MsBuildHost - e.g. when SharpIDE is launched from Rider with hot reload,
+		// DOTNET_STARTUP_HOOKS loads Rider's hot reload agent into SharpDbg too, delaying its startup by ~5 seconds
+		var keysToRemove = startInfo.Environment
+			.Where(s => s.Key.StartsWith("DOTNET_", StringComparison.OrdinalIgnoreCase))
+			.Where(s => s.Key.Equals("DOTNET_CLI_TELEMETRY_OPTOUT", StringComparison.OrdinalIgnoreCase) is false)
+			.Select(s => s.Key)
+			.ToList();
+		keysToRemove.ForEach(s => startInfo.Environment.Remove(s));
 		// SharpDbg.Cli rolls forward to the latest major runtime (RollForward=Major); allow that to be a preview runtime, as for SharpIDE.MsBuildHost
 		startInfo.Environment["DOTNET_ROLL_FORWARD_TO_PRERELEASE"] = "1";
 		var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start SharpDbg");
