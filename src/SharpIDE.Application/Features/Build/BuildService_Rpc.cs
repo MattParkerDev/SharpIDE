@@ -122,13 +122,16 @@ public partial class BuildService
 		{
 			try
 			{
-				var buffer = new byte[4096];
 				while (true)
 				{
 					if (_rpcDisposing) break;
-					var bytesRead = await socket.ReceiveAsync(buffer, SocketFlags.None);
+					// Receive straight into the pipe's buffer, rather than into our own and copying across
+					var memory = pipeWriter.GetMemory(4096);
+					var bytesRead = await socket.ReceiveAsync(memory, SocketFlags.None);
 					if (bytesRead == 0) break; // End of stream
-					await pipeWriter.WriteAsync(buffer.AsMemory(0, bytesRead));
+					pipeWriter.Advance(bytesRead);
+					var flushResult = await pipeWriter.FlushAsync();
+					if (flushResult.IsCompleted) break; // The reader was completed
 				}
 			}
 			catch when (_rpcDisposing || ReferenceEquals(_buildLogSocket, socket) is false)
