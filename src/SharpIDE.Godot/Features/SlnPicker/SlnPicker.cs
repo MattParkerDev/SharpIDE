@@ -10,6 +10,7 @@ public partial class SlnPicker : Control
 	private Button _openSlnButton = null!;
 	private Button _newSlnButton = null!;
 	private VBoxContainer _previousSlnsVBoxContainer = null!;
+	private LineEdit _searchLineEdit = null!;
 	private Label _versionLabel = null!;
 	private Button _aboutButton = null!;
 
@@ -35,6 +36,8 @@ public partial class SlnPicker : Control
 		_openSlnButton = GetNode<Button>("%OpenSlnButton");
 		_newSlnButton = GetNode<Button>("%NewSlnButton");
 		_aboutButton = GetNode<Button>("%AboutButton");
+		_searchLineEdit = GetNode<LineEdit>("%SearchLineEdit");
+		_searchLineEdit.TextChanged += FilterPreviousSolutions;
 		_openSlnButton.Pressed += () => _fileDialog.PopupCentered();
 		_newSlnButton.Pressed += () =>
 		{
@@ -92,6 +95,19 @@ public partial class SlnPicker : Control
 				_previousSlnsVBoxContainer.RemoveChildAndQueueFree(node);
 			};
 			_previousSlnsVBoxContainer.AddChild(node);
+		}
+		FilterPreviousSolutions(_searchLineEdit.Text);
+	}
+
+	private void FilterPreviousSolutions(string text)
+	{
+		var searchText = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+		foreach (var node in _previousSlnsVBoxContainer.GetChildren().OfType<PreviousSlnEntry>())
+		{
+			if (node.IsQueuedForDeletion()) continue;
+			node.Visible = searchText is null
+				|| node.RecentSln.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+				|| node.RecentSln.FilePath.Contains(searchText, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 
