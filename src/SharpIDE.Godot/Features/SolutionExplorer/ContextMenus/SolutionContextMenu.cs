@@ -7,7 +7,8 @@ namespace SharpIDE.Godot.Features.SolutionExplorer;
 file enum SolutionContextMenuOptions
 {
 	Add = 1,
-	ReloadSolution
+	ReloadSolution,
+	RevealInFileExplorer
 }
 
 file enum SolutionAddSubmenuOptions
@@ -31,13 +32,19 @@ public partial class SolutionExplorerPanel
 		createNewSubmenu.AddItem("New Solution Folder", (int)SolutionAddSubmenuOptions.SolutionFolder);
 		createNewSubmenu.IdPressed += id => OnSolutionAddSubmenuPressed(id, solution);
 
+		menu.AddItem("Reveal in File Explorer", (int)SolutionContextMenuOptions.RevealInFileExplorer);
+		menu.AddSeparator();
 		menu.AddItem("Reload Solution", (int)SolutionContextMenuOptions.ReloadSolution);
 
 		menu.PopupHide += () => menu.QueueFree();
 		menu.IdPressed += id =>
 		{
 			var actionId = (SolutionContextMenuOptions)id;
-			if (actionId == SolutionContextMenuOptions.ReloadSolution)
+			if (actionId == SolutionContextMenuOptions.RevealInFileExplorer)
+			{
+				OS.ShellShowInFileManager(solution.FilePath);
+			}
+			else if (actionId == SolutionContextMenuOptions.ReloadSolution)
 			{
 				_ = Task.GodotRun(async () =>
 				{

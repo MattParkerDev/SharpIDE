@@ -18,6 +18,7 @@ file enum ProjectContextMenuOptions
 	DotnetUserSecrets = 6,
 	Remove = 7,
 	Debug = 8,
+	RevealInFileExplorer = 9,
 }
 
 file enum CreateNewSubmenuOptions
@@ -42,6 +43,7 @@ public partial class SolutionExplorerPanel
 		AddChild(menu);
 		var createNewSubmenu = new PopupMenu();
 		menu.AddSubmenuNodeItem("Add", createNewSubmenu, (int)ProjectContextMenuOptions.CreateNew);
+		menu.AddItem("Reveal in File Explorer", (int)ProjectContextMenuOptions.RevealInFileExplorer);
 		menu.AddSeparator();
 		createNewSubmenu.AddItem("Directory", (int)CreateNewSubmenuOptions.Directory);
 		createNewSubmenu.AddItem("C# File", (int)CreateNewSubmenuOptions.CSharpFile);
@@ -68,7 +70,11 @@ public partial class SolutionExplorerPanel
 		menu.IdPressed += id =>
 		{
 			var actionId = (ProjectContextMenuOptions)id;
-			if (actionId is ProjectContextMenuOptions.Run)
+			if (actionId is ProjectContextMenuOptions.RevealInFileExplorer)
+			{
+				OS.ShellShowInFileManager(project.FilePath);
+			}
+			else if (actionId is ProjectContextMenuOptions.Run)
 			{
 				_ = Task.GodotRun(async () =>
 				{
