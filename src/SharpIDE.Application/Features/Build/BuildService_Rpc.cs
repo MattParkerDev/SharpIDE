@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using NeoSmart.AsyncLock;
+using NuGet.Versioning;
 using SharpIDE.MsBuildHost.Contracts;
 using StreamJsonRpc;
 
@@ -22,6 +23,8 @@ public partial class BuildService
 	private volatile string? _hostSolutionFilePath;
 	private int _consecutiveCrashCount;
 	private const int MaxConsecutiveCrashRestarts = 3;
+	private NuGetVersion? _hostSdkVersion;
+	private bool _hostSdkStale;
 
 	/// Starts the host for the solution being opened, so it isn't left until the first build (the restore before the workspace loads).
 	/// The solution path is recorded synchronously, so callers that don't await this can still use the host as soon as it is up.
@@ -37,6 +40,11 @@ public partial class BuildService
 		using (await _rpcInitLock.LockAsync(cancellationToken))
 		{
 			ObjectDisposedException.ThrowIf(_rpcDisposing, this);
+			if (_rpcBuildService is not null && _hostSdkStale && _cancellationTokenSource is null)
+			{
+				_logger.LogInformation("Restarting SharpIDE.MsBuildHost, as the .NET SDK resolved for the solution changed");
+				TearDownConnection();
+			}
 			if (_rpcBuildService is not null) return _rpcBuildService;
 			var solutionFilePath = _hostSolutionFilePath ?? throw new InvalidOperationException($"The build host has not been started - call {nameof(StartHostAsync)} when the solution is opened.");
 			_rpcBuildService = await ConnectRpc(solutionFilePath);
@@ -48,7 +56,7 @@ public partial class BuildService
 	{
 		if (_fillPipeFromLoggerTask is not null) throw new InvalidOperationException("Build logger pipe is already open, but RPC service is not initialized. This should never happen.");
 		IRpcBuildService proxy = null!;
-		var (process, rpc, (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath)) = await MsBuildHostProcess.StartAsync(solutionOrProjectFilePath, designTime: false, _logger, rpc =>
+		var (process, rpc, (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath), sdkVersion) = await MsBuildHostProcess.StartAsync(solutionOrProjectFilePath, designTime: false, _logger, rpc =>
 		{
 			proxy = rpc.Attach<IRpcBuildService>();
 			return proxy.GetMsbuildInfoAsync();
@@ -57,7 +65,20 @@ public partial class BuildService
 		_fillPipeFromLoggerTask = await OpenMsBuildLoggerPipe(proxy);
 		_sharpIdeMsBuildHostProcess = process;
 		_rpc = rpc;
+		_hostSdkVersion = sdkVersion;
 		return proxy;
+	}
+
+	/// The host is replaced at the start of the next build, so a build in progress is never killed
+	internal async Task<bool> MarkHostStaleIfSdkChangedAsync(NuGetVersion sdkVersion, CancellationToken cancellationToken = default)
+	{
+		using (await _rpcInitLock.LockAsync(cancellationToken))
+		{
+			if (_rpcDisposing || _rpcBuildService is null || _hostSdkVersion == sdkVersion) return false;
+			_logger.LogInformation("The .NET SDK resolved for the solution changed from {OldSdkVersion} to {NewSdkVersion} - SharpIDE.MsBuildHost will be restarted before the next build", _hostSdkVersion, sdkVersion);
+			_hostSdkStale = true;
+			return true;
+		}
 	}
 
 	private void OnRpcDisconnected(JsonRpc rpc, JsonRpcDisconnectedEventArgs e)
@@ -93,6 +114,8 @@ public partial class BuildService
 	private void TearDownConnection()
 	{
 		_rpcBuildService = null;
+		_hostSdkVersion = null;
+		_hostSdkStale = false;
 		_rpc?.Dispose();
 		_rpc = null;
 		try { _buildLogSocket?.Shutdown(SocketShutdown.Both); } catch (SocketException) { }

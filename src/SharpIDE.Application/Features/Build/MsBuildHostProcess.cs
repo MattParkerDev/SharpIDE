@@ -20,10 +20,10 @@ internal static class MsBuildHostProcess
 	private const int MaxStartupStderrLines = 100;
 
 	/// designTime starts the design-time build host (serving IRpcDesignTimeBuildService) rather than the build host (IRpcBuildService)
-	public static async Task<(Process Process, JsonRpc Rpc, T HandshakeResult)> StartAsync<T>(string solutionOrProjectFilePath, bool designTime, ILogger logger, Func<JsonRpc, Task<T>> handshake, Action<JsonRpc, JsonRpcDisconnectedEventArgs> onDisconnected)
+	public static async Task<(Process Process, JsonRpc Rpc, T HandshakeResult, NuGetVersion SdkVersion)> StartAsync<T>(string solutionOrProjectFilePath, bool designTime, ILogger logger, Func<JsonRpc, Task<T>> handshake, Action<JsonRpc, JsonRpcDisconnectedEventArgs> onDisconnected)
 	{
 		var sharpIdeMsBuildHostDllPath = Path.Combine(AppContext.BaseDirectory, "SharpIdeMsBuildHost", "SharpIDE.MsBuildHost.dll");
-		var slnOrProjectDirectory = Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
+		var slnOrProjectDirectory = GetSlnOrProjectDirectory(solutionOrProjectFilePath);
 		var dotnetDescription = DescribeDotnet(FindDotnetOnPath());
 		var sdkVersion = await GetSdkVersion(slnOrProjectDirectory, dotnetDescription);
 		var startupInfo = new ProcessStartInfo
@@ -61,7 +61,7 @@ internal static class MsBuildHostProcess
 			var handshakeResult = await handshake(rpc);
 			Volatile.Write(ref handshakeCompleted, true);
 			startupStderr.Clear();
-			return (process, rpc, handshakeResult);
+			return (process, rpc, handshakeResult, sdkVersion);
 		}
 		catch (Exception ex)
 		{
@@ -89,6 +89,12 @@ internal static class MsBuildHostProcess
 		}
 		return $"SharpIDE's build host did not respond during startup (using {dotnetDescription}, .NET SDK {sdkVersion}): {handshakeException.Message}";
 	}
+
+	public static Task<NuGetVersion> ResolveSdkVersionAsync(string solutionOrProjectFilePath) =>
+		GetSdkVersion(GetSlnOrProjectDirectory(solutionOrProjectFilePath), DescribeDotnet(FindDotnetOnPath()));
+
+	internal static string GetSlnOrProjectDirectory(string solutionOrProjectFilePath) =>
+		Path.GetDirectoryName(solutionOrProjectFilePath) ?? throw new InvalidOperationException("Could not determine working directory from solution or project file path.");
 
 	private static async Task<NuGetVersion> GetSdkVersion(string slnOrProjectDirectory, string dotnetDescription)
 	{

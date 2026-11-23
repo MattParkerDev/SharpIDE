@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NeoSmart.AsyncLock;
+using NuGet.Versioning;
 using SharpIDE.Application.Features.Events;
 using SharpIDE.MsBuildHost.Contracts;
 using StreamJsonRpc;
@@ -18,6 +19,7 @@ public sealed class DesignTimeBuildService(ILogger<DesignTimeBuildService> logge
 	private Process? _process;
 	private JsonRpc? _rpc;
 	private IRpcDesignTimeBuildService? _rpcService;
+	private NuGetVersion? _hostSdkVersion;
 	private volatile bool _disposing;
 	private volatile string? _hostSolutionFilePath;
 	private int _consecutiveCrashCount;
@@ -65,13 +67,14 @@ public sealed class DesignTimeBuildService(ILogger<DesignTimeBuildService> logge
 			var solutionFilePath = _hostSolutionFilePath ?? throw new InvalidOperationException($"The design-time build host has not been started - call {nameof(StartHostAsync)} when the solution is opened.");
 
 			IRpcDesignTimeBuildService rpcService = null!;
-			var (process, rpc, (runtimeVersion, msBuildSdkPath)) = await MsBuildHostProcess.StartAsync(solutionFilePath, designTime: true, _logger, rpc =>
+			var (process, rpc, (runtimeVersion, msBuildSdkPath), sdkVersion) = await MsBuildHostProcess.StartAsync(solutionFilePath, designTime: true, _logger, rpc =>
 			{
 				rpcService = rpc.Attach<IRpcDesignTimeBuildService>();
 				return rpcService.GetMsbuildInfoAsync();
 			}, OnRpcDisconnected);
 			_process = process;
 			_rpc = rpc;
+			_hostSdkVersion = sdkVersion;
 			_logger.LogInformation("Connected to SharpIDE.MsBuildHost (design-time) running on '{RuntimeVersion}' Runtime with MSBuild from SDK at '{MsBuildPath}'", runtimeVersion, msBuildSdkPath);
 			_rpcService = rpcService;
 			return rpcService;
@@ -108,10 +111,25 @@ public sealed class DesignTimeBuildService(ILogger<DesignTimeBuildService> logge
 		});
 	}
 
+	/// Also returns true when no host is running, e.g. it failed to start as the previously pinned SDK isn't installed
+	internal async Task<bool> StopHostIfSdkChangedAsync(NuGetVersion sdkVersion, CancellationToken cancellationToken = default)
+	{
+		using (await _rpcInitLock.LockAsync(cancellationToken))
+		{
+			if (_disposing) return false;
+			if (_rpcService is null) return true;
+			if (_hostSdkVersion == sdkVersion) return false;
+			_logger.LogInformation("The .NET SDK resolved for the solution changed from {OldSdkVersion} to {NewSdkVersion} - restarting SharpIDE.MsBuildHost (design-time)", _hostSdkVersion, sdkVersion);
+			TearDown();
+			return true;
+		}
+	}
+
 	/// Must be called inside _rpcInitLock (or when disposing)
 	private void TearDown()
 	{
 		_rpcService = null;
+		_hostSdkVersion = null;
 		_rpc?.Dispose();
 		_rpc = null;
 		try { _process?.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } // Already exited

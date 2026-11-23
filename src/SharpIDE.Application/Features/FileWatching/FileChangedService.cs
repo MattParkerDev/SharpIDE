@@ -4,7 +4,10 @@ using Microsoft.CodeAnalysis.Collections;
 using Microsoft.CodeAnalysis.Razor.Utilities;
 using Microsoft.CodeAnalysis.Shared.TestHooks;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 using SharpIDE.Application.Features.Analysis;
+using SharpIDE.Application.Features.Build;
 using SharpIDE.Application.Features.Editor;
 using SharpIDE.Application.Features.Evaluation;
 using SharpIDE.Application.Features.Events;
@@ -31,11 +34,19 @@ public class FileChangedService
 	private bool _pendingSolutionReload;
 	private readonly HashSet<SharpIdeProjectModel> _pendingProjectReloads = [];
 	private readonly HashSet<string> _pendingImportFileChanges = new(PathComparison.Comparer);
+	private bool _pendingSdkCheck;
 	// Processes one batch at a time, in order, so Roslyn always ends up with the latest text of each open file
 	private readonly Microsoft.CodeAnalysis.Threading.AsyncBatchingWorkQueue<(SharpIdeFile File, SourceText Text)> _openFileTextChangedQueue;
 
-	public FileChangedService(RoslynAnalysis roslynAnalysis, IdeOpenTabsFileManager openTabsFileManager, SharpIdeSolutionService sharpIdeSolutionService, ProjectEvaluationService projectEvaluationService)
+	private readonly BuildService _buildService;
+	private readonly DesignTimeBuildService _designTimeBuildService;
+	private readonly ILogger<FileChangedService> _logger;
+
+	public FileChangedService(RoslynAnalysis roslynAnalysis, IdeOpenTabsFileManager openTabsFileManager, SharpIdeSolutionService sharpIdeSolutionService, ProjectEvaluationService projectEvaluationService, BuildService buildService, DesignTimeBuildService designTimeBuildService, ILogger<FileChangedService> logger)
 	{
+		_buildService = buildService;
+		_designTimeBuildService = designTimeBuildService;
+		_logger = logger;
 		_projectEvaluationService = projectEvaluationService;
 		_roslynAnalysis = roslynAnalysis;
 		_openTabsFileManager = openTabsFileManager;
@@ -71,6 +82,7 @@ public class FileChangedService
 		// A project the solution references has moved away from (or onto) its path - IDE moves update the solution file to follow it first
 		if (IsSolutionProjectPath(oldFilePath) || IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true);
 		await ApplyOrDeferImportFileChanges(oldFilePath, file.Path);
+		await ApplyOrDeferGlobalJsonChanges(oldFilePath, file.Path);
 	}
 
 	public async Task SharpIdeFileAdded(SharpIdeFile file, string content)
@@ -83,6 +95,7 @@ public class FileChangedService
 		// e.g. a project the solution references, which was missing, has been checked out
 		if (IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true);
 		await ApplyOrDeferImportFileChanges(file.Path); // e.g. a new Directory.Build.props
+		await ApplyOrDeferGlobalJsonChanges(file.Path);
 	}
 
 	public async Task SharpIdeFileRemoved(SharpIdeFile file)
@@ -91,6 +104,7 @@ public class FileChangedService
 		await ApplyOrDeferFileOperation(new WorkspaceFileOperation.Remove(file.Path));
 		if (IsSolutionProjectPath(file.Path)) await ApplyOrDeferProjectSystemChange(reloadSolution: true); // Now shown as missing
 		await ApplyOrDeferImportFileChanges(file.Path);
+		await ApplyOrDeferGlobalJsonChanges(file.Path);
 	}
 
 	/// A csproj the solution references. Projects that aren't in the solution aren't loaded, so adding or removing one doesn't matter (as in VS).
@@ -193,6 +207,7 @@ public class FileChangedService
 		{
 			return ApplyOrDeferProjectSystemChange(reloadSolution: false, project);
 		}
+		if (IsGlobalJsonFile(file.Path)) return ApplyOrDeferGlobalJsonChanges(file.Path);
 		return ApplyOrDeferImportFileChanges(file.Path);
 	}
 
@@ -216,19 +231,58 @@ public class FileChangedService
 		await _projectEvaluationService.ReloadForChangedFilesAsync(importFilePaths);
 	}
 
+	private static bool IsGlobalJsonFile(string filePath) => Path.GetFileName(filePath.AsSpan()).Equals("global.json", StringComparison.OrdinalIgnoreCase);
+
+	/// A global.json may now pin a different SDK - if so, the build hosts are restarted and every project re-evaluated and reloaded
+	private async Task ApplyOrDeferGlobalJsonChanges(params string[] filePaths)
+	{
+		if (SolutionModel is null || filePaths.Any(IsGlobalJsonFile) is false) return;
+		lock (_batchLock)
+		{
+			if (_batchDepth > 0)
+			{
+				_pendingSdkCheck = true;
+				return;
+			}
+		}
+		if (await RestartBuildHostsIfSdkChanged()) await ApplyProjectSystemChanges(reloadSolution: false, [.. SolutionModel.AllProjects]);
+	}
+
+	/// MSBuild's assemblies can't be unloaded, so a host that has loaded another SDK's MSBuild must be replaced
+	private async Task<bool> RestartBuildHostsIfSdkChanged()
+	{
+		if (SolutionModel is null) return false;
+		NuGetVersion sdkVersion;
+		try
+		{
+			sdkVersion = await MsBuildHostProcess.ResolveSdkVersionAsync(SolutionModel.FilePath);
+		}
+		catch (MsBuildHostStartException ex)
+		{
+			_logger.LogWarning(ex, "global.json changed, but no .NET SDK could be resolved for the solution - SharpIDE.MsBuildHost keeps using the SDK it has loaded");
+			return false;
+		}
+		var designTimeHostRestarting = await _designTimeBuildService.StopHostIfSdkChangedAsync(sdkVersion);
+		var buildHostRestarting = await _buildService.MarkHostStaleIfSdkChangedAsync(sdkVersion);
+		return designTimeHostRestarting || buildHostRestarting;
+	}
+
+	private Task ApplyOrDeferProjectSystemChange(bool reloadSolution, SharpIdeProjectModel? projectToReload = null) =>
+		ApplyOrDeferProjectSystemChange(reloadSolution, projectToReload is null ? [] : [projectToReload]);
+
 	/// Applied now, or once at the end of the batch - so e.g. a git checkout changing the sln and several csproj files reloads once
-	private async Task ApplyOrDeferProjectSystemChange(bool reloadSolution, SharpIdeProjectModel? projectToReload = null)
+	private async Task ApplyOrDeferProjectSystemChange(bool reloadSolution, IReadOnlyCollection<SharpIdeProjectModel> projectsToReload)
 	{
 		lock (_batchLock)
 		{
 			if (_batchDepth > 0)
 			{
 				_pendingSolutionReload |= reloadSolution;
-				if (projectToReload is not null) _pendingProjectReloads.Add(projectToReload);
+				_pendingProjectReloads.UnionWith(projectsToReload);
 				return;
 			}
 		}
-		await ApplyProjectSystemChanges(reloadSolution, projectToReload is null ? [] : [projectToReload]);
+		await ApplyProjectSystemChanges(reloadSolution, projectsToReload);
 	}
 
 	private async Task ApplyProjectSystemChanges(bool reloadSolution, IReadOnlyCollection<SharpIdeProjectModel> projectsToReload)
@@ -283,6 +337,7 @@ public class FileChangedService
 		bool reloadSolution;
 		List<SharpIdeProjectModel> projectsToReload;
 		List<string> importFileChanges;
+		bool sdkCheck;
 		lock (_batchLock)
 		{
 			if (--_batchDepth > 0) return;
@@ -296,8 +351,11 @@ public class FileChangedService
 			_pendingProjectReloads.Clear();
 			importFileChanges = [.. _pendingImportFileChanges];
 			_pendingImportFileChanges.Clear();
+			sdkCheck = _pendingSdkCheck;
+			_pendingSdkCheck = false;
 		}
 		if (operations.Count > 0 && await _roslynAnalysis.ApplyFileOperations(operations)) workspaceAltered = true;
+		if (sdkCheck && await RestartBuildHostsIfSdkChanged()) projectsToReload = [.. SolutionModel.AllProjects];
 		// After the file operations, so a project reload sees the files' current paths
 		await ApplyProjectSystemChanges(reloadSolution, projectsToReload);
 		// After project file reloads, so their evaluations aren't redone
