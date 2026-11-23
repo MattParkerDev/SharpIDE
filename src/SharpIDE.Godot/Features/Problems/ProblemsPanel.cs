@@ -32,6 +32,7 @@ public partial class ProblemsPanel : Control
 		_diagnosticCustomDrawCallable = new Callable(this, MethodName.DiagnosticCustomDraw);
 		_tree = GetNode<Tree>("%Tree");
 		_tree.ItemActivated += TreeOnItemActivated;
+		_tree.ItemMouseSelected += TreeOnItemMouseSelected;
 		_rootItem = _tree.CreateItem();
 		_rootItem.SetText(0, "Problems");
 		_stagingTree = new Tree();

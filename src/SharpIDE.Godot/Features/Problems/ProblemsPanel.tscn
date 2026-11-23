@@ -56,4 +56,5 @@ theme_override_constants/inner_item_margin_right = 5
 theme_override_constants/draw_guides = 0
 theme_override_styles/panel = SubResource("StyleBoxEmpty_wqdox")
 hide_root = true
+allow_rmb_select = true
 scroll_horizontal_enabled = false
