@@ -64,11 +64,14 @@ public sealed class DesignTimeBuildService(ILogger<DesignTimeBuildService> logge
 			if (_rpcService is not null) return _rpcService;
 			var solutionFilePath = _hostSolutionFilePath ?? throw new InvalidOperationException($"The design-time build host has not been started - call {nameof(StartHostAsync)} when the solution is opened.");
 
-			var (process, rpc) = await MsBuildHostProcess.StartAsync(solutionFilePath, designTime: true, _logger, OnRpcDisconnected);
+			IRpcDesignTimeBuildService rpcService = null!;
+			var (process, rpc, (runtimeVersion, msBuildSdkPath)) = await MsBuildHostProcess.StartAsync(solutionFilePath, designTime: true, _logger, rpc =>
+			{
+				rpcService = rpc.Attach<IRpcDesignTimeBuildService>();
+				return rpcService.GetMsbuildInfoAsync();
+			}, OnRpcDisconnected);
 			_process = process;
 			_rpc = rpc;
-			var rpcService = rpc.Attach<IRpcDesignTimeBuildService>();
-			var (runtimeVersion, msBuildSdkPath) = await rpcService.GetMsbuildInfoAsync();
 			_logger.LogInformation("Connected to SharpIDE.MsBuildHost (design-time) running on '{RuntimeVersion}' Runtime with MSBuild from SDK at '{MsBuildPath}'", runtimeVersion, msBuildSdkPath);
 			_rpcService = rpcService;
 			return rpcService;

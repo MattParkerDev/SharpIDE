@@ -47,10 +47,12 @@ public partial class BuildService
 	private async Task<IRpcBuildService> ConnectRpc(string solutionOrProjectFilePath)
 	{
 		if (_fillPipeFromLoggerTask is not null) throw new InvalidOperationException("Build logger pipe is already open, but RPC service is not initialized. This should never happen.");
-		var (process, rpc) = await MsBuildHostProcess.StartAsync(solutionOrProjectFilePath, designTime: false, _logger, OnRpcDisconnected);
-
-		var proxy = rpc.Attach<IRpcBuildService>();
-		var (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath) = await proxy.GetMsbuildInfoAsync();
+		IRpcBuildService proxy = null!;
+		var (process, rpc, (rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath)) = await MsBuildHostProcess.StartAsync(solutionOrProjectFilePath, designTime: false, _logger, rpc =>
+		{
+			proxy = rpc.Attach<IRpcBuildService>();
+			return proxy.GetMsbuildInfoAsync();
+		}, OnRpcDisconnected);
 		_logger.LogInformation("Connected to SharpIDE.MsBuildHost running on '{RpcBuildHostRuntimeVersion}' Runtime with MSBuild from SDK at '{RpcBuildHostMsBuildPath}'", rpcBuildHostRuntimeVersion, rpcBuildHostMsBuildPath);
 		_fillPipeFromLoggerTask = await OpenMsBuildLoggerPipe(proxy);
 		_sharpIdeMsBuildHostProcess = process;

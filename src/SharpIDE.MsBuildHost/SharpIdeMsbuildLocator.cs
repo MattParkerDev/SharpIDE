@@ -17,8 +17,13 @@ public static class SharpIdeMsbuildLocator
 		var originalWorkingDirectory = Environment.CurrentDirectory;
 		Environment.CurrentDirectory = projectOrSlnDirectory;
 		// Use latest version - https://github.com/microsoft/MSBuildLocator/issues/81
-		var instance = MSBuildLocator.QueryVisualStudioInstances().FirstOrDefault(s => s.MSBuildPath.EndsWith(sdkVersion, StringComparison.OrdinalIgnoreCase));
-		if (instance is null) throw new InvalidOperationException("No matching MSBuild instances found");
+		var instances = MSBuildLocator.QueryVisualStudioInstances().ToList();
+		var instance = instances.FirstOrDefault(s => s.MSBuildPath.EndsWith(sdkVersion, StringComparison.OrdinalIgnoreCase));
+		if (instance is null)
+		{
+			var found = instances.Count is 0 ? "none" : string.Join(", ", instances.Select(s => $"{s.Version} ({s.MSBuildPath})"));
+			throw new InvalidOperationException($"MSBuild for .NET SDK {sdkVersion} was not found. The build host is running on .NET {Environment.Version} from '{Environment.ProcessPath}', where MSBuildLocator found these SDKs: {found}.");
+		}
 		MSBuildLocator.RegisterInstance(instance);
 		Environment.CurrentDirectory = originalWorkingDirectory;
 		ResolvedMsBuildSdkPath = instance.MSBuildPath;
