@@ -42,6 +42,7 @@ public partial class SolutionExplorerPanel : MarginContainer
 	{
 		_tree = GetNode<Tree>("%Tree");
 		_tree.ItemMouseSelected += TreeOnItemMouseSelected;
+		_tree.ItemActivated += TreeOnItemActivated;
 		// Remove the tree from the scene tree for now, we will add it back when we bind to a solution
 		RemoveChild(_tree);
 		GodotGlobalEvents.Instance.FileExternallySelected.Subscribe(OnFileExternallySelected);
@@ -148,6 +149,26 @@ public partial class SolutionExplorerPanel : MarginContainer
 			case (MouseButtonMask.Left, SharpIdeSolutionModel): break;
 			case (MouseButtonMask.Right, SharpIdeSolutionModel solution): OpenContextMenuSolution(solution, selected); break;
 			default: break;
+		}
+	}
+
+	// Fired on double click, or ui_accept (Enter)
+	private void TreeOnItemActivated()
+	{
+		var selected = _tree.GetSelected();
+		if (selected is null) return;
+		if (_tree.HasMultipleNodesSelected()) return;
+
+		var filePath = selected.SharpIdeNode switch
+		{
+			SharpIdeSolutionModel solution => solution.FilePath,
+			SharpIdeProjectModel project => project.FilePath,
+			_ => null
+		};
+		if (filePath is null) return;
+		if (_sharpIdeSolutionAccessor.SolutionModel?.AllFiles.GetValueOrDefault(filePath) is { } file)
+		{
+			GodotGlobalEvents.Instance.FileSelected.InvokeParallelFireAndForget(file, null);
 		}
 	}
 

@@ -133,6 +133,8 @@ public partial class IdeWindow : Control
 				_slnPicker = null;
 				return;
 			}
+			// Godot file dialogs return paths with forward slashes - normalise once here, so the path matches the file tree's paths everywhere
+			slnPath = Path.GetFullPath(slnPath);
 			// The new solution's services, so its build hosts can start now, rather than once the IdeRoot is ready. Becomes the current scope in ResetScope below.
 			var solutionServices = _diAutoload.CreateNextScope();
 			ideRoot.SetSlnFilePath(slnPath, solutionServices);
