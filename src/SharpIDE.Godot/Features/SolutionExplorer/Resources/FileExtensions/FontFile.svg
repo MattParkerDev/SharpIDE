@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   class="mud-icon-root mud-svg-icon mud-error-text mud-icon-size-medium"
+   focusable="false"
+   viewBox="0 0 24 24"
+   aria-hidden="true"
+   role="img"
+   style="fill: rgb(40, 167, 69);"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="FontFile.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="18.096062"
+     inkscape:cx="9.6706123"
+     inkscape:cy="15.417719"
+     inkscape:window-width="1694"
+     inkscape:window-height="1055"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:17.825px;font-family:'Noto Serif';-inkscape-font-specification:'Noto Serif';text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:none;fill:#dfe5e9;fill-opacity:1;stroke:none;stroke-width:0.334218;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+     x="1.0821866"
+     y="18.274403"
+     id="text1"><tspan
+       sodipodi:role="line"
+       id="tspan1"
+       x="1.0821866"
+       y="18.274403"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Noto Serif';-inkscape-font-specification:'Noto Serif';fill:#dfe5e9;fill-opacity:1;stroke:none;stroke-width:0.334218">Aa</tspan></text>
+  <path
+     d="m 1.9499501,17.775705 v -0.689147 h 0.3117568 q 0.4758391,0 0.7055545,-0.246122 0.2461237,-0.246125 0.5414722,-1.033721 L 7.1513637,6.0602178 H 8.4312069 L 12.139471,16.216921 q 0.180489,0.508656 0.426614,0.689147 0.262531,0.18049 0.73837,0.18049 h 0.213308 v 0.689147 H 9.0054954 v -0.689147 h 0.3773897 q 0.9844949,0 0.9844949,-0.787595 0,-0.131266 -0.03282,-0.27894 -0.03282,-0.147675 -0.09845,-0.328165 L 9.5797839,13.854134 H 5.2644156 L 4.6409025,15.577 q -0.1476745,0.393799 -0.1476745,0.705555 0,0.804003 1.0829442,0.804003 h 0.3773897 v 0.689147 z M 5.5761722,13.033722 H 9.2844355 L 8.2671245,10.162279 Q 8.0045927,9.4403161 7.7912853,8.8003946 7.5779782,8.160473 7.4467122,7.5697762 7.3318546,8.160473 7.1513637,8.7019452 6.9708731,9.2434172 6.691933,10.014606 Z m 11.3052788,4.906066 q -1.099352,0 -1.821315,-0.639923 -0.721961,-0.639921 -0.721961,-1.985397 0,-1.31266 0.91886,-1.936174 0.935271,-0.623513 2.822219,-0.689145 l 1.361884,-0.04922 v -0.984495 q 0,-0.590697 -0.09845,-1.033721 Q 19.244238,10.162279 18.916075,9.8997467 18.587908,9.637215 17.91517,9.637215 q -0.623512,0 -0.951677,0.2297154 -0.328165,0.2297146 -0.443023,0.6399216 -0.09845,0.393797 -0.09845,0.918862 -0.689147,0 -1.050127,-0.229716 -0.344574,-0.246124 -0.344574,-0.804003 0,-0.5742901 0.393798,-0.9188624 0.410205,-0.3445731 1.082944,-0.4922473 0.672737,-0.1640826 1.476741,-0.1640826 1.509559,0 2.247932,0.6399216 0.754779,0.6399207 0.754779,2.1987047 v 4.249737 q 0,0.689145 0.229715,0.93527 0.229716,0.246122 0.787596,0.246122 h 0.04923 v 0.689147 H 19.834941 L 19.57241,16.364596 h -0.131268 q -0.344574,0.45943 -0.672738,0.820412 -0.328166,0.344573 -0.771188,0.557881 -0.426614,0.196899 -1.115761,0.196899 z m 0.37739,-1.017312 q 1.000902,0 1.5916,-0.607106 0.590697,-0.623512 0.590697,-1.67364 v -1.329069 l -1.050129,0.04922 q -1.3947,0.06563 -1.936171,0.574289 -0.525064,0.492247 -0.525064,1.460335 0,1.525966 1.329067,1.525966 z"
+     id="text2"
+     style="font-size:17.825px;font-family:'Noto Serif';-inkscape-font-specification:'Noto Serif';fill:#dfe5e9;fill-opacity:1;stroke:#dfe5e9;stroke-width:0.920518;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+     aria-label="Aa" />
+</svg>
