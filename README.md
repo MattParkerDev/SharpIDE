@@ -12,6 +12,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions for building and running
 ### WIP
 SharpIDE is a WIP, and contributions are always welcome! If you encounter an error, please raise an issue! 😊
 
+### Credit
+The Godot logo is licensed under CC-BY 4.0 [License](https://github.com/godotengine/godot/blob/master/misc/logo/LICENSE.txt)
+
 ### FAQs
 
 <details><summary>SharpIDE won't open on MacOS Tahoe</summary>
